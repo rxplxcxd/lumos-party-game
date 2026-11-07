@@ -1,0 +1,138 @@
+name: Build & Deploy – Web/PWA & Lumos Store
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: build-web-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.7.2"
+  GODOT_BIN: /home/runner/godot/godot
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Godot + Web-Templates aus dem Cache
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /home/runner/godot
+            /home/runner/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-web
+
+      - name: Godot installieren
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          mkdir -p /home/runner/godot
+          cd /home/runner/godot
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && rm godot.zip
+          mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 godot
+          curl -sSL -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          T=/home/runner/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$T"
+          unzip -q -j templates.tpz 'templates/web*' 'templates/version.txt' -d "$T"
+          rm templates.tpz
+
+      - name: Asset-Inventur & Katalog prüfen
+        run: |
+          python3 tools/asset_pipeline.py --check
+          python3 tools/validate_catalog.py
+
+      - name: Import-Cache
+        uses: actions/cache@v4
+        with:
+          path: .godot
+          key: godot-import-${{ env.GODOT_VERSION }}-${{ hashFiles('data/asset_inventory.json', 'project.godot') }}-${{ github.sha }}
+          restore-keys: |
+            godot-import-${{ env.GODOT_VERSION }}-${{ hashFiles('data/asset_inventory.json', 'project.godot') }}-
+
+      - name: Assets importieren
+        run: |
+          timeout 1800 $GODOT_BIN --headless --path . --import || true
+          timeout 600 $GODOT_BIN --headless --path . --import
+
+      - name: Skripte & Szenen prüfen
+        run: |
+          timeout 300 $GODOT_BIN --headless --path . res://tools/dev/Check.tscn 2>&1 | tee check.log
+          ! grep -q "SCRIPT ERROR" check.log
+
+      - name: Export-Liste erzeugen
+        run: timeout 300 $GODOT_BIN --headless --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/export_list.gd
+
+      - name: Web-Export (WebGL2, ohne Threads – läuft auf GitHub Pages & iOS)
+        run: |
+          mkdir -p build/web
+          timeout 900 $GODOT_BIN --headless --path . --export-release "Web" build/web/index.html
+          test -f build/web/index.pck
+
+      - name: PWA & Store-Paket
+        run: python3 tools/postexport_pwa.py build/web --zip
+
+      - name: Rauchtest im Browser (Chromium/WebGL2)
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install --with-deps chromium
+          (cd build/web && python3 -m http.server 8765 &) && sleep 2
+          node tools/web_smoke_test.js http://localhost:8765/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lumos-party-web
+          path: |
+            build/lumos-party-web.zip
+            build/web/lumos-app.json
+
+  deploy-pages:
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: lumos-party-web
+          path: dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/lumos-party-web.zip
+            dist/web/lumos-app.json
+          generate_release_notes: true

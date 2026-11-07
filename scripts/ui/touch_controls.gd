@@ -7,8 +7,8 @@ extends CanvasLayer
 ## * Anpassbares Layout: Positionen/Größe/Deckkraft werden in den Einstellungen gespeichert
 
 const DEFAULT_LAYOUT := {
-	"a": Vector2(0.905, 0.76), "b": Vector2(0.805, 0.87), "x": Vector2(0.80, 0.64),
-	"r": Vector2(0.915, 0.47), "start": Vector2(0.5, 0.075),
+	"a": Vector2(0.905, 0.64), "b": Vector2(0.80, 0.74), "x": Vector2(0.795, 0.53),
+	"r": Vector2(0.915, 0.40), "start": Vector2(0.64, 0.07),
 }
 const BUTTON_STYLE := {
 	"a": {"color": Color("#2ee59d"), "radius": 62.0},
@@ -20,7 +20,7 @@ const BUTTON_STYLE := {
 const PROFILES := {
 	"none": {"stick": false, "buttons": {}},
 	"menu": {"stick": false, "buttons": {}},
-	"board": {"stick": true, "buttons": {"a": "OK", "b": "Info", "start": "II"}},
+	"board": {"stick": true, "buttons": {"a": "OK", "b": "Nein", "start": "II"}},
 	"minigame": {"stick": true, "buttons": {"a": "Sprung", "b": "Aktion", "start": "II"}},
 	"action_only": {"stick": false, "buttons": {"a": "Los!", "start": "II"}},
 	"race": {"stick": true, "buttons": {"r": "Drift", "x": "Item", "b": "Bremse", "start": "II"}},
@@ -97,7 +97,7 @@ func _relayout() -> void:
 		b.queue_redraw()
 	_stick.modulate.a = opacity
 	_stick.scale_factor = scl
-	_stick.home = Vector2(0.15, 0.74) * vs
+	_stick.home = Vector2(0.14, 0.62) * vs
 	_stick.zone = Rect2(Vector2.ZERO, Vector2(vs.x * 0.48, vs.y))
 	_stick.reset()
 	_refresh_visibility()

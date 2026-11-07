@@ -234,7 +234,7 @@ func _update_camera(delta: float) -> void:
 	var fr := focus.global_transform
 	var fwd := -fr.basis.z
 	var up := fr.basis.y
-	_cam_up = _cam_up.slerp(up, clampf(delta * 5.0, 0, 1)).normalized()
+	_cam_up = _cam_up.lerp(up.normalized(), clampf(delta * 5.0, 0, 1)).normalized()
 	var drift_side := fr.basis.x * float(focus.drift_dir) * -1.2
 	var dist := 5.4 + absf(focus.v) * 0.03
 	var want := fr.origin - fwd * dist + _cam_up * (3.9 + (1.5 if focus.gliding else 0.0)) + drift_side

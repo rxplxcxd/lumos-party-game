@@ -1,0 +1,39 @@
+{
+  "schema": "lumos-app/1",
+  "id": "com.lumos.party",
+  "name": "Lumos Party & Nitro Dash",
+  "short_name": "Lumos Party",
+  "version": "1.0.0",
+  "publisher": "Lumos",
+  "category": "games",
+  "tags": ["party", "brettspiel", "minispiele", "racer", "lokaler-multiplayer"],
+  "age_rating": "6+",
+  "languages": ["de"],
+  "description": "Das chaotische 3D-Party-Brettspiel mit 3 Welten und 10 Minispielen – plus Nitro Dash, der High-Speed-Arcade-Racer mit Looping, Gleiter und Unterwasser-Tunnel. Bis zu 4 Spieler lokal (Gamepads), Touch- und Tastatursteuerung.",
+  "icon": "web/icons/icon-512.png",
+  "icon_maskable": "web/icons/icon-maskable-512.png",
+  "repository": "https://github.com/rxplxcxd/lumos-party-game",
+  "entry": {
+    "type": "web",
+    "url": "https://rxplxcxd.github.io/lumos-party-game/",
+    "index": "index.html",
+    "params": { "lumos": "1" }
+  },
+  "download": {
+    "type": "zip",
+    "url": "https://github.com/rxplxcxd/lumos-party-game/releases/latest/download/lumos-party-web.zip",
+    "launch": "index.html",
+    "serve": "static-http"
+  },
+  "engine": { "name": "godot", "version": "4.7.2", "renderer": "gl_compatibility", "webgl": 2, "threads": false },
+  "display": { "orientation": "landscape", "fullscreen": true },
+  "input": ["gamepad", "touch", "keyboard"],
+  "players": { "min": 1, "max": 4, "local": true, "online": false },
+  "features": { "offline": true, "pwa": true, "haptics": true, "cloud_save": false },
+  "screenshots": [
+    "docs/screenshots/menu.png",
+    "docs/screenshots/board.png",
+    "docs/screenshots/minigame.png",
+    "docs/screenshots/race.png"
+  ]
+}

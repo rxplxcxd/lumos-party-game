@@ -8,7 +8,8 @@ extends Node
 ##   --shots=2,5,9                                       Screenshots nach x Sekunden
 ##   --shotdir=/pfad                                     Zielordner für Screenshots
 ##   --quit=20                                           nach x Sekunden beenden
-##   --board=dungeon --track=lumos_ring                  Brett/Strecke
+##   --board=dungeon --rounds=5 --track=lumos_ring       Brett/Strecke
+##   --touch                                             Touch-Steuerung erzwingen
 
 const PRELOAD := [
 	"res://scenes/menu/MainMenu.tscn",
@@ -25,6 +26,8 @@ func _ready() -> void:
 			p.cpu = true
 	if _args.has("mode"):
 		Game.mode = _args.mode
+	if _args.has("touch"):
+		Game.is_touch_device = true
 	if _args.has("shots") or _args.has("quit"):
 		var cap := ShotDaemon.new()
 		cap.shots = Array(String(_args.get("shots", "")).split(",", false)).map(func(s: String) -> float: return s.to_float())
@@ -38,6 +41,8 @@ func _ready() -> void:
 		Game.mode = "party"
 	if _args.has("track"):
 		Game.race_cfg.track = _args.track
+	if _args.has("laps"):
+		Game.race_cfg.laps = int(_args.laps)
 	Router.goto(target)
 
 

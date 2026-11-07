@@ -187,10 +187,13 @@ func _build_star() -> void:
 
 
 ## Platz-für-Kulisse prüfen (nicht auf Feldern/Pfaden).
-func _free_spot(p: Vector3, min_d := 3.2) -> bool:
+func _free_spot(p: Vector3, min_d := 3.2, tall := false) -> bool:
 	for sp in spaces:
 		var q: Vector3 = sp.pos
 		if Vector2(p.x - q.x, p.z - q.z).length() < min_d:
+			return false
+		# Hohe Deko nicht in den Kamerakorridor (Kamera steht hinter dem Spieler auf +Z)
+		if tall and p.z > q.z and p.z - q.z < 10.0 and absf(p.x - q.x) < 4.5:
 			return false
 	return true
 
@@ -201,7 +204,11 @@ func _scatter_free(keys: Array, count: int, area: Rect2, y := 0.0, scl := Vector
 	while placed < count and tries < count * 20:
 		tries += 1
 		var p := Vector3(_rng.randf_range(area.position.x, area.end.x), y, _rng.randf_range(area.position.y, area.end.y))
-		if _free_spot(p, min_d):
+		var tall := false
+		for k in keys:
+			if String(k).contains("palm") or String(k).contains("tree") or String(k).contains("tower") or String(k).contains("pillar"):
+				tall = true
+		if _free_spot(p, min_d, tall):
 			WorldKit.place(root, keys[_rng.randi() % keys.size()], p, _rng.randf() * 360.0, _rng.randf_range(scl.x, scl.y))
 			placed += 1
 
@@ -270,7 +277,7 @@ func _build_dungeon() -> void:
 
 func _build_pirates() -> void:
 	WorldKit.water(root, Vector2(240, 240), -0.45)
-	var sand := WorldKit.cylinder(root, 1.0, 1.0, Vector3(0, -0.5, 0), Color("#f3dca0"), false)
+	var sand := WorldKit.cylinder(root, 1.0, 1.0, Vector3(0, -0.5, 0), Color("#dcb878"), false)
 	sand.scale = Vector3(27, 0.9, 20)
 	var grass := WorldKit.cylinder(root, 1.0, 1.0, Vector3(0, -0.02, 0), Color("#8fd16a"), false)
 	grass.scale = Vector3(14, 0.06, 8)
