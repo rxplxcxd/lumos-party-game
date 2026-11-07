@@ -86,9 +86,26 @@ func is_slot_human(slot: int) -> bool:
 
 # --- Rohdaten ---------------------------------------------------------------------
 
-func _raw_held(slot: int, action: String) -> bool:
+## Online: Spiel-Slot, der von den lokalen Eingabegeräten (Slot-0-Geräte) gesteuert wird. -1 = aus.
+var online_local := -1
+
+
+## Eingabegerät-Index für einen Spiel-Slot: -2 = virtuell (CPU), -1 = keine lokale Eingabe (Online-Mitspieler).
+func _dev(slot: int) -> int:
 	if not is_slot_human(slot):
+		return -2
+	if online_local >= 0:
+		return 0 if slot == online_local else -1
+	return slot
+
+
+func _raw_held(slot: int, action: String) -> bool:
+	var dev := _dev(slot)
+	if dev == -2:
 		return _virtual[slot].held.get(action, false)
+	if dev == -1:
+		return false
+	slot = dev
 	var pad := pad_for_slot(slot)
 	if pad >= 0:
 		for b in PAD[action]:
@@ -108,8 +125,12 @@ func _raw_held(slot: int, action: String) -> bool:
 
 
 func _raw_move(slot: int) -> Vector2:
-	if not is_slot_human(slot):
+	var dev := _dev(slot)
+	if dev == -2:
 		return (_virtual[slot].move as Vector2).limit_length(1.0)
+	if dev == -1:
+		return Vector2.ZERO
+	slot = dev
 	var v := Vector2.ZERO
 	var pad := pad_for_slot(slot)
 	if pad >= 0:

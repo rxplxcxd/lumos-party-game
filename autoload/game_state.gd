@@ -57,7 +57,7 @@ const MINIGAMES := [
 	{"id": "coin_rain", "name": "Münzregen", "scene": "res://scenes/minigames/CoinRain.tscn", "kind": "score",
 		"desc": "Münzen, Sterne – und Bomben regnen vom Himmel! Schnapp dir die meisten Münzen und schubse Gegner, damit sie welche verlieren.",
 		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
-	{"id": "sumo_shove", "name": "Sumo-Schubser", "scene": "res://scenes/minigames/SumoShove.tscn", "kind": "survival",
+	{"id": "sumo_shove", "name": "Sumo-Schubser", "scene": "res://scenes/minigames/SumoShove.tscn", "kind": "survival", "online": true,
 		"desc": "Die runde Plattform über dem Meer schrumpft! Doppelt starke Schubser – wer zuletzt oben steht, gewinnt.",
 		"controls": "Stick: Laufen · A: Springen · B: Super-Schubser"},
 	{"id": "snowball_fight", "name": "Schneeball-Schlacht", "scene": "res://scenes/minigames/SnowballFight.tscn", "kind": "score",
@@ -146,7 +146,7 @@ func reset_players(human_count := 1) -> void:
 func new_player(idx: int, hero_id: String, cpu: bool, cpu_level: int) -> Dictionary:
 	return {
 		"idx": idx, "hero": hero_id, "name": hero(hero_id).name, "color": SLOT_COLORS[idx],
-		"cpu": cpu, "cpu_level": cpu_level, "device": idx,
+		"cpu": cpu, "cpu_level": cpu_level, "device": idx, "remote": false,
 		"coins": 10, "stars": 0, "space": -1, "items": [], "minigame_wins": 0, "coins_max": 10,
 		"swaps": 0, "last_roll": 0,
 	}

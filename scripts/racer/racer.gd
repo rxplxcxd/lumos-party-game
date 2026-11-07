@@ -63,6 +63,12 @@ var _scale := 1.0
 var _was_drift_held := false
 var _prev_boost_on := false
 
+# --- Online: entfernte Karts werden aus Zustands-Snapshots interpoliert ---
+const INTERP_DELAY := 0.1         # Jitter-Puffer (s)
+const MAX_EXTRAPOLATE := 0.25
+var remote := false
+var _snaps: Array[Dictionary] = []
+
 
 func setup(i: int, p_slot: int, kart_key: String, hero_key: String, name_: String, col: Color, rt: RaceTrack) -> Racer:
 	idx = i
@@ -135,7 +141,82 @@ func _read_input(delta: float) -> Dictionary:
 		"item": InputHub.pressed(slot, "x"), "pitch": mv.y}
 
 
+## Kompakter Zustand für das Netz (unzuverlässiger Kanal, 20–30 Hz).
+func net_state() -> Dictionary:
+	return {"k": "rs", "i": idx, "s": snappedf(s, 0.01), "x": snappedf(x, 0.01), "h": snappedf(h, 0.01), "p": snappedf(psi, 0.001),
+		"v": snappedf(v, 0.01), "dd": drift_dir, "dl": drift_level, "b": 1 if boost_t > 0.0 else 0, "g": 1 if gliding else 0,
+		"a": 1 if airborne else 0, "l": lap, "fi": 1 if finished else 0, "ft": snappedf(finish_time, 0.01), "it": item,
+		"sh": 1 if shrink_t > 0.0 else 0}
+
+
+func push_snapshot(d: Dictionary) -> void:
+	d["rt"] = Time.get_ticks_msec() / 1000.0
+	_snaps.append(d)
+	if _snaps.size() > 16:
+		_snaps.pop_front()
+
+
+## Interpolation zwischen zwei Snapshots (100 ms in der Vergangenheit), sonst kurze Extrapolation.
+func _remote_tick(delta: float) -> void:
+	if _snaps.is_empty():
+		_apply_transform(delta)
+		return
+	var now := Time.get_ticks_msec() / 1000.0 - INTERP_DELAY
+	var a: Dictionary = {}
+	var b: Dictionary = {}
+	for i in range(_snaps.size() - 1, -1, -1):
+		if float(_snaps[i].rt) <= now:
+			a = _snaps[i]
+			if i + 1 < _snaps.size():
+				b = _snaps[i + 1]
+			break
+	var last: Dictionary = _snaps[_snaps.size() - 1]
+	if a.is_empty():
+		a = _snaps[0]
+	if b.is_empty():
+		var dt := clampf(now - float(a.rt), 0.0, MAX_EXTRAPOLATE)
+		s = track.wrap_s(float(a.s) + float(a.v) * cos(float(a.p)) * dt)
+		x = float(a.x) + float(a.v) * sin(float(a.p)) * dt
+		h = float(a.h)
+		psi = float(a.p)
+		v = float(a.v)
+	else:
+		var span := maxf(float(b.rt) - float(a.rt), 0.001)
+		var t := clampf((now - float(a.rt)) / span, 0.0, 1.0)
+		var ds := fposmod(float(b.s) - float(a.s) + track.length * 0.5, track.length) - track.length * 0.5
+		s = track.wrap_s(float(a.s) + ds * t)
+		x = lerpf(float(a.x), float(b.x), t)
+		h = lerpf(float(a.h), float(b.h), t)
+		psi = lerp_angle(float(a.p), float(b.p), t)
+		v = lerpf(float(a.v), float(b.v), t)
+	drift_dir = int(last.dd)
+	drift_level = int(last.dl)
+	boost_t = 0.15 if int(last.b) == 1 else 0.0
+	airborne = int(last.a) == 1
+	shrink_t = 0.2 if int(last.get("sh", 0)) == 1 else 0.0
+	if gliding != (int(last.g) == 1):
+		gliding = int(last.g) == 1
+		_glider.visible = gliding
+	item = String(last.it)
+	if int(last.fi) == 1 and not finished:
+		finished = true
+		finish_time = float(last.ft)
+	var nl := int(last.l)
+	if nl > lap:
+		lap = nl
+		lap_done.emit(self, lap)
+	progress = lap * track.length + s
+	_scale = lerpf(_scale, 0.55 if shrink_t > 0.0 else 1.0, clampf(delta * 6.0, 0, 1))
+	visual.scale = Vector3.ONE * _scale
+	if _engine:
+		_engine.pitch_scale = 0.7 + absf(v) / MAX_SPEED * 0.9 + (0.25 if boost_t > 0.0 else 0.0)
+	_apply_transform(delta)
+
+
 func tick(delta: float) -> void:
+	if remote:
+		_remote_tick(delta)
+		return
 	if not started:
 		_apply_transform(delta)
 		return

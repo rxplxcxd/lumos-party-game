@@ -53,7 +53,50 @@ func _ready() -> void:
 		target = "res://scenes/menu/MarathonHub.tscn"
 	if _args.has("laps"):
 		Game.race_cfg.laps = int(_args.laps)
+	if _args.has("net-test"):
+		_net_test()
+		return
 	Router.goto(target, {"page": _args.page} if _args.has("page") else {})
+
+
+## Dev: automatischer Online-Test zweier Instanzen (siehe tools/dev/net_test.sh).
+func _net_test() -> void:
+	var mode: String = _args["net-test"]
+	var code_file: String = _args.get("net-code-file", "/tmp/lumos_net_code")
+	Net.status.connect(func(t: String) -> void: print("[NET] ", t))
+	Net.room_changed.connect(func() -> void: print("[NET] Spieler: %d, Transport: %s" % [Net.players.size(), Net.transport]))
+	var tick := func() -> void:
+		while true:
+			await get_tree().create_timer(5.0, true).timeout
+			print("[NET] empfangen: %s rtt=%d" % [Net.debug_counts, int(Net.rtt_ms)])
+	tick.call()
+	if mode == "host":
+		Net.create_room()
+		while not Net.online:
+			await get_tree().process_frame
+		print("[NET] CODE ", Net.code)
+		var f := FileAccess.open(code_file, FileAccess.WRITE)
+		f.store_string(Net.code)
+		f.close()
+		var need := int(_args.get("net-players", "2"))
+		while Net.players.size() < need:
+			await get_tree().process_frame
+		await get_tree().create_timer(2.0).timeout
+		var game := String(_args.get("net-game", "race"))
+		if game == "race":
+			Net.start_game({"mode": "race", "track": String(_args.get("track", "lumos_ring")), "laps": int(_args.get("laps", "1"))})
+		else:
+			Net.start_game({"mode": "minigame", "id": game})
+	else:
+		var code := ""
+		while code == "":
+			if FileAccess.file_exists(code_file):
+				code = FileAccess.get_file_as_string(code_file).strip_edges()
+			await get_tree().create_timer(0.3).timeout
+		Net.join_room(code)
+		while not Net.online:
+			await get_tree().process_frame
+		Net.set_ready(true)
 
 
 func _parse_args() -> void:

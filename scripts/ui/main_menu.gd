@@ -126,6 +126,10 @@ func show_page(name: String) -> void:
 			p = _page_credits()
 		"touch_edit":
 			p = _page_touch_edit()
+		"profile":
+			p = _page_profile()
+		"online":
+			p = _page_online()
 		_:
 			p = _page_main()
 	p.name = name
@@ -229,28 +233,203 @@ func _page_main() -> Control:
 	var tw := logo.create_tween().set_loops()
 	tw.tween_property(logo, "position:y", 38.0, 1.4).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(logo, "position:y", 30.0, 1.4).set_trans(Tween.TRANS_SINE)
-	var v := UI.vbox(14)
+	var v := UI.vbox(10)
 	root.add_child(v)
-	v.position = Vector2(56, 240)
+	v.position = Vector2(56, 214)
 	var items := [
 		["Lumos Party", Color("#ff4fb8"), "party", "Das chaotische 3D-Brettspiel"],
 		["Nitro Dash", Color("#2f9bff"), "race", "High-Speed Arcade-Racer"],
-		["Minispiel-Arena", Color("#2ecc71"), "minigames", "Alle 10 Minispiele frei spielen"],
+		["Minispiel-Arena", Color("#2ecc71"), "minigames", "Alle Minispiele frei spielen, Marathon"],
+		["Online-Spiel", Color("#00b894"), "online", "Mit bis zu 4 Smartphones über Raumcode spielen"],
 		["Einstellungen", Color("#7b3cff"), "settings", ""],
 		["Credits", Color("#5a4a80"), "credits", ""],
 	]
 	for it in items:
-		var b := UI.button(it[0], it[1], 36, 380.0)
-		b.custom_minimum_size.y = 72
+		var b := UI.button(it[0], it[1], 32, 380.0)
+		b.custom_minimum_size.y = 60
 		b.tooltip_text = it[3]
 		var target: String = it[2]
 		b.pressed.connect(func() -> void: show_page(target))
 		v.add_child(b)
+	# Konto-Knopf oben rechts
+	var acc := UI.button("", Color("#3a2a6a"), 22, 0.0)
+	acc.icon = UI.icon_tex("user", 28)
+	acc.text = ("  " + Account.display_name()) if Account.signed_in() else "  Anmelden"
+	acc.pressed.connect(func() -> void: show_page("profile"))
+	root.add_child(acc)
+	UI.place(acc, Control.PRESET_TOP_RIGHT, Vector2(-300, 24), Vector2(276, 56))
 	var foot := UI.label("v%s · Lumos OS · %s" % [ProjectSettings.get_setting("application/config/version", "1.0"), "Touch, Tastatur & bis zu 4 Gamepads"], 18, Color(1, 1, 1, 0.75))
 	root.add_child(foot)
 	foot.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	foot.position = Vector2(24, -40)
 	return root
+
+
+# --- Profil & Anmeldung -----------------------------------------------------------------------------------
+
+var _need_credentials := false
+
+
+func _page_profile() -> Control:
+	var arr := _side_panel("Profil", 720)
+	var v: VBoxContainer = arr[1]
+	if not Account.changed.is_connected(_on_account_changed):
+		Account.changed.connect(_on_account_changed)
+		Account.bridge_event.connect(func(t: String, _d: Variant) -> void:
+			if t == "lumos_resume_failed" and _page and _page.name == "profile":
+				_need_credentials = true
+				_on_account_changed())
+	if Account.signed_in():
+		_profile_view(v)
+	else:
+		_login_view(v)
+	_back_button(v)
+	return arr[0]
+
+
+func _on_account_changed() -> void:
+	if _page and _page.name == "profile":
+		show_page("profile")
+
+
+func _login_view(v: VBoxContainer) -> void:
+	var lumos := Account.lumos_available
+	var head := UI.label("Lumos-Gerät erkannt – melde dich mit deiner Lumos-ID an." if lumos else "Melde dich an, um Bestzeiten, Freischaltungen und Statistiken geräteübergreifend zu sichern.", 22, Color(1, 1, 1, 0.85))
+	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	head.custom_minimum_size.x = 640
+	v.add_child(head)
+	if Account.busy:
+		v.add_child(UI.label("Anmeldung läuft …", 28, UI.GOLD, true))
+	if lumos and not _need_credentials:
+		var one := UI.button("  Login mit Lumos Cloud", Color("#7b3cff"), 32, 520)
+		one.icon = UI.icon_tex("user", 34)
+		one.custom_minimum_size.y = 72
+		one.pressed.connect(func() -> void: Account.resume_lumos())
+		v.add_child(one)
+		var reg := UI.button("Neue Lumos-ID registrieren", Color("#5a4a80"), 24, 520)
+		reg.pressed.connect(func() -> void:
+			_need_credentials = true
+			show_page("profile"))
+		v.add_child(reg)
+	else:
+		if Account.is_web and not lumos:
+			var g := UI.button("  Mit Google anmelden", Color("#ffffff"), 30, 520)
+			g.add_theme_color_override("font_color", Color("#202124"))
+			g.add_theme_color_override("font_hover_color", Color("#202124"))
+			g.add_theme_color_override("font_focus_color", Color("#202124"))
+			g.icon = UI.icon_tex("globe", 30, Color("#4285f4"))
+			g.custom_minimum_size.y = 66
+			g.pressed.connect(func() -> void: Account.login_google())
+			v.add_child(g)
+			v.add_child(UI.label("oder mit E-Mail und Passwort", 20, Color(1, 1, 1, 0.6)))
+		var email := LineEdit.new()
+		email.placeholder_text = "E-Mail"
+		email.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+		email.custom_minimum_size = Vector2(520, 54)
+		email.add_theme_font_size_override("font_size", 24)
+		v.add_child(email)
+		var pw := LineEdit.new()
+		pw.placeholder_text = "Passwort"
+		pw.secret = true
+		pw.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_PASSWORD
+		pw.custom_minimum_size = Vector2(520, 54)
+		pw.add_theme_font_size_override("font_size", 24)
+		v.add_child(pw)
+		var name_edit := LineEdit.new()
+		name_edit.placeholder_text = "Anzeigename (nur bei Registrierung)"
+		name_edit.custom_minimum_size = Vector2(520, 54)
+		name_edit.add_theme_font_size_override("font_size", 24)
+		name_edit.text = Game.hero(Game.players[0].hero).name
+		v.add_child(name_edit)
+		var row := UI.hbox(12)
+		var login := UI.button("Anmelden", Color("#2ecc71"), 28, 250)
+		var register := UI.button("Registrieren", Color("#2f9bff"), 28, 250)
+		login.pressed.connect(func() -> void:
+			if lumos:
+				Account.login_lumos(email.text.strip_edges(), pw.text)
+			else:
+				Account.login_email(email.text.strip_edges(), pw.text))
+		register.pressed.connect(func() -> void:
+			if lumos:
+				Account.register_lumos(email.text.strip_edges(), pw.text, name_edit.text.strip_edges())
+			else:
+				Account.register_email(email.text.strip_edges(), pw.text, name_edit.text.strip_edges()))
+		pw.text_submitted.connect(func(_t: String) -> void: login.pressed.emit())
+		row.add_child(login)
+		row.add_child(register)
+		v.add_child(row)
+		if not lumos:
+			var forgot := UI.button("Passwort vergessen?", Color("#5a4a80"), 20, 260)
+			forgot.pressed.connect(func() -> void: Account.reset_password(email.text.strip_edges()))
+			v.add_child(forgot)
+		else:
+			v.add_child(UI.label("Lumos Cloud: %s" % Account.lumos_url, 18, Color(1, 1, 1, 0.5)))
+	var guest := UI.button("Als Gast spielen", Color("#5a4a80"), 24, 520)
+	guest.pressed.connect(func() -> void:
+		Account.play_as_guest()
+		show_page("main"))
+	v.add_child(guest)
+
+
+func _profile_view(v: VBoxContainer) -> void:
+	var u: Dictionary = Account.user
+	var head := UI.hbox(14)
+	head.add_child(UI.icon_rect("user", 64, UI.GOLD))
+	var hv := UI.vbox(0)
+	hv.add_child(UI.label(Account.display_name(), 36, Color.WHITE, true))
+	var sub := "%s · %s" % [Account.provider_label(), u.get("email", "")]
+	if u.has("friend_code"):
+		sub += " · Freundescode " + String(u.friend_code)
+	hv.add_child(UI.label(sub, 20, Color(1, 1, 1, 0.7)))
+	head.add_child(hv)
+	v.add_child(head)
+	var st: Dictionary = Account.profile.get("stats", {})
+	var grid := GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 24)
+	var pairs := [["Rennen", "races"], ["Siege", "race_wins"], ["GP-Siege", "gp_wins"], ["Partys", "parties"],
+		["Party-Siege", "party_wins"], ["Minispiele", "minigames"], ["Minispiel-Siege", "minigame_wins"]]
+	for pr in pairs:
+		var cell := UI.vbox(-4)
+		cell.add_child(UI.label(str(int(st.get(pr[1], 0))), 34, UI.GOLD, true))
+		cell.add_child(UI.label(pr[0], 18, Color(1, 1, 1, 0.7)))
+		grid.add_child(cell)
+	v.add_child(grid)
+	v.add_child(UI.label("Bestzeiten (Zeitfahren)", 28, UI.ACCENT2, true))
+	var hs: Dictionary = Account.profile.get("highscores", {})
+	if hs.is_empty():
+		v.add_child(UI.label("Noch keine – probier den Zeitfahr-Modus in Nitro Dash!", 20, Color(1, 1, 1, 0.6)))
+	for t in Game.TRACKS:
+		if hs.has(t.id):
+			var row := UI.hbox(12)
+			var n := UI.label(t.name, 22, Color.WHITE, true)
+			n.custom_minimum_size.x = 320
+			row.add_child(n)
+			var tt := float(hs[t.id])
+			row.add_child(UI.label("%d:%05.2f" % [int(tt) / 60, fmod(tt, 60.0)], 22, UI.GOLD, true))
+			v.add_child(row)
+	v.add_child(UI.label("Freischaltungen", 28, UI.ACCENT2, true))
+	for id in Account.UNLOCKS:
+		var info: Dictionary = Account.UNLOCKS[id]
+		var have := Account.has_unlock(id)
+		var row2 := UI.hbox(10)
+		row2.add_child(UI.icon_rect("check" if have else "lock", 26, Color("#7dff9a") if have else Color(1, 1, 1, 0.45)))
+		var nl := UI.label(info.name, 22, Color.WHITE if have else Color(1, 1, 1, 0.55), true)
+		nl.custom_minimum_size.x = 240
+		row2.add_child(nl)
+		row2.add_child(UI.label(info.desc, 18, Color(1, 1, 1, 0.6)))
+		v.add_child(row2)
+	var out := UI.button("Abmelden", Color("#c0392b"), 24, 260)
+	out.pressed.connect(func() -> void:
+		_need_credentials = false
+		Account.logout())
+	v.add_child(out)
+
+
+# --- Online ----------------------------------------------------------------------------------------------
+
+func _page_online() -> Control:
+	return OnlinePage.new().build(self)
 
 
 # --- Party-Setup ----------------------------------------------------------------------------------------
@@ -373,7 +552,10 @@ func _page_race() -> Control:
 		desc.text = Game.TRACKS[i].desc + _record_text(Game.TRACKS[i].id))
 	var track_row := _row("Strecke", ts)
 	v.add_child(track_row)
-	var cups := Stepper.new().setup(Game.CUPS.map(func(c: Dictionary) -> String: return c.name), int(Game.race_cfg.get("cup", 0)), 380, Color("#2f9bff"))
+	var cup_names: Array = []
+	for ci in Game.CUPS.size():
+		cup_names.append(String(Game.CUPS[ci].name) + ("  (gesperrt)" if ci == 2 and not Account.has_unlock("mega_cup") else ""))
+	var cups := Stepper.new().setup(cup_names, int(Game.race_cfg.get("cup", 0)), 380, Color("#2f9bff"))
 	var cup_row := _row("Cup", cups)
 	v.add_child(cup_row)
 	v.add_child(desc)
@@ -412,6 +594,9 @@ func _page_race() -> Control:
 	start.pressed.connect(func() -> void:
 		_apply_players()
 		if Game.race_cfg.mode == "gp":
+			if int(Game.race_cfg.cup) == 2 and not Account.has_unlock("mega_cup"):
+				Account.toast("Mega-Cup gesperrt – gewinne zuerst den Lumos- oder Sternen-Cup!", Color("#ffcc33"))
+				return
 			Game.start_gp(int(Game.race_cfg.cup))
 		Game.mode = "race"
 		Router.goto("res://scenes/racer/NitroDash.tscn"))

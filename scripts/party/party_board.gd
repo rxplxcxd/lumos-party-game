@@ -1044,6 +1044,7 @@ func _finale() -> void:
 			rigs[i].react("victory")
 			FX.confetti(rigs[i].global_position + Vector3.UP * 2.0, 50)
 		await _wait(1.2)
+	EventBus.party_result.emit(rank)
 	await CutsceneManager.play("Podium", {"board": self, "ranking": rank, "skippable": false})
 	Router.goto("res://scenes/menu/MainMenu.tscn")
 

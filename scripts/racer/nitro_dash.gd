@@ -72,6 +72,8 @@ func _ready() -> void:
 	_build_camera()
 	_build_hud()
 	_setup_views()
+	if Net.online:
+		Net.message.connect(_on_net)
 	Audio.music("race")
 	InputHub.set_touch_profile("none")
 	_flow()
@@ -227,7 +229,10 @@ func _spawn_racers() -> void:
 		racers.append(r)
 	focus = racers[mini(4, racers.size() - 1)]
 	for r in racers:
-		if r.slot >= 0 and not r.is_cpu:
+		if Net.online and not Net.owns_slot(r.slot):
+			r.remote = true
+	for r in racers:
+		if r.slot >= 0 and not r.is_cpu and not r.remote:
 			focus = r
 			break
 
@@ -255,7 +260,7 @@ func _exit_tree() -> void:
 func _humans() -> Array[Racer]:
 	var out: Array[Racer] = []
 	for r in racers:
-		if r.slot >= 0 and (not r.is_cpu or "--split-test" in OS.get_cmdline_user_args()):
+		if r.slot >= 0 and not r.remote and (not r.is_cpu or "--split-test" in OS.get_cmdline_user_args()):
 			out.append(r)
 	out.sort_custom(func(a: Racer, b: Racer) -> bool: return a.slot < b.slot)
 	return out
@@ -413,6 +418,7 @@ func _update_camera(delta: float) -> void:
 func _flow() -> void:
 	await get_tree().process_frame
 	await CutsceneManager.play("RaceIntro", {"race": self})
+	await _net_barrier()
 	InputHub.set_touch_profile("race")
 	_set_views_on(true)
 	state = "countdown"
@@ -445,7 +451,98 @@ func _countdown_watch(early: Dictionary) -> void:
 		await get_tree().process_frame
 
 
+var _net_t := 0.0
+var _net_ready: Dictionary = {}
+var _net_go := false
+
+
+func _net_hit(r: Racer, kind: String, proj := "") -> void:
+	if Net.online and not r.remote:
+		Net.send({"k": "hit", "i": r.idx, "kind": kind, "p": proj}, true)
+
+
+func _on_net(from: String, msg: Dictionary) -> void:
+	var k := String(msg.get("k", ""))
+	var i := int(msg.get("i", -1))
+	var r: Racer = racers[i] if i >= 0 and i < racers.size() else null
+	match k:
+		"rsb":
+			for st in msg.get("l", []):
+				if st is Dictionary:
+					var ri := int((st as Dictionary).get("i", -1))
+					if ri >= 0 and ri < racers.size() and racers[ri].remote:
+						racers[ri].push_snapshot(st as Dictionary)
+		"rs":
+			if r and r.remote:
+				r.push_snapshot(msg)
+		"item":
+			if r and r.remote:
+				use_item(r, String(msg.get("kind", "")), true)
+		"hit":
+			if r and r.remote:
+				r.hit(String(msg.get("kind", "spin")))
+				# passendes Geschoss in der Nähe entfernen
+				var proj := String(msg.get("p", ""))
+				for p in projectiles.duplicate():
+					if (proj == "" or p.kind == proj) and absf(track.wrap_s(r.s - float(p.s) + track.length * 0.5) - track.length * 0.5) < 8.0:
+						FX.smoke((p.node as Node3D).global_position, Color(1, 1, 1), 6, 0.6)
+						(p.node as Node3D).queue_free()
+						projectiles.erase(p)
+						break
+		"ready":
+			_net_ready[from] = true
+		"go":
+			_net_go = true
+		"left":
+			for o in racers:
+				if o.remote and o.slot >= 0 and not o.is_cpu and not o.finished and _slot_of_peer(from) == o.slot:
+					o.finished = true
+					o.finish_time = race_time + 999.0
+					_message("%s hat das Spiel verlassen" % o.display_name, Color(1, 1, 1, 0.8))
+
+
+func _slot_of_peer(id: String) -> int:
+	return int((Net.game_cfg.get("slots", {}) as Dictionary).get(id, -1))
+
+
+## Online: alle Geräte starten den Countdown gleichzeitig (Host gibt das Signal).
+func _net_barrier() -> void:
+	if not Net.online:
+		return
+	_message("Warte auf Mitspieler …", Color(1, 1, 1, 0.9), 2.0)
+	if Net.is_host:
+		var waited := 0.0
+		while waited < 12.0:
+			var all := true
+			for id in Net.players:
+				if id != Net.me and not _net_ready.has(id):
+					all = false
+			if all:
+				break
+			await get_tree().process_frame
+			waited += get_process_delta_time()
+		Net.send({"k": "go"}, true)
+	else:
+		Net.send({"k": "ready"}, true, false)
+		var w2 := 0.0
+		while not _net_go and w2 < 15.0:
+			await get_tree().process_frame
+			w2 += get_process_delta_time()
+	if "--net-test" in str(OS.get_cmdline_user_args()):
+		print("[NET] Start-Countdown um %.2f s (Host=%s)" % [Time.get_ticks_msec() / 1000.0, Net.is_host])
+
+
 func _physics_process(delta: float) -> void:
+	if Net.online and state != "intro":
+		_net_t += delta
+		if _net_t >= 1.0 / Net.state_rate():
+			_net_t = 0.0
+			var batch: Array = []
+			for r in racers:
+				if not r.remote:
+					batch.append(r.net_state())
+			if not batch.is_empty():
+				Net.send({"k": "rsb", "l": batch}, false)
 	if state == "intro":
 		for r in racers:
 			r.tick(delta)
@@ -491,7 +588,7 @@ func _process(delta: float) -> void:
 
 
 func _rubber_band(r: Racer) -> void:
-	if not r.is_cpu:
+	if not r.is_cpu or r.remote:
 		r.speed_mult = 1.0
 		return
 	var base: float = [0.9, 0.97, 1.02][r.cpu_level]
@@ -598,6 +695,18 @@ func _end_race() -> void:
 	var entries: Array = []
 	for r in order:
 		entries.append({"model": r.visual.hero.model_key, "name": r.display_name, "color": r.color, "player": r.slot})
+	if _mode() != "time":
+		for r in racers:
+			if r.slot >= 0 and not r.is_cpu:
+				EventBus.race_result.emit(r.slot, r.place)
+	if Net.online:
+		if "--net-test" in str(OS.get_cmdline_user_args()):
+			print("[NET] Rennende %.2f s · empfangen %s · Reihenfolge %s" % [Time.get_ticks_msec() / 1000.0, Net.debug_counts,
+				order.map(func(r: Racer) -> String: return "%s%s" % [r.display_name, "(remote)" if r.remote else ""])])
+		await _results(order)
+		Net.back_to_lobby()
+		Router.goto("res://scenes/menu/MainMenu.tscn", {"page": "online"})
+		return
 	match _mode():
 		"time":
 			await _time_trial_results()
@@ -739,6 +848,10 @@ func _gp_standings(order: Array) -> void:
 			break
 	layer.queue_free()
 	if last_race:
+		for k in names.size():
+			var sl: int = int(gp.slots.get(names[k], -1))
+			if sl >= 0 and not Game.players[sl].cpu:
+				EventBus.gp_result.emit(sl, k + 1, String(gp.cup))
 		var entries: Array = []
 		for nm in names:
 			entries.append({"model": gp.models[nm], "name": nm, "color": gp.colors[nm], "player": int(gp.slots[nm])})
@@ -792,7 +905,7 @@ func _update_boxes(delta: float) -> void:
 				b.respawn = 3.0
 				FX.stars(n.global_position, Color(1, 0.8, 1.0), 10)
 				Audio.sfx("glass", n.global_position, -6.0 if not r.is_cpu else -14.0)
-				if r.item == "" and r.rolling <= 0.0:
+				if r.item == "" and r.rolling <= 0.0 and not r.remote:
 					r.item = _roll_item(r.place)
 					r.rolling = 1.0
 					if r == focus:
@@ -820,8 +933,10 @@ func ai_wants_item(r: Racer) -> bool:
 	return false
 
 
-func use_item(r: Racer, kind: String) -> void:
+func use_item(r: Racer, kind: String, from_net := false) -> void:
 	var pos := r.global_position
+	if Net.online and not from_net and not r.remote:
+		Net.send({"k": "item", "i": r.idx, "kind": kind}, true)
 	match kind:
 		"nitro":
 			r._boost(1.6, false)
@@ -834,8 +949,10 @@ func use_item(r: Racer, kind: String) -> void:
 			if r == focus:
 				Juice.shake(0.35)
 			for o in racers:
-				if o != r and o.global_position.distance_to(pos) < 18.0:
-					if o.hit("shrink" if randf() < 0.5 else "spin"):
+				if o != r and not o.remote and o.global_position.distance_to(pos) < 18.0:
+					var mk := "shrink" if randf() < 0.5 else "spin"
+					if o.hit(mk):
+						_net_hit(o, mk)
 						_maybe_closeup(o, r)
 		"pie":
 			_spawn_projectile(r, "pie", maxf(r.v + 22.0, 42.0), sin(r.psi) * 22.0, 0.8)
@@ -974,11 +1091,14 @@ func _update_projectiles(delta: float) -> void:
 				continue
 			if p.kind != "pie" and target and r != target:
 				continue
+			if r.remote:
+				continue   # Treffer auf fremde Karts meldet deren Besitzer (Opfer-Autorität)
 			var ds := track.wrap_s(r.s - float(p.s) + track.length * 0.5) - track.length * 0.5
 			if absf(ds) < 2.4 and absf(r.x - float(p.x)) < 2.0 and absf(r.h - float(p.h) + 0.8) < 2.4:
 				var kind: String = {"pie": "spin", "homing": "blast", "anchor": "anchor"}.get(p.kind, "spin")
 				if r.hit(kind):
 					_impact(r, p)
+					_net_hit(r, kind, String(p.kind))
 				done = true
 				break
 		if done:

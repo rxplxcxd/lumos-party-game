@@ -6,6 +6,8 @@ extends CharacterBody3D
 
 signal fell(avatar: PartyAvatar, hazard: String)
 signal shoved(by: PartyAvatar, victim: PartyAvatar)
+## Online: Schubser auf eine Figur, die ein anderes Gerät steuert (deren Besitzer wendet ihn an).
+signal shove_remote(victim: PartyAvatar, dir: Vector3, power: float)
 
 const LAYER_WORLD := 1
 const LAYER_AVATAR := 2
@@ -27,6 +29,7 @@ var alive := true
 var kill_y := -8.0
 var hazard := "lava"
 var shove_power := 11.0
+var net_remote := false
 
 var _stun_until := 0
 var _shove_cd := 0.0
@@ -169,7 +172,11 @@ func _do_shove() -> void:
 			var d := o.global_position - global_position
 			d.y = 0
 			if d.length() < 1.9 and fwd.dot(d.normalized()) > 0.3:
-				o.apply_knockback(d.normalized(), shove_power, 0.5, 4.5)
+				if o.net_remote:
+					shove_remote.emit(o, d.normalized(), shove_power)
+					o.rig.react("hit")
+				else:
+					o.apply_knockback(d.normalized(), shove_power, 0.5, 4.5)
 				FX.stars(o.global_position + Vector3.UP * 1.5, Color(1, 0.95, 0.4), 6)
 				Audio.sfx("punch", o.global_position)
 				Juice.hitstop(0.05)
