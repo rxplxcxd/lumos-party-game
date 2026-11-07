@@ -2,7 +2,7 @@
 
 Automatisch erzeugt von `tools/asset_pipeline.py`. Nicht von Hand bearbeiten.
 
-* Pakete gesamt: **67**, davon im Spiel verwendet: **40**
+* Pakete gesamt: **67**, davon im Spiel verwendet: **45**
 * Runtime-Modelle (glTF/GLB): **5163**
 * Audio-Dateien: **698**
 * Defekte/unvollständige Modelle: **0**
@@ -28,7 +28,7 @@ die Dateien, die der Code tatsächlich lädt (`tools/gen_export_list.py`).
 | `3d/minigames-and-others/KayKit_Holiday_Bits_1.0_FREE` | ✅ | Konfetti-/Geschenk-Deko, Schneeball-Kanone | 24.84 MB | 98 | 0 |
 | `3d/minigames-and-others/KayKit_RPGToolsBits_1.0_FREE` | ✅ | Amboss für den Podest-Gag, Werkzeuge | 7.14 MB | 49 | 0 |
 | `3d/minigames-and-others/KayKit_ResourceBits_1.0_FREE` | – | Reserve (nicht importiert, für künftige Inhalte) | 17.62 MB | 76 | 0 |
-| `3d/minigames-and-others/KayKit_Space_Base_Bits_1.0_FREE` | – | Reserve (nicht importiert, für künftige Inhalte) | 10.1 MB | 57 | 0 |
+| `3d/minigames-and-others/KayKit_Space_Base_Bits_1.0_FREE` | ✅ | Raumstation-Brett & Orbit-Strecke (Module, Landeplätze, Windräder) | 10.1 MB | 57 | 0 |
 | `3d/minigames-and-others/kenney_blaster-kit_2.1` | – | Reserve (nicht importiert, für künftige Inhalte) | 4.51 MB | 40 | 0 |
 | `3d/minigames-and-others/kenney_brick-kit` | – | Reserve (nicht importiert, für künftige Inhalte) | 15.17 MB | 296 | 0 |
 | `3d/minigames-and-others/kenney_castle-kit` | ✅ | Sky-Kingdom-Burg, Türme, Brücken | 6.89 MB | 76 | 0 |
@@ -36,10 +36,10 @@ die Dateien, die der Code tatsächlich lädt (`tools/gen_export_list.py`).
 | `3d/minigames-and-others/kenney_crosshair-pack` | ✅ | Zielmarker der Homing-Kanonenkugel | 3.18 MB | 0 | 0 |
 | `3d/minigames-and-others/kenney_graveyard-kit_5.0` | ✅ | Geister-Schloss (Geister, Skelette, Gruften, Zäune) | 12.63 MB | 91 | 0 |
 | `3d/minigames-and-others/kenney_input-prompts-pixel-1-bit` | – | Reserve (nicht importiert, für künftige Inhalte) | 0.31 MB | 0 | 0 |
-| `3d/minigames-and-others/kenney_input-prompts_1.5` | ✅ | Button-Glyphen (Switch/Xbox/Tastatur/Touch) | 6.49 MB | 0 | 0 |
+| `3d/minigames-and-others/kenney_input-prompts_1.5` | ✅ | Button-Glyphen (Switch/Xbox/Tastatur/Touch) | 6.64 MB | 0 | 0 |
 | `3d/minigames-and-others/kenney_marble-kit` | – | Reserve (nicht importiert, für künftige Inhalte) | 12.86 MB | 162 | 0 |
 | `3d/minigames-and-others/kenney_medals` | ✅ | Medaillen in der Siegerehrung | 0.18 MB | 0 | 0 |
-| `3d/minigames-and-others/kenney_minigolf-kit` | – | Reserve (nicht importiert, für künftige Inhalte) | 8.34 MB | 126 | 0 |
+| `3d/minigames-and-others/kenney_minigolf-kit` | ✅ | Minigolf-Duell (Bahnen, Bälle, Löcher, Fahnen) | 8.34 MB | 126 | 0 |
 | `3d/minigames-and-others/kenney_modular-cave-kit_1.0` | ✅ | Vulkan-/Höhlen-Kulissen | 17.36 MB | 40 | 0 |
 | `3d/minigames-and-others/kenney_modular-dungeon-kit_1.0` | – | Reserve (nicht importiert, für künftige Inhalte) | 19.46 MB | 39 | 0 |
 | `3d/minigames-and-others/kenney_modular-space-kit_1.0` | – | Reserve (nicht importiert, für künftige Inhalte) | 20.83 MB | 40 | 0 |
@@ -52,13 +52,13 @@ die Dateien, die der Code tatsächlich lädt (`tools/gen_export_list.py`).
 | `3d/tracks-enviroment/KayKit_City_Builder_Bits_1.0_FREE` | – | Reserve (nicht importiert, für künftige Inhalte) | 9.14 MB | 41 | 0 |
 | `3d/tracks-enviroment/kenney_3d-road-tiles` | – | Reserve (nicht importiert, für künftige Inhalte) | 6.8 MB | 302 | 0 |
 | `3d/tracks-enviroment/kenney_building-kit` | – | Reserve (nicht importiert, für künftige Inhalte) | 4.5 MB | 79 | 0 |
-| `3d/tracks-enviroment/kenney_city-kit-commercial_2.1` | – | Reserve (nicht importiert, für künftige Inhalte) | 11.07 MB | 41 | 0 |
+| `3d/tracks-enviroment/kenney_city-kit-commercial_2.1` | ✅ | Stadt-Rallye-Strecke (Hochhäuser, Markisen) | 11.07 MB | 41 | 0 |
 | `3d/tracks-enviroment/kenney_city-kit-industrial_2.0` | – | Reserve (nicht importiert, für künftige Inhalte) | 10.95 MB | 37 | 0 |
 | `3d/tracks-enviroment/kenney_city-kit-roads` | – | Reserve (nicht importiert, für künftige Inhalte) | 6.96 MB | 95 | 0 |
-| `3d/tracks-enviroment/kenney_city-kit-suburban_20` | – | Reserve (nicht importiert, für künftige Inhalte) | 7.98 MB | 40 | 0 |
+| `3d/tracks-enviroment/kenney_city-kit-suburban_20` | ✅ | Stadt-Rallye-Strecke (Vorstadthäuser, Zäune, Bäume) | 7.98 MB | 40 | 0 |
 | `3d/tracks-enviroment/kenney_factory-kit_3.0` | – | Reserve (nicht importiert, für künftige Inhalte) | 12.09 MB | 143 | 0 |
 | `3d/tracks-enviroment/kenney_fantasy-town-kit_2.0` | ✅ | Häuser & Mauern im Sky Kingdom | 10.78 MB | 167 | 0 |
-| `3d/tracks-enviroment/kenney_holiday-kit` | ✅ | Lichterketten/Laternen als Neon-Deko | 10.64 MB | 99 | 0 |
+| `3d/tracks-enviroment/kenney_holiday-kit` | ✅ | Frostdorf-Brett & Frostgipfel-Strecke (Hütten, Schneemänner, Rentiere), Schneeball-Schlacht | 10.64 MB | 99 | 0 |
 | `3d/tracks-enviroment/kenney_mini-arcade` | ✅ | Glücksrad (prize-wheel) für die Glücksrad-Kiste | 4.33 MB | 20 | 0 |
 | `3d/tracks-enviroment/kenney_mini-arena` | ✅ | Pokal & Arena-Bauteile fürs Podest | 2.23 MB | 22 | 0 |
 | `3d/tracks-enviroment/kenney_mini-forest_1.0` | – | Reserve (nicht importiert, für künftige Inhalte) | 3.24 MB | 22 | 0 |
@@ -67,7 +67,7 @@ die Dateien, die der Code tatsächlich lädt (`tools/gen_export_list.py`).
 | `3d/tracks-enviroment/kenney_pirate-kit` | ✅ | Pirates-Cove-Brett, Planken-Feld, Kanonen, Fässer-Chaos, Plank-Panic | 9.34 MB | 72 | 0 |
 | `3d/tracks-enviroment/kenney_racing-kit` | ✅ | Nitro-Dash-Streckendeko (Tribünen, Banner, Zielbogen) | 18.41 MB | 112 | 0 |
 | `3d/tracks-enviroment/kenney_space-kit` | ✅ | Neon-Vulkan-Strecke (Krater, Raketen, Kristalle) | 18.86 MB | 153 | 0 |
-| `3d/tracks-enviroment/kenney_space-station-kit` | – | Reserve (nicht importiert, für künftige Inhalte) | 5.23 MB | 97 | 0 |
+| `3d/tracks-enviroment/kenney_space-station-kit` | ✅ | Raumstation-Brett (Böden, Geländer, Konsolen) | 5.23 MB | 97 | 0 |
 | `3d/vehicles/kenney_car-kit` | ✅ | Karts (kart-oobi … kart-oozi) für Nitro Dash und Kart-Bowling | 14.42 MB | 50 | 0 |
 | `3d/vehicles/kenney_toy-car-kit` | ✅ | Item-Boxen, Rampen | 14.42 MB | 157 | 0 |
 | `3d/vehicles/kenney_watercraft-pack` | ✅ | Boote/Bojen in Pirates Cove und im Unterwasser-Tunnel | 5.86 MB | 46 | 0 |
@@ -233,7 +233,7 @@ die Dateien, die der Code tatsächlich lädt (`tools/gen_export_list.py`).
 * `.fbx`: 5778
 * `.mtl`: 5082
 * `.obj`: 5081
-* `.import`: 4363
+* `.import`: 4501
 * `.glb`: 3934
 * `.svg`: 2197
 * `.gltf`: 1229
@@ -242,7 +242,7 @@ die Dateien, die der Code tatsächlich lädt (`tools/gen_export_list.py`).
 * `.ogg`: 698
 * `.stl`: 265
 * `.url`: 180
-* `(ohne)`: 172
+* `(ohne)`: 174
 * `.txt`: 106
 * `.html`: 34
 * `.xml`: 34

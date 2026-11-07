@@ -14,6 +14,7 @@ var _wheel: Node3D
 
 var _party_board := 0
 var _party_rounds := 0
+var _party_mode := 0
 var _hero_steppers: Array[Stepper] = []
 var _cpu_steppers: Array[Stepper] = []
 
@@ -29,7 +30,6 @@ func _ready() -> void:
 	_ui.mouse_filter = Control.MOUSE_FILTER_PASS
 	Audio.music("menu")
 	InputHub.set_touch_profile("menu")
-	_apply_quality()
 	var p: String = Router.params.get("page", start_page)
 	Router.params = {}
 	show_page(p)
@@ -38,7 +38,8 @@ func _ready() -> void:
 # --- 3D-Diorama -------------------------------------------------------------------------------
 
 func _build_diorama() -> void:
-	WorldKit.env(self, "day")
+	var we := WorldKit.env(self, "day")
+	WorldKit.god_rays(self, Vector3(-2, 0, -2), 9.0, we.get_meta("sun"), 6, Color(1.0, 0.92, 0.7), 0.2)
 	WorldKit.water(self, Vector2(260, 260), -0.6)
 	# Insel
 	WorldKit.cylinder(self, 9.0, 1.2, Vector3(0, -0.6, 0), Color("#f1d9a0"), false)
@@ -102,21 +103,15 @@ func _update_cam(_d: float) -> void:
 	_cam.look_at(Vector3(-offset_x * 0.6, 1.6, 0), Vector3.UP)
 
 
-func _apply_quality() -> void:
-	var q: String = Game.settings.quality
-	var low := q == "low" or (q == "auto" and (Game.is_touch_device or OS.has_feature("mobile")))
-	get_viewport().scaling_3d_scale = 0.75 if low else 1.0
-	get_viewport().msaa_3d = Viewport.MSAA_DISABLED if low else Viewport.MSAA_2X
-
-
 # --- Seitensystem -------------------------------------------------------------------------------
 
 func show_page(name: String) -> void:
 	if _page:
 		var old := _page
-		var tw := old.create_tween()
-		tw.tween_property(old, "modulate:a", 0.0, 0.15)
-		tw.tween_callback(old.queue_free)
+		var otw := old.create_tween().set_parallel(true)
+		otw.tween_property(old, "modulate:a", 0.0, 0.16)
+		otw.tween_property(old, "position:x", -50.0, 0.16).set_ease(Tween.EASE_IN)
+		otw.chain().tween_callback(old.queue_free)
 	var p: Control
 	match name:
 		"party":
@@ -131,17 +126,40 @@ func show_page(name: String) -> void:
 			p = _page_credits()
 		"touch_edit":
 			p = _page_touch_edit()
+		"profile":
+			p = _page_profile()
+		"online":
+			p = _page_online()
 		_:
 			p = _page_main()
 	p.name = name
 	_ui.add_child(p)
 	_page = p
 	p.modulate.a = 0.0
-	p.create_tween().tween_property(p, "modulate:a", 1.0, 0.2)
+	p.position.x = -70.0
+	var tw := p.create_tween().set_parallel(true)
+	tw.tween_property(p, "modulate:a", 1.0, 0.25)
+	tw.tween_property(p, "position:x", 0.0, 0.38).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	var k := 0
+	for b in _all_buttons(p):
+		b.modulate.a = 0.0
+		var bt := b.create_tween()
+		bt.tween_interval(0.04 * k)
+		bt.tween_property(b, "modulate:a", 1.0, 0.2)
+		k += 1
 	await get_tree().process_frame
 	var first := _first_focus(p)
 	if first:
 		first.grab_focus()
+
+
+func _all_buttons(n: Node) -> Array[Button]:
+	var out: Array[Button] = []
+	for c in n.get_children():
+		if c is Button:
+			out.append(c)
+		out.append_array(_all_buttons(c))
+	return out
 
 
 func _first_focus(n: Node) -> Control:
@@ -180,6 +198,7 @@ func _side_panel(title: String, width := 640.0) -> Array:
 	panel.offset_right = 28 + width
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
 	panel.add_child(scroll)
 	var v := UI.vbox(14)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -214,28 +233,203 @@ func _page_main() -> Control:
 	var tw := logo.create_tween().set_loops()
 	tw.tween_property(logo, "position:y", 38.0, 1.4).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(logo, "position:y", 30.0, 1.4).set_trans(Tween.TRANS_SINE)
-	var v := UI.vbox(14)
+	var v := UI.vbox(10)
 	root.add_child(v)
-	v.position = Vector2(56, 240)
+	v.position = Vector2(56, 214)
 	var items := [
 		["Lumos Party", Color("#ff4fb8"), "party", "Das chaotische 3D-Brettspiel"],
 		["Nitro Dash", Color("#2f9bff"), "race", "High-Speed Arcade-Racer"],
-		["Minispiel-Arena", Color("#2ecc71"), "minigames", "Alle 10 Minispiele frei spielen"],
+		["Minispiel-Arena", Color("#2ecc71"), "minigames", "Alle Minispiele frei spielen, Marathon"],
+		["Online-Spiel", Color("#00b894"), "online", "Mit bis zu 4 Smartphones über Raumcode spielen"],
 		["Einstellungen", Color("#7b3cff"), "settings", ""],
 		["Credits", Color("#5a4a80"), "credits", ""],
 	]
 	for it in items:
-		var b := UI.button(it[0], it[1], 36, 380.0)
-		b.custom_minimum_size.y = 72
+		var b := UI.button(it[0], it[1], 32, 380.0)
+		b.custom_minimum_size.y = 60
 		b.tooltip_text = it[3]
 		var target: String = it[2]
 		b.pressed.connect(func() -> void: show_page(target))
 		v.add_child(b)
+	# Konto-Knopf oben rechts
+	var acc := UI.button("", Color("#3a2a6a"), 22, 0.0)
+	acc.icon = UI.icon_tex("user", 28)
+	acc.text = ("  " + Account.display_name()) if Account.signed_in() else "  Anmelden"
+	acc.pressed.connect(func() -> void: show_page("profile"))
+	root.add_child(acc)
+	UI.place(acc, Control.PRESET_TOP_RIGHT, Vector2(-300, 24), Vector2(276, 56))
 	var foot := UI.label("v%s · Lumos OS · %s" % [ProjectSettings.get_setting("application/config/version", "1.0"), "Touch, Tastatur & bis zu 4 Gamepads"], 18, Color(1, 1, 1, 0.75))
 	root.add_child(foot)
 	foot.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	foot.position = Vector2(24, -40)
 	return root
+
+
+# --- Profil & Anmeldung -----------------------------------------------------------------------------------
+
+var _need_credentials := false
+
+
+func _page_profile() -> Control:
+	var arr := _side_panel("Profil", 720)
+	var v: VBoxContainer = arr[1]
+	if not Account.changed.is_connected(_on_account_changed):
+		Account.changed.connect(_on_account_changed)
+		Account.bridge_event.connect(func(t: String, _d: Variant) -> void:
+			if t == "lumos_resume_failed" and _page and _page.name == "profile":
+				_need_credentials = true
+				_on_account_changed())
+	if Account.signed_in():
+		_profile_view(v)
+	else:
+		_login_view(v)
+	_back_button(v)
+	return arr[0]
+
+
+func _on_account_changed() -> void:
+	if _page and _page.name == "profile":
+		show_page("profile")
+
+
+func _login_view(v: VBoxContainer) -> void:
+	var lumos := Account.lumos_available
+	var head := UI.label("Lumos-Gerät erkannt – melde dich mit deiner Lumos-ID an." if lumos else "Melde dich an, um Bestzeiten, Freischaltungen und Statistiken geräteübergreifend zu sichern.", 22, Color(1, 1, 1, 0.85))
+	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	head.custom_minimum_size.x = 640
+	v.add_child(head)
+	if Account.busy:
+		v.add_child(UI.label("Anmeldung läuft …", 28, UI.GOLD, true))
+	if lumos and not _need_credentials:
+		var one := UI.button("  Login mit Lumos Cloud", Color("#7b3cff"), 32, 520)
+		one.icon = UI.icon_tex("user", 34)
+		one.custom_minimum_size.y = 72
+		one.pressed.connect(func() -> void: Account.resume_lumos())
+		v.add_child(one)
+		var reg := UI.button("Neue Lumos-ID registrieren", Color("#5a4a80"), 24, 520)
+		reg.pressed.connect(func() -> void:
+			_need_credentials = true
+			show_page("profile"))
+		v.add_child(reg)
+	else:
+		if Account.is_web and not lumos:
+			var g := UI.button("  Mit Google anmelden", Color("#ffffff"), 30, 520)
+			g.add_theme_color_override("font_color", Color("#202124"))
+			g.add_theme_color_override("font_hover_color", Color("#202124"))
+			g.add_theme_color_override("font_focus_color", Color("#202124"))
+			g.icon = UI.icon_tex("globe", 30, Color("#4285f4"))
+			g.custom_minimum_size.y = 66
+			g.pressed.connect(func() -> void: Account.login_google())
+			v.add_child(g)
+			v.add_child(UI.label("oder mit E-Mail und Passwort", 20, Color(1, 1, 1, 0.6)))
+		var email := LineEdit.new()
+		email.placeholder_text = "E-Mail"
+		email.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+		email.custom_minimum_size = Vector2(520, 54)
+		email.add_theme_font_size_override("font_size", 24)
+		v.add_child(email)
+		var pw := LineEdit.new()
+		pw.placeholder_text = "Passwort"
+		pw.secret = true
+		pw.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_PASSWORD
+		pw.custom_minimum_size = Vector2(520, 54)
+		pw.add_theme_font_size_override("font_size", 24)
+		v.add_child(pw)
+		var name_edit := LineEdit.new()
+		name_edit.placeholder_text = "Anzeigename (nur bei Registrierung)"
+		name_edit.custom_minimum_size = Vector2(520, 54)
+		name_edit.add_theme_font_size_override("font_size", 24)
+		name_edit.text = Game.hero(Game.players[0].hero).name
+		v.add_child(name_edit)
+		var row := UI.hbox(12)
+		var login := UI.button("Anmelden", Color("#2ecc71"), 28, 250)
+		var register := UI.button("Registrieren", Color("#2f9bff"), 28, 250)
+		login.pressed.connect(func() -> void:
+			if lumos:
+				Account.login_lumos(email.text.strip_edges(), pw.text)
+			else:
+				Account.login_email(email.text.strip_edges(), pw.text))
+		register.pressed.connect(func() -> void:
+			if lumos:
+				Account.register_lumos(email.text.strip_edges(), pw.text, name_edit.text.strip_edges())
+			else:
+				Account.register_email(email.text.strip_edges(), pw.text, name_edit.text.strip_edges()))
+		pw.text_submitted.connect(func(_t: String) -> void: login.pressed.emit())
+		row.add_child(login)
+		row.add_child(register)
+		v.add_child(row)
+		if not lumos:
+			var forgot := UI.button("Passwort vergessen?", Color("#5a4a80"), 20, 260)
+			forgot.pressed.connect(func() -> void: Account.reset_password(email.text.strip_edges()))
+			v.add_child(forgot)
+		else:
+			v.add_child(UI.label("Lumos Cloud: %s" % Account.lumos_url, 18, Color(1, 1, 1, 0.5)))
+	var guest := UI.button("Als Gast spielen", Color("#5a4a80"), 24, 520)
+	guest.pressed.connect(func() -> void:
+		Account.play_as_guest()
+		show_page("main"))
+	v.add_child(guest)
+
+
+func _profile_view(v: VBoxContainer) -> void:
+	var u: Dictionary = Account.user
+	var head := UI.hbox(14)
+	head.add_child(UI.icon_rect("user", 64, UI.GOLD))
+	var hv := UI.vbox(0)
+	hv.add_child(UI.label(Account.display_name(), 36, Color.WHITE, true))
+	var sub := "%s · %s" % [Account.provider_label(), u.get("email", "")]
+	if u.has("friend_code"):
+		sub += " · Freundescode " + String(u.friend_code)
+	hv.add_child(UI.label(sub, 20, Color(1, 1, 1, 0.7)))
+	head.add_child(hv)
+	v.add_child(head)
+	var st: Dictionary = Account.profile.get("stats", {})
+	var grid := GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 24)
+	var pairs := [["Rennen", "races"], ["Siege", "race_wins"], ["GP-Siege", "gp_wins"], ["Partys", "parties"],
+		["Party-Siege", "party_wins"], ["Minispiele", "minigames"], ["Minispiel-Siege", "minigame_wins"]]
+	for pr in pairs:
+		var cell := UI.vbox(-4)
+		cell.add_child(UI.label(str(int(st.get(pr[1], 0))), 34, UI.GOLD, true))
+		cell.add_child(UI.label(pr[0], 18, Color(1, 1, 1, 0.7)))
+		grid.add_child(cell)
+	v.add_child(grid)
+	v.add_child(UI.label("Bestzeiten (Zeitfahren)", 28, UI.ACCENT2, true))
+	var hs: Dictionary = Account.profile.get("highscores", {})
+	if hs.is_empty():
+		v.add_child(UI.label("Noch keine – probier den Zeitfahr-Modus in Nitro Dash!", 20, Color(1, 1, 1, 0.6)))
+	for t in Game.TRACKS:
+		if hs.has(t.id):
+			var row := UI.hbox(12)
+			var n := UI.label(t.name, 22, Color.WHITE, true)
+			n.custom_minimum_size.x = 320
+			row.add_child(n)
+			var tt := float(hs[t.id])
+			row.add_child(UI.label("%d:%05.2f" % [int(tt) / 60, fmod(tt, 60.0)], 22, UI.GOLD, true))
+			v.add_child(row)
+	v.add_child(UI.label("Freischaltungen", 28, UI.ACCENT2, true))
+	for id in Account.UNLOCKS:
+		var info: Dictionary = Account.UNLOCKS[id]
+		var have := Account.has_unlock(id)
+		var row2 := UI.hbox(10)
+		row2.add_child(UI.icon_rect("check" if have else "lock", 26, Color("#7dff9a") if have else Color(1, 1, 1, 0.45)))
+		var nl := UI.label(info.name, 22, Color.WHITE if have else Color(1, 1, 1, 0.55), true)
+		nl.custom_minimum_size.x = 240
+		row2.add_child(nl)
+		row2.add_child(UI.label(info.desc, 18, Color(1, 1, 1, 0.6)))
+		v.add_child(row2)
+	var out := UI.button("Abmelden", Color("#c0392b"), 24, 260)
+	out.pressed.connect(func() -> void:
+		_need_credentials = false
+		Account.logout())
+	v.add_child(out)
+
+
+# --- Online ----------------------------------------------------------------------------------------------
+
+func _page_online() -> Control:
+	return OnlinePage.new().build(self)
 
 
 # --- Party-Setup ----------------------------------------------------------------------------------------
@@ -253,6 +447,15 @@ func _page_party() -> Control:
 		board_desc.text = Game.BOARDS[i].desc)
 	v.add_child(_row("Spielbrett", bs))
 	v.add_child(board_desc)
+	var mode_desc := UI.label(Game.PARTY_MODES[_party_mode].desc, 20, Color(1, 1, 1, 0.75))
+	mode_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	mode_desc.custom_minimum_size = Vector2(620, 44)
+	var ms := Stepper.new().setup(Game.PARTY_MODES.map(func(m: Dictionary) -> String: return m.name), _party_mode, 340, Color("#ff4fb8"))
+	ms.changed.connect(func(i: int) -> void:
+		_party_mode = i
+		mode_desc.text = Game.PARTY_MODES[i].desc)
+	v.add_child(_row("Modus", ms))
+	v.add_child(mode_desc)
 	var rs := Stepper.new().setup(["5 Runden", "10 Runden", "15 Runden"], _party_rounds, 220, Color("#ff4fb8"))
 	rs.changed.connect(func(i: int) -> void: _party_rounds = i)
 	v.add_child(_row("Länge", rs))
@@ -321,7 +524,7 @@ func _row(title: String, ctrl: Control) -> Control:
 
 func _start_party() -> void:
 	_apply_players()
-	Game.start_party(Game.BOARDS[_party_board].id, [5, 10, 15][_party_rounds])
+	Game.start_party(Game.BOARDS[_party_board].id, [5, 10, 15][_party_rounds], Game.PARTY_MODES[_party_mode].id)
 	Router.goto("res://scenes/party/PartyBoard.tscn")
 
 
@@ -338,12 +541,42 @@ func _page_race() -> Control:
 	var desc := UI.label(Game.TRACKS[cur].desc, 22, Color(1, 1, 1, 0.85))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.custom_minimum_size = Vector2(620, 50)
+	var modes := ["Einzelrennen", "Grand Prix", "Zeitfahren"]
+	var mode_ids := ["single", "gp", "time"]
+	var cur_mode := maxi(0, mode_ids.find(String(Game.race_cfg.get("mode", "single"))))
+	var ms := Stepper.new().setup(modes, cur_mode, 320, Color("#2f9bff"))
+	v.add_child(_row("Modus", ms))
 	var ts := Stepper.new().setup(names, cur, 320, Color("#2f9bff"))
 	ts.changed.connect(func(i: int) -> void:
 		Game.race_cfg.track = Game.TRACKS[i].id
-		desc.text = Game.TRACKS[i].desc)
-	v.add_child(_row("Strecke", ts))
+		desc.text = Game.TRACKS[i].desc + _record_text(Game.TRACKS[i].id))
+	var track_row := _row("Strecke", ts)
+	v.add_child(track_row)
+	var cup_names: Array = []
+	for ci in Game.CUPS.size():
+		cup_names.append(String(Game.CUPS[ci].name) + ("  (gesperrt)" if ci == 2 and not Account.has_unlock("mega_cup") else ""))
+	var cups := Stepper.new().setup(cup_names, int(Game.race_cfg.get("cup", 0)), 380, Color("#2f9bff"))
+	var cup_row := _row("Cup", cups)
+	v.add_child(cup_row)
 	v.add_child(desc)
+	var cup_text := func(i: int) -> String:
+		var names_in_cup: Array = (Game.CUPS[i].tracks as Array).map(func(id: String) -> String: return Game.track_info(id).name)
+		return "Vier Rennen, Punkte 15-12-10-8-6-4-2-1: " + " · ".join(names_in_cup) if names_in_cup.size() <= 4 else "Acht Rennen am Stück: " + " · ".join(names_in_cup)
+	cups.changed.connect(func(i: int) -> void:
+		Game.race_cfg.cup = i
+		desc.text = cup_text.call(i))
+	var apply_mode := func(i: int) -> void:
+		Game.race_cfg.mode = mode_ids[i]
+		track_row.visible = mode_ids[i] != "gp"
+		cup_row.visible = mode_ids[i] == "gp"
+		if mode_ids[i] == "gp":
+			desc.text = cup_text.call(int(Game.race_cfg.get("cup", 0)))
+		elif mode_ids[i] == "time":
+			desc.text = "Allein gegen die Uhr – nur Nitro-Boxen. Bestzeiten werden gespeichert." + _record_text(String(Game.race_cfg.track))
+		else:
+			desc.text = Game.TRACKS[ts.index].desc + _record_text(String(Game.race_cfg.track))
+	ms.changed.connect(apply_mode)
+	apply_mode.call(cur_mode)
 	var laps := Stepper.new().setup(["2 Runden", "3 Runden", "5 Runden"], [2, 3, 5].find(Game.race_cfg.laps), 220, Color("#2f9bff"))
 	laps.changed.connect(func(i: int) -> void: Game.race_cfg.laps = [2, 3, 5][i])
 	v.add_child(_row("Runden", laps))
@@ -352,7 +585,7 @@ func _page_race() -> Control:
 	v.add_child(_row("Gegner", lvl))
 	v.add_child(UI.label("Fahrer", 32, UI.ACCENT2, true))
 	_players_editor(v)
-	var hint := UI.label("Drift halten (R / Shift) und lenken: Funken wechseln Blau → Orange → Regenbogen.\nItems: Kuchendeckel · Homing-Kanonenkugel · Megafon-Schock · Piraten-Anker · Nitro", 20, Color(1, 1, 1, 0.75))
+	var hint := UI.label("Drift halten (R / Shift) und lenken: Funken wechseln von Blau über Orange zu Regenbogen.\nItems: Kuchendeckel · Homing-Kanonenkugel · Megafon-Schock · Piraten-Anker · Nitro", 20, Color(1, 1, 1, 0.75))
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.custom_minimum_size.x = 620
 	v.add_child(hint)
@@ -360,6 +593,11 @@ func _page_race() -> Control:
 	start.custom_minimum_size.y = 76
 	start.pressed.connect(func() -> void:
 		_apply_players()
+		if Game.race_cfg.mode == "gp":
+			if int(Game.race_cfg.cup) == 2 and not Account.has_unlock("mega_cup"):
+				Account.toast("Mega-Cup gesperrt – gewinne zuerst den Lumos- oder Sternen-Cup!", Color("#ffcc33"))
+				return
+			Game.start_gp(int(Game.race_cfg.cup))
 		Game.mode = "race"
 		Router.goto("res://scenes/racer/NitroDash.tscn"))
 	v.add_child(start)
@@ -370,33 +608,57 @@ func _page_race() -> Control:
 # --- Minispiel-Arena --------------------------------------------------------------------------------------
 
 func _page_minigames() -> Control:
-	var arr := _side_panel("Minispiel-Arena", 760)
+	var arr := _side_panel("Minispiel-Arena", 800)
 	var v: VBoxContainer = arr[1]
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 12)
-	grid.add_theme_constant_override("v_separation", 12)
-	v.add_child(grid)
-	var colors := [Color("#ff4fb8"), Color("#2f9bff"), Color("#2ecc71"), Color("#ff9f1a"), Color("#7b3cff")]
-	var desc := UI.label("Wähle ein Minispiel.", 22, Color(1, 1, 1, 0.85))
+	var desc := UI.label("Wähle eines von %d Minispielen." % Game.MINIGAMES.size(), 22, Color(1, 1, 1, 0.85))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.custom_minimum_size = Vector2(700, 64)
+	v.add_child(desc)
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	v.add_child(grid)
+	var colors := [Color("#ff4fb8"), Color("#2f9bff"), Color("#2ecc71"), Color("#ff9f1a"), Color("#7b3cff")]
+	var kind_icon := {"survival": "heart", "score": "star", "race": "bolt"}
 	for i in Game.MINIGAMES.size():
 		var m: Dictionary = Game.MINIGAMES[i]
-		var b := UI.button(m.name, colors[i % colors.size()], 26, 340)
-		b.custom_minimum_size.y = 64
-		b.focus_entered.connect(func() -> void: desc.text = m.desc)
-		b.mouse_entered.connect(func() -> void: desc.text = m.desc)
+		var b := UI.button(m.name, colors[i % colors.size()], 21, 228)
+		b.custom_minimum_size.y = 56
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.icon = UI.icon_tex(kind_icon.get(m.kind, "star"), 26)
+		b.expand_icon = false
+		b.focus_entered.connect(func() -> void: desc.text = "%s – %s" % [m.name, m.desc])
+		b.mouse_entered.connect(func() -> void: desc.text = "%s – %s" % [m.name, m.desc])
 		b.pressed.connect(func() -> void: _play_minigame(m.id))
 		grid.add_child(b)
-	v.add_child(desc)
-	var rnd := UI.button("Zufall!", Color("#ffcc33"), 30, 300)
+	var extra := UI.hbox(12)
+	var rnd := UI.button("Zufall!", Color("#ffcc33"), 26, 230)
 	rnd.pressed.connect(func() -> void: _play_minigame(Game.MINIGAMES[randi() % Game.MINIGAMES.size()].id))
-	v.add_child(rnd)
+	extra.add_child(rnd)
+	for n in [5, 10]:
+		var mb := UI.button("Marathon (%d)" % n, Color("#ff4fb8"), 26, 230)
+		mb.icon = UI.icon_tex("trophy", 26)
+		mb.pressed.connect(func() -> void:
+			if not _hero_steppers.is_empty():
+				_apply_players()
+			Game.start_marathon(n)
+			Router.goto("res://scenes/menu/MarathonHub.tscn"))
+		extra.add_child(mb)
+	v.add_child(extra)
 	v.add_child(UI.label("Spieler", 30, UI.ACCENT2, true))
 	_players_editor(v)
 	_back_button(v)
 	return arr[0]
+
+
+func _record_text(track_id: String) -> String:
+	var r := Game.record_for(track_id)
+	if r.is_empty() or float(r.total) == INF:
+		return ""
+	var t := float(r.total)
+	return "\nBestzeit: %d:%05.2f" % [int(t) / 60, fmod(t, 60.0)]
 
 
 func _play_minigame(id: String) -> void:
@@ -417,12 +679,21 @@ func _page_settings() -> Control:
 	v.add_child(_slider("Kamera-Wackeln", "screen_shake"))
 	v.add_child(_toggle("Haptik / Vibration", "haptics"))
 	v.add_child(_toggle("Auto-Gas (Touch-Racer)", "auto_accel"))
-	var q := Stepper.new().setup(["Automatisch", "Niedrig (Handheld)", "Hoch"], ["auto", "low", "high"].find(Game.settings.quality), 300)
+	var qkeys := ["auto", "low", "medium", "high", "ultra"]
+	var qnames := ["Automatisch (%s)" % Gfx.PRESETS[Gfx.detected].label, "Niedrig", "Mittel", "Hoch", "Ultra"]
+	var q := Stepper.new().setup(qnames, maxi(0, qkeys.find(Game.settings.quality)), 300)
 	q.changed.connect(func(i: int) -> void:
-		Game.settings.quality = ["auto", "low", "high"][i]
-		Game.save_settings()
-		_apply_quality())
+		Game.settings.quality = qkeys[i]
+		Game.save_settings())
 	v.add_child(_row("Grafik", q))
+	v.add_child(_toggle("Dynamische Auflösung (stabile 60 FPS)", "dynamic_res"))
+	v.add_child(_toggle("FPS anzeigen", "show_fps"))
+	v.add_child(_toggle("Split-Screen für mehrere Fahrer", "split_screen"))
+	if not OS.has_feature("web"):
+		v.add_child(_toggle("Weitere Monitore automatisch nutzen (%d erkannt)" % DisplayServer.get_screen_count(), "multi_display"))
+	var hw: Dictionary = Gfx.hardware
+	var hw_label := UI.label("Erkannt: %d Kerne · %s · %s" % [int(hw.get("cores", 0)), ("%.0f GB RAM" % hw.memory_gb) if float(hw.get("memory_gb", 0)) > 0 else "RAM unbekannt", String(hw.get("gpu", "GPU unbekannt")).substr(0, 40)], 18, Color(1, 1, 1, 0.6))
+	v.add_child(hw_label)
 	v.add_child(UI.label("Touch-Steuerung", 30, UI.ACCENT2, true))
 	v.add_child(_slider("Button-Größe", "touch_scale", 0.6, 1.5))
 	v.add_child(_slider("Deckkraft", "touch_opacity", 0.2, 1.0))

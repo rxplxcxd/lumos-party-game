@@ -1,13 +1,14 @@
 class_name BoardDefs
 extends RefCounted
-## Datendefinition der drei Spielbretter.
+## Datendefinition der Spielbretter.
 ##
 ## main:     geschlossene Hauptschleife (Kontrollpunkte, Catmull-Rom), main_count Felder
 ## pattern:  Feldtypen der Hauptschleife (ein Zeichen pro Feld)
 ## branches: Abzweigungen {from, to, points, pattern, toggle, gate}
 ##
 ## Feldtypen:  S Start · B Blau (+3) · R Rot (-3) · L Glücksrad-Kiste · P Piraten-Planke
-##             C Dungeon-Fluch · T Fackel-Falle · K Wolken-Kanone · N Händler (Durchgang)
+##             C Dungeon-Fluch · T Fackel-Falle · K Wolken-Kanone/Rakete · N Händler (Durchgang)
+##             G Geister-Taxi (fliegt dich vor/zurück) · E Eis-Rutsche · W Warp-Pad (Teleport zu anderem W)
 ## toggle:    Route ist nur in geraden/ungeraden Runden offen (Lava-Steg, Ebbe, Zugbrücke)
 ## gate:      Skelett-Wächter verlangt Wegzoll
 
@@ -49,6 +50,45 @@ const BOARDS := {
 				"pattern": "BLBKB", "toggle": "even", "kind": "drawbridge"},
 			{"from": 17, "to": 26, "points": [Vector3(10, 1, 4), Vector3(4, 3, 4), Vector3(-3, 4, 5), Vector3(-10, 3, 4)],
 				"pattern": "BKLB", "toggle": "odd", "kind": "drawbridge"},
+		],
+	},
+	"graveyard": {
+		"name": "Geisterfriedhof", "env": "graveyard", "music": "board_dungeon", "surface": "grass",
+		"main": [Vector3(-20, 0, -8), Vector3(-11, 0, -14), Vector3(0, 0, -15), Vector3(12, 0, -13), Vector3(20, 0, -5),
+			Vector3(20, 0, 6), Vector3(10, 0, 13), Vector3(-2, 0, 14), Vector3(-13, 0, 12), Vector3(-21, 0, 3)],
+		"main_count": 32,
+		"pattern": "SBBGBLBRBCBBGBLBRBBGBCBLBRBGBBLB",
+		"branches": [
+			{"from": 4, "to": 11, "points": [Vector3(-5, 0, -9), Vector3(1, 0, -7), Vector3(8, 0, -8)],
+				"pattern": "BGL", "toggle": "odd", "kind": "fog_bridge"},
+			{"from": 19, "to": 27, "points": [Vector3(5, 0, 8), Vector3(-2, 0, 6), Vector3(-9, 0, 6)],
+				"pattern": "LBR", "gate": 5, "kind": "crypt_gate"},
+		],
+	},
+	"frost": {
+		"name": "Frostdorf", "env": "snow", "music": "board_sky", "surface": "snow",
+		"main": [Vector3(-20, 0, -6), Vector3(-12, 0, -14), Vector3(0, 0, -15), Vector3(12, 0, -12), Vector3(21, 0, -3),
+			Vector3(18, 0, 8), Vector3(7, 0, 14), Vector3(-6, 0, 13), Vector3(-17, 0, 8)],
+		"main_count": 30,
+		"pattern": "SBBEBLBRBNBBEBLBRBBEBBLBRBNBEB",
+		"branches": [
+			{"from": 3, "to": 10, "points": [Vector3(-5, 0, -9), Vector3(2, 0, -6), Vector3(9, 0, -7)],
+				"pattern": "BLE", "toggle": "even", "kind": "ice_bridge"},
+			{"from": 17, "to": 25, "points": [Vector3(10, 0, 5), Vector3(3, 0, 6), Vector3(-4, 0, 6), Vector3(-10, 0, 5)],
+				"pattern": "BLBR", "kind": "sled"},
+		],
+	},
+	"station": {
+		"name": "Orbit-Station", "env": "station", "music": "board_sky", "surface": "metal",
+		"main": [Vector3(-20, 0, -5), Vector3(-13, 0, -13), Vector3(-1, 0, -15), Vector3(11, 0, -13), Vector3(20, 0, -5),
+			Vector3(19, 0, 6), Vector3(10, 0, 13), Vector3(-3, 0, 14), Vector3(-15, 0, 10)],
+		"main_count": 30,
+		"pattern": "SBBWBLBRBKBBWBLBRBNBWBLBRBKBBW",
+		"branches": [
+			{"from": 2, "to": 11, "points": [Vector3(-10, 0, -5), Vector3(-3, 0, -4), Vector3(4, 0, -4), Vector3(12, 0, -6)],
+				"pattern": "BLWB", "toggle": "odd", "kind": "airlock"},
+			{"from": 16, "to": 25, "points": [Vector3(11, 0, 5), Vector3(4, 0, 4), Vector3(-4, 0, 5), Vector3(-11, 0, 4)],
+				"pattern": "BKLB", "toggle": "even", "kind": "airlock"},
 		],
 	},
 }

@@ -63,7 +63,12 @@ PACK_ROLES: dict[str, str] = {
     "3d/tracks-enviroment/kenney_mini-arcade": "Glücksrad (prize-wheel) für die Glücksrad-Kiste",
     "3d/tracks-enviroment/kenney_mini-arena": "Pokal & Arena-Bauteile fürs Podest",
     "3d/tracks-enviroment/kenney_fantasy-town-kit_2.0": "Häuser & Mauern im Sky Kingdom",
-    "3d/tracks-enviroment/kenney_holiday-kit": "Lichterketten/Laternen als Neon-Deko",
+    "3d/tracks-enviroment/kenney_holiday-kit": "Frostdorf-Brett & Frostgipfel-Strecke (Hütten, Schneemänner, Rentiere), Schneeball-Schlacht",
+    "3d/minigames-and-others/kenney_minigolf-kit": "Minigolf-Duell (Bahnen, Bälle, Löcher, Fahnen)",
+    "3d/tracks-enviroment/kenney_space-station-kit": "Raumstation-Brett (Böden, Geländer, Konsolen)",
+    "3d/minigames-and-others/KayKit_Space_Base_Bits_1.0_FREE": "Raumstation-Brett & Orbit-Strecke (Module, Landeplätze, Windräder)",
+    "3d/tracks-enviroment/kenney_city-kit-commercial_2.1": "Stadt-Rallye-Strecke (Hochhäuser, Markisen)",
+    "3d/tracks-enviroment/kenney_city-kit-suburban_20": "Stadt-Rallye-Strecke (Vorstadthäuser, Zäune, Bäume)",
     # Fahrzeuge
     "3d/vehicles/kenney_car-kit": "Karts (kart-oobi … kart-oozi) für Nitro Dash und Kart-Bowling",
     "3d/vehicles/kenney_toy-car-kit": "Item-Boxen, Rampen",
@@ -87,7 +92,7 @@ PACK_SUBDIR_WHITELIST: dict[str, list[str]] = {
     "3d/characters/KayKit_Adventurers_2.0_FREE": ["KayKit_Adventurers_2.0_FREE/Characters/gltf"],
     "3d/boardgame/kenney_board-game-info": ["PNG/Default (128px)"],
     "3d/minigames-and-others/kenney_input-prompts_1.5": [
-        "Nintendo Switch/Default", "Xbox Series/Default", "Keyboard & Mouse/Default", "Touch/Default"],
+        "Nintendo Switch/Default", "Xbox Series/Default", "PlayStation Series/Default", "Keyboard & Mouse/Default", "Touch/Default"],
     "3d/minigames-and-others/kenney_medals": ["PNG"],
     "3d/minigames-and-others/kenney_crosshair-pack": ["PNG/Glow"],
 }

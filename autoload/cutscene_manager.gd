@@ -24,7 +24,7 @@ var _bar_bot: ColorRect
 var _flash: ColorRect
 var _title: Label
 var _subtitle: Label
-var _hint: Label
+var _hint: ButtonPrompt
 var _big: Label
 var _title_font: Font
 var _body_font: Font
@@ -57,15 +57,11 @@ func _build_overlay() -> void:
 	_title = _mk_label(root, _title_font, 92, 0.38)
 	_subtitle = _mk_label(root, _body_font, 34, 0.52)
 	_big = _mk_label(root, _title_font, 220, 0.42)
-	_hint = Label.new()
-	_hint.add_theme_font_override("font", _body_font)
-	_hint.add_theme_font_size_override("font_size", 20)
-	_hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.7))
-	_hint.text = "Ⓐ halten: Vorspulen"
+	_hint = ButtonPrompt.new().setup("a", "halten: Vorspulen", 20)
+	_hint.modulate.a = 0.75
 	_hint.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_hint.position = Vector2(-260, -40)
-	_hint.size = Vector2(240, 30)
-	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_hint.position = Vector2(-300, -44)
+	_hint.size = Vector2(280, 32)
 	_hint.visible = false
 	root.add_child(_hint)
 
@@ -195,13 +191,17 @@ func end(blend := 0.55) -> void:
 
 # --- Kamera-Primitive (alle awaitbar) -------------------------------------------------------
 
-func cut(pos: Vector3, look: Vector3, fov := -1.0) -> void:
+func cut(pos: Vector3, look: Vector3, fov := -1.0, soft := true) -> void:
 	if not is_instance_valid(cam):
 		return
 	cam.global_position = pos
 	_look(look)
 	if fov > 0:
 		cam.fov = fov
+	if soft:
+		# kurzer "Lidschlag": verdeckt den harten Schnitt und wirkt wie eine bewusste Kameramontage
+		_flash.color = Color(0.03, 0.01, 0.07, 0.9)
+		create_tween().tween_property(_flash, "color:a", 0.0, 0.24).set_ease(Tween.EASE_OUT)
 
 
 func _look(target: Vector3, up := Vector3.UP) -> void:

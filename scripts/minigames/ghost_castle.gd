@@ -185,17 +185,28 @@ func on_tick(delta: float) -> void:
 func _lightning(first: bool) -> void:
 	Audio.sfx("thunder", null, -2.0 if not first else -8.0)
 	var tw := create_tween()
-	for k in 2:
+	# Dreifach-Entladung: kurz – lang (Lesephase) – kurz, danach weiches Nachglühen
+	var pulses := [[0.09, 3.6], [0.55, 4.5], [0.12, 3.0]]
+	for k in pulses.size():
+		var dur: float = pulses[k][0]
+		var energy: float = pulses[k][1]
 		tw.tween_callback(func() -> void:
-			sun.light_energy = 3.2
-			env.ambient_light_energy = 1.4
-			flash_rect.color.a = 0.45)
-		tw.tween_interval(0.09 if k == 0 else 0.16)
+			sun.light_energy = energy
+			env.ambient_light_energy = 1.6
+			env.fog_density = 0.008
+			flash_rect.color.a = 0.4)
+		tw.tween_property(flash_rect, "color:a", 0.08, dur * 0.6)
+		tw.tween_interval(dur * 0.4)
 		tw.tween_callback(func() -> void:
-			sun.light_energy = 0.08
-			env.ambient_light_energy = 0.12
+			sun.light_energy = 0.25
+			env.ambient_light_energy = 0.3
 			flash_rect.color.a = 0.0)
-		tw.tween_interval(0.07)
+		tw.tween_interval(0.08)
+	tw.tween_method(func(v: float) -> void:
+		sun.light_energy = v
+		env.ambient_light_energy = lerpf(0.14, 0.4, v / 1.2)
+		env.fog_density = lerpf(0.03, 0.012, v / 1.2), 1.2, 0.08, 1.4)
+	tw.tween_callback(func() -> void: env.fog_density = 0.03)
 	Juice.shake(0.15)
 	# CPU-Gedächtnis auffrischen
 	for i in 4:
@@ -217,7 +228,10 @@ func check_end() -> bool:
 
 func _update_badges() -> void:
 	for i in badges.size():
-		badges[i].set_score("%d. ✓" % (finish_order.find(i) + 1) if i in finish_order else "%d%%" % int(scores[i]))
+		if i in finish_order:
+			badges[i].set_status("done", finish_order.find(i) + 1)
+		else:
+			badges[i].set_status("", "%d%%" % int(scores[i]))
 
 
 # --- CPU ---------------------------------------------------------------------------------------

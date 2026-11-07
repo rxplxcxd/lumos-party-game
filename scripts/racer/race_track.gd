@@ -6,6 +6,18 @@ extends Node3D
 ## Fahrphysik arbeitet im Strecken-Raum (s = Meter entlang, x = seitlich, h = Höhe).
 
 const STEP := 0.5
+## Fahrbahn-/Leitplanken-Stile der Themen (Strecken ab v2).
+const STYLES := {
+	"storm": {"asphalt": Color(0.15, 0.16, 0.19), "kerb_a": Color(0.95, 0.75, 0.1), "kerb_b": Color(0.14, 0.14, 0.16), "wet": 1.0,
+		"edge_glow": 1.0, "glow_col": Color(1.0, 0.8, 0.35), "under": Color(0.16, 0.16, 0.2), "wall_a": Color("#2a2c34"), "wall_b": Color("#f2c230"), "wall_emit": 0.45},
+	"snow": {"asphalt": Color(0.48, 0.52, 0.6), "kerb_a": Color(0.2, 0.5, 0.95), "kerb_b": Color(0.97, 0.98, 1.0), "under": Color(0.75, 0.82, 0.92),
+		"wall_a": Color("#2f7de0"), "wall_b": Color("#ffffff"), "edge_glow": 0.4, "glow_col": Color(0.7, 0.9, 1.0)},
+	"space": {"neon": 1.0, "neon_col": Color(0.3, 0.95, 1.0), "under": Color(0.08, 0.08, 0.16), "wall_neon": Color(0.3, 0.9, 1.0)},
+	"city": {"asphalt": Color(0.27, 0.27, 0.3), "kerb_a": Color(0.95, 0.8, 0.1), "kerb_b": Color(0.12, 0.12, 0.12), "under": Color(0.42, 0.42, 0.46),
+		"wall_a": Color("#ffd23f"), "wall_b": Color("#26262a")},
+	"desert": {"asphalt": Color(0.6, 0.47, 0.32), "kerb_a": Color(0.95, 0.45, 0.15), "kerb_b": Color(0.98, 0.93, 0.8), "under": Color(0.55, 0.4, 0.26),
+		"wall_a": Color("#e2722c"), "wall_b": Color("#fff2dc")},
+}
 
 var def: Dictionary
 var curve: Curve3D
@@ -15,6 +27,7 @@ var point_s: Array[float] = []
 var loops: Array[Dictionary] = []
 var glide_ranges: Array[Vector2] = []
 var water_ranges: Array[Vector2] = []
+var ice_ranges: Array[Vector2] = []
 var ramp_s: Array[float] = []
 var boosts: Array[Vector2] = []     # (s, x)
 var item_rows: Array[float] = []
@@ -50,6 +63,8 @@ func build(d: Dictionary) -> void:
 		glide_ranges.append(Vector2(point_s[g[0]], point_s[g[1]]))
 	for w in d.water:
 		water_ranges.append(Vector2(point_s[w[0]], point_s[w[1]]))
+	for ic in d.get("ice", []):
+		ice_ranges.append(Vector2(point_s[ic[0]], point_s[ic[1]]))
 	for r in d.ramps:
 		ramp_s.append(point_s[r])
 	for b in d.boosts:
@@ -166,6 +181,10 @@ func is_water(s: float) -> bool:
 	return in_range(s, water_ranges)
 
 
+func is_ice(s: float) -> bool:
+	return in_range(s, ice_ranges)
+
+
 func is_loop(s: float) -> bool:
 	var w := wrap_s(s)
 	for l in loops:
@@ -219,16 +238,20 @@ func _build_mesh() -> void:
 	rm.shader = load("res://assets/shaders/road.gdshader")
 	rm.set_shader_parameter("track_len", length)
 	rm.set_shader_parameter("start_v", 0.0)
+	var style: Dictionary = STYLES.get(def.theme, {})
 	if def.theme == "neon":
 		rm.set_shader_parameter("neon", 1.0)
 	elif def.theme == "pirates":
 		rm.set_shader_parameter("asphalt", Color(0.78, 0.68, 0.5))
 		rm.set_shader_parameter("kerb_a", Color(0.2, 0.55, 0.95))
+	for key in ["asphalt", "kerb_a", "kerb_b", "wet", "edge_glow", "glow_col", "neon", "neon_col"]:
+		if style.has(key):
+			rm.set_shader_parameter(key, style[key])
 	road_mi.material_override = rm
 	add_child(road_mi)
 	var under_mi := MeshInstance3D.new()
 	under_mi.mesh = under.commit()
-	var um := WorldKit.mat(Color(0.35, 0.3, 0.38) if def.theme != "neon" else Color(0.12, 0.08, 0.2))
+	var um := WorldKit.mat(style.get("under", Color(0.35, 0.3, 0.38) if def.theme != "neon" else Color(0.12, 0.08, 0.2)))
 	um.cull_mode = BaseMaterial3D.CULL_DISABLED
 	under_mi.material_override = um
 	add_child(under_mi)
@@ -238,15 +261,20 @@ func _build_mesh() -> void:
 	wm.vertex_color_use_as_albedo = false
 	wm.albedo_color = Color(1, 1, 1)
 	wm.cull_mode = BaseMaterial3D.CULL_DISABLED
-	if def.theme == "neon":
+	if def.theme == "neon" or style.has("wall_neon"):
 		wm.emission_enabled = true
-		wm.emission = Color(1.0, 0.2, 0.8)
+		wm.emission = style.get("wall_neon", Color(1.0, 0.2, 0.8))
 		wm.emission_energy_multiplier = 1.5
-		wm.albedo_color = Color(0.3, 0.05, 0.3)
+		wm.albedo_color = (wm.emission as Color) * 0.3
 	else:
 		var g := Gradient.new()
-		g.set_color(0, Color("#e8364f"))
-		g.set_color(1, Color("#ffffff"))
+		g.set_color(0, style.get("wall_a", Color("#e8364f")))
+		g.set_color(1, style.get("wall_b", Color("#ffffff")))
+		if style.has("wall_emit"):
+			# Reflektierende Leitplanken: die hellen Streifen glimmen dezent im Scheinwerferlicht
+			wm.emission_enabled = true
+			wm.emission = (style.wall_b as Color) * 0.6
+			wm.emission_energy_multiplier = float(style.wall_emit)
 		g.interpolation_mode = Gradient.GRADIENT_INTERPOLATE_CONSTANT
 		var gt := GradientTexture1D.new()
 		gt.gradient = g
@@ -292,6 +320,74 @@ func _build_extras() -> void:
 	# Glas-Tunnel
 	for wr in water_ranges:
 		_build_tube(wr.x - 6.0, wr.y + 6.0)
+	# Eisplatten
+	for ir in ice_ranges:
+		_build_ice(ir.x, ir.y)
+	# Stützpfeiler unter hochliegenden Abschnitten
+	if def.theme != "space":
+		_build_pillars()
+
+
+func _build_ice(s0: float, s1: float) -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var hw := width * 0.42
+	var s := s0
+	while s < s1:
+		var fa := frame(s)
+		var fb := frame(minf(s + 1.5, s1))
+		var wob_a := sin(s * 0.7) * 0.6
+		var wob_b := sin((s + 1.5) * 0.7) * 0.6
+		var la := fa.origin - fa.basis.x * (hw + wob_a) + fa.basis.y * 0.03
+		var ra := fa.origin + fa.basis.x * (hw - wob_a) + fa.basis.y * 0.03
+		var lb := fb.origin - fb.basis.x * (hw + wob_b) + fb.basis.y * 0.03
+		var rb := fb.origin + fb.basis.x * (hw - wob_b) + fb.basis.y * 0.03
+		_quad(st, la, ra, rb, lb, fa.basis.y, fb.basis.y, Vector2(0, s * 0.1), Vector2(1, s * 0.1), Vector2(1, s * 0.1 + 0.15), Vector2(0, s * 0.1 + 0.15))
+		s += 1.5
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.82, 0.94, 1.0, 0.62)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.roughness = 0.04
+	m.metallic_specular = 1.0
+	m.emission_enabled = true
+	m.emission = Color(0.5, 0.8, 1.0)
+	m.emission_energy_multiplier = 0.15
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mi)
+
+
+func _build_pillars() -> void:
+	var xfs: Array[Transform3D] = []
+	var s := 0.0
+	while s < length:
+		var fr := frame(s)
+		if fr.origin.y > 3.0 and not is_loop(s) and not is_glide(s):
+			var top := fr.origin - fr.basis.y * 0.6
+			var h := top.y + 0.8
+			for side in [-0.32, 0.32]:
+				var base := top + fr.basis.x * width * float(side)
+				xfs.append(Transform3D(Basis().scaled(Vector3(1.0, h, 1.0)), Vector3(base.x, top.y - h * 0.5, base.z)))
+		s += 14.0
+	if xfs.is_empty():
+		return
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.7
+	cm.bottom_radius = 0.9
+	cm.height = 1.0
+	cm.radial_segments = 10
+	cm.material = WorldKit.mat((STYLES.get(def.theme, {}) as Dictionary).get("under", Color(0.45, 0.42, 0.48)), 0.85)
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = cm
+	mm.instance_count = xfs.size()
+	for i in xfs.size():
+		mm.set_instance_transform(i, xfs[i])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	add_child(mmi)
 
 
 func _build_tube(s0: float, s1: float) -> void:

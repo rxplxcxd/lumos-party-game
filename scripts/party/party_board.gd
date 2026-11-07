@@ -5,7 +5,7 @@ extends Node3D
 ## -> Minispiel-Roulette -> Minispiel-Szene -> zurück: Belohnungen -> nächste Runde
 ## -> nach der letzten Runde: Bonus-Sterne und Siegerehrung (Podest-Cutscene).
 
-const STAR_COST := 20
+const STAR_COST_DEFAULT := 20
 const DOUBLE_DICE_COST := 8
 const DICE_MAX := 10
 
@@ -19,9 +19,9 @@ var surface := "stone"
 var _hud: Control
 var _badges: Array[PlayerBadge] = []
 var _round_label: Label
-var _prompt: Label
+var _prompt: ButtonPrompt
 var _banner: Label
-var _ff_hint: Label
+var _ff_hint: ButtonPrompt
 var _current := -1
 var _busy_ui := false
 
@@ -32,7 +32,9 @@ func _ready() -> void:
 	def = BoardDefs.get_def(Game.party.board)
 	spaces = BoardDefs.build_graph(def)
 	surface = def.surface
-	WorldKit.env(self, def.env)
+	var we := WorldKit.env(self, def.env)
+	if WorldKit.PRESETS.get(def.env, {}).get("rays", false):
+		WorldKit.god_rays(self, Vector3.ZERO, 22.0, we.get_meta("sun"), 9)
 	builder = BoardBuilder.new()
 	builder.build(self, Game.party.board, spaces)
 	_spawn_players()
@@ -104,6 +106,9 @@ func _main() -> void:
 			await _finale()
 			return
 	party.phase = "turns"
+	if "--test-roulette" in OS.get_cmdline_user_args():
+		await _choose_minigame()
+		return
 	while true:
 		await _round_start()
 		for t in range(int(party.turn), 4):
@@ -163,13 +168,13 @@ func _turn(p: int) -> void:
 	rig.face_now(cam.global_position - rig.global_position)
 	rig.react("determined")
 	await _wait(0.6)
-	var dice := 1
+	var dice := 2 if Game.party_mode() == "blitz" else 1
 	var items: Array = Game.players[p].items
 	if "double_dice" in items:
 		var use := await _ask(p, "Doppelwürfel benutzen?", true)
 		if use:
 			items.erase("double_dice")
-			dice = 2
+			dice += 1
 	var total := 0
 	for k in dice:
 		total += await _roll_dice(p, k, dice)
@@ -216,7 +221,7 @@ func _roll_dice(p: int, k: int, count: int) -> int:
 	num.position = Vector3(0, 0, 0)
 	holder.add_child(num)
 	Juice.pop_in(holder, 0.35)
-	_set_prompt(UI.prompt_text("a", "Würfeln!") if not Game.players[p].cpu else "")
+	_set_prompt("Würfeln!" if not Game.players[p].cpu else "")
 	var value := 1
 	var t := 0.0
 	var wait_cpu := randf_range(0.7, 1.4)
@@ -338,8 +343,14 @@ func _apply_routes(animate: bool) -> bool:
 					Audio.sfx("stone_hit", mid)
 					Juice.shake(0.2)
 					var kind: String = br.get("kind", "")
-					var txt: String = {"lava_bridge": "Der Lava-Steg ", "tide": "Die Sandbank ", "drawbridge": "Die Zugbrücke "}.get(kind, "Die Route ")
-					_show_banner(txt + ("taucht auf!" if open else "verschwindet!"), Color("#ffcc33"), 1.1)
+					var txts: Dictionary = {"lava_bridge": ["Der Lava-Steg taucht auf!", "Der Lava-Steg versinkt!"],
+						"tide": ["Ebbe: Die Sandbank taucht auf!", "Flut: Die Sandbank verschwindet!"],
+						"drawbridge": ["Die Zugbrücke senkt sich!", "Die Zugbrücke klappt hoch!"],
+						"fog_bridge": ["Die Geisterbrücke erscheint!", "Die Geisterbrücke löst sich auf!"],
+						"ice_bridge": ["Der See friert zu!", "Das Eis taut weg!"],
+						"airlock": ["Luftschleuse offen!", "Luftschleuse geschlossen!"]}
+					var pair: Array = txts.get(kind, ["Die Route öffnet sich!", "Die Route schließt sich!"])
+					_show_banner(pair[0] if open else pair[1], Color("#ffcc33"), 1.1)
 					get_tree().create_timer(1.6).timeout.connect(marker.queue_free)
 	Game.party.route_states = states
 	return changed
@@ -449,7 +460,7 @@ func _choose_path(p: int, cur: int, options: Array) -> int:
 	var t := 0.0
 	var prev_x := 0.0
 	var cpu_pick := _cpu_path(p, options)
-	_set_prompt("" if Game.players[p].cpu else UI.prompt_text("a", "Weg wählen (Stick ◀ ▶)"))
+	_set_prompt("" if Game.players[p].cpu else "Weg wählen (Stick links/rechts)")
 	while chosen < 0:
 		var dt := get_process_delta_time()
 		t += dt
@@ -486,7 +497,7 @@ func _cpu_path(p: int, options: Array) -> int:
 	for i in options.size():
 		var d := float(_dist(options[i], star))
 		var b: int = spaces[options[i]].branch
-		if b >= 0 and def.branches[b].has("gate") and Game.players[p].coins < int(def.branches[b].gate) + STAR_COST:
+		if b >= 0 and def.branches[b].has("gate") and Game.players[p].coins < int(def.branches[b].gate) + _star_cost():
 			d += 6.0
 		d += randf() * [6.0, 3.0, 0.5][int(Game.players[p].cpu_level)]
 		if d < best_d:
@@ -545,6 +556,12 @@ func _land(p: int) -> void:
 			await _cloud_cannon(p)
 		"N":
 			await _shop(p)
+		"G":
+			await _ghost_taxi(p)
+		"E":
+			await _ice_slide(p)
+		"W":
+			await _warp(p)
 	_formation_all()
 
 
@@ -564,7 +581,7 @@ func _torch_trap(p: int) -> void:
 
 func _cloud_cannon(p: int) -> void:
 	var rig := rigs[p]
-	await _show_banner("Wolken-Kanone!", Color("#7fd6ff"), 0.7)
+	await _show_banner("Raketen-Start!" if Game.party.board == "station" else "Wolken-Kanone!", Color("#7fd6ff"), 0.7)
 	var cur: int = Game.players[p].space
 	var jumps := randi_range(5, 12)
 	var target := cur
@@ -589,6 +606,132 @@ func _cloud_cannon(p: int) -> void:
 	Game.players[p].space = target
 	cam.zoom = 1.0
 	await _wait(1.3)
+	if target == int(Game.party.star_space):
+		await _star_event(p)
+
+
+## Geisterfriedhof: Ein Geist packt dich und fliegt dich ein paar Felder vor – oder zurück.
+func _ghost_taxi(p: int) -> void:
+	var rig := rigs[p]
+	await _show_banner("Geister-Taxi!", Color("#9dffc8"), 0.7)
+	var ghost := CharacterRig.new()
+	add_child(ghost)
+	ghost.setup("npc/ghost", -1, 1.6)
+	var start := rig.position
+	ghost.position = start + Vector3(0, 7, -2)
+	ghost.play("idle")
+	Audio.sfx("ghost", start)
+	var tw := ghost.create_tween()
+	tw.tween_property(ghost, "position", start + Vector3(0, 1.9, 0), 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	await tw.finished
+	rig.react("scared")
+	InputHub.rumble(p, 0.5, 0.2)
+	await _wait(0.6)
+	var forward := randf() < 0.6
+	var n := randi_range(2, 6) if forward else randi_range(2, 4)
+	var target: int = Game.players[p].space
+	for _i in n:
+		if forward:
+			var opts := _available_next(target)
+			target = opts[randi() % opts.size()]
+		else:
+			target = int(spaces[target].prev[0])
+	await _show_banner(("%d Felder vor!" % n) if forward else ("%d Felder zurück…" % n), Color("#9dffc8") if forward else Color("#ff9db0"), 0.7)
+	var a := rig.position
+	var b := _space_pos(target)
+	cam.zoom = 1.8
+	var fly := create_tween()
+	fly.tween_method(func(t: float) -> void:
+		var pos := a.lerp(b, t) + Vector3.UP * (sin(t * PI) * 5.0 + 1.0 * (1.0 - t))
+		rig.position = pos
+		ghost.position = pos + Vector3.UP * 1.7
+		rig.rotation.z = sin(t * TAU * 2.0) * 0.35, 0.0, 1.0, 1.8).set_trans(Tween.TRANS_SINE)
+	await fly.finished
+	rig.rotation.z = 0.0
+	rig.position = b
+	rig.land_impact(1.0)
+	Game.players[p].space = target
+	FX.smoke(b, Color(0.7, 1.0, 0.85), 10, 1.0)
+	Audio.sfx("evil_laugh", b, -6.0)
+	var gone := ghost.create_tween()
+	gone.tween_property(ghost, "position", ghost.position + Vector3(0, 9, -3), 0.7).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	gone.tween_callback(ghost.queue_free)
+	cam.zoom = 1.0
+	await _wait(0.9)
+	if target == int(Game.party.star_space):
+		await _star_event(p)
+
+
+## Frostdorf: Auf dem Eis schlitterst du 2–4 Felder weiter. Manchmal legt man sich aber auch hin.
+func _ice_slide(p: int) -> void:
+	var rig := rigs[p]
+	await _show_banner("Eis-Rutsche!", Color("#bfefff"), 0.7)
+	if randf() < 0.3:
+		rig.react("slip")
+		Audio.sfx("boing", rig.global_position)
+		InputHub.rumble(p, 0.6, 0.2)
+		await _wait(1.1)
+		_coins(p, -2)
+		await _show_banner("Ausgerutscht! -2 Münzen", Color("#ff9db0"), 0.8)
+		return
+	var n := randi_range(2, 4)
+	var cur: int = Game.players[p].space
+	cam.zoom = 1.3
+	for _i in n:
+		var nxt: int = _available_next(cur)[0]
+		var a := rig.position
+		var b := _space_pos(nxt)
+		rig.spin_around(1.0, 0.3)
+		FX.dust(a, Color(0.9, 0.97, 1.0), 8, 0.8)
+		Audio.sfx("drift", a, -6.0, 1.2)
+		var tw := create_tween()
+		tw.tween_property(rig, "position", b, 0.3)
+		await tw.finished
+		cur = nxt
+		Game.players[p].space = cur
+		if cur == int(Game.party.star_space):
+			break
+	rig.land_impact(0.8)
+	rig.react("cheer")
+	cam.zoom = 1.0
+	await _wait(0.8)
+	if cur == int(Game.party.star_space):
+		await _star_event(p)
+
+
+## Orbit-Station: Beam zu einem zufälligen anderen Warp-Pad.
+func _warp(p: int) -> void:
+	var rig := rigs[p]
+	var cur: int = Game.players[p].space
+	var pads: Array[int] = []
+	for sp in spaces:
+		if sp.type == "W" and int(sp.id) != cur and (int(sp.branch) < 0 or _route_open(int(sp.branch))):
+			pads.append(int(sp.id))
+	if pads.is_empty():
+		return
+	await _show_banner("Warp-Pad!", Color("#7ff0ff"), 0.7)
+	var target: int = pads[randi() % pads.size()]
+	var base := rig.scale
+	Audio.sfx("forcefield", rig.global_position)
+	FX.ring(rig.global_position + Vector3.UP * 0.2, Color(0.4, 0.95, 1.0, 0.9), 2.5, 0.4)
+	var tw := create_tween()
+	tw.tween_property(rig, "scale", Vector3(base.x * 0.15, base.y * 3.0, base.z * 0.15), 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	await tw.finished
+	FX.sparks(rig.global_position + Vector3.UP, Color(0.5, 0.95, 1.0), 24, 1.4)
+	rig.visible = false
+	await _wait(0.25)
+	rig.position = _space_pos(target)
+	Game.players[p].space = target
+	cam.snap_to(rig)
+	await _wait(0.2)
+	rig.visible = true
+	FX.ring(rig.global_position + Vector3.UP * 0.2, Color(0.4, 0.95, 1.0, 0.9), 2.5, 0.4)
+	Audio.sfx("zap", rig.global_position)
+	var tw2 := create_tween()
+	tw2.tween_property(rig, "scale", base, 0.5).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	await tw2.finished
+	rig.react("dizzy")
+	await _wait(1.0)
 	if target == int(Game.party.star_space):
 		await _star_event(p)
 
@@ -630,7 +773,7 @@ func _lucky_chest(p: int) -> void:
 	wheel.size = wheel.custom_minimum_size
 	Juice.pop_in(wheel, 0.4)
 	wheel.spin()
-	_set_prompt("" if Game.players[p].cpu else UI.prompt_text("a", "Stopp!"))
+	_set_prompt("" if Game.players[p].cpu else "Stopp!")
 	var t := 0.0
 	var stop_at := randf_range(1.2, 2.2)
 	while not wheel.stopping:
@@ -705,13 +848,13 @@ func _shop(p: int) -> void:
 func _star_event(p: int) -> void:
 	var rig := rigs[p]
 	cam.zoom = 0.85
-	if Game.players[p].coins < STAR_COST:
+	if Game.players[p].coins < _star_cost():
 		await _show_banner("Zu wenig Münzen für den Stern!", Color("#ff6b6b"), 1.0)
 		rig.react("sad")
 		await _wait(0.8)
 		cam.zoom = 1.0
 		return
-	var buy := await _ask(p, "Lumos-Stern für %d Münzen kaufen?" % STAR_COST, true)
+	var buy := await _ask(p, "Lumos-Stern für %d Münzen kaufen?" % _star_cost(), true)
 	if buy:
 		await CutsceneManager.play("StarGet", {"board": self, "player": p, "free": false})
 		await _relocate_star(int(Game.party.star_space))
@@ -721,7 +864,7 @@ func _star_event(p: int) -> void:
 ## Vom StarGet-Cutscene aufgerufen.
 func grant_star(p: int, pay: bool) -> void:
 	if pay:
-		_coins(p, -STAR_COST)
+		_coins(p, -_star_cost())
 	Game.add_stars(p, 1)
 
 
@@ -790,38 +933,39 @@ func _choose_minigame() -> void:
 	var root := UI.center_root(layer)
 	var panel := UI.panel()
 	root.add_child(panel)
-	var v := UI.vbox(8)
+	var v := UI.vbox(10)
 	panel.add_child(v)
 	var title := UI.label("Minispiel-Roulette!", 52, UI.GOLD, true, 10)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(title)
-	var rows: Array[Label] = []
-	for m in Game.MINIGAMES:
-		var l := UI.label(m.name, 30, Color(1, 1, 1, 0.55), true)
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		v.add_child(l)
-		rows.append(l)
+	var all_names: Array = Game.MINIGAMES.map(func(m: Dictionary) -> String: return m.name)
+	var palette := [Color("#ff4fb8"), Color("#2f9bff"), Color("#2ecc71"), Color("#ff9f1a"), Color("#c06bff")]
+	var cols: Array = []
+	for i in all_names.size():
+		cols.append(palette[i % palette.size()])
+	var reel := RouletteReel.new().setup(all_names, cols)
+	v.add_child(reel)
+	var desc := UI.label("", 22, Color(1, 1, 1, 0.9))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc.custom_minimum_size = Vector2(640, 84)
+	v.add_child(desc)
 	await get_tree().process_frame
 	panel.position = (root.size - panel.size) / 2.0
 	Juice.pop_in(panel, 0.35)
 	Audio.sfx("drumroll")
 	var pick: Dictionary = pool[randi() % pool.size()]
 	var target := Game.MINIGAMES.find(pick)
-	var idx := randi() % rows.size()
-	var steps := 24 + ((target - idx + rows.size()) % rows.size())
-	for k in steps:
-		idx = (idx + 1) % rows.size()
-		for i in rows.size():
-			rows[i].add_theme_color_override("font_color", UI.GOLD if i == idx else Color(1, 1, 1, 0.55))
-			rows[i].scale = Vector2.ONE
-		rows[idx].pivot_offset = rows[idx].size / 2.0
-		rows[idx].scale = Vector2(1.15, 1.15)
-		Audio.sfx("tick", null, -4.0, 1.0 + float(k) / steps * 0.5)
-		await _wait(0.04 + pow(float(k) / steps, 3.0) * 0.32)
+	await reel.spin_to(target, 3, 3.2)
+	# Anzeige und geladenes Spiel sind identisch: wir laden exakt den Eintrag unter dem Zeiger
+	pick = Game.MINIGAMES[reel.current_index()]
+	desc.text = pick.desc
+	await get_tree().process_frame
+	panel.create_tween().tween_property(panel, "position", (root.size - panel.size) / 2.0, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	Audio.sfx("bell")
-	Juice.ui_punch(rows[idx], 0.4, 0.5)
+	Juice.ui_punch(reel, 0.12, 0.5)
 	FX.confetti(cam.global_position + cam.global_basis.z * -12.0, 40)
-	await _wait(1.0)
+	await _wait(1.6)
 	played.append(pick.id)
 	Game.party.phase = "minigame"
 	Game.pending_minigame = pick.id
@@ -883,11 +1027,50 @@ func _finale() -> void:
 				Audio.jingle("star")
 				await _wait(1.6)
 	var rank := Game.ranking()
+	if Game.is_team_mode():
+		var teams := Game.team_ranking()
+		var names := ["Team Rot & Grün", "Team Blau & Gelb"]
+		cam.overview = true
+		await _show_banner("%s gewinnt!" % names[teams[0]], Game.player_color(teams[0]), 1.8)
+		var win: Array[int] = []
+		var lose: Array[int] = []
+		for i in rank:
+			if Game.team_of(i) == teams[0]:
+				win.append(i)
+			else:
+				lose.append(i)
+		rank = win + lose
+		for i in win:
+			rigs[i].react("victory")
+			FX.confetti(rigs[i].global_position + Vector3.UP * 2.0, 50)
+		await _wait(1.2)
+	EventBus.party_result.emit(rank)
 	await CutsceneManager.play("Podium", {"board": self, "ranking": rank, "skippable": false})
 	Router.goto("res://scenes/menu/MainMenu.tscn")
 
 
 # --- Hilfen ---------------------------------------------------------------------------------------------------
+
+var _mode_label: Label
+
+
+func _refresh_mode_label() -> void:
+	if _mode_label == null:
+		return
+	if Game.is_team_mode():
+		var st := [0, 0]
+		var co := [0, 0]
+		for i in 4:
+			st[Game.team_of(i)] += int(Game.players[i].stars)
+			co[Game.team_of(i)] += int(Game.players[i].coins)
+		_mode_label.text = "Rot+Grün  ★%d · %d Münzen     |     Blau+Gelb  ★%d · %d Münzen" % [st[0], co[0], st[1], co[1]]
+	else:
+		_mode_label.text = "BLITZ-PARTY · 2 Würfel · Stern = %d Münzen" % _star_cost()
+
+
+func _star_cost() -> int:
+	return 10 if Game.party_mode() == "blitz" else STAR_COST_DEFAULT
+
 
 func _coins(p: int, delta: int) -> void:
 	var real := Game.add_coins(p, delta)
@@ -973,8 +1156,9 @@ func _show_banner(text: String, color := Color.WHITE, hold := 1.0) -> void:
 	_banner.visible = false
 
 
-func _set_prompt(text: String) -> void:
-	_prompt.text = text
+func _set_prompt(text: String, action := "a") -> void:
+	_prompt.action = action
+	_prompt.set_text(text)
 	_prompt.visible = text != ""
 	if text != "":
 		Juice.ui_punch(_prompt, 0.15, 0.3)
@@ -1000,6 +1184,16 @@ func _build_hud() -> void:
 	_round_label.position = Vector2(-160, 14)
 	_round_label.size = Vector2(320, 50)
 	_hud.add_child(_round_label)
+	if Game.party_mode() != "classic":
+		_mode_label = UI.label("", 22, UI.GOLD, true, 8)
+		_mode_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_mode_label.position = Vector2(-300, 58)
+		_mode_label.size = Vector2(600, 30)
+		_hud.add_child(_mode_label)
+		EventBus.stars_changed.connect(func(_i: int, _v: int, _d: int) -> void: _refresh_mode_label())
+		EventBus.coins_changed.connect(func(_i: int, _v: int, _d: int) -> void: _refresh_mode_label())
+		_refresh_mode_label()
 	_banner = UI.label("", 68, Color.WHITE, true, 14)
 	_banner.set_anchors_preset(Control.PRESET_CENTER)
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1007,17 +1201,16 @@ func _build_hud() -> void:
 	_banner.size = Vector2(1200, 100)
 	_banner.visible = false
 	_hud.add_child(_banner)
-	_prompt = UI.label("", 34, Color.WHITE, true, 10)
+	_prompt = UI.prompt("a", "", 34)
 	_prompt.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_prompt.position = Vector2(-400, -120)
 	_prompt.size = Vector2(800, 60)
 	_prompt.visible = false
 	_hud.add_child(_prompt)
-	_ff_hint = UI.label(UI.prompt_text("a", "halten: CPU vorspulen"), 20, Color(1, 1, 1, 0.7))
+	_ff_hint = UI.prompt("a", "halten: CPU vorspulen", 20)
+	_ff_hint.modulate.a = 0.75
 	_ff_hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_ff_hint.position = Vector2(-200, -48)
 	_ff_hint.size = Vector2(400, 30)
-	_ff_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ff_hint.visible = false
 	_hud.add_child(_ff_hint)

@@ -18,6 +18,9 @@ const BOARDS := [
 	{"id": "dungeon", "name": "Dungeon Deep", "desc": "Fackeln, Fallen und ein Lavasee mit fahrender Plattform. Skelette bewachen das Tor.", "music": "board_dungeon"},
 	{"id": "pirates", "name": "Pirates Cove", "desc": "Sonnige Bucht mit Planken-Katapulten, Schiffen und einem gierigen Händler.", "music": "board_pirates"},
 	{"id": "sky", "name": "Sky Kingdom", "desc": "Schwebende Inseln, eine Zugbrücke, die sich jede Runde dreht, und Wolken-Kanonen.", "music": "board_sky"},
+	{"id": "graveyard", "name": "Geisterfriedhof", "desc": "Mondlicht, Bodennebel und ein Geister-Taxi, das dich vor- oder zurückfliegt. Die Geisterbrücke erscheint nur in ungeraden Runden.", "music": "board_dungeon"},
+	{"id": "frost", "name": "Frostdorf", "desc": "Verschneites Dorf mit Eis-Rutschen, Schlittenbahn und einem See, der in geraden Runden zufriert.", "music": "board_sky"},
+	{"id": "station", "name": "Orbit-Station", "desc": "Raumstation über einem Ringplaneten: Warp-Pads, Raketenstarts und Luftschleusen, die abwechselnd öffnen.", "music": "board_sky"},
 ]
 
 const MINIGAMES := [
@@ -51,25 +54,75 @@ const MINIGAMES := [
 	{"id": "slime_sprint", "name": "Schleim-Spur Sprint", "scene": "res://scenes/minigames/SlimeSprint.tscn", "kind": "race",
 		"desc": "Sprinte durch den Parcours! Schleimpfützen sind glitschig und Pendel-Fallen schwingen gnadenlos.",
 		"controls": "Stick: Laufen · A: Springen"},
+	{"id": "coin_rain", "name": "Münzregen", "scene": "res://scenes/minigames/CoinRain.tscn", "kind": "score",
+		"desc": "Münzen, Sterne – und Bomben regnen vom Himmel! Schnapp dir die meisten Münzen und schubse Gegner, damit sie welche verlieren.",
+		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
+	{"id": "sumo_shove", "name": "Sumo-Schubser", "scene": "res://scenes/minigames/SumoShove.tscn", "kind": "survival", "online": true,
+		"desc": "Die runde Plattform über dem Meer schrumpft! Doppelt starke Schubser – wer zuletzt oben steht, gewinnt.",
+		"controls": "Stick: Laufen · A: Springen · B: Super-Schubser"},
+	{"id": "snowball_fight", "name": "Schneeball-Schlacht", "scene": "res://scenes/minigames/SnowballFight.tscn", "kind": "score",
+		"desc": "Verschanz dich hinter Schneemännern und triff die anderen! Am Schneehaufen lädt Munition schneller nach.",
+		"controls": "Stick: Laufen · A: Springen · B: Werfen"},
+	{"id": "color_chaos", "name": "Farb-Chaos", "scene": "res://scenes/minigames/ColorChaos.tscn", "kind": "score",
+		"desc": "Jedes Feld, über das du läufst, wird in deiner Farbe eingefärbt. Farbbomben färben ganze Bereiche!",
+		"controls": "Stick: Laufen · A: Springen · B: Schubsen (betäubt)"},
+	{"id": "hammer_hop", "name": "Hammer-Hüpfen", "scene": "res://scenes/minigames/HammerHop.tscn", "kind": "survival",
+		"desc": "Ein Riesenhammer kreist über den Turm – spring rechtzeitig! Später kommt ein hoher Balken dazu: darunter bloß nicht springen.",
+		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
+	{"id": "fish_catch", "name": "Fischfang", "scene": "res://scenes/minigames/FishCatch.tscn", "kind": "score",
+		"desc": "Steuere deinen Schwimmer zu den Fisch-Schatten. Taucht er ab, sofort A! Goldfische bringen 6 Punkte – Stiefel nichts.",
+		"controls": "Stick: Schwimmer bewegen · A: Anschlagen"},
+	{"id": "meteor_dodge", "name": "Meteor-Ausweichen", "scene": "res://scenes/minigames/MeteorDodge.tscn", "kind": "survival",
+		"desc": "Auf dem Mond regnen Meteore! Rote Kreise zeigen den Einschlag – und manche zielen direkt auf dich.",
+		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
+	{"id": "rhythm_dance", "name": "Rhythmus-Tanz", "scene": "res://scenes/minigames/RhythmDance.tscn", "kind": "score",
+		"desc": "Schnipp den Stick genau im Takt in Pfeilrichtung oder drück A! PERFEKT gibt 3 Punkte, Serien geben Bonus.",
+		"controls": "Stick: Richtung schnippen · A: A-Note"},
+	{"id": "minigolf_duel", "name": "Minigolf-Duell", "scene": "res://scenes/minigames/MinigolfDuel.tscn", "kind": "score",
+		"desc": "Alle putten gleichzeitig! Wer zuerst einlocht, kassiert 4 Punkte. Pilz-Bumper schleudern Bälle quer über die Bahn.",
+		"controls": "Stick: Zielen · A halten: Kraft laden · loslassen: Schlag"},
+	{"id": "balloon_battle", "name": "Ballon-Kart-Battle", "scene": "res://scenes/minigames/BalloonBattle.tscn", "kind": "survival",
+		"desc": "Platze die Ballons der anderen per Turbo-Rempler und klau sie dir! Item-Boxen geben Torten-Kanonen.",
+		"controls": "Stick: Lenken · A: Gas · B: Turbo-Rempler · X: Torte"},
 ]
 
 const TRACKS := [
 	{"id": "lumos_ring", "name": "Lumos-Ring", "desc": "Sonniger Grand-Prix-Kurs mit Looping und Gleiter-Schlucht.", "music": "race"},
 	{"id": "coral_canal", "name": "Korallen-Kanal", "desc": "Piratenbucht mit gläsernem Unterwasser-Tunnel.", "music": "race"},
 	{"id": "neon_volcano", "name": "Neon-Vulkan", "desc": "Nachtrennen über Lavaseen – Looping, Gleiter und Neonlicht.", "music": "race"},
+	{"id": "storm_pass", "name": "Gewitter-Pass", "desc": "Nacht, Regen, grelle Blitze: Bergpass mit Leuchtmarkierungen und Sprung über die Schlucht.", "music": "race"},
+	{"id": "frost_peak", "name": "Frostgipfel", "desc": "Spiegelglatte Eisplatten, Schneegestöber und eine Skisprungschanze.", "music": "race"},
+	{"id": "orbit_ring", "name": "Orbit-Bahn", "desc": "Neonbahn im All: Looping, Schwerelos-Gleiter und ein Ringplanet zum Greifen nah.", "music": "race"},
+	{"id": "city_rally", "name": "Stadt-Rallye", "desc": "Enge 90°-Kurven zwischen Hochhäusern und ein Sprung über den Stadtkanal.", "music": "race"},
+	{"id": "desert_canyon", "name": "Wüsten-Canyon", "desc": "Sandpiste mit Looping und Gleitflug über eine schwindelerregende Schlucht.", "music": "race"},
 ]
 
+const CUPS := [
+	{"id": "lumos", "name": "Lumos-Cup", "tracks": ["lumos_ring", "coral_canal", "neon_volcano", "storm_pass"]},
+	{"id": "stars", "name": "Sternen-Cup", "tracks": ["frost_peak", "orbit_ring", "city_rally", "desert_canyon"]},
+	{"id": "mega", "name": "Mega-Cup (8 Strecken)", "tracks": ["lumos_ring", "frost_peak", "coral_canal", "city_rally", "neon_volcano", "desert_canyon", "storm_pass", "orbit_ring"]},
+]
+const GP_POINTS := [15, 12, 10, 8, 6, 4, 2, 1]
+const PARTY_MODES := [
+	{"id": "classic", "name": "Klassisch", "desc": "Sterne sammeln, Münzen horten, Minispiele nach jeder Runde."},
+	{"id": "blitz", "name": "Blitz-Party", "desc": "Doppelt würfeln, Sterne kosten nur 10 Münzen, 20 Startmünzen – schnelle Runden voller Chaos."},
+	{"id": "team", "name": "Team-Party (2 gegen 2)", "desc": "Rot + Grün gegen Blau + Gelb: Sterne und Münzen zählen fürs Team."},
+]
+const RECORDS_PATH := "user://records.cfg"
 const SETTINGS_PATH := "user://settings.cfg"
 
 var players: Array[Dictionary] = []
 var settings := {
 	"music": 0.7, "sfx": 0.9, "voice": 1.0,
 	"haptics": true, "touch_opacity": 0.8, "touch_scale": 1.0, "touch_layout": {},
-	"auto_accel": true, "screen_shake": 1.0, "quality": "auto", "show_fps": false,
+	"auto_accel": true, "screen_shake": 1.0, "quality": "auto", "show_fps": false, "dynamic_res": true,
+		"split_screen": true, "multi_display": true,
 }
 var party: Dictionary = {}
-var race_cfg := {"track": "lumos_ring", "laps": 3, "cpu_level": 1}
-var mode := "menu"          # menu | party | free_play | race
+var race_cfg := {"track": "lumos_ring", "laps": 3, "cpu_level": 1, "mode": "single", "cup": 0}
+var gp: Dictionary = {}           # {cup, tracks, index, points: {name: pts}, colors: {name: Color}, models: {name: model}, slots: {name: slot}}
+var marathon: Dictionary = {}     # {games: [ids], index, points: [4]}
+var mode := "menu"          # menu | party | free_play | race | marathon
 var pending_minigame := ""
 var last_results: Dictionary = {}
 var free_play_queue: Array = []
@@ -93,7 +146,7 @@ func reset_players(human_count := 1) -> void:
 func new_player(idx: int, hero_id: String, cpu: bool, cpu_level: int) -> Dictionary:
 	return {
 		"idx": idx, "hero": hero_id, "name": hero(hero_id).name, "color": SLOT_COLORS[idx],
-		"cpu": cpu, "cpu_level": cpu_level, "device": idx,
+		"cpu": cpu, "cpu_level": cpu_level, "device": idx, "remote": false,
 		"coins": 10, "stars": 0, "space": -1, "items": [], "minigame_wins": 0, "coins_max": 10,
 		"swaps": 0, "last_roll": 0,
 	}
@@ -178,19 +231,90 @@ func placements_from_ranking(rank: Array[int]) -> Array[int]:
 	return places
 
 
-func start_party(board_id: String, rounds: int) -> void:
+## Team-Modus: Spieler 0+2 (Rot/Grün) gegen 1+3 (Blau/Gelb).
+func team_of(i: int) -> int:
+	return i % 2
+
+
+func is_team_mode() -> bool:
+	return mode == "party" and String(party.get("mode", "classic")) == "team"
+
+
+func party_mode() -> String:
+	return String(party.get("mode", "classic"))
+
+
+## Team-Rangliste [Siegerteam, Verliererteam] nach Sternen, dann Münzen.
+func team_ranking() -> Array[int]:
+	var st := [0, 0]
+	var co := [0, 0]
+	for i in 4:
+		st[team_of(i)] += int(players[i].stars)
+		co[team_of(i)] += int(players[i].coins)
+	if st[0] != st[1]:
+		return [0, 1] if st[0] > st[1] else [1, 0]
+	return [0, 1] if co[0] >= co[1] else [1, 0]
+
+
+func start_party(board_id: String, rounds: int, party_mode := "classic") -> void:
+	var start_coins := 20 if party_mode == "blitz" else 10
 	for p in players:
-		p.coins = 10
+		p.coins = start_coins
 		p.stars = 0
 		p.space = -1
 		p.items = []
 		p.minigame_wins = 0
-		p.coins_max = 10
+		p.coins_max = start_coins
 	party = {
-		"board": board_id, "max_rounds": rounds, "round": 1, "turn": 0, "phase": "intro",
+		"board": board_id, "max_rounds": rounds, "round": 1, "turn": 0, "phase": "intro", "mode": party_mode,
 		"star_space": -1, "minigames_played": [], "events": {}, "first_intro_done": false,
 	}
 	mode = "party"
+
+
+# --- Grand Prix ---------------------------------------------------------------
+
+func start_gp(cup_index: int) -> void:
+	var cup: Dictionary = CUPS[clampi(cup_index, 0, CUPS.size() - 1)]
+	gp = {"cup": cup.name, "tracks": cup.tracks.duplicate(), "index": 0, "points": {}, "colors": {}, "models": {}, "slots": {}}
+	race_cfg.mode = "gp"
+	race_cfg.track = cup.tracks[0]
+	mode = "race"
+
+
+# --- Minispiel-Marathon ---------------------------------------------------------
+
+func start_marathon(count: int) -> void:
+	var ids: Array = MINIGAMES.map(func(m: Dictionary) -> String: return m.id)
+	ids.shuffle()
+	marathon = {"games": ids.slice(0, mini(count, ids.size())), "index": 0, "points": [0, 0, 0, 0]}
+	mode = "marathon"
+
+
+# --- Zeitfahren-Rekorde ----------------------------------------------------------
+
+## Speichert eine Zeitfahrt. Gibt {total_record: bool, lap_record: bool, best_total, best_lap} zurück.
+func submit_time(track_id: String, total: float, best_lap: float) -> Dictionary:
+	var cfg := ConfigFile.new()
+	cfg.load(RECORDS_PATH)
+	var old_total: float = cfg.get_value(track_id, "total", INF)
+	var old_lap: float = cfg.get_value(track_id, "lap", INF)
+	var res := {"total_record": total < old_total, "lap_record": best_lap < old_lap,
+		"best_total": minf(total, old_total), "best_lap": minf(best_lap, old_lap), "prev_total": old_total}
+	cfg.set_value(track_id, "total", res.best_total)
+	cfg.set_value(track_id, "lap", res.best_lap)
+	cfg.save(RECORDS_PATH)
+	EventBus.record_set.emit(track_id, float(res.best_total), float(res.best_lap))
+	return res
+
+
+func record_for(track_id: String) -> Dictionary:
+	var cfg := ConfigFile.new()
+	if cfg.load(RECORDS_PATH) != OK:
+		return {}
+	if not cfg.has_section(track_id):
+		return {}
+	return {"total": cfg.get_value(track_id, "total", INF), "lap": cfg.get_value(track_id, "lap", INF)}
 
 
 # --- Einstellungen ------------------------------------------------------------

@@ -169,6 +169,17 @@ static func hbox(sep := 14) -> HBoxContainer:
 	return h
 
 
+## Verankert ein Control und setzt die Offsets relativ zum Anker – unabhängig davon, ob es schon im
+## Baum hängt (Control.position rechnet sonst gegen die aktuelle Elterngröße und landet außerhalb).
+static func place(c: Control, preset: int, pos: Vector2, sz := Vector2.ZERO) -> void:
+	c.set_anchors_preset(preset)
+	var s := sz if sz != Vector2.ZERO else c.get_combined_minimum_size()
+	c.offset_left = pos.x
+	c.offset_top = pos.y
+	c.offset_right = pos.x + s.x
+	c.offset_bottom = pos.y + s.y
+
+
 static func center_root(parent: Node) -> Control:
 	var c := Control.new()
 	c.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -196,8 +207,67 @@ static func gradient_bg(parent: Node, top := Color("#2a0f5c"), bottom := Color("
 	return tr
 
 
-## Hinweiszeile "Ⓐ Weiter" passend zum Eingabegerät.
+## Hinweiszeile als Text (Fallback ohne Symbolbild), z. B. "Leertaste: Weiter".
 static func prompt_text(action: String, text: String) -> String:
 	if InputHub.last_device == "touch":
 		return "Tippen: " + text
-	return "%s  %s" % [InputHub.glyph(action), text]
+	return "%s: %s" % [InputHub.glyph(action), text]
+
+
+# --- Vektor-Icons (SVG, zur Laufzeit gerastert – schriftunabhängig, keine Tofu-Kästchen) ----
+
+const SVG_ICONS := {
+	"arrow_left": "<path d='M40 10 L18 32 L40 54' fill='none' stroke='#C' stroke-width='11' stroke-linecap='round' stroke-linejoin='round'/>",
+	"arrow_right": "<path d='M24 10 L46 32 L24 54' fill='none' stroke='#C' stroke-width='11' stroke-linecap='round' stroke-linejoin='round'/>",
+	"arrow_up": "<path d='M10 40 L32 18 L54 40' fill='none' stroke='#C' stroke-width='11' stroke-linecap='round' stroke-linejoin='round'/>",
+	"arrow_down": "<path d='M10 24 L32 46 L54 24' fill='none' stroke='#C' stroke-width='11' stroke-linecap='round' stroke-linejoin='round'/>",
+	"heart": "<path d='M32 56 C10 40 4 30 4 20 C4 11 11 5 19 5 C25 5 29 8 32 13 C35 8 39 5 45 5 C53 5 60 11 60 20 C60 30 54 40 32 56 Z' fill='#C' stroke='#3a0a1a' stroke-width='4'/><ellipse cx='20' cy='18' rx='6' ry='4' fill='#fff' opacity='0.55'/>",
+	"cross": "<path d='M14 14 L50 50 M50 14 L14 50' stroke='#C' stroke-width='12' stroke-linecap='round'/>",
+	"check": "<path d='M10 34 L26 50 L54 16' fill='none' stroke='#C' stroke-width='11' stroke-linecap='round' stroke-linejoin='round'/>",
+	"star": "<path d='M32 4 L40 23 L60 24 L44 37 L50 58 L32 46 L14 58 L20 37 L4 24 L24 23 Z' fill='#C' stroke='#5a3000' stroke-width='3' stroke-linejoin='round'/>",
+	"pause": "<rect x='14' y='10' width='12' height='44' rx='4' fill='#C'/><rect x='38' y='10' width='12' height='44' rx='4' fill='#C'/>",
+	"play": "<path d='M18 8 L54 32 L18 56 Z' fill='#C' stroke-linejoin='round'/>",
+	"back": "<path d='M28 12 L10 30 L28 48 M12 30 L42 30 C52 30 56 38 56 44' fill='none' stroke='#C' stroke-width='9' stroke-linecap='round' stroke-linejoin='round'/>",
+	"globe": "<circle cx='32' cy='32' r='24' fill='none' stroke='#C' stroke-width='6'/><path d='M8 32 H56 M32 8 C20 20 20 44 32 56 C44 44 44 20 32 8' fill='none' stroke='#C' stroke-width='5'/>",
+	"user": "<circle cx='32' cy='22' r='12' fill='#C'/><path d='M8 58 C10 42 20 36 32 36 C44 36 54 42 56 58 Z' fill='#C'/>",
+	"lock": "<rect x='12' y='28' width='40' height='30' rx='6' fill='#C'/><path d='M20 28 V20 C20 12 26 8 32 8 C38 8 44 12 44 20 V28' fill='none' stroke='#C' stroke-width='7'/>",
+	"gamepad": "<path d='M14 20 H50 C58 20 62 28 62 38 C62 50 56 54 50 50 L42 44 H22 L14 50 C8 54 2 50 2 38 C2 28 6 20 14 20 Z' fill='#C'/><circle cx='46' cy='31' r='4' fill='#1a0833'/><circle cx='52' cy='37' r='4' fill='#1a0833'/><path d='M14 34 H26 M20 28 V40' stroke='#1a0833' stroke-width='5' stroke-linecap='round'/>",
+	"trophy": "<path d='M18 8 H46 V22 C46 32 40 38 32 38 C24 38 18 32 18 22 Z' fill='#C'/><path d='M18 14 H8 C8 24 12 28 18 28 M46 14 H56 C56 24 52 28 46 28' fill='none' stroke='#C' stroke-width='5'/><rect x='28' y='38' width='8' height='10' fill='#C'/><rect x='18' y='48' width='28' height='8' rx='3' fill='#C'/>",
+	"bolt": "<path d='M36 4 L12 36 H30 L26 60 L52 26 H34 Z' fill='#C' stroke-linejoin='round'/>",
+	"dice": "<rect x='8' y='8' width='48' height='48' rx='10' fill='#C'/><circle cx='22' cy='22' r='5' fill='#1a0833'/><circle cx='42' cy='42' r='5' fill='#1a0833'/><circle cx='32' cy='32' r='5' fill='#1a0833'/>",
+}
+
+static var _icon_cache := {}
+
+
+## Gerastertes Vektor-Icon als Textur (gecacht).
+static func icon_tex(name: String, px := 48, color := Color.WHITE) -> Texture2D:
+	var key := "%s_%d_%s" % [name, px, color.to_html()]
+	if _icon_cache.has(key):
+		return _icon_cache[key]
+	var body: String = SVG_ICONS.get(name, SVG_ICONS.star)
+	body = body.replace("#C", "#" + color.to_html(false))
+	var svg := "<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>%s</svg>" % body
+	var img := Image.new()
+	var err := img.load_svg_from_string(svg, px / 64.0)
+	if err != OK:
+		img = Image.create(px, px, false, Image.FORMAT_RGBA8)
+		img.fill(color)
+	var tex := ImageTexture.create_from_image(img)
+	_icon_cache[key] = tex
+	return tex
+
+
+static func icon_rect(name: String, px := 40, color := Color.WHITE) -> TextureRect:
+	var tr := TextureRect.new()
+	tr.texture = icon_tex(name, px * 2, color)
+	tr.custom_minimum_size = Vector2(px, px)
+	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return tr
+
+
+## Hinweis mit echtem Button-Symbol des aktuellen Eingabegeräts ("[A] Weiter").
+static func prompt(action: String, text: String, size := 30) -> ButtonPrompt:
+	return ButtonPrompt.new().setup(action, text, size)

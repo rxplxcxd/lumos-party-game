@@ -19,10 +19,17 @@ func run(d: Node, ctx: Dictionary) -> void:
 		FX.zzz(s, 2.6, 2.5)
 		if s is CharacterRig:
 			(s as CharacterRig).play("sit" if (s as CharacterRig).has_clip("sit") else "idle")
-		var dir := (s.global_position - center).normalized()
-		d.cut(s.global_position + dir * 6.0 + Vector3(2.0, 3.0, 0.0), s.global_position + Vector3.UP * 1.2, 40.0)
+		var look := s.global_position + Vector3.UP * 1.2
+		var dir := _clear_dir(builder, look, 6.0)
+		if s is CharacterRig:
+			(s as CharacterRig).face_now(dir)
+		var hidden := _hide_occluders(builder, look + dir * 6.0 + Vector3.UP * 2.0, look, s)
+		d.cut(look + dir * 6.0 + Vector3.UP * 2.0, look, 40.0)
 		d.subtitle("Psst … die Gegner schlafen noch.", 1.2)
-		await d.move(s.global_position + dir * 4.5 + Vector3(1.0, 2.2, 0), s.global_position + Vector3.UP * 1.4, 1.4, 34.0)
+		await d.move(look + dir * 4.5 + Vector3.UP * 1.2, look + Vector3.UP * 0.2, 1.4, 34.0)
+		for n in hidden:
+			if is_instance_valid(n):
+				n.visible = true
 
 	# 3) zuckende Fallen
 	if builder.traps.size() > 0:
@@ -50,3 +57,45 @@ func run(d: Node, ctx: Dictionary) -> void:
 	await d.wait(1.0)
 	await d.countdown("LOS!")
 	rig.clear_look()
+
+
+## Kulissen-Objekte (Katalog-Modelle), die zwischen Kamera und Ziel stehen.
+static func _occluders(builder: BoardBuilder, cam_pos: Vector3, target: Vector3, ignore: Node = null) -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	var a := Vector2(cam_pos.x, cam_pos.z)
+	var b := Vector2(target.x, target.z)
+	var seg := b - a
+	var len2 := maxf(seg.length_squared(), 0.001)
+	for c in builder.root.get_children():
+		if not (c is Node3D) or c == ignore or (c as Node3D).scene_file_path == "" or not (c as Node3D).visible:
+			continue
+		var n := c as Node3D
+		var p := Vector2(n.global_position.x, n.global_position.z)
+		var t := clampf((p - a).dot(seg) / len2, 0.0, 1.0)
+		if t > 0.9:
+			continue   # direkt am Ziel: gehört zur Szene
+		if p.distance_to(a + seg * t) < 1.8:
+			out.append(n)
+	return out
+
+
+## Richtung (vom Ziel weg), aus der möglichst nichts im Bild steht. Bevorzugt Blick von +Z (Brett-Kamera).
+static func _clear_dir(builder: BoardBuilder, target: Vector3, dist: float) -> Vector3:
+	var best := Vector3.BACK
+	var best_score := INF
+	for k in 16:
+		var ang := TAU * k / 16.0
+		var dir := Vector3(sin(ang), 0, cos(ang))
+		var score := float(_occluders(builder, target + dir * dist + Vector3.UP * 2.0, target).size()) * 10.0
+		score += (1.0 - dir.z) * 0.8
+		if score < best_score:
+			best_score = score
+			best = dir
+	return best
+
+
+static func _hide_occluders(builder: BoardBuilder, cam_pos: Vector3, target: Vector3, ignore: Node) -> Array[Node3D]:
+	var list := _occluders(builder, cam_pos, target, ignore)
+	for n in list:
+		n.visible = false
+	return list

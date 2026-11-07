@@ -9,6 +9,9 @@ extends Node
 ##   --shotdir=/pfad                                     Zielordner für Screenshots
 ##   --quit=20                                           nach x Sekunden beenden
 ##   --board=dungeon --rounds=5 --track=lumos_ring       Brett/Strecke
+##   --party-mode=classic|blitz|team                     Party-Modus
+##   --race-mode=single|gp|time --cup=0                  Renn-Modus (Grand Prix mit Cup-Index)
+##   --marathon=5                                        Minispiel-Marathon mit n Spielen
 ##   --touch                                             Touch-Steuerung erzwingen
 
 const PRELOAD := [
@@ -37,13 +40,63 @@ func _ready() -> void:
 	await _splash()
 	var target: String = _args.get("scene", "res://scenes/menu/MainMenu.tscn")
 	if _args.has("board"):
-		Game.start_party(_args.board, int(_args.get("rounds", "5")))
+		Game.start_party(_args.board, int(_args.get("rounds", "5")), String(_args.get("party-mode", "classic")))
 		Game.mode = "party"
 	if _args.has("track"):
 		Game.race_cfg.track = _args.track
+	if _args.has("race-mode"):
+		Game.race_cfg.mode = _args["race-mode"]
+		if Game.race_cfg.mode == "gp":
+			Game.start_gp(int(_args.get("cup", "0")))
+	if _args.has("marathon"):
+		Game.start_marathon(int(_args.marathon))
+		target = "res://scenes/menu/MarathonHub.tscn"
 	if _args.has("laps"):
 		Game.race_cfg.laps = int(_args.laps)
-	Router.goto(target)
+	if _args.has("net-test"):
+		_net_test()
+		return
+	Router.goto(target, {"page": _args.page} if _args.has("page") else {})
+
+
+## Dev: automatischer Online-Test zweier Instanzen (siehe tools/dev/net_test.sh).
+func _net_test() -> void:
+	var mode: String = _args["net-test"]
+	var code_file: String = _args.get("net-code-file", "/tmp/lumos_net_code")
+	Net.status.connect(func(t: String) -> void: print("[NET] ", t))
+	Net.room_changed.connect(func() -> void: print("[NET] Spieler: %d, Transport: %s" % [Net.players.size(), Net.transport]))
+	var tick := func() -> void:
+		while true:
+			await get_tree().create_timer(5.0, true).timeout
+			print("[NET] empfangen: %s rtt=%d" % [Net.debug_counts, int(Net.rtt_ms)])
+	tick.call()
+	if mode == "host":
+		Net.create_room()
+		while not Net.online:
+			await get_tree().process_frame
+		print("[NET] CODE ", Net.code)
+		var f := FileAccess.open(code_file, FileAccess.WRITE)
+		f.store_string(Net.code)
+		f.close()
+		var need := int(_args.get("net-players", "2"))
+		while Net.players.size() < need:
+			await get_tree().process_frame
+		await get_tree().create_timer(2.0).timeout
+		var game := String(_args.get("net-game", "race"))
+		if game == "race":
+			Net.start_game({"mode": "race", "track": String(_args.get("track", "lumos_ring")), "laps": int(_args.get("laps", "1"))})
+		else:
+			Net.start_game({"mode": "minigame", "id": game})
+	else:
+		var code := ""
+		while code == "":
+			if FileAccess.file_exists(code_file):
+				code = FileAccess.get_file_as_string(code_file).strip_edges()
+			await get_tree().create_timer(0.3).timeout
+		Net.join_room(code)
+		while not Net.online:
+			await get_tree().process_frame
+		Net.set_ready(true)
 
 
 func _parse_args() -> void:

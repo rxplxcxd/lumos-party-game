@@ -9,6 +9,9 @@ uniform vec4 kerb_a : source_color = vec4(0.9, 0.15, 0.2, 1.0);
 uniform vec4 kerb_b : source_color = vec4(0.98, 0.98, 0.98, 1.0);
 uniform vec4 neon_col : source_color = vec4(0.2, 0.9, 1.0, 1.0);
 uniform float neon = 0.0;
+uniform float wet = 0.0;          // nasse Fahrbahn: dunkler, glänzend (Gewitter)
+uniform float edge_glow = 0.0;    // reflektierende Randmarkierungen (dezentes Leuchten)
+uniform vec4 glow_col : source_color = vec4(1.0, 0.8, 0.35, 1.0);
 uniform float start_v = 0.0;
 uniform float track_len = 800.0;
 
@@ -42,7 +45,15 @@ void fragment() {
 		emi = neon_col.rgb * glow * 2.5;
 		if (edge < 0.055) { col = vec3(0.08); emi = mix(neon_col.rgb, vec3(1.0, 0.2, 0.8), step(0.5, fract(v / 4.0))) * 2.0; }
 	}
+	if (edge_glow > 0.0) {
+		// Reflektor-Strich auf der Randlinie, alle 3 m kurz unterbrochen
+		float dash = step(0.35, fract(v / 3.0));
+		if (edge > 0.065 && edge < 0.09) emi += glow_col.rgb * edge_glow * 0.55 * dash;
+		if (abs(u - 0.5) < 0.01 && fract(v / 6.0) < 0.5) emi += glow_col.rgb * edge_glow * 0.25;
+	}
+	col *= mix(1.0, 0.72, wet);
 	ALBEDO = col;
-	ROUGHNESS = 0.8;
+	ROUGHNESS = mix(0.8, 0.18, wet * (0.6 + 0.4 * hash(floor(vec2(u * 12.0, v * 0.8)))));
+	SPECULAR = mix(0.5, 0.9, wet);
 	EMISSION = emi;
 }

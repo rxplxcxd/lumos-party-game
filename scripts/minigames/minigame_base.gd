@@ -47,6 +47,10 @@ var _hud_root: Control
 var _hurry_said := false
 var _last_tick := -1
 var cpu_mem: Array[Dictionary] = [{}, {}, {}, {}]
+var forced_placements: Array[int] = []
+var net_sync: NetAvatarSync
+var _net_ready: Dictionary = {}
+var _net_go := false
 var _debug_ai := "--debug-ai" in OS.get_cmdline_user_args()
 
 
@@ -55,7 +59,9 @@ func _ready() -> void:
 	world = Node3D.new()
 	world.name = "World"
 	add_child(world)
-	WorldKit.env(self, env_preset)
+	var we := WorldKit.env(self, env_preset)
+	if WorldKit.PRESETS.get(env_preset, {}).get("rays", false):
+		WorldKit.god_rays(self, arena_center, arena_radius * 1.2, we.get_meta("sun"), 6)
 	if spawn_points.is_empty():
 		for i in 4:
 			spawn_points.append(arena_center + Vector3(-4.5 + i * 3.0, 0.5, 0))
@@ -151,6 +157,10 @@ func _flow() -> void:
 	await get_tree().process_frame
 	await CutsceneManager.play("MinigameTeaser", {"game": self})
 	await _instructions()
+	if Game.mode == "online" and Net.online:
+		net_sync = NetAvatarSync.new().setup(self)
+		add_child(net_sync)
+		await _net_barrier()
 	InputHub.set_touch_profile(touch_profile)
 	await CutsceneManager.countdown()
 	time_left = time_limit
@@ -176,6 +186,8 @@ func _process(delta: float) -> void:
 			Juice.ui_punch(timer_label, 0.3, 0.3)
 	on_tick(delta)
 	_update_badges()
+	if net_sync and not Net.is_host:
+		return   # Online: das Ende entscheidet der Host
 	if state == "play" and show_timer and time_left <= 0.0:
 		on_timeout()
 	elif state == "play" and check_end():
@@ -185,7 +197,7 @@ func _process(delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if state == "play":
 		for i in 4:
-			if Game.players[i].cpu:
+			if Game.players[i].cpu and Net.owns_slot(i):
 				cpu_think(i, delta)
 		if _debug_ai and Engine.get_physics_frames() % 90 == 0:
 			for i in 4:
@@ -193,6 +205,37 @@ func _physics_process(delta: float) -> void:
 				print("[AI] P%d pos=%s mv=%s score=%s alive=%s" % [i, a.global_position.snapped(Vector3.ONE * 0.1), InputHub.move(i).snapped(Vector2.ONE * 0.01), scores[i], alive[i]])
 	elif state != "setup":
 		InputHub.clear_virtual()
+
+
+## Online: alle Geräte starten gleichzeitig (Host gibt "go").
+func _on_net_barrier_msg(from: String, msg: Dictionary) -> void:
+	var k := String(msg.get("k", ""))
+	if k == "ready":
+		_net_ready[from] = true
+	elif k == "go":
+		_net_go = true
+
+
+func _net_barrier() -> void:
+	Net.message.connect(_on_net_barrier_msg)
+	if Net.is_host:
+		var waited := 0.0
+		while waited < 12.0:
+			var all := true
+			for id in Net.players:
+				if id != Net.me and not _net_ready.has(id):
+					all = false
+			if all:
+				break
+			await get_tree().process_frame
+			waited += get_process_delta_time()
+		Net.send({"k": "go"}, true)
+	else:
+		Net.send({"k": "ready"}, true, false)
+		var w := 0.0
+		while not _net_go and w < 15.0:
+			await get_tree().process_frame
+			w += get_process_delta_time()
 
 
 func alive_count() -> int:
@@ -240,7 +283,11 @@ func end_game() -> void:
 	InputHub.set_touch_profile("none")
 	Audio.sfx("bell")
 	await CutsceneManager.big_word("FERTIG!", Color("#ffcc33"), 1.0)
-	var placements := compute_placements()
+	var placements := forced_placements if forced_placements.size() == 4 else compute_placements()
+	if net_sync and "--net-test" in str(OS.get_cmdline_user_args()):
+		print("[NET] Minispiel-Ende · Platzierungen %s · alive %s · empfangen %s" % [placements, alive, Net.debug_counts])
+	if net_sync and Net.is_host:
+		Net.send({"k": "end", "pl": placements}, true)
 	await CutsceneManager.play("MinigameWin", {"game": self, "placements": placements})
 	await _show_results(placements)
 	_return(placements)
@@ -284,11 +331,18 @@ func compute_placements() -> Array[int]:
 
 func _return(placements: Array[int]) -> void:
 	Game.last_results = {"game": game_id, "placements": placements, "scores": scores.duplicate()}
+	if not Game.players[0].cpu:
+		EventBus.minigame_result.emit(placements)
 	match Game.mode:
 		"party":
 			Router.goto("res://scenes/party/PartyBoard.tscn")
 		"free_play":
 			Router.goto("res://scenes/menu/MinigameSelect.tscn")
+		"marathon":
+			Router.goto("res://scenes/menu/MarathonHub.tscn")
+		"online":
+			Net.back_to_lobby()
+			Router.goto("res://scenes/menu/MainMenu.tscn", {"page": "online"})
 		_:
 			Router.goto("res://scenes/menu/MainMenu.tscn")
 
@@ -321,7 +375,10 @@ func _build_hud() -> void:
 
 func _update_badges() -> void:
 	for i in badges.size():
-		badges[i].set_score(score_format % scores[i] if not survival else ("♥" if alive[i] else "✕"))
+		if survival:
+			badges[i].set_status("alive" if alive[i] else "out")
+		else:
+			badges[i].set_score(score_format % scores[i])
 
 
 func _instructions() -> void:
@@ -351,8 +408,7 @@ func _instructions() -> void:
 	c.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	c.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(c)
-	var go := UI.label(UI.prompt_text("a", "Los geht's!"), 30, Color.WHITE, true)
-	go.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var go := UI.prompt("a", "Los geht's!", 30)
 	v.add_child(go)
 	await get_tree().process_frame
 	panel.position = (root.size - panel.size) / 2.0
@@ -432,8 +488,7 @@ func _show_results(placements: Array[int]) -> void:
 		row.modulate.a = 0.0
 		v.add_child(row)
 		rows.append(row)
-	var go := UI.label(UI.prompt_text("a", "Weiter"), 28, Color.WHITE, true)
-	go.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var go := UI.prompt("a", "Weiter", 28)
 	v.add_child(go)
 	await get_tree().process_frame
 	panel.position = (root.size - panel.size) / 2.0

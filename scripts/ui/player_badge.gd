@@ -16,6 +16,8 @@ var _place: Label
 var _shown_coins := 0
 var _shown_stars := 0
 var _crown: UIIcon
+var _status_icon: TextureRect
+var _status := ""
 var _cpu_tag: Label
 
 
@@ -46,6 +48,12 @@ func setup(p: int, compact := false, scores := false) -> PlayerBadge:
 	var stats := UI.hbox(8)
 	v.add_child(stats)
 	if score_mode:
+		_status_icon = TextureRect.new()
+		_status_icon.custom_minimum_size = Vector2(30, 30)
+		_status_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_status_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_status_icon.visible = false
+		stats.add_child(_status_icon)
 		_score = UI.label("0", 34, Color.WHITE, true)
 		stats.add_child(_score)
 	else:
@@ -100,6 +108,39 @@ func set_score(v: Variant) -> void:
 		if _score.text != s:
 			_score.text = s
 			Juice.ui_punch(_score, 0.25, 0.3)
+
+
+## Status mit Symbol: "hearts" (Wert = Anzahl), "alive", "out", "done" (Wert = Platz), "" = nur Zahl.
+func set_status(kind: String, value: Variant = null) -> void:
+	if _score == null:
+		return
+	var key := "%s:%s" % [kind, str(value)]
+	if key == _status:
+		return
+	var kind_changed := not _status.begins_with(kind + ":")
+	_status = key
+	match kind:
+		"hearts":
+			_status_icon.texture = UI.icon_tex("heart", 60, Color("#ff4d6d"))
+			_status_icon.visible = true
+			_score.text = "x%d" % int(value)
+		"alive":
+			_status_icon.texture = UI.icon_tex("heart", 60, Color("#ff4d6d"))
+			_status_icon.visible = true
+			_score.text = ""
+		"out":
+			_status_icon.texture = UI.icon_tex("cross", 60, Color("#9aa0b0"))
+			_status_icon.visible = true
+			_score.text = "raus"
+		"done":
+			_status_icon.texture = UI.icon_tex("check", 60, Color("#7dff9a"))
+			_status_icon.visible = true
+			_score.text = "%d." % int(value)
+		_:
+			_status_icon.visible = false
+			_score.text = str(value)
+	if kind_changed:
+		Juice.ui_punch(self, 0.12, 0.3)
 
 
 func set_place(place: int) -> void:

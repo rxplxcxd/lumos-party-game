@@ -34,6 +34,11 @@ const KHOL := "res://assets/3d/minigames-and-others/KayKit_Holiday_Bits_1.0_FREE
 const KFOR := "res://assets/3d/minigames-and-others/KayKit_Forest_Nature_Pack_1.0_FREE/KayKit_Forest_Nature_Pack_1.0_FREE/Assets/gltf/"
 const KRPG := "res://assets/3d/minigames-and-others/KayKit_RPGToolsBits_1.0_FREE/KayKit_RPGToolsBits_1.0_FREE/Assets/gltf/"
 const KIP := "res://assets/3d/minigames-and-others/kenney_input-prompts_1.5/"
+const KGOLF := "res://assets/3d/minigames-and-others/kenney_minigolf-kit/Models/GLB format/"
+const KSS := "res://assets/3d/tracks-enviroment/kenney_space-station-kit/Models/GLB format/"
+const KSB := "res://assets/3d/minigames-and-others/KayKit_Space_Base_Bits_1.0_FREE/KayKit_Space_Base_Bits_1.0_FREE/Assets/gltf/"
+const KCITY := "res://assets/3d/tracks-enviroment/kenney_city-kit-commercial_2.1/Models/GLB format/"
+const KSUB := "res://assets/3d/tracks-enviroment/kenney_city-kit-suburban_20/Models/GLB format/"
 
 const MODELS := {
 	# --- Helden (KayKit Adventurers, Rig_Medium) ---
@@ -403,6 +408,78 @@ const MODELS := {
 	"space/alien": KSP + "alien.glb",
 	"space/astronaut": KSP + "astronautA.glb",
 	"space/rover": KSP + "rover.glb",
+	# --- v2: Minigolf ---
+	"golf/ball_red": KGOLF + "ball-red.glb",
+	"golf/ball_blue": KGOLF + "ball-blue.glb",
+	"golf/ball_green": KGOLF + "ball-green.glb",
+	"golf/hole": KGOLF + "hole-round.glb",
+	"golf/flag": KGOLF + "flag-large-red.glb",
+	"golf/block": KGOLF + "block.glb",
+	"golf/obstacle": KGOLF + "obstacle-block.glb",
+	"golf/obstacle_diamond": KGOLF + "obstacle-diamond.glb",
+	"golf/castle": KGOLF + "castle.glb",
+	"golf/club": KGOLF + "club-red.glb",
+	# --- v2: Holiday-Kit (Frost) ---
+	"hk/snowman": KHK + "snowman-hat.glb",
+	"hk/snow_pile": KHK + "snow-pile.glb",
+	"hk/snow_bunker": KHK + "snow-bunker.glb",
+	"hk/tree_snow": KHK + "tree-snow-a.glb",
+	"hk/tree_snow_b": KHK + "tree-snow-b.glb",
+	"hk/tree_decorated": KHK + "tree-decorated-snow.glb",
+	"hk/reindeer": KHK + "reindeer.glb",
+	"hk/sled": KHK + "sled.glb",
+	"hk/candy_cane": KHK + "candy-cane-red.glb",
+	"hk/present": KHK + "present-a-cube.glb",
+	"hk/present_round": KHK + "present-b-round.glb",
+	"hk/cabin_wall": KHK + "cabin-wall.glb",
+	"hk/cabin_roof": KHK + "cabin-roof-snow.glb",
+	"hk/cabin_door": KHK + "cabin-doorway.glb",
+	"hk/nutcracker": KHK + "nutcracker.glb",
+	"hk/train": KHK + "train-locomotive.glb",
+	"hk/rocks": KHK + "rocks-large.glb",
+	"hk/snowflake": KHK + "snowflake-a.glb",
+	"hol/snowball": KHOL + "snowball.gltf",
+	"hol/snowball_pile": KHOL + "snowball_pile.gltf",
+	"hol/snowman": KHOL + "snowman_A.gltf",
+	"hol/christmas_tree": KHOL + "christmas_tree_decorated.gltf",
+	"hol/gingerbread_house": KHOL + "gingerbread_house_decorated.gltf",
+	"nat/pine_snow": KN + "tree_pineTallA_detailed.glb",
+	"nat/pine": KN + "tree_pineRoundC.glb",
+	"nat/cactus_short": KN + "cactus_short.glb",
+	# --- v2: Raumstation ---
+	"ss/floor": KSS + "floor-panel.glb",
+	"ss/rail": KSS + "rail.glb",
+	"ss/computer": KSS + "computer-wide.glb",
+	"ss/container": KSS + "container-tall.glb",
+	"ss/display": KSS + "display-wall-wide.glb",
+	"ss/table_planet": KSS + "table-display-planet.glb",
+	"sb/module_a": KSB + "basemodule_A.gltf",
+	"sb/module_c": KSB + "basemodule_C.gltf",
+	"sb/garage": KSB + "basemodule_garage.gltf",
+	"sb/landingpad": KSB + "landingpad_large.gltf",
+	"sb/lander": KSB + "lander_A.gltf",
+	"sb/windturbine": KSB + "windturbine_tall.gltf",
+	"sb/solarpanel": KSB + "solarpanel.gltf",
+	"sb/drill": KSB + "drill_structure.gltf",
+	"sb/cargo": KSB + "cargo_A_stacked.gltf",
+	"sb/truck": KSB + "spacetruck.gltf",
+	"sb/rocks": KSB + "rocks_A.gltf",
+	# --- v2: Stadt ---
+	"city/sky_a": KCITY + "building-skyscraper-a.glb",
+	"city/sky_b": KCITY + "building-skyscraper-b.glb",
+	"city/sky_c": KCITY + "building-skyscraper-c.glb",
+	"city/building_a": KCITY + "building-a.glb",
+	"city/building_e": KCITY + "building-e.glb",
+	"city/building_h": KCITY + "building-h.glb",
+	"city/parasol": KCITY + "detail-parasol-a.glb",
+	"sub/house_a": KSUB + "building-type-a.glb",
+	"sub/house_f": KSUB + "building-type-f.glb",
+	"sub/house_k": KSUB + "building-type-k.glb",
+	"sub/tree": KSUB + "tree-large.glb",
+	"sub/fence": KSUB + "fence-3x3.glb",
+	"sub/planter": KSUB + "planter.glb",
+	"arcade/dance": KARC + "dance-machine.glb",
+	"arcade/gamer": KARC + "character-gamer.glb",
 }
 
 ## Rig_Medium-Animationsquellen (alle teilen das Skelett der Helden).
@@ -435,6 +512,25 @@ const ICONS := {
 	"crosshair": "res://assets/3d/minigames-and-others/kenney_crosshair-pack/PNG/Glow/crosshair-030.png",
 	"luck": "res://assets/3d/boardgame/kenney_board-game-info/PNG/Default (128px)/luck.png",
 	"hourglass": "res://assets/3d/boardgame/kenney_board-game-info/PNG/Default (128px)/hourglass.png",
+}
+
+## Button-Glyphen je Controller-Layout (Kenney Input Prompts). Aktionen sind positionsbasiert:
+## "a" = unterer Face-Button, "b" = rechter, "x" = linker, "y" = oberer.
+const GLYPHS := {
+	"xbox": {"a": KIP + "Xbox Series/Default/xbox_button_a.png", "b": KIP + "Xbox Series/Default/xbox_button_b.png",
+		"x": KIP + "Xbox Series/Default/xbox_button_x.png", "y": KIP + "Xbox Series/Default/xbox_button_y.png",
+		"r": KIP + "Xbox Series/Default/xbox_rb.png", "l": KIP + "Xbox Series/Default/xbox_lb.png", "start": KIP + "Xbox Series/Default/xbox_button_menu.png"},
+	"playstation": {"a": KIP + "PlayStation Series/Default/playstation_button_cross.png", "b": KIP + "PlayStation Series/Default/playstation_button_circle.png",
+		"x": KIP + "PlayStation Series/Default/playstation_button_square.png", "y": KIP + "PlayStation Series/Default/playstation_button_triangle.png",
+		"r": KIP + "PlayStation Series/Default/playstation_trigger_r1.png", "l": KIP + "PlayStation Series/Default/playstation_trigger_l1.png",
+		"start": KIP + "PlayStation Series/Default/playstation5_button_options.png"},
+	"switch": {"a": KIP + "Nintendo Switch/Default/switch_button_b.png", "b": KIP + "Nintendo Switch/Default/switch_button_a.png",
+		"x": KIP + "Nintendo Switch/Default/switch_button_y.png", "y": KIP + "Nintendo Switch/Default/switch_button_x.png",
+		"r": KIP + "Nintendo Switch/Default/switch_button_r.png", "l": KIP + "Nintendo Switch/Default/switch_button_l.png", "start": KIP + "Nintendo Switch/Default/switch_button_plus.png"},
+	"keyboard": {"a": KIP + "Keyboard & Mouse/Default/keyboard_space.png", "b": KIP + "Keyboard & Mouse/Default/keyboard_k.png",
+		"x": KIP + "Keyboard & Mouse/Default/keyboard_e.png", "y": KIP + "Keyboard & Mouse/Default/keyboard_q.png",
+		"r": KIP + "Keyboard & Mouse/Default/keyboard_shift.png", "l": KIP + "Keyboard & Mouse/Default/keyboard_tab.png", "start": KIP + "Keyboard & Mouse/Default/keyboard_escape.png"},
+	"touch": {"a": KIP + "Touch/Default/touch_tap.png"},
 }
 
 const FONT_TITLE := "res://assets/fonts/LilitaOne-Regular.ttf"
@@ -623,6 +719,9 @@ func all_paths() -> PackedStringArray:
 		out.append(v)
 	for v in ICONS.values():
 		out.append(v)
+	for layout in GLYPHS.values():
+		for v in layout.values():
+			out.append(v)
 	out.append(FONT_TITLE)
 	out.append(FONT_BODY)
 	return out

@@ -15,7 +15,7 @@ const BUTTON_STYLE := {
 	"b": {"color": Color("#ff5c7a"), "radius": 50.0},
 	"x": {"color": Color("#ffc93c"), "radius": 50.0},
 	"r": {"color": Color("#5ab8ff"), "radius": 56.0},
-	"start": {"color": Color("#ffffff"), "radius": 30.0},
+	"start": {"color": Color("#4a3a8a"), "radius": 30.0},
 }
 const PROFILES := {
 	"none": {"stick": false, "buttons": {}},
@@ -23,6 +23,10 @@ const PROFILES := {
 	"board": {"stick": true, "buttons": {"a": "OK", "b": "Nein", "start": "II"}},
 	"minigame": {"stick": true, "buttons": {"a": "Sprung", "b": "Aktion", "start": "II"}},
 	"action_only": {"stick": false, "buttons": {"a": "Los!", "start": "II"}},
+	"battle": {"stick": true, "buttons": {"a": "Gas", "b": "Turbo", "x": "Item", "start": "II"}},
+	"golf": {"stick": true, "buttons": {"a": "Schlag", "start": "II"}},
+	"dance": {"stick": true, "buttons": {"a": "A", "start": "II"}},
+	"throw": {"stick": true, "buttons": {"a": "Sprung", "b": "Werfen", "start": "II"}},
 	"race": {"stick": true, "buttons": {"r": "Drift", "x": "Item", "b": "Bremse", "start": "II"}},
 	"edit": {"stick": true, "buttons": {"a": "A", "b": "B", "x": "Item", "r": "Drift", "start": "II"}},
 }
@@ -87,7 +91,7 @@ func _relayout() -> void:
 	for k in saved.keys():
 		if layout.has(k):
 			layout[k] = saved[k] if saved[k] is Vector2 else layout[k]
-	var scl: float = Game.settings.get("touch_scale", 1.0)
+	var scl: float = Game.settings.get("touch_scale", 1.0) * clampf(vs.y / 720.0, 0.75, 1.6)
 	var opacity: float = Game.settings.get("touch_opacity", 0.8)
 	for id in _buttons:
 		var b: TouchButton = _buttons[id]
@@ -97,7 +101,8 @@ func _relayout() -> void:
 		b.queue_redraw()
 	_stick.modulate.a = opacity
 	_stick.scale_factor = scl
-	_stick.home = Vector2(0.14, 0.62) * vs
+	var inset := InputHub.safe_insets()
+	_stick.home = Vector2(0.14, 0.62) * vs + Vector2(inset.x, 0)
 	_stick.zone = Rect2(Vector2.ZERO, Vector2(vs.x * 0.48, vs.y))
 	_stick.reset()
 	_refresh_visibility()
@@ -241,6 +246,7 @@ class TouchStick extends Control:
 	var active := false
 	var scale_factor := 1.0
 	var max_r := 78.0
+	var _pulse := 0.0
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -258,6 +264,7 @@ class TouchStick extends Control:
 		base = p
 		knob = p
 		value = Vector2.ZERO
+		_pulse = 1.0
 		queue_redraw()
 
 	func drag(p: Vector2) -> void:
@@ -276,26 +283,41 @@ class TouchStick extends Control:
 		active = false
 		value = Vector2.ZERO
 		var tw := create_tween().set_parallel(true)
-		tw.tween_property(self, "knob", home, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tw.tween_property(self, "base", home, 0.12)
-		tw.tween_callback(queue_redraw)
-		tw.chain().tween_callback(queue_redraw)
+		tw.tween_property(self, "knob", home, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(self, "base", home, 0.14)
 
-	func _process(_d: float) -> void:
-		if visible and not active:
+	func _process(delta: float) -> void:
+		if visible:
+			_pulse = maxf(0.0, _pulse - delta * 3.0)
 			queue_redraw()
 
 	func _draw() -> void:
 		var r := max_r * scale_factor
-		draw_circle(base, r * 1.25, Color(0, 0, 0, 0.22))
-		draw_arc(base, r * 1.25, 0, TAU, 48, Color(1, 1, 1, 0.55), 4.0, true)
+		var outer := r * 1.28
+		# Glasscheibe mit weichem Schatten
+		draw_circle(base + Vector2(0, 6), outer, Color(0, 0, 0, 0.22))
+		for k in 6:
+			var t := k / 6.0
+			draw_circle(base, outer * (1.0 - t * 0.12), Color(0.12, 0.1, 0.25, 0.18 + t * 0.04))
+		draw_arc(base, outer, 0, TAU, 64, Color(1, 1, 1, 0.55 if active else 0.35), 3.0, true)
+		draw_arc(base, outer - 6, PI * 1.1, PI * 1.9, 24, Color(1, 1, 1, 0.25), 3.0, true)
+		if _pulse > 0.0:
+			draw_arc(base, outer * (1.0 + (1.0 - _pulse) * 0.35), 0, TAU, 48, Color(0.6, 0.85, 1.0, _pulse * 0.6), 4.0, true)
+		# Richtungs-Kerben
 		for k in 4:
 			var ang := k * PI / 2.0
-			var tip := base + Vector2.from_angle(ang) * r * 1.02
-			draw_colored_polygon(PackedVector2Array([tip + Vector2.from_angle(ang) * 10, tip + Vector2.from_angle(ang + 2.2) * 8, tip + Vector2.from_angle(ang - 2.2) * 8]), Color(1, 1, 1, 0.5))
-		draw_circle(knob + Vector2(0, 5), r * 0.55, Color(0, 0, 0, 0.25))
-		draw_circle(knob, r * 0.55, Color(1, 1, 1, 0.92 if active else 0.75))
-		draw_circle(knob, r * 0.38, Color(0.85, 0.9, 1.0, 1.0))
+			var dir := Vector2.from_angle(ang)
+			var lit := value.dot(dir) > 0.5
+			var tip := base + dir * r * 1.05
+			draw_colored_polygon(PackedVector2Array([tip + dir * 9, tip + Vector2.from_angle(ang + 2.3) * 7, tip + Vector2.from_angle(ang - 2.3) * 7]), Color(0.6, 0.9, 1.0, 0.95) if lit else Color(1, 1, 1, 0.4))
+		# Knauf: glänzende Kappe
+		var kr := r * 0.58
+		draw_circle(knob + Vector2(0, 7), kr, Color(0, 0, 0, 0.3))
+		draw_circle(knob, kr, Color(0.86, 0.9, 1.0, 0.95))
+		draw_circle(knob + Vector2(0, kr * 0.12), kr * 0.86, Color(0.72, 0.78, 0.95, 1.0))
+		draw_circle(knob, kr * 0.62, Color(0.82, 0.87, 1.0, 1.0))
+		draw_circle(knob - Vector2(kr * 0.25, kr * 0.32), kr * 0.28, Color(1, 1, 1, 0.55))
+		draw_arc(knob, kr, 0, TAU, 40, Color(1, 1, 1, 0.9), 2.5, true)
 
 
 class TouchButton extends Control:
@@ -310,6 +332,8 @@ class TouchButton extends Control:
 	var pressed_now := false
 	var _font: Font
 
+	const LETTER := {"a": "A", "b": "B", "x": "X", "y": "Y", "r": "R", "l": "L", "start": ""}
+
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -320,7 +344,7 @@ class TouchButton extends Control:
 	func pulse() -> void:
 		pressed_now = true
 		var tw := create_tween().set_parallel(true)
-		press_scale = 0.84
+		press_scale = 0.86
 		ring = 0.0
 		tw.tween_property(self, "ring", 1.0, 0.35).set_ease(Tween.EASE_OUT)
 		tw.tween_method(func(_v: float) -> void: queue_redraw(), 0.0, 1.0, 0.35)
@@ -328,19 +352,43 @@ class TouchButton extends Control:
 	func release() -> void:
 		pressed_now = false
 		var tw := create_tween()
-		tw.tween_property(self, "press_scale", 1.0, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tw.parallel().tween_method(func(_v: float) -> void: queue_redraw(), 0.0, 1.0, 0.18)
+		tw.tween_property(self, "press_scale", 1.0, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.parallel().tween_method(func(_v: float) -> void: queue_redraw(), 0.0, 1.0, 0.2)
 
 	func _draw() -> void:
 		var r := radius * scale_factor * press_scale
+		var depth := 7.0 * scale_factor * (0.35 if pressed_now else 1.0)
+		var c := center + Vector2(0, 0 if not pressed_now else 3)
 		if ring > 0.0 and ring < 1.0:
-			draw_arc(center, radius * scale_factor * (1.0 + ring * 0.7), 0, TAU, 48, Color(color, 1.0 - ring), 6.0 * (1.0 - ring) + 1.0, true)
-		draw_circle(center + Vector2(0, 6 * scale_factor), r, Color(0, 0, 0, 0.3))
-		draw_circle(center, r, color.darkened(0.25) if pressed_now else color)
-		draw_circle(center + Vector2(-r * 0.25, -r * 0.3), r * 0.45, Color(1, 1, 1, 0.22))
-		draw_arc(center, r, 0, TAU, 48, Color(1, 1, 1, 0.85), 3.0, true)
-		if _font and label != "":
-			var fs := int(clampf(r * (0.55 if label.length() <= 2 else 0.34), 12, 40))
-			var sz := _font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, fs)
-			draw_string_outline(_font, center + Vector2(-sz.x / 2.0, fs * 0.36), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, Color(0, 0, 0, 0.55))
-			draw_string(_font, center + Vector2(-sz.x / 2.0, fs * 0.36), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
+			draw_arc(center, radius * scale_factor * (1.0 + ring * 0.7), 0, TAU, 48, Color(color.lightened(0.3), 1.0 - ring), 6.0 * (1.0 - ring) + 1.0, true)
+		# Schatten + Seitenwand (Tiefe)
+		draw_circle(c + Vector2(0, depth + 4), r, Color(0, 0, 0, 0.28))
+		draw_circle(c + Vector2(0, depth), r, color.darkened(0.45))
+		# Kappe mit vertikalem Verlauf
+		for k in 8:
+			var t := k / 8.0
+			draw_circle(c + Vector2(0, -r * 0.06 * t), r * (1.0 - t * 0.1), color.darkened(0.12 - t * 0.2) if not pressed_now else color.darkened(0.3 - t * 0.1))
+		# Glanz
+		draw_circle(c + Vector2(-r * 0.22, -r * 0.34), r * 0.42, Color(1, 1, 1, 0.24))
+		draw_circle(c + Vector2(-r * 0.3, -r * 0.42), r * 0.18, Color(1, 1, 1, 0.35))
+		draw_arc(c, r, 0, TAU, 56, Color(1, 1, 1, 0.85), 2.5, true)
+		draw_arc(c, r - 3, PI * 0.15, PI * 0.85, 24, Color(0, 0, 0, 0.18), 3.0, true)
+		if _font == null:
+			return
+		var letter: String = LETTER.get(id, "")
+		if id == "start":
+			var bw := r * 0.18
+			draw_rect(Rect2(c + Vector2(-r * 0.32, -r * 0.4), Vector2(bw, r * 0.8)), Color.WHITE)
+			draw_rect(Rect2(c + Vector2(r * 0.14, -r * 0.4), Vector2(bw, r * 0.8)), Color.WHITE)
+			return
+		var fs := int(r * 0.78)
+		var sz := _font.get_string_size(letter, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+		var lp := c + Vector2(-sz.x / 2.0, fs * 0.28 - (r * 0.08 if label != "" else 0.0))
+		draw_string_outline(_font, lp, letter, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 7, Color(0, 0, 0, 0.45))
+		draw_string(_font, lp, letter, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
+		if label != "" and label != letter:
+			var fs2 := int(clampf(r * 0.26, 11, 20))
+			var sz2 := _font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2)
+			var lp2 := c + Vector2(-sz2.x / 2.0, r * 0.62)
+			draw_string_outline(_font, lp2, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2, 5, Color(0, 0, 0, 0.6))
+			draw_string(_font, lp2, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2, Color(1, 1, 1, 0.95))
