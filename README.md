@@ -90,28 +90,26 @@ Hilfswerkzeuge:
 Test-Start-Optionen (nach `--`): `--scene=res://scenes/minigames/HotBomb.tscn --cpu --touch --board=pirates
 --rounds=1 --track=neon_volcano --laps=1 --shots=5,10 --quit=20 --debug-ai`.
 
-## Web/PWA-Build & Lumos Store
+## Web/PWA-Build, Vercel & Lumos OS
 
 ```bash
-godot --headless --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/export_list.gd
+./godot --headless --export-release "Web" web/index.html
 ```
 
 ```bash
-godot --headless --path . --export-release "Web" build/web/index.html
+cd web && python3 -m http.server 8080
 ```
 
-```bash
-python3 tools/postexport_pwa.py build/web --zip
-```
-
-* Der Export nutzt die Single-Thread-Variante (kein SharedArrayBuffer nötig → läuft auf GitHub Pages und iOS Safari).
-* `tools/export_list.gd` exportiert nur Assets, die der Katalog wirklich referenziert (≈16 MB PCK statt 900 MB Quell-Assets).
-* `tools/postexport_pwa.py` erzeugt Service Worker (versionierter Precache, Offline-Start), Manifest, Icons,
-  `version.json`, `lumos-app.json` und das Store-Paket `build/lumos-party-web.zip`.
-* **GitHub Actions** (`.github/workflows/build-web.yml`): Import → Skriptprüfung → Export → PWA → Browser-Rauchtest
-  (Chromium/WebGL2) → Deployment auf **GitHub Pages** (Push auf `main`) und **GitHub Release** mit ZIP +
-  `lumos-app.json` (Tag `v*`). Einmalig nötig: *Settings → Pages → Source: GitHub Actions*.
-* `lumos-app.json` im Repo-Root beschreibt die App für den Lumos Store (Web-Einstieg + Download-ZIP).
+* `web/` ist direkt auf **Vercel** deploybar (MIME-Typen für `.wasm`/`.pck`, Cache-Header für den Service Worker,
+  Popup-taugliche COOP-Policy für das Google-Login) – Details und Lumos-Sideload/Kiosk-Installer in
+  [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), Online-Architektur in [docs/ONLINE.md](docs/ONLINE.md).
+* Exportliste neu erzeugen (nach neuen Modellen/Szenen):
+  `./godot --headless --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/export_list.gd`
+* `python3 tools/postexport_pwa.py web --zip` erzeugt `version.json`, `lumos-app.json` und das Store-Paket
+  `build/lumos-party-web.zip`.
+* Lumos OS: `python3 tools/lumos/install_lumos.py --launch` installiert und registriert das Spiel über `lumosd`.
+* **GitHub Actions**: Import → Skriptprüfung → Online-Test (2 Instanzen) → Web-Export → Browser-Rauchtest
+  (inkl. Audio) → Linux-Export → GitHub Pages / Vercel / Release (`v*`).
 
 ## Projektstruktur
 

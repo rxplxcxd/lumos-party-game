@@ -2,15 +2,13 @@
 """
 Post-Export für die PWA / den Lumos Store.
 
-* kopiert Manifest + Icons aus web/ in den Export-Ordner
-* erzeugt sw.js (Service Worker) mit Versions-Hash und vollständiger Precache-Liste:
-  - Navigation: Network-First (Updates kommen sofort an), Offline-Fallback aus dem Cache
-  - Engine/Spieldaten: Cache-First mit Hintergrund-Aktualisierung
-  - alte Caches werden beim Aktivieren gelöscht
+* kopiert Manifest, Icons, Service Worker (web/sw.js, Network-First mit Offline-Fallback),
+  JS-Brücke (web/lumos_bridge.js) und vercel.json in den Export-Ordner – bei einem Export direkt
+  nach web/ (./godot --headless --export-release "Web" web/index.html) liegt alles schon dort
 * schreibt version.json und lumos-app.json (Store-Metadaten), .nojekyll für GitHub Pages
 * optional: --zip erzeugt lumos-party-web.zip für den Lumos Store / GitHub Releases
 
-Aufruf: python3 tools/postexport_pwa.py build/web [--zip] [--base-url URL]
+Aufruf: python3 tools/postexport_pwa.py web [--zip] [--base-url URL]   (oder build/web)
 """
 from __future__ import annotations
 
@@ -42,57 +40,6 @@ def git_sha() -> str:
         return "dev"
 
 
-SW_TEMPLATE = r"""// Lumos Party – Service Worker (automatisch erzeugt von tools/postexport_pwa.py)
-const VERSION = '__VERSION__';
-const CACHE = 'lumos-party-' + VERSION;
-const PRECACHE = __FILES__;
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting()));
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith('lumos-party-') && k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('message', (event) => {
-  if (event.data === 'skipWaiting') self.skipWaiting();
-});
-
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
-  if (req.method !== 'GET') return;
-  const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;
-  // Navigation: Network-First, damit neue Versionen sofort geladen werden
-  if (req.mode === 'navigate') {
-    event.respondWith(
-      fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put('./index.html', copy));
-        return res;
-      }).catch(() => caches.match('./index.html'))
-    );
-    return;
-  }
-  // Spieldaten: Cache-First (Engine/PCK sind versioniert über den Cache-Namen)
-  event.respondWith(
-    caches.match(req, { ignoreSearch: true }).then((hit) => {
-      if (hit) return hit;
-      return fetch(req).then((res) => {
-        if (res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
-        }
-        return res;
-      });
-    })
-  );
-});
-"""
 
 
 def main() -> int:
@@ -107,12 +54,15 @@ def main() -> int:
     if not (out / "index.html").exists():
         print("index.html fehlt – zuerst exportieren.")
         return 1
-    # Manifest & Icons
-    shutil.copy(ROOT / "web" / "manifest.webmanifest", out / "manifest.webmanifest")
-    icons = out / "icons"
-    icons.mkdir(exist_ok=True)
-    for f in (ROOT / "web" / "icons").glob("*.png"):
-        shutil.copy(f, icons / f.name)
+    # Manifest, Icons, Service Worker, JS-Brücke, Vercel-Konfiguration
+    src = ROOT / "web"
+    if out != src.resolve():
+        for name in ("manifest.webmanifest", "sw.js", "lumos_bridge.js", "vercel.json"):
+            shutil.copy(src / name, out / name)
+        icons = out / "icons"
+        icons.mkdir(exist_ok=True)
+        for f in (src / "icons").glob("*.png"):
+            shutil.copy(f, icons / f.name)
     # Versions-Hash über die großen Dateien
     h = hashlib.sha256()
     for name in ("index.pck", "index.wasm", "index.js", "index.html"):
@@ -122,10 +72,12 @@ def main() -> int:
     version = f"{project_version()}-{h.hexdigest()[:10]}"
     files = ["./", "./index.html", "./manifest.webmanifest"]
     for p in sorted(out.rglob("*")):
-        if p.is_file() and p.name not in ("sw.js", "index.html") and not p.name.endswith((".zip", ".map")) \
-                and p.name not in ("version.json", "lumos-app.json", ".nojekyll"):
+        if p.is_file() and p.name not in ("sw.js", "index.html", "shell.html", ".gdignore", "vercel.json", ".vercelignore") \
+                and not p.name.endswith((".zip", ".map")) and p.name not in ("version.json", "lumos-app.json", ".nojekyll"):
             files.append("./" + p.relative_to(out).as_posix())
-    (out / "sw.js").write_text(SW_TEMPLATE.replace("__VERSION__", version).replace("__FILES__", json.dumps(files, indent=2)))
+    # Service Worker: statisch (web/sw.js), Cache-Name an die Build-Version koppeln
+    sw = (src / "sw.js").read_text().replace("const CACHE = 'lumos-party-v1-1';", f"const CACHE = 'lumos-party-{version}';")
+    (out / "sw.js").write_text(sw) if out != src.resolve() else None
     total = sum(p.stat().st_size for p in out.rglob("*") if p.is_file())
     meta = {"version": project_version(), "build": version, "commit": git_sha(), "built_at": int(time.time()), "bytes": total}
     (out / "version.json").write_text(json.dumps(meta, indent=2))
@@ -137,12 +89,13 @@ def main() -> int:
     store["entry"]["url"] = base_url
     (out / "lumos-app.json").write_text(json.dumps(store, indent=2, ensure_ascii=False))
     (out / ".nojekyll").write_text("")
-    print(f"PWA fertig: {len(files)} Dateien im Precache, Version {version}, {total / 1e6:.1f} MB")
+    print(f"PWA fertig: {len(files)} Dateien, Version {version}, {total / 1e6:.1f} MB")
     if make_zip:
-        zpath = out.parent / "lumos-party-web.zip"
+        zpath = ROOT / "build" / "lumos-party-web.zip"
+        zpath.parent.mkdir(exist_ok=True)
         with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
             for p in sorted(out.rglob("*")):
-                if p.is_file():
+                if p.is_file() and p.name not in ("shell.html", ".gdignore", ".vercelignore") and not p.name.endswith(".zip"):
                     z.write(p, p.relative_to(out).as_posix())
         print(f"Store-Paket: {zpath} ({zpath.stat().st_size / 1e6:.1f} MB)")
     return 0

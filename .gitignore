@@ -8,3 +8,12 @@ export/
 *.pck
 # Python
 __pycache__/
+# Web-Export (./godot --headless --export-release "Web" web/index.html) – nicht einchecken
+web/index.*
+web/version.json
+web/lumos-app.json
+web/*.zip
+web/.nojekyll
+.vercel/
+# lokaler Symlink auf die Godot-Binärdatei (./godot --headless --export-release …)
+/godot

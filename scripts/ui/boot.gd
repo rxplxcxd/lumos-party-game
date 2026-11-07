@@ -149,6 +149,32 @@ func _splash() -> void:
 		bar.size.x = 420.0 * (i + 2) / steps
 		await get_tree().process_frame
 	await get_tree().create_timer(0.35).timeout
+	# Browser erlauben Ton erst nach einer Geste: "Press Start" wie auf der Konsole
+	if OS.has_feature("web") and not _args.has("scene") and not _args.has("net-test"):
+		bar_bg.visible = false
+		var hint := UI.label("Tippen oder Taste drücken", 34, Color.WHITE, true, 10)
+		hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(hint)
+		var tw := hint.create_tween().set_loops()
+		tw.tween_property(hint, "modulate:a", 0.35, 0.7).set_trans(Tween.TRANS_SINE)
+		tw.tween_property(hint, "modulate:a", 1.0, 0.7).set_trans(Tween.TRANS_SINE)
+		_started = false
+		while not _started:
+			await get_tree().process_frame
+		tw.kill()
+		Audio.sfx("ui_confirm")
+		Juice.ui_punch(hint, 0.2, 0.3)
+		await get_tree().create_timer(0.25).timeout
+
+
+var _started := true
+
+
+func _input(event: InputEvent) -> void:
+	if _started:
+		return
+	if (event is InputEventMouseButton or event is InputEventScreenTouch or event is InputEventKey or event is InputEventJoypadButton) and event.is_pressed():
+		_started = true
 
 
 class ShotDaemon extends Node:
