@@ -43,7 +43,7 @@ func _ready() -> void:
 		Game.race_cfg.track = _args.track
 	if _args.has("laps"):
 		Game.race_cfg.laps = int(_args.laps)
-	Router.goto(target)
+	Router.goto(target, {"page": _args.page} if _args.has("page") else {})
 
 
 func _parse_args() -> void:

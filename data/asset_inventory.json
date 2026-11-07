@@ -1478,8 +1478,8 @@
   },
   {
    "pack": "3d/minigames-and-others/KayKit_Space_Base_Bits_1.0_FREE",
-   "used": false,
-   "role": "Reserve (nicht importiert, für künftige Inhalte)",
+   "used": true,
+   "role": "Raumstation-Brett & Orbit-Strecke (Module, Landeplätze, Windräder)",
    "size_mb": 10.1,
    "formats": {
     ".fbx": 114,
@@ -1839,14 +1839,14 @@
    "pack": "3d/minigames-and-others/kenney_input-prompts_1.5",
    "used": true,
    "role": "Button-Glyphen (Switch/Xbox/Tastatur/Touch)",
-   "size_mb": 6.49,
+   "size_mb": 6.64,
    "formats": {
     ".png": 3056,
     ".svg": 1504,
-    ".import": 518,
+    ".import": 656,
     ".txt": 35,
     ".xml": 34,
-    "": 25,
+    "": 27,
     ".otf": 17,
     ".ttf": 17,
     ".url": 3,
@@ -1898,8 +1898,8 @@
   },
   {
    "pack": "3d/minigames-and-others/kenney_minigolf-kit",
-   "used": false,
-   "role": "Reserve (nicht importiert, für künftige Inhalte)",
+   "used": true,
+   "role": "Minigolf-Duell (Bahnen, Bälle, Löcher, Fahnen)",
    "size_mb": 8.34,
    "formats": {
     ".png": 137,
@@ -2625,8 +2625,8 @@
   },
   {
    "pack": "3d/tracks-enviroment/kenney_city-kit-commercial_2.1",
-   "used": false,
-   "role": "Reserve (nicht importiert, für künftige Inhalte)",
+   "used": true,
+   "role": "Stadt-Rallye-Strecke (Hochhäuser, Markisen)",
    "size_mb": 11.07,
    "formats": {
     ".png": 50,
@@ -2688,8 +2688,8 @@
   },
   {
    "pack": "3d/tracks-enviroment/kenney_city-kit-suburban_20",
-   "used": false,
-   "role": "Reserve (nicht importiert, für künftige Inhalte)",
+   "used": true,
+   "role": "Stadt-Rallye-Strecke (Vorstadthäuser, Zäune, Bäume)",
    "size_mb": 7.98,
    "formats": {
     ".png": 51,
@@ -2809,7 +2809,7 @@
   {
    "pack": "3d/tracks-enviroment/kenney_holiday-kit",
    "used": true,
-   "role": "Lichterketten/Laternen als Neon-Deko",
+   "role": "Frostdorf-Brett & Frostgipfel-Strecke (Hütten, Schneemänner, Rentiere), Schneeball-Schlacht",
    "size_mb": 10.64,
    "formats": {
     ".png": 108,
@@ -3169,8 +3169,8 @@
   },
   {
    "pack": "3d/tracks-enviroment/kenney_space-station-kit",
-   "used": false,
-   "role": "Reserve (nicht importiert, für künftige Inhalte)",
+   "used": true,
+   "role": "Raumstation-Brett (Böden, Geländer, Konsolen)",
    "size_mb": 5.23,
    "formats": {
     ".png": 104,
@@ -3406,7 +3406,7 @@
   ".fbx": 5778,
   ".mtl": 5082,
   ".obj": 5081,
-  ".import": 4363,
+  ".import": 4501,
   ".glb": 3934,
   ".svg": 2197,
   ".gltf": 1229,
@@ -3415,7 +3415,7 @@
   ".ogg": 698,
   ".stl": 265,
   ".url": 180,
-  "": 172,
+  "": 174,
   ".txt": 106,
   ".html": 34,
   ".xml": 34,

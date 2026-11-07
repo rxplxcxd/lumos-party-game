@@ -19,9 +19,9 @@ var surface := "stone"
 var _hud: Control
 var _badges: Array[PlayerBadge] = []
 var _round_label: Label
-var _prompt: Label
+var _prompt: ButtonPrompt
 var _banner: Label
-var _ff_hint: Label
+var _ff_hint: ButtonPrompt
 var _current := -1
 var _busy_ui := false
 
@@ -32,7 +32,9 @@ func _ready() -> void:
 	def = BoardDefs.get_def(Game.party.board)
 	spaces = BoardDefs.build_graph(def)
 	surface = def.surface
-	WorldKit.env(self, def.env)
+	var we := WorldKit.env(self, def.env)
+	if WorldKit.PRESETS.get(def.env, {}).get("rays", false):
+		WorldKit.god_rays(self, Vector3.ZERO, 22.0, we.get_meta("sun"), 9)
 	builder = BoardBuilder.new()
 	builder.build(self, Game.party.board, spaces)
 	_spawn_players()
@@ -104,6 +106,9 @@ func _main() -> void:
 			await _finale()
 			return
 	party.phase = "turns"
+	if "--test-roulette" in OS.get_cmdline_user_args():
+		await _choose_minigame()
+		return
 	while true:
 		await _round_start()
 		for t in range(int(party.turn), 4):
@@ -216,7 +221,7 @@ func _roll_dice(p: int, k: int, count: int) -> int:
 	num.position = Vector3(0, 0, 0)
 	holder.add_child(num)
 	Juice.pop_in(holder, 0.35)
-	_set_prompt(UI.prompt_text("a", "Würfeln!") if not Game.players[p].cpu else "")
+	_set_prompt("Würfeln!" if not Game.players[p].cpu else "")
 	var value := 1
 	var t := 0.0
 	var wait_cpu := randf_range(0.7, 1.4)
@@ -449,7 +454,7 @@ func _choose_path(p: int, cur: int, options: Array) -> int:
 	var t := 0.0
 	var prev_x := 0.0
 	var cpu_pick := _cpu_path(p, options)
-	_set_prompt("" if Game.players[p].cpu else UI.prompt_text("a", "Weg wählen (Stick ◀ ▶)"))
+	_set_prompt("" if Game.players[p].cpu else "Weg wählen (Stick links/rechts)")
 	while chosen < 0:
 		var dt := get_process_delta_time()
 		t += dt
@@ -630,7 +635,7 @@ func _lucky_chest(p: int) -> void:
 	wheel.size = wheel.custom_minimum_size
 	Juice.pop_in(wheel, 0.4)
 	wheel.spin()
-	_set_prompt("" if Game.players[p].cpu else UI.prompt_text("a", "Stopp!"))
+	_set_prompt("" if Game.players[p].cpu else "Stopp!")
 	var t := 0.0
 	var stop_at := randf_range(1.2, 2.2)
 	while not wheel.stopping:
@@ -790,38 +795,39 @@ func _choose_minigame() -> void:
 	var root := UI.center_root(layer)
 	var panel := UI.panel()
 	root.add_child(panel)
-	var v := UI.vbox(8)
+	var v := UI.vbox(10)
 	panel.add_child(v)
 	var title := UI.label("Minispiel-Roulette!", 52, UI.GOLD, true, 10)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(title)
-	var rows: Array[Label] = []
-	for m in Game.MINIGAMES:
-		var l := UI.label(m.name, 30, Color(1, 1, 1, 0.55), true)
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		v.add_child(l)
-		rows.append(l)
+	var all_names: Array = Game.MINIGAMES.map(func(m: Dictionary) -> String: return m.name)
+	var palette := [Color("#ff4fb8"), Color("#2f9bff"), Color("#2ecc71"), Color("#ff9f1a"), Color("#c06bff")]
+	var cols: Array = []
+	for i in all_names.size():
+		cols.append(palette[i % palette.size()])
+	var reel := RouletteReel.new().setup(all_names, cols)
+	v.add_child(reel)
+	var desc := UI.label("", 22, Color(1, 1, 1, 0.9))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc.custom_minimum_size = Vector2(640, 84)
+	v.add_child(desc)
 	await get_tree().process_frame
 	panel.position = (root.size - panel.size) / 2.0
 	Juice.pop_in(panel, 0.35)
 	Audio.sfx("drumroll")
 	var pick: Dictionary = pool[randi() % pool.size()]
 	var target := Game.MINIGAMES.find(pick)
-	var idx := randi() % rows.size()
-	var steps := 24 + ((target - idx + rows.size()) % rows.size())
-	for k in steps:
-		idx = (idx + 1) % rows.size()
-		for i in rows.size():
-			rows[i].add_theme_color_override("font_color", UI.GOLD if i == idx else Color(1, 1, 1, 0.55))
-			rows[i].scale = Vector2.ONE
-		rows[idx].pivot_offset = rows[idx].size / 2.0
-		rows[idx].scale = Vector2(1.15, 1.15)
-		Audio.sfx("tick", null, -4.0, 1.0 + float(k) / steps * 0.5)
-		await _wait(0.04 + pow(float(k) / steps, 3.0) * 0.32)
+	await reel.spin_to(target, 3, 3.2)
+	# Anzeige und geladenes Spiel sind identisch: wir laden exakt den Eintrag unter dem Zeiger
+	pick = Game.MINIGAMES[reel.current_index()]
+	desc.text = pick.desc
+	await get_tree().process_frame
+	panel.create_tween().tween_property(panel, "position", (root.size - panel.size) / 2.0, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	Audio.sfx("bell")
-	Juice.ui_punch(rows[idx], 0.4, 0.5)
+	Juice.ui_punch(reel, 0.12, 0.5)
 	FX.confetti(cam.global_position + cam.global_basis.z * -12.0, 40)
-	await _wait(1.0)
+	await _wait(1.6)
 	played.append(pick.id)
 	Game.party.phase = "minigame"
 	Game.pending_minigame = pick.id
@@ -973,8 +979,9 @@ func _show_banner(text: String, color := Color.WHITE, hold := 1.0) -> void:
 	_banner.visible = false
 
 
-func _set_prompt(text: String) -> void:
-	_prompt.text = text
+func _set_prompt(text: String, action := "a") -> void:
+	_prompt.action = action
+	_prompt.set_text(text)
 	_prompt.visible = text != ""
 	if text != "":
 		Juice.ui_punch(_prompt, 0.15, 0.3)
@@ -1007,17 +1014,16 @@ func _build_hud() -> void:
 	_banner.size = Vector2(1200, 100)
 	_banner.visible = false
 	_hud.add_child(_banner)
-	_prompt = UI.label("", 34, Color.WHITE, true, 10)
+	_prompt = UI.prompt("a", "", 34)
 	_prompt.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_prompt.position = Vector2(-400, -120)
 	_prompt.size = Vector2(800, 60)
 	_prompt.visible = false
 	_hud.add_child(_prompt)
-	_ff_hint = UI.label(UI.prompt_text("a", "halten: CPU vorspulen"), 20, Color(1, 1, 1, 0.7))
+	_ff_hint = UI.prompt("a", "halten: CPU vorspulen", 20)
+	_ff_hint.modulate.a = 0.75
 	_ff_hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_ff_hint.position = Vector2(-200, -48)
 	_ff_hint.size = Vector2(400, 30)
-	_ff_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ff_hint.visible = false
 	_hud.add_child(_ff_hint)

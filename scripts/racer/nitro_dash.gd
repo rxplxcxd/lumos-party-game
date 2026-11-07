@@ -34,6 +34,7 @@ var _env: Environment
 var _env_base := {}
 var _underwater := 0.0
 var _bubbles: CPUParticles3D
+var _rays_sun: DirectionalLight3D
 
 # HUD
 var _hud: Control
@@ -55,12 +56,17 @@ func _ready() -> void:
 	laps = int(Game.race_cfg.laps)
 	def = TrackDefs.get_def(Game.race_cfg.track)
 	var we := WorldKit.env(self, def.env)
+	if WorldKit.PRESETS.get(def.env, {}).get("rays", false):
+		_rays_sun = we.get_meta("sun")
 	_env = we.environment
 	_env_base = {"fog": _env.fog_enabled, "fog_color": _env.fog_light_color, "fog_density": _env.fog_density, "ambient": _env.ambient_light_color}
 	track = RaceTrack.new()
 	add_child(track)
 	track.build(def)
 	_build_world()
+	if _rays_sun:
+		for k in 4:
+			WorldKit.god_rays(self, track.frame(track.length * k / 4.0).origin, 25.0, _rays_sun, 5)
 	_build_boxes()
 	_spawn_racers()
 	_build_camera()
@@ -83,7 +89,7 @@ func _build_world() -> void:
 			var lava := WorldKit.lava(self, Vector2(70, 90), -0.5, Vector2(0.05, 0.1))
 			lava.position = Vector3(110, -0.5, 60)
 		_:
-			WorldKit.box(self, Vector3(500, 1, 500), Vector3(80, -0.8, 20), Color("#79c25a"), false)
+			WorldKit.box(self, Vector3(500, 1, 500), Vector3(80, -0.8, 20), Color("#4c9a36"), false)
 			var canyon := WorldKit.water(self, Vector2(50, 70), -26.0)
 			canyon.position = Vector3(172, -26, 50)
 	_decorate(theme)
@@ -746,8 +752,8 @@ func _build_hud() -> void:
 	_minimap = MiniMap.new()
 	(_minimap as MiniMap).race = self
 	_hud.add_child(_minimap)
-	_minimap.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_minimap.position = Vector2(-230, -230)
+	_minimap.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT if not Game.is_touch_device else Control.PRESET_TOP_RIGHT)
+	_minimap.position = Vector2(-230, -230) if not Game.is_touch_device else Vector2(-380, 18)
 	_minimap.size = Vector2(210, 210)
 	_splat = Control.new()
 	_splat.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -855,9 +861,7 @@ func _results(order: Array) -> void:
 		var tt := rr.finish_time if rr.finished else race_time
 		row.add_child(UI.label(("%d:%05.2f" % [int(tt) / 60, fmod(tt, 60.0)]) if rr.finished else "—", 26, Color.WHITE, true))
 		v.add_child(row)
-	var go := UI.label(UI.prompt_text("a", "Weiter"), 26, Color.WHITE, true)
-	go.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(go)
+	v.add_child(UI.prompt("a", "Weiter", 26))
 	await get_tree().process_frame
 	panel.position = (root.size - panel.size) / 2.0
 	Juice.pop_in(panel, 0.4)

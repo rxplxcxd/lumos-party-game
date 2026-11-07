@@ -202,7 +202,7 @@ func _explode() -> void:
 
 func _update_badges() -> void:
 	for i in badges.size():
-		badges[i].set_score("♥" if alive[i] else "✕")
+		badges[i].set_status("alive" if alive[i] else "out")
 
 
 # --- CPU ---------------------------------------------------------------------------------------

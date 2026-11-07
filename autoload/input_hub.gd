@@ -181,6 +181,23 @@ func latch_touch_press(action: String) -> void:
 	_set_device("touch")
 
 
+## Sichere Ränder (Notch/Rundungen): x = links, y = rechts (Pixel im Viewport).
+func safe_insets() -> Vector2:
+	if OS.has_feature("web"):
+		var v = JavaScriptBridge.eval("(function(){var d=document.createElement('div');d.style.cssText='position:fixed;left:env(safe-area-inset-left);right:env(safe-area-inset-right)';document.body.appendChild(d);var s=getComputedStyle(d);var r=[parseFloat(s.left)||0,parseFloat(s.right)||0,window.devicePixelRatio||1];d.remove();return JSON.stringify(r);})()", true)
+		if v is String:
+			var arr = JSON.parse_string(v)
+			if arr is Array and arr.size() == 3:
+				var scale: float = get_viewport().get_visible_rect().size.x / maxf(1.0, float(DisplayServer.window_get_size().x) / float(arr[2]))
+				return Vector2(float(arr[0]), float(arr[1])) * scale
+		return Vector2.ZERO
+	var safe := DisplayServer.get_display_safe_area()
+	var full := DisplayServer.screen_get_size()
+	if safe.size.x <= 0 or full.x <= 0:
+		return Vector2.ZERO
+	return Vector2(safe.position.x, full.x - safe.end.x)
+
+
 func set_touch_profile(profile: String) -> void:
 	if touch_controls:
 		touch_controls.call("set_profile", profile)
@@ -261,11 +278,51 @@ func vibrate_device(ms: int) -> void:
 
 
 ## Bezeichnung einer Taste je nach zuletzt genutztem Eingabegerät.
-func glyph(action: String) -> String:
+## Controller-Layout eines Gamepads anhand des Gerätenamens (SDL-GUID/Name).
+func pad_layout(device: int = -1) -> String:
+	if device < 0:
+		var pads := Input.get_connected_joypads()
+		if pads.is_empty():
+			return "xbox"
+		device = pads[0]
+	var n := Input.get_joy_name(device).to_lower() + " " + Input.get_joy_guid(device).to_lower()
+	if n.contains("lumos") or n.contains("nintendo") or n.contains("switch") or n.contains("pro controller") or n.contains("joy-con") or n.contains("057e"):
+		return "switch"
+	if n.contains("playstation") or n.contains("dualsense") or n.contains("dualshock") or n.contains("ps4") or n.contains("ps5") or n.contains("054c") or n.contains("wireless controller"):
+		return "playstation"
+	return "xbox"
+
+
+## Aktuelles Glyphen-Set: touch | keyboard | xbox | playstation | switch
+func glyph_set() -> String:
 	match last_device:
 		"touch":
-			return {"a": "Ⓐ", "b": "Ⓑ", "x": "★", "r": "R", "start": "II"}.get(action, action.to_upper())
+			return "touch"
 		"gamepad":
-			return {"a": "Ⓐ", "b": "Ⓑ", "x": "Ⓧ", "y": "Ⓨ", "r": "R", "l": "L", "start": "+"}.get(action, action.to_upper())
+			return pad_layout()
+		_:
+			return "keyboard"
+
+
+## Textur des Button-Symbols für eine Aktion im aktuellen Eingabegerät (oder null).
+func glyph_texture(action: String) -> Texture2D:
+	var set_name := glyph_set()
+	var table: Dictionary = Assets.GLYPHS.get(set_name, {})
+	if not table.has(action):
+		return null
+	return Assets.icon(table[action])
+
+
+## Textbezeichnung (Fallback, wenn kein Bild passt).
+func glyph(action: String) -> String:
+	match glyph_set():
+		"touch":
+			return {"a": "A", "b": "B", "x": "Item", "r": "Drift", "start": "Pause"}.get(action, action.to_upper())
+		"playstation":
+			return {"a": "Kreuz", "b": "Kreis", "x": "Quadrat", "y": "Dreieck", "r": "R1", "l": "L1", "start": "Options"}.get(action, action.to_upper())
+		"switch":
+			return {"a": "B", "b": "A", "x": "Y", "y": "X", "r": "R", "l": "L", "start": "+"}.get(action, action.to_upper())
+		"xbox":
+			return {"a": "A", "b": "B", "x": "X", "y": "Y", "r": "RB", "l": "LB", "start": "Menü"}.get(action, action.to_upper())
 		_:
 			return {"a": "Leertaste", "b": "K", "x": "E", "y": "Q", "r": "Shift", "l": "Tab", "start": "Esc"}.get(action, action.to_upper())

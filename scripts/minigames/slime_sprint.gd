@@ -184,7 +184,10 @@ func check_end() -> bool:
 
 func _update_badges() -> void:
 	for i in badges.size():
-		badges[i].set_score("%d. ✓" % (finish_order.find(i) + 1) if i in finish_order else "%d%%" % int(scores[i]))
+		if i in finish_order:
+			badges[i].set_status("done", finish_order.find(i) + 1)
+		else:
+			badges[i].set_status("", "%d%%" % int(scores[i]))
 
 
 # --- CPU ---------------------------------------------------------------------------------------

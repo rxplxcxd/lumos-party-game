@@ -97,7 +97,7 @@ func on_tick(delta: float) -> void:
 		_wind_target = [-1.0, 1.0][randi() % 2] * randf_range(0.6, 1.0) if randf() < 0.75 else 0.0
 		if _wind_target != 0.0:
 			Audio.sfx("whoosh", null, 0.0, 0.6)
-			CutsceneManager.big_word("WIND " + ("→" if _wind_target > 0 else "←"), Color("#bfe3ff"), 0.8)
+			CutsceneManager.big_word("WIND »" if _wind_target > 0 else "« WIND", Color("#bfe3ff"), 0.8)
 	_wind = lerpf(_wind, _wind_target, clampf(delta * 1.5, 0, 1))
 	_wind_fx.emitting = absf(_wind) > 0.2
 	_wind_fx.position.x = -14.0 if _wind > 0 else 14.0

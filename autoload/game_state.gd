@@ -51,6 +51,36 @@ const MINIGAMES := [
 	{"id": "slime_sprint", "name": "Schleim-Spur Sprint", "scene": "res://scenes/minigames/SlimeSprint.tscn", "kind": "race",
 		"desc": "Sprinte durch den Parcours! Schleimpfützen sind glitschig und Pendel-Fallen schwingen gnadenlos.",
 		"controls": "Stick: Laufen · A: Springen"},
+	{"id": "coin_rain", "name": "Münzregen", "scene": "res://scenes/minigames/CoinRain.tscn", "kind": "score",
+		"desc": "Münzen, Sterne – und Bomben regnen vom Himmel! Schnapp dir die meisten Münzen und schubse Gegner, damit sie welche verlieren.",
+		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
+	{"id": "sumo_shove", "name": "Sumo-Schubser", "scene": "res://scenes/minigames/SumoShove.tscn", "kind": "survival",
+		"desc": "Die runde Plattform über dem Meer schrumpft! Doppelt starke Schubser – wer zuletzt oben steht, gewinnt.",
+		"controls": "Stick: Laufen · A: Springen · B: Super-Schubser"},
+	{"id": "snowball_fight", "name": "Schneeball-Schlacht", "scene": "res://scenes/minigames/SnowballFight.tscn", "kind": "score",
+		"desc": "Verschanz dich hinter Schneemännern und triff die anderen! Am Schneehaufen lädt Munition schneller nach.",
+		"controls": "Stick: Laufen · A: Springen · B: Werfen"},
+	{"id": "color_chaos", "name": "Farb-Chaos", "scene": "res://scenes/minigames/ColorChaos.tscn", "kind": "score",
+		"desc": "Jedes Feld, über das du läufst, wird in deiner Farbe eingefärbt. Farbbomben färben ganze Bereiche!",
+		"controls": "Stick: Laufen · A: Springen · B: Schubsen (betäubt)"},
+	{"id": "hammer_hop", "name": "Hammer-Hüpfen", "scene": "res://scenes/minigames/HammerHop.tscn", "kind": "survival",
+		"desc": "Ein Riesenhammer kreist über den Turm – spring rechtzeitig! Später kommt ein hoher Balken dazu: darunter bloß nicht springen.",
+		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
+	{"id": "fish_catch", "name": "Fischfang", "scene": "res://scenes/minigames/FishCatch.tscn", "kind": "score",
+		"desc": "Steuere deinen Schwimmer zu den Fisch-Schatten. Taucht er ab, sofort A! Goldfische bringen 6 Punkte – Stiefel nichts.",
+		"controls": "Stick: Schwimmer bewegen · A: Anschlagen"},
+	{"id": "meteor_dodge", "name": "Meteor-Ausweichen", "scene": "res://scenes/minigames/MeteorDodge.tscn", "kind": "survival",
+		"desc": "Auf dem Mond regnen Meteore! Rote Kreise zeigen den Einschlag – und manche zielen direkt auf dich.",
+		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
+	{"id": "rhythm_dance", "name": "Rhythmus-Tanz", "scene": "res://scenes/minigames/RhythmDance.tscn", "kind": "score",
+		"desc": "Schnipp den Stick genau im Takt in Pfeilrichtung oder drück A! PERFEKT gibt 3 Punkte, Serien geben Bonus.",
+		"controls": "Stick: Richtung schnippen · A: A-Note"},
+	{"id": "minigolf_duel", "name": "Minigolf-Duell", "scene": "res://scenes/minigames/MinigolfDuel.tscn", "kind": "score",
+		"desc": "Alle putten gleichzeitig! Wer zuerst einlocht, kassiert 4 Punkte. Pilz-Bumper schleudern Bälle quer über die Bahn.",
+		"controls": "Stick: Zielen · A halten: Kraft laden · loslassen: Schlag"},
+	{"id": "balloon_battle", "name": "Ballon-Kart-Battle", "scene": "res://scenes/minigames/BalloonBattle.tscn", "kind": "survival",
+		"desc": "Platze die Ballons der anderen per Turbo-Rempler und klau sie dir! Item-Boxen geben Torten-Kanonen.",
+		"controls": "Stick: Lenken · A: Gas · B: Turbo-Rempler · X: Torte"},
 ]
 
 const TRACKS := [
@@ -65,7 +95,7 @@ var players: Array[Dictionary] = []
 var settings := {
 	"music": 0.7, "sfx": 0.9, "voice": 1.0,
 	"haptics": true, "touch_opacity": 0.8, "touch_scale": 1.0, "touch_layout": {},
-	"auto_accel": true, "screen_shake": 1.0, "quality": "auto", "show_fps": false,
+	"auto_accel": true, "screen_shake": 1.0, "quality": "auto", "show_fps": false, "dynamic_res": true,
 }
 var party: Dictionary = {}
 var race_cfg := {"track": "lumos_ring", "laps": 3, "cpu_level": 1}

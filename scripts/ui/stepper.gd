@@ -15,9 +15,13 @@ func setup(opts: Array, start := 0, width := 260.0, accent := Color("#7b3cff")) 
 	options = opts
 	index = clampi(start, 0, maxi(opts.size() - 1, 0))
 	add_theme_constant_override("separation", 6)
-	_left = UI.button("◀", accent, 28)
+	_left = UI.button("", accent, 28)
+	_left.icon = UI.icon_tex("arrow_left", 36)
+	_left.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_left.custom_minimum_size = Vector2(64, 56)
-	_right = UI.button("▶", accent, 28)
+	_right = UI.button("", accent, 28)
+	_right.icon = UI.icon_tex("arrow_right", 36)
+	_right.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_right.custom_minimum_size = Vector2(64, 56)
 	_label = UI.label("", 28, Color.WHITE, true)
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

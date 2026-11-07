@@ -72,10 +72,11 @@ func setup_camera(c: ArenaCamera) -> void:
 
 func _update_badges() -> void:
 	for i in badges.size():
-		var hearts := ""
-		for k in int(karts[i].lives) if i < karts.size() else 0:
-			hearts += "♥"
-		badges[i].set_score(hearts if hearts != "" else "✕")
+		var lives: int = int(karts[i].lives) if i < karts.size() else 0
+		if lives > 0:
+			badges[i].set_status("hearts", lives)
+		else:
+			badges[i].set_status("out")
 
 
 func on_tick(delta: float) -> void:

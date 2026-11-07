@@ -29,7 +29,6 @@ func _ready() -> void:
 	_ui.mouse_filter = Control.MOUSE_FILTER_PASS
 	Audio.music("menu")
 	InputHub.set_touch_profile("menu")
-	_apply_quality()
 	var p: String = Router.params.get("page", start_page)
 	Router.params = {}
 	show_page(p)
@@ -38,7 +37,8 @@ func _ready() -> void:
 # --- 3D-Diorama -------------------------------------------------------------------------------
 
 func _build_diorama() -> void:
-	WorldKit.env(self, "day")
+	var we := WorldKit.env(self, "day")
+	WorldKit.god_rays(self, Vector3(-2, 0, -2), 9.0, we.get_meta("sun"), 6, Color(1.0, 0.92, 0.7), 0.2)
 	WorldKit.water(self, Vector2(260, 260), -0.6)
 	# Insel
 	WorldKit.cylinder(self, 9.0, 1.2, Vector3(0, -0.6, 0), Color("#f1d9a0"), false)
@@ -102,21 +102,15 @@ func _update_cam(_d: float) -> void:
 	_cam.look_at(Vector3(-offset_x * 0.6, 1.6, 0), Vector3.UP)
 
 
-func _apply_quality() -> void:
-	var q: String = Game.settings.quality
-	var low := q == "low" or (q == "auto" and (Game.is_touch_device or OS.has_feature("mobile")))
-	get_viewport().scaling_3d_scale = 0.75 if low else 1.0
-	get_viewport().msaa_3d = Viewport.MSAA_DISABLED if low else Viewport.MSAA_2X
-
-
 # --- Seitensystem -------------------------------------------------------------------------------
 
 func show_page(name: String) -> void:
 	if _page:
 		var old := _page
-		var tw := old.create_tween()
-		tw.tween_property(old, "modulate:a", 0.0, 0.15)
-		tw.tween_callback(old.queue_free)
+		var otw := old.create_tween().set_parallel(true)
+		otw.tween_property(old, "modulate:a", 0.0, 0.16)
+		otw.tween_property(old, "position:x", -50.0, 0.16).set_ease(Tween.EASE_IN)
+		otw.chain().tween_callback(old.queue_free)
 	var p: Control
 	match name:
 		"party":
@@ -137,11 +131,30 @@ func show_page(name: String) -> void:
 	_ui.add_child(p)
 	_page = p
 	p.modulate.a = 0.0
-	p.create_tween().tween_property(p, "modulate:a", 1.0, 0.2)
+	p.position.x = -70.0
+	var tw := p.create_tween().set_parallel(true)
+	tw.tween_property(p, "modulate:a", 1.0, 0.25)
+	tw.tween_property(p, "position:x", 0.0, 0.38).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	var k := 0
+	for b in _all_buttons(p):
+		b.modulate.a = 0.0
+		var bt := b.create_tween()
+		bt.tween_interval(0.04 * k)
+		bt.tween_property(b, "modulate:a", 1.0, 0.2)
+		k += 1
 	await get_tree().process_frame
 	var first := _first_focus(p)
 	if first:
 		first.grab_focus()
+
+
+func _all_buttons(n: Node) -> Array[Button]:
+	var out: Array[Button] = []
+	for c in n.get_children():
+		if c is Button:
+			out.append(c)
+		out.append_array(_all_buttons(c))
+	return out
 
 
 func _first_focus(n: Node) -> Control:
@@ -180,6 +193,7 @@ func _side_panel(title: String, width := 640.0) -> Array:
 	panel.offset_right = 28 + width
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
 	panel.add_child(scroll)
 	var v := UI.vbox(14)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -352,7 +366,7 @@ func _page_race() -> Control:
 	v.add_child(_row("Gegner", lvl))
 	v.add_child(UI.label("Fahrer", 32, UI.ACCENT2, true))
 	_players_editor(v)
-	var hint := UI.label("Drift halten (R / Shift) und lenken: Funken wechseln Blau → Orange → Regenbogen.\nItems: Kuchendeckel · Homing-Kanonenkugel · Megafon-Schock · Piraten-Anker · Nitro", 20, Color(1, 1, 1, 0.75))
+	var hint := UI.label("Drift halten (R / Shift) und lenken: Funken wechseln von Blau über Orange zu Regenbogen.\nItems: Kuchendeckel · Homing-Kanonenkugel · Megafon-Schock · Piraten-Anker · Nitro", 20, Color(1, 1, 1, 0.75))
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.custom_minimum_size.x = 620
 	v.add_child(hint)
@@ -370,26 +384,31 @@ func _page_race() -> Control:
 # --- Minispiel-Arena --------------------------------------------------------------------------------------
 
 func _page_minigames() -> Control:
-	var arr := _side_panel("Minispiel-Arena", 760)
+	var arr := _side_panel("Minispiel-Arena", 800)
 	var v: VBoxContainer = arr[1]
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 12)
-	grid.add_theme_constant_override("v_separation", 12)
-	v.add_child(grid)
-	var colors := [Color("#ff4fb8"), Color("#2f9bff"), Color("#2ecc71"), Color("#ff9f1a"), Color("#7b3cff")]
-	var desc := UI.label("Wähle ein Minispiel.", 22, Color(1, 1, 1, 0.85))
+	var desc := UI.label("Wähle eines von %d Minispielen." % Game.MINIGAMES.size(), 22, Color(1, 1, 1, 0.85))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.custom_minimum_size = Vector2(700, 64)
+	v.add_child(desc)
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	v.add_child(grid)
+	var colors := [Color("#ff4fb8"), Color("#2f9bff"), Color("#2ecc71"), Color("#ff9f1a"), Color("#7b3cff")]
+	var kind_icon := {"survival": "heart", "score": "star", "race": "bolt"}
 	for i in Game.MINIGAMES.size():
 		var m: Dictionary = Game.MINIGAMES[i]
-		var b := UI.button(m.name, colors[i % colors.size()], 26, 340)
-		b.custom_minimum_size.y = 64
-		b.focus_entered.connect(func() -> void: desc.text = m.desc)
-		b.mouse_entered.connect(func() -> void: desc.text = m.desc)
+		var b := UI.button(m.name, colors[i % colors.size()], 21, 228)
+		b.custom_minimum_size.y = 56
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.icon = UI.icon_tex(kind_icon.get(m.kind, "star"), 26)
+		b.expand_icon = false
+		b.focus_entered.connect(func() -> void: desc.text = "%s – %s" % [m.name, m.desc])
+		b.mouse_entered.connect(func() -> void: desc.text = "%s – %s" % [m.name, m.desc])
 		b.pressed.connect(func() -> void: _play_minigame(m.id))
 		grid.add_child(b)
-	v.add_child(desc)
 	var rnd := UI.button("Zufall!", Color("#ffcc33"), 30, 300)
 	rnd.pressed.connect(func() -> void: _play_minigame(Game.MINIGAMES[randi() % Game.MINIGAMES.size()].id))
 	v.add_child(rnd)
@@ -417,12 +436,18 @@ func _page_settings() -> Control:
 	v.add_child(_slider("Kamera-Wackeln", "screen_shake"))
 	v.add_child(_toggle("Haptik / Vibration", "haptics"))
 	v.add_child(_toggle("Auto-Gas (Touch-Racer)", "auto_accel"))
-	var q := Stepper.new().setup(["Automatisch", "Niedrig (Handheld)", "Hoch"], ["auto", "low", "high"].find(Game.settings.quality), 300)
+	var qkeys := ["auto", "low", "medium", "high", "ultra"]
+	var qnames := ["Automatisch (%s)" % Gfx.PRESETS[Gfx.detected].label, "Niedrig", "Mittel", "Hoch", "Ultra"]
+	var q := Stepper.new().setup(qnames, maxi(0, qkeys.find(Game.settings.quality)), 300)
 	q.changed.connect(func(i: int) -> void:
-		Game.settings.quality = ["auto", "low", "high"][i]
-		Game.save_settings()
-		_apply_quality())
+		Game.settings.quality = qkeys[i]
+		Game.save_settings())
 	v.add_child(_row("Grafik", q))
+	v.add_child(_toggle("Dynamische Auflösung (stabile 60 FPS)", "dynamic_res"))
+	v.add_child(_toggle("FPS anzeigen", "show_fps"))
+	var hw: Dictionary = Gfx.hardware
+	var hw_label := UI.label("Erkannt: %d Kerne · %s · %s" % [int(hw.get("cores", 0)), ("%.0f GB RAM" % hw.memory_gb) if float(hw.get("memory_gb", 0)) > 0 else "RAM unbekannt", String(hw.get("gpu", "GPU unbekannt")).substr(0, 40)], 18, Color(1, 1, 1, 0.6))
+	v.add_child(hw_label)
 	v.add_child(UI.label("Touch-Steuerung", 30, UI.ACCENT2, true))
 	v.add_child(_slider("Button-Größe", "touch_scale", 0.6, 1.5))
 	v.add_child(_slider("Deckkraft", "touch_opacity", 0.2, 1.0))

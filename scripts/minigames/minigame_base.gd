@@ -55,7 +55,9 @@ func _ready() -> void:
 	world = Node3D.new()
 	world.name = "World"
 	add_child(world)
-	WorldKit.env(self, env_preset)
+	var we := WorldKit.env(self, env_preset)
+	if WorldKit.PRESETS.get(env_preset, {}).get("rays", false):
+		WorldKit.god_rays(self, arena_center, arena_radius * 1.2, we.get_meta("sun"), 6)
 	if spawn_points.is_empty():
 		for i in 4:
 			spawn_points.append(arena_center + Vector3(-4.5 + i * 3.0, 0.5, 0))
@@ -321,7 +323,10 @@ func _build_hud() -> void:
 
 func _update_badges() -> void:
 	for i in badges.size():
-		badges[i].set_score(score_format % scores[i] if not survival else ("♥" if alive[i] else "✕"))
+		if survival:
+			badges[i].set_status("alive" if alive[i] else "out")
+		else:
+			badges[i].set_score(score_format % scores[i])
 
 
 func _instructions() -> void:
@@ -351,8 +356,7 @@ func _instructions() -> void:
 	c.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	c.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(c)
-	var go := UI.label(UI.prompt_text("a", "Los geht's!"), 30, Color.WHITE, true)
-	go.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var go := UI.prompt("a", "Los geht's!", 30)
 	v.add_child(go)
 	await get_tree().process_frame
 	panel.position = (root.size - panel.size) / 2.0
@@ -432,8 +436,7 @@ func _show_results(placements: Array[int]) -> void:
 		row.modulate.a = 0.0
 		v.add_child(row)
 		rows.append(row)
-	var go := UI.label(UI.prompt_text("a", "Weiter"), 28, Color.WHITE, true)
-	go.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var go := UI.prompt("a", "Weiter", 28)
 	v.add_child(go)
 	await get_tree().process_frame
 	panel.position = (root.size - panel.size) / 2.0
