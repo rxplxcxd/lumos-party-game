@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ReactionClip" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/reaction_clip.gd" id="1_rc"]
+
+[resource]
+script = ExtResource("1_rc")
+id = "coin_loss"
+clip = "hit"
+clip_speed = 1.0
+hold = 1.0
+squash = Vector2(1.15, 0.85)
+hop = 0.0
+spin = 0.0
+modifier = "sad"
+modifier_time = 0.9
+fx = "sweat"
+emote = ""
+emote_color = Color(1, 1, 1, 1)
+sfx = ""
+shake = 0.0
+then_clip = ""

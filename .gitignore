@@ -1,0 +1,10 @@
+# Godot
+.godot/
+*.import
+*.tmp
+# Builds
+build/
+export/
+*.pck
+# Python
+__pycache__/

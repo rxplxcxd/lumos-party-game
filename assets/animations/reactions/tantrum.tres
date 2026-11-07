@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ReactionClip" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/reaction_clip.gd" id="1_rc"]
+
+[resource]
+script = ExtResource("1_rc")
+id = "tantrum"
+clip = "hammer"
+clip_speed = 1.6
+hold = 2.4
+squash = Vector2(1.2, 0.8)
+hop = 0.0
+spin = 0.0
+modifier = "frustrated"
+modifier_time = 2.3
+fx = "dust"
+emote = "#"
+emote_color = Color(1, 0.2, 0.2, 1)
+sfx = "stone_hit"
+shake = 0.2
+then_clip = ""

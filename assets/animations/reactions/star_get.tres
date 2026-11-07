@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ReactionClip" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/reaction_clip.gd" id="1_rc"]
+
+[resource]
+script = ExtResource("1_rc")
+id = "star_get"
+clip = "cheer"
+clip_speed = 1.0
+hold = 2.6
+squash = Vector2(0.75, 1.35)
+hop = 1.0
+spin = 1.0
+modifier = "triumph"
+modifier_time = 2.4
+fx = "confetti"
+emote = "!"
+emote_color = Color(1, 0.85, 0.2, 1)
+sfx = ""
+shake = 0.0
+then_clip = ""

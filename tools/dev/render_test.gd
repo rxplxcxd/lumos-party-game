@@ -1,0 +1,27 @@
+extends SceneTree
+func _init() -> void:
+	var root3d := Node3D.new()
+	get_root().add_child(root3d)
+	var env := WorldEnvironment.new(); env.environment = Environment.new()
+	env.environment.background_mode = Environment.BG_COLOR; env.environment.background_color = Color(0.5,0.7,1)
+	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR; env.environment.ambient_light_color = Color(0.6,0.6,0.7)
+	root3d.add_child(env)
+	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-50, 30, 0); sun.shadow_enabled = true; root3d.add_child(sun)
+	var knight: Node3D = load("res://assets/3d/characters/KayKit_Adventurers_2.0_FREE/KayKit_Adventurers_2.0_FREE/Characters/gltf/Knight.glb").instantiate()
+	root3d.add_child(knight)
+	var anim_src: Node = load("res://assets/3d/characters/KayKit_Character_Animations_1.1/KayKit_Character_Animations_1.1/Animations/gltf/Rig_Medium/Rig_Medium_Simulation.glb").instantiate()
+	var ap_src: AnimationPlayer = anim_src.get_node("AnimationPlayer")
+	var lib: AnimationLibrary = ap_src.get_animation_library("")
+	var ap := AnimationPlayer.new(); knight.add_child(ap); ap.root_node = NodePath("..")
+	ap.add_animation_library("rig", lib.duplicate())
+	ap.play("rig/Cheering")
+	var kart: Node3D = load("res://assets/3d/vehicles/kenney_car-kit/Models/GLB format/kart-oobi.glb").instantiate()
+	kart.position = Vector3(2.2, 0, 0); kart.scale = Vector3.ONE * 2.5; root3d.add_child(kart)
+	var chest: Node3D = load("res://assets/3d/tracks-enviroment/kenney_pirate-kit/Models/GLB format/chest.glb").instantiate()
+	chest.position = Vector3(-2, 0, 0); root3d.add_child(chest)
+	var floor := MeshInstance3D.new(); var pm := PlaneMesh.new(); pm.size = Vector2(20,20); floor.mesh = pm; root3d.add_child(floor)
+	var cam := Camera3D.new(); root3d.add_child(cam); cam.position = Vector3(0, 2.2, 6.5); cam.look_at(Vector3(0,1.1,0)); cam.current = true
+	for i in 40: await process_frame
+	get_root().get_texture().get_image().save_png("/tmp/claude-0/-home-user-lumos-party-game/d5dae123-6a9e-5654-a4a7-764580280fc7/scratchpad/render_test.png")
+	print("saved")
+	quit()

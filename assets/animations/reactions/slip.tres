@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ReactionClip" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/reaction_clip.gd" id="1_rc"]
+
+[resource]
+script = ExtResource("1_rc")
+id = "slip"
+clip = "death_b"
+clip_speed = 1.4
+hold = 1.1
+squash = Vector2(1.25, 0.75)
+hop = 0.0
+spin = 0.0
+modifier = ""
+modifier_time = 0.0
+fx = "dust"
+emote = "?"
+emote_color = Color(0.6, 1, 0.5, 1)
+sfx = "boing"
+shake = 0.15
+then_clip = "stand_up"
