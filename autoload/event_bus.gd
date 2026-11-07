@@ -30,3 +30,6 @@ signal lap_completed(racer: int, lap: int)
 signal toast(text: String, color: Color)
 signal announcer(text: String)
 signal settings_changed
+
+## Zeitfahren: neuer Bestwert gespeichert (für Profil-Sync).
+signal record_set(track_id: String, best_total: float, best_lap: float)

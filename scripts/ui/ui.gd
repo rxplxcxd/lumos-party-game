@@ -169,6 +169,17 @@ static func hbox(sep := 14) -> HBoxContainer:
 	return h
 
 
+## Verankert ein Control und setzt die Offsets relativ zum Anker – unabhängig davon, ob es schon im
+## Baum hängt (Control.position rechnet sonst gegen die aktuelle Elterngröße und landet außerhalb).
+static func place(c: Control, preset: int, pos: Vector2, sz := Vector2.ZERO) -> void:
+	c.set_anchors_preset(preset)
+	var s := sz if sz != Vector2.ZERO else c.get_combined_minimum_size()
+	c.offset_left = pos.x
+	c.offset_top = pos.y
+	c.offset_right = pos.x + s.x
+	c.offset_bottom = pos.y + s.y
+
+
 static func center_root(parent: Node) -> Control:
 	var c := Control.new()
 	c.set_anchors_preset(Control.PRESET_FULL_RECT)

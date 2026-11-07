@@ -14,6 +14,7 @@ var _wheel: Node3D
 
 var _party_board := 0
 var _party_rounds := 0
+var _party_mode := 0
 var _hero_steppers: Array[Stepper] = []
 var _cpu_steppers: Array[Stepper] = []
 
@@ -267,6 +268,15 @@ func _page_party() -> Control:
 		board_desc.text = Game.BOARDS[i].desc)
 	v.add_child(_row("Spielbrett", bs))
 	v.add_child(board_desc)
+	var mode_desc := UI.label(Game.PARTY_MODES[_party_mode].desc, 20, Color(1, 1, 1, 0.75))
+	mode_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	mode_desc.custom_minimum_size = Vector2(620, 44)
+	var ms := Stepper.new().setup(Game.PARTY_MODES.map(func(m: Dictionary) -> String: return m.name), _party_mode, 340, Color("#ff4fb8"))
+	ms.changed.connect(func(i: int) -> void:
+		_party_mode = i
+		mode_desc.text = Game.PARTY_MODES[i].desc)
+	v.add_child(_row("Modus", ms))
+	v.add_child(mode_desc)
 	var rs := Stepper.new().setup(["5 Runden", "10 Runden", "15 Runden"], _party_rounds, 220, Color("#ff4fb8"))
 	rs.changed.connect(func(i: int) -> void: _party_rounds = i)
 	v.add_child(_row("Länge", rs))
@@ -335,7 +345,7 @@ func _row(title: String, ctrl: Control) -> Control:
 
 func _start_party() -> void:
 	_apply_players()
-	Game.start_party(Game.BOARDS[_party_board].id, [5, 10, 15][_party_rounds])
+	Game.start_party(Game.BOARDS[_party_board].id, [5, 10, 15][_party_rounds], Game.PARTY_MODES[_party_mode].id)
 	Router.goto("res://scenes/party/PartyBoard.tscn")
 
 
@@ -352,12 +362,39 @@ func _page_race() -> Control:
 	var desc := UI.label(Game.TRACKS[cur].desc, 22, Color(1, 1, 1, 0.85))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.custom_minimum_size = Vector2(620, 50)
+	var modes := ["Einzelrennen", "Grand Prix", "Zeitfahren"]
+	var mode_ids := ["single", "gp", "time"]
+	var cur_mode := maxi(0, mode_ids.find(String(Game.race_cfg.get("mode", "single"))))
+	var ms := Stepper.new().setup(modes, cur_mode, 320, Color("#2f9bff"))
+	v.add_child(_row("Modus", ms))
 	var ts := Stepper.new().setup(names, cur, 320, Color("#2f9bff"))
 	ts.changed.connect(func(i: int) -> void:
 		Game.race_cfg.track = Game.TRACKS[i].id
-		desc.text = Game.TRACKS[i].desc)
-	v.add_child(_row("Strecke", ts))
+		desc.text = Game.TRACKS[i].desc + _record_text(Game.TRACKS[i].id))
+	var track_row := _row("Strecke", ts)
+	v.add_child(track_row)
+	var cups := Stepper.new().setup(Game.CUPS.map(func(c: Dictionary) -> String: return c.name), int(Game.race_cfg.get("cup", 0)), 380, Color("#2f9bff"))
+	var cup_row := _row("Cup", cups)
+	v.add_child(cup_row)
 	v.add_child(desc)
+	var cup_text := func(i: int) -> String:
+		var names_in_cup: Array = (Game.CUPS[i].tracks as Array).map(func(id: String) -> String: return Game.track_info(id).name)
+		return "Vier Rennen, Punkte 15-12-10-8-6-4-2-1: " + " · ".join(names_in_cup) if names_in_cup.size() <= 4 else "Acht Rennen am Stück: " + " · ".join(names_in_cup)
+	cups.changed.connect(func(i: int) -> void:
+		Game.race_cfg.cup = i
+		desc.text = cup_text.call(i))
+	var apply_mode := func(i: int) -> void:
+		Game.race_cfg.mode = mode_ids[i]
+		track_row.visible = mode_ids[i] != "gp"
+		cup_row.visible = mode_ids[i] == "gp"
+		if mode_ids[i] == "gp":
+			desc.text = cup_text.call(int(Game.race_cfg.get("cup", 0)))
+		elif mode_ids[i] == "time":
+			desc.text = "Allein gegen die Uhr – nur Nitro-Boxen. Bestzeiten werden gespeichert." + _record_text(String(Game.race_cfg.track))
+		else:
+			desc.text = Game.TRACKS[ts.index].desc + _record_text(String(Game.race_cfg.track))
+	ms.changed.connect(apply_mode)
+	apply_mode.call(cur_mode)
 	var laps := Stepper.new().setup(["2 Runden", "3 Runden", "5 Runden"], [2, 3, 5].find(Game.race_cfg.laps), 220, Color("#2f9bff"))
 	laps.changed.connect(func(i: int) -> void: Game.race_cfg.laps = [2, 3, 5][i])
 	v.add_child(_row("Runden", laps))
@@ -374,6 +411,8 @@ func _page_race() -> Control:
 	start.custom_minimum_size.y = 76
 	start.pressed.connect(func() -> void:
 		_apply_players()
+		if Game.race_cfg.mode == "gp":
+			Game.start_gp(int(Game.race_cfg.cup))
 		Game.mode = "race"
 		Router.goto("res://scenes/racer/NitroDash.tscn"))
 	v.add_child(start)
@@ -409,13 +448,32 @@ func _page_minigames() -> Control:
 		b.mouse_entered.connect(func() -> void: desc.text = "%s – %s" % [m.name, m.desc])
 		b.pressed.connect(func() -> void: _play_minigame(m.id))
 		grid.add_child(b)
-	var rnd := UI.button("Zufall!", Color("#ffcc33"), 30, 300)
+	var extra := UI.hbox(12)
+	var rnd := UI.button("Zufall!", Color("#ffcc33"), 26, 230)
 	rnd.pressed.connect(func() -> void: _play_minigame(Game.MINIGAMES[randi() % Game.MINIGAMES.size()].id))
-	v.add_child(rnd)
+	extra.add_child(rnd)
+	for n in [5, 10]:
+		var mb := UI.button("Marathon (%d)" % n, Color("#ff4fb8"), 26, 230)
+		mb.icon = UI.icon_tex("trophy", 26)
+		mb.pressed.connect(func() -> void:
+			if not _hero_steppers.is_empty():
+				_apply_players()
+			Game.start_marathon(n)
+			Router.goto("res://scenes/menu/MarathonHub.tscn"))
+		extra.add_child(mb)
+	v.add_child(extra)
 	v.add_child(UI.label("Spieler", 30, UI.ACCENT2, true))
 	_players_editor(v)
 	_back_button(v)
 	return arr[0]
+
+
+func _record_text(track_id: String) -> String:
+	var r := Game.record_for(track_id)
+	if r.is_empty() or float(r.total) == INF:
+		return ""
+	var t := float(r.total)
+	return "\nBestzeit: %d:%05.2f" % [int(t) / 60, fmod(t, 60.0)]
 
 
 func _play_minigame(id: String) -> void:
@@ -445,6 +503,9 @@ func _page_settings() -> Control:
 	v.add_child(_row("Grafik", q))
 	v.add_child(_toggle("Dynamische Auflösung (stabile 60 FPS)", "dynamic_res"))
 	v.add_child(_toggle("FPS anzeigen", "show_fps"))
+	v.add_child(_toggle("Split-Screen für mehrere Fahrer", "split_screen"))
+	if not OS.has_feature("web"):
+		v.add_child(_toggle("Weitere Monitore automatisch nutzen (%d erkannt)" % DisplayServer.get_screen_count(), "multi_display"))
 	var hw: Dictionary = Gfx.hardware
 	var hw_label := UI.label("Erkannt: %d Kerne · %s · %s" % [int(hw.get("cores", 0)), ("%.0f GB RAM" % hw.memory_gb) if float(hw.get("memory_gb", 0)) > 0 else "RAM unbekannt", String(hw.get("gpu", "GPU unbekannt")).substr(0, 40)], 18, Color(1, 1, 1, 0.6))
 	v.add_child(hw_label)

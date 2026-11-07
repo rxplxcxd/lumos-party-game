@@ -291,6 +291,8 @@ func _return(placements: Array[int]) -> void:
 			Router.goto("res://scenes/party/PartyBoard.tscn")
 		"free_play":
 			Router.goto("res://scenes/menu/MinigameSelect.tscn")
+		"marathon":
+			Router.goto("res://scenes/menu/MarathonHub.tscn")
 		_:
 			Router.goto("res://scenes/menu/MainMenu.tscn")
 

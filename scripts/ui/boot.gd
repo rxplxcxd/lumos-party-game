@@ -9,6 +9,9 @@ extends Node
 ##   --shotdir=/pfad                                     Zielordner für Screenshots
 ##   --quit=20                                           nach x Sekunden beenden
 ##   --board=dungeon --rounds=5 --track=lumos_ring       Brett/Strecke
+##   --party-mode=classic|blitz|team                     Party-Modus
+##   --race-mode=single|gp|time --cup=0                  Renn-Modus (Grand Prix mit Cup-Index)
+##   --marathon=5                                        Minispiel-Marathon mit n Spielen
 ##   --touch                                             Touch-Steuerung erzwingen
 
 const PRELOAD := [
@@ -37,10 +40,17 @@ func _ready() -> void:
 	await _splash()
 	var target: String = _args.get("scene", "res://scenes/menu/MainMenu.tscn")
 	if _args.has("board"):
-		Game.start_party(_args.board, int(_args.get("rounds", "5")))
+		Game.start_party(_args.board, int(_args.get("rounds", "5")), String(_args.get("party-mode", "classic")))
 		Game.mode = "party"
 	if _args.has("track"):
 		Game.race_cfg.track = _args.track
+	if _args.has("race-mode"):
+		Game.race_cfg.mode = _args["race-mode"]
+		if Game.race_cfg.mode == "gp":
+			Game.start_gp(int(_args.get("cup", "0")))
+	if _args.has("marathon"):
+		Game.start_marathon(int(_args.marathon))
+		target = "res://scenes/menu/MarathonHub.tscn"
 	if _args.has("laps"):
 		Game.race_cfg.laps = int(_args.laps)
 	Router.goto(target, {"page": _args.page} if _args.has("page") else {})

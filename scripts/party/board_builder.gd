@@ -5,10 +5,12 @@ extends RefCounted
 ## Dungeon-Fackeln = Fallen-Felder, Kanonen = Wolkenkanonen, Krabbe = Händler …).
 
 const TILE_KEYS := {"B": "bg/tile_blue", "R": "bg/tile_red", "L": "bg/tile_yellow", "P": "bg/tile_green", "C": "bg/tile_purple",
-	"T": "bg/tile_purple", "K": "bg/tile_green", "N": "bg/tile_yellow", "S": "bg/tile_green"}
-const SYMBOLS := {"B": "+", "R": "-", "L": "?", "P": "!", "C": "?!", "T": "!", "K": "!", "N": "$", "S": "GO"}
+	"T": "bg/tile_purple", "K": "bg/tile_green", "N": "bg/tile_yellow", "S": "bg/tile_green", "G": "bg/tile_purple",
+	"E": "bg/tile_blue", "W": "bg/tile_green"}
+const SYMBOLS := {"B": "+", "R": "-", "L": "?", "P": "!", "C": "?!", "T": "!", "K": "!", "N": "$", "S": "GO", "G": "~", "E": "»", "W": "@"}
 const SYMBOL_COLORS := {"B": Color("#dff2ff"), "R": Color("#ffe0e0"), "L": Color("#7a4a00"), "P": Color("#eaffea"),
-	"C": Color("#f2e0ff"), "T": Color("#ffd0a0"), "K": Color("#eaffea"), "N": Color("#7a4a00"), "S": Color("#ffffff")}
+	"C": Color("#f2e0ff"), "T": Color("#ffd0a0"), "K": Color("#eaffea"), "N": Color("#7a4a00"), "S": Color("#ffffff"),
+	"G": Color("#d8ffe8"), "E": Color("#e8fbff"), "W": Color("#eaffea")}
 const TILE_SCALE := 2.3
 
 var root: Node3D
@@ -38,6 +40,12 @@ func build(parent: Node3D, id: String, graph: Array) -> void:
 			_build_pirates()
 		"sky":
 			_build_sky()
+		"graveyard":
+			_build_graveyard()
+		"frost":
+			_build_frost()
+		"station":
+			_build_station()
 		_:
 			_build_dungeon()
 	_build_spaces()
@@ -79,7 +87,7 @@ func _space_prop(holder: Node3D, t: String, sp: Dictionary) -> void:
 	var side := _outward(sp) * 1.9
 	match t:
 		"L":
-			var key := "dun/chest" if board_id == "dungeon" else ("plat/chest" if board_id == "sky" else "pirate/chest")
+			var key: String = {"dungeon": "dun/chest", "sky": "plat/chest", "graveyard": "dun/chest", "frost": "hol/present_red", "station": "sb/cargo"}.get(board_id, "pirate/chest")
 			var chest := Assets.spawn(key, holder, side, 0.0, 0.9 if board_id == "dungeon" else 1.2)
 			chest.look_at(holder.global_position + Vector3(0, chest.global_position.y - holder.global_position.y, 0), Vector3.UP)
 			chest.rotate_object_local(Vector3.UP, PI)
@@ -104,10 +112,53 @@ func _space_prop(holder: Node3D, t: String, sp: Dictionary) -> void:
 			WorldKit.torch_light(holder, Vector3(0, 1.6, 0), Color(1.0, 0.55, 0.2), 1.4, 5.0)
 			traps.append(holder)
 		"K":
-			var c := Assets.spawn("pirate/cannon", holder, side, 0.0, 1.3)
-			c.look_at(holder.global_position + Vector3(0, c.global_position.y - holder.global_position.y, 0), Vector3.UP)
-			c.rotate_object_local(Vector3.RIGHT, deg_to_rad(-35))
-			traps.append(c)
+			if board_id == "station":
+				var rk := Assets.spawn("space/rocket", holder, side * 1.1, 0.0, 0.8)
+				traps.append(rk)
+			else:
+				var c := Assets.spawn("pirate/cannon", holder, side, 0.0, 1.3)
+				c.look_at(holder.global_position + Vector3(0, c.global_position.y - holder.global_position.y, 0), Vector3.UP)
+				c.rotate_object_local(Vector3.RIGHT, deg_to_rad(-35))
+				traps.append(c)
+		"G":
+			var lamp := Assets.spawn("grave/lantern", holder, side, 0.0, 2.0)
+			traps.append(lamp)
+			var gl := OmniLight3D.new()
+			gl.light_color = Color(0.45, 1.0, 0.7)
+			gl.light_energy = 1.2
+			gl.omni_range = 4.0
+			gl.position = side + Vector3.UP * 1.2
+			holder.add_child(gl)
+		"E":
+			var ice := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = 1.5
+			cm.bottom_radius = 1.6
+			cm.height = 0.06
+			var im := WorldKit.mat(Color(0.75, 0.92, 1.0, 0.75), 0.05, 0.25)
+			im.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			im.metallic_specular = 1.0
+			cm.material = im
+			ice.mesh = cm
+			ice.position.y = 0.42
+			holder.add_child(ice)
+			Assets.spawn("hk/snow_pile", holder, side * 1.1, _rng.randf() * 360.0, 1.4)
+			traps.append(holder)
+		"W":
+			var pad := Assets.spawn("sb/landingpad", holder, Vector3(0, 0.02, 0), 0.0, 0.55)
+			pad.position.y = -0.05
+			var ring := MeshInstance3D.new()
+			var tm := TorusMesh.new()
+			tm.inner_radius = 1.25
+			tm.outer_radius = 1.45
+			tm.material = WorldKit.mat(Color("#40f0ff"), 0.3, 2.0)
+			ring.mesh = tm
+			ring.position.y = 0.5
+			holder.add_child(ring)
+			var tw := ring.create_tween().set_loops()
+			tw.tween_property(ring, "position:y", 1.1, 0.9).set_trans(Tween.TRANS_SINE)
+			tw.tween_property(ring, "position:y", 0.5, 0.9).set_trans(Tween.TRANS_SINE)
+			traps.append(holder)
 		"N":
 			var stall := Assets.spawn("town/stall", holder, side * 1.2, 0.0, 2.2)
 			stall.look_at(holder.global_position + Vector3(0, stall.global_position.y - holder.global_position.y, 0), Vector3.UP)
@@ -115,7 +166,8 @@ func _space_prop(holder: Node3D, t: String, sp: Dictionary) -> void:
 			if merchant == null:
 				merchant = CharacterRig.new()
 				holder.add_child(merchant)
-				merchant.setup("pet/crab", -1, 0.9)
+				var mkey: String = {"frost": "pet/deer", "station": "mini/robot"}.get(board_id, "pet/crab")
+				merchant.setup(mkey, -1, 0.9 if mkey.begins_with("pet/") else 1.3)
 				merchant.position = side * 0.75
 				merchant.face_now(-side)
 				merchant.play("idle")
@@ -355,6 +407,183 @@ func _build_sky() -> void:
 	_toggle_platforms(1, "castle/bridge_draw", 2.6, Vector3(0, 0.05, 0), false)
 
 
+# --- Geisterfriedhof ---------------------------------------------------------------------------------------
+
+func _build_graveyard() -> void:
+	WorldKit.box(root, Vector3(70, 1, 52), Vector3(0, -0.5, 0), Color("#2c3a2c"), false)
+	# Moosige Grabfelder, Zäune und Krypten
+	_scatter_free(["grave/gravestone", "grave/gravestone_round", "grave/gravestone", "grave/debris", "grave/pumpkin", "grave/candles"],
+		46, Rect2(-28, -20, 56, 40), 0.0, Vector2(1.6, 2.2), 2.6)
+	_scatter_free(["grave/pine", "nat/stump", "grave/pine", "nat/rock_tall"], 16, Rect2(-30, -22, 60, 44), 0.0, Vector2(2.0, 2.8), 3.6)
+	for x in range(-30, 31, 3):
+		WorldKit.place(root, "grave/fence", Vector3(x, 0, -22), 0.0, 2.0)
+	for z in range(-20, 21, 3):
+		WorldKit.place(root, "grave/fence", Vector3(-31, 0, z), 90.0, 2.0)
+		WorldKit.place(root, "grave/fence", Vector3(31, 0, z), -90.0, 2.0)
+	WorldKit.place(root, "grave/crypt", Vector3(0, 0, -2), 0.0, 3.0)
+	WorldKit.place(root, "grave/crypt_small", Vector3(-25, 0, -16), 40.0, 2.6)
+	WorldKit.place(root, "grave/crypt_small", Vector3(25, 0, 17), -140.0, 2.6)
+	WorldKit.place(root, "grave/obelisk", Vector3(-8, 0, 1), 0.0, 2.4)
+	WorldKit.place(root, "grave/obelisk", Vector3(8, 0, -1), 0.0, 2.4)
+	WorldKit.place(root, "grave/altar", Vector3(14, 0, 1), -90.0, 2.4)
+	for p in [Vector3(-26, 0, 8), Vector3(26, 0, -10), Vector3(-6, 0, -20), Vector3(14, 0, 19), Vector3(-16, 0, 18)]:
+		WorldKit.place(root, "grave/lightpost", p, 0.0, 2.2)
+		WorldKit.torch_light(root, p + Vector3.UP * 3.6, Color(1.0, 0.7, 0.35), 1.8, 9.0)
+	for p in [Vector3(-12, 0, 6), Vector3(4, 0, 8), Vector3(16, 0, -8)]:
+		WorldKit.place(root, "grave/fire_basket", p, 0.0, 2.0)
+		WorldKit.torch_light(root, p + Vector3.UP * 1.6, Color(0.5, 1.0, 0.6), 1.6, 7.0)
+	# Mond + Bodennebel
+	var moon := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 6.0
+	sm.height = 12.0
+	sm.material = WorldKit.mat(Color("#f0f0ff"), 1.0, 1.6)
+	moon.mesh = sm
+	moon.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(moon)
+	moon.position = Vector3(-40, 34, -70)
+	var mist := FX.emitter({"amount": 40, "life": 7.0, "one_shot": false, "explosive": 0.0, "spread": 180.0, "dir": Vector3(1, 0, 0),
+		"vel_min": 0.2, "vel_max": 0.6, "gravity": Vector3.ZERO, "size": 9.0, "color": Color(0.6, 0.65, 0.9, 0.08), "box": Vector3(30, 0.4, 22)})
+	root.add_child(mist)
+	mist.position = Vector3(0, 0.6, 0)
+	mist.emitting = true
+	# Schlafende Untote
+	for p in [Vector3(-22, 0, -4), Vector3(22, 0, 10), Vector3(6, 0, 19)]:
+		var sk := CharacterRig.new()
+		root.add_child(sk)
+		sk.setup(["npc/skeleton", "npc/vampire", "npc/ghost"][sleepers.size() % 3], -1, 2.0 if sleepers.size() == 0 else 1.4)
+		sk.position = p
+		sk.rotation.y = _rng.randf() * TAU
+		sk.play("sit" if sleepers.size() == 0 else "idle")
+		sleepers.append(sk)
+	# Geisterbrücke (Route 0): schwebende Grabplatten
+	_toggle_platforms(0, "plat/block_moving", 0.75, Vector3(0, -0.85, 0))
+	for part in toggle_visuals.get(0, []):
+		Assets.tint(part, Color(0.6, 1.2, 0.9, 0.85), false, 0.6)
+	# Krypta-Wächter (Route 1)
+	var gs := _branch_first_space(1)
+	if gs >= 0:
+		gate_npc = CharacterRig.new()
+		root.add_child(gate_npc)
+		gate_npc.setup("npc/keeper", -1, 1.6)
+		var gp: Vector3 = spaces[gs].pos
+		var fwd: Vector3 = (spaces[spaces[gs].next[0]].pos - gp).normalized()
+		gate_npc.position = gp + Vector3(-fwd.z, 0, fwd.x) * 1.8
+		gate_npc.face_now(-Vector3(-fwd.z, 0, fwd.x))
+		gate_npc.play("idle")
+		var arch := WorldKit.place(root, "grave/crypt_small", gp - fwd * 2.4 + Vector3(-fwd.z, 0, fwd.x) * -2.4, 0.0, 1.6)
+		arch.look_at(arch.position + fwd, Vector3.UP)
+
+
+# --- Frostdorf ----------------------------------------------------------------------------------------------
+
+func _build_frost() -> void:
+	WorldKit.box(root, Vector3(76, 1, 56), Vector3(0, -0.5, 0), Color("#e8f0fa"), false)
+	# Zugefrorener See in der Mitte (Eis-Route 0 führt drüber)
+	var lake := WorldKit.water(root, Vector2(22, 9), 0.02, Color(0.55, 0.78, 0.95), Color(0.85, 0.95, 1.0))
+	lake.position = Vector3(2, 0.03, -7)
+	(lake.mesh.surface_get_material(0) as ShaderMaterial).set_shader_parameter("wave_height", 0.0)
+	_scatter_free(["nat/pine_snow", "hk/tree_snow", "hk/tree_snow_b", "nat/pine_snow"], 30, Rect2(-34, -24, 68, 48), 0.0, Vector2(2.0, 3.0), 3.8)
+	_scatter_free(["hk/snow_pile", "hk/rocks", "hol/snowball_pile", "hk/candy_cane", "hol/present_red", "hol/present_green", "hk/lantern"],
+		30, Rect2(-28, -20, 56, 40), 0.0, Vector2(1.4, 2.0), 2.8)
+	# Dorf: Hütten, Lebkuchenhaus, Weihnachtsbaum, Schlitten, Zug
+	WorldKit.place(root, "hol/christmas_tree", Vector3(0, 0, 4), 0.0, 3.4)
+	WorldKit.place(root, "hol/gingerbread_house", Vector3(-24, 0, -14), 40.0, 3.2)
+	WorldKit.place(root, "hol/gingerbread_house", Vector3(24, 0, 16), -140.0, 3.2)
+	WorldKit.place(root, "hk/sled", Vector3(-10, 0, 9), 20.0, 2.4)
+	WorldKit.place(root, "hk/train", Vector3(12, 0, -22), 0.0, 2.6)
+	WorldKit.place(root, "hk/nutcracker", Vector3(-6, 0, -1), 0.0, 2.6)
+	WorldKit.place(root, "hk/nutcracker", Vector3(6, 0, -1), 0.0, 2.6)
+	for p in [Vector3(-26, 0, 6), Vector3(26, 0, -6), Vector3(-14, 0, 19), Vector3(12, 0, 20)]:
+		WorldKit.place(root, "hol/snowman", p, _rng.randf() * 360.0, 2.6)
+	for p in [Vector3(-18, 0, -2), Vector3(16, 0, 4), Vector3(0, 0, 19), Vector3(-2, 0, -20)]:
+		WorldKit.place(root, "hk/lantern", p, 0.0, 2.4)
+		WorldKit.torch_light(root, p + Vector3.UP * 2.2, Color(1.0, 0.75, 0.45), 1.5, 8.0)
+	var snow := FX.emitter({"amount": 120, "life": 8.0, "one_shot": false, "explosive": 0.0, "spread": 15.0, "dir": Vector3(0, -1, 0),
+		"vel_min": 0.8, "vel_max": 1.6, "gravity": Vector3(0.4, -0.5, 0), "size": 0.25, "color": Color(1, 1, 1, 0.9), "box": Vector3(36, 1, 26)})
+	root.add_child(snow)
+	snow.position = Vector3(0, 16, 0)
+	snow.emitting = true
+	for p in [Vector3(-12, 0, -3), Vector3(14, 0, -4), Vector3(-3, 0, 18)]:
+		var r := CharacterRig.new()
+		root.add_child(r)
+		r.setup(["pet/deer", "pet/bunny", "pet/chick"][sleepers.size() % 3], -1, 1.0)
+		r.position = p
+		r.rotation.y = _rng.randf() * TAU
+		r.play("idle")
+		sleepers.append(r)
+	# Eis-Route 0: Eisschollen unter den Feldern
+	_toggle_platforms(0, "plat/block_snow", 0.75, Vector3(0, -0.85, 0))
+
+
+# --- Orbit-Station -------------------------------------------------------------------------------------------
+
+func _build_station() -> void:
+	# Metall-Deck aus Space-Station-Bodenplatten
+	var bb := Assets.model_aabb("ss/floor")
+	var step := maxf(bb.size.x, 1.0) * 2.0
+	var tiles: Array = []
+	var nx := int(56.0 / step)
+	var nz := int(44.0 / step)
+	for x in nx:
+		for z in nz:
+			var px := -28.0 + step * (x + 0.5)
+			var pz := -22.0 + step * (z + 0.5)
+			tiles.append(Transform3D(Basis().scaled(Vector3(2, 2, 2)), Vector3(px, -bb.end.y * 2.0, pz)))
+	WorldKit.multimesh(root, "ss/floor", tiles)
+	WorldKit.box(root, Vector3(60, 1, 48), Vector3(0, -0.56, 0), Color("#3a4054"), false)
+	# Rand: Geländer + Module, dahinter das All mit Planet
+	for x in range(-27, 28, 3):
+		WorldKit.place(root, "ss/rail", Vector3(x, 0, -23), 0.0, 2.0)
+	for z in range(-21, 22, 3):
+		WorldKit.place(root, "ss/rail", Vector3(-29, 0, z), 90.0, 2.0)
+		WorldKit.place(root, "ss/rail", Vector3(29, 0, z), -90.0, 2.0)
+	_scatter_free(["sb/solarpanel", "sb/module_a", "sb/module_c", "ss/container", "ss/computer", "ss/display", "space/machine", "sb/cargo"],
+		26, Rect2(-27, -21, 54, 42), 0.0, Vector2(1.4, 2.0), 3.0)
+	WorldKit.place(root, "space/rocket", Vector3(-24, 0, -16), 0.0, 3.0)
+	WorldKit.place(root, "sb/lander", Vector3(24, 0, 16), -130.0, 2.4)
+	WorldKit.place(root, "space/hangar", Vector3(0, 0, -1), 0.0, 2.2)
+	WorldKit.place(root, "ss/table_planet", Vector3(-8, 0, 1), 0.0, 2.2)
+	WorldKit.place(root, "sb/windturbine", Vector3(10, 0, 1), 0.0, 2.0)
+	var planet := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 40.0
+	sm.height = 80.0
+	sm.material = WorldKit.mat(Color("#3e7be0"), 0.9, 0.35)
+	planet.mesh = sm
+	planet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(planet)
+	planet.position = Vector3(60, -30, -110)
+	var ring := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 50.0
+	tm.outer_radius = 62.0
+	tm.material = WorldKit.mat(Color(0.9, 0.8, 0.6, 1), 0.9, 0.4)
+	ring.mesh = tm
+	ring.rotation_degrees = Vector3(18, 0, 12)
+	planet.add_child(ring)
+	var stars := FX.emitter({"amount": 160, "life": 30.0, "one_shot": false, "explosive": 0.0, "spread": 180.0, "vel_min": 0.0, "vel_max": 0.05,
+		"gravity": Vector3.ZERO, "size": 0.6, "tex": FX.tex_star, "additive": true, "color": Color(1, 1, 1, 0.9), "box": Vector3(120, 30, 20)})
+	root.add_child(stars)
+	stars.position = Vector3(0, 30, -90)
+	stars.preprocess = 30.0
+	stars.emitting = true
+	# Leuchtstreifen am Deck
+	for p in [Vector3(-20, 0.05, 0), Vector3(20, 0.05, 0), Vector3(0, 0.05, -19), Vector3(0, 0.05, 19)]:
+		WorldKit.torch_light(root, p + Vector3.UP * 2.0, Color(0.4, 0.8, 1.0), 1.6, 12.0)
+	for p in [Vector3(-14, 0, 4), Vector3(14, 0, -3), Vector3(-4, 0, 18)]:
+		var r := CharacterRig.new()
+		root.add_child(r)
+		r.setup(["mini/robot", "mini/alien", "npc/duck"][sleepers.size() % 3], -1, 1.4)
+		r.position = p
+		r.rotation.y = _rng.randf() * TAU
+		r.play("idle")
+		sleepers.append(r)
+	# Luftschleusen-Routen: ausfahrende Brückenplatten
+	_toggle_platforms(0, "sb/landingpad", 0.5, Vector3(0, -0.25, 0))
+	_toggle_platforms(1, "sb/landingpad", 0.5, Vector3(0, -0.25, 0))
+
+
 # --- Wechselnde Routen ---------------------------------------------------------------------------------------
 
 func _branch_first_space(bi: int) -> int:
@@ -395,6 +624,10 @@ func set_route_open(bi: int, open: bool, animate := true) -> void:
 			dy = 0.0 if open else -1.4
 		"drawbridge":
 			dy = 0.0 if open else -0.3
+		"fog_bridge", "ice_bridge":
+			dy = 0.0 if open else -2.4
+		"airlock":
+			dy = 0.0 if open else -1.6
 	for k in ids.size():
 		var node: Node3D = space_nodes[ids[k]]
 		var target := (spaces[ids[k]].pos as Vector3) + Vector3.UP * dy
@@ -408,7 +641,8 @@ func set_route_open(bi: int, open: bool, animate := true) -> void:
 			node.rotation = tilt
 		if k < parts.size():
 			var part: Node3D = parts[k]
-			var ptarget := (spaces[ids[k]].pos as Vector3) + Vector3.UP * (dy - (0.85 if kind == "lava_bridge" else (0.2 if kind == "tide" else 0.0)))
+			var sink: float = {"lava_bridge": 0.85, "fog_bridge": 0.85, "ice_bridge": 0.85, "tide": 0.2, "airlock": 0.25}.get(kind, 0.0)
+			var ptarget := (spaces[ids[k]].pos as Vector3) + Vector3.UP * (dy - sink)
 			if animate:
 				var tw2 := part.create_tween().set_parallel(true)
 				tw2.tween_property(part, "position", ptarget, 0.9).set_trans(Tween.TRANS_BACK).set_delay(k * 0.08)

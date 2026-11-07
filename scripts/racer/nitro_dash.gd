@@ -71,6 +71,7 @@ func _ready() -> void:
 	_spawn_racers()
 	_build_camera()
 	_build_hud()
+	_setup_views()
 	Audio.music("race")
 	InputHub.set_touch_profile("none")
 	_flow()
@@ -78,9 +79,18 @@ func _ready() -> void:
 
 # --- Welt -----------------------------------------------------------------------------------------------
 
+var scenery: TrackScenery
+
+
 func _build_world() -> void:
 	var theme: String = def.theme
+	if theme in TrackScenery.THEMES:
+		scenery = TrackScenery.new()
+		add_child(scenery)
+		scenery.build(track, def, _env)
 	match theme:
+		"storm", "snow", "space", "city", "desert":
+			pass
 		"pirates":
 			WorldKit.water(self, Vector2(600, 600), -0.6)
 			WorldKit.box(self, Vector3(110, 1, 160), Vector3(30, -0.75, 20), Color("#f1d9a0"), false)
@@ -105,6 +115,9 @@ func _decorate(theme: String) -> void:
 	var keys: Array
 	var near: Array
 	match theme:
+		"storm", "snow", "space", "city", "desert":
+			keys = []
+			near = []
 		"pirates":
 			keys = ["pirate/palm", "pirate/palm_bend", "pirate/palm_detailed", "pirate/rocks_a", "pirate/rocks_b", "pirate/barrel", "pirate/crate", "pirate/flag", "pirate/tower_small"]
 			near = ["race/barrier_white", "pirate/barrel", "race/flag_red"]
@@ -116,7 +129,7 @@ func _decorate(theme: String) -> void:
 			near = ["race/barrier_red", "race/barrier_white", "race/light_post", "race/flag_checkers", "race/pylon"]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(def.id)
-	var s := 0.0
+	var s := 0.0 if not (theme in TrackScenery.THEMES) else track.length   # v2-Themen dekoriert TrackScenery
 	while s < track.length:
 		var fr := track.frame(s)
 		var flat_up := fr.basis.y.dot(Vector3.UP) > 0.95 and fr.origin.y < 2.5 and fr.origin.y > -1.5
@@ -136,7 +149,7 @@ func _decorate(theme: String) -> void:
 					WorldKit.place(self, k, far_p, rng.randf() * 360.0, scl, false, rng.randf() < 0.3)
 		s += 11.0
 	# Tribünen am Start
-	for i in 4:
+	for i in (4 if theme != "space" else 0):
 		var fr2 := track.frame(track.length - 20.0 + i * 12.0)
 		var p2 := fr2.origin - fr2.basis.x * (track.width * 0.5 + 6.0)
 		p2.y = 0.0
@@ -188,12 +201,18 @@ func _build_boxes() -> void:
 			boxes.append({"node": n, "s": rs + 10.0, "x": lx, "respawn": 0.0})
 
 
+func _mode() -> String:
+	return String(Game.race_cfg.get("mode", "single"))
+
+
 func _spawn_racers() -> void:
 	var entries: Array = []
-	for e in EXTRA:
-		entries.append({"slot": -1, "model": e.model, "name": e.name, "kart": e.kart, "color": e.color})
+	var time_trial := _mode() == "time"
+	if not time_trial:
+		for e in EXTRA:
+			entries.append({"slot": -1, "model": e.model, "name": e.name, "kart": e.kart, "color": e.color})
 	var kart_keys := ["kart/oobi", "kart/oodi", "kart/ooli", "kart/oopi"]
-	for i in 4:
+	for i in (1 if time_trial else 4):
 		var hero := Game.hero(Game.players[i].hero)
 		entries.append({"slot": i, "model": hero.model, "name": hero.name, "kart": kart_keys[i], "color": Game.player_color(i)})
 	for i in entries.size():
@@ -206,11 +225,147 @@ func _spawn_racers() -> void:
 		r.lap_done.connect(_on_lap)
 		r.item_changed.connect(_on_item_changed)
 		racers.append(r)
-	focus = racers[4]
+	focus = racers[mini(4, racers.size() - 1)]
 	for r in racers:
 		if r.slot >= 0 and not r.is_cpu:
 			focus = r
 			break
+
+
+# --- Split-Screen & Multi-Monitor ----------------------------------------------------------------------------
+## 2–4 menschliche Fahrer bekommen je eine eigene Kamera. Im Browser/auf einem Bildschirm wird geteilt
+## (2 = oben/unten, 3–4 = Raster). Nativ mit mehreren Monitoren wandern weitere Spieler auf eigene
+## Vollbild-Fenster auf den anderen Bildschirmen. Monitor-Änderungen werden alle 2 s erkannt.
+
+var views: Array[SplitView] = []
+var _split_layer: CanvasLayer
+var _windows: Array[Window] = []
+var _screen_count := 1
+var _screen_poll := 2.0
+var _split_in_main := false
+var _views_on := false
+var _extra_maps: Array[Control] = []
+
+
+func _exit_tree() -> void:
+	# Die Haupt-Viewport-Einstellung überdauert Szenenwechsel – immer zurücksetzen
+	get_viewport().disable_3d = false
+
+
+func _humans() -> Array[Racer]:
+	var out: Array[Racer] = []
+	for r in racers:
+		if r.slot >= 0 and (not r.is_cpu or "--split-test" in OS.get_cmdline_user_args()):
+			out.append(r)
+	out.sort_custom(func(a: Racer, b: Racer) -> bool: return a.slot < b.slot)
+	return out
+
+
+func _teardown_views() -> void:
+	for v in views:
+		v.queue_free()
+	views.clear()
+	for w in _windows:
+		w.queue_free()
+	_windows.clear()
+	_extra_maps.clear()
+	if _split_layer:
+		_split_layer.queue_free()
+		_split_layer = null
+	_split_in_main = false
+
+
+func _setup_views() -> void:
+	_teardown_views()
+	var humans := _humans()
+	_screen_count = DisplayServer.get_screen_count()
+	if humans.size() < 2 or not Game.settings.get("split_screen", true):
+		return
+	var multi: bool = not OS.has_feature("web") and _screen_count > 1 and bool(Game.settings.get("multi_display", true)) and DisplayServer.get_name() != "headless"
+	var screens := mini(_screen_count, humans.size()) if multi else 1
+	var groups: Array = []
+	for i in screens:
+		groups.append([])
+	for k in humans.size():
+		(groups[k % screens] as Array).append(humans[k])
+	for gi in groups.size():
+		var group: Array = groups[gi]
+		if gi == 0 and group.size() == 1:
+			focus = group[0]   # Hauptfenster zeigt P1 mit normaler Kamera und vollem HUD
+			continue
+		var host: Node
+		if gi == 0:
+			_split_layer = CanvasLayer.new()
+			_split_layer.layer = 5
+			add_child(_split_layer)
+			host = _split_layer
+			_split_in_main = true
+		else:
+			var w := Window.new()
+			w.title = "Lumos Nitro Dash – Monitor %d" % (gi + 1)
+			w.borderless = true
+			w.unfocusable = false
+			add_child(w)
+			var rect := DisplayServer.screen_get_usable_rect(gi)
+			w.current_screen = gi
+			w.position = rect.position
+			w.size = rect.size
+			w.mode = Window.MODE_FULLSCREEN
+			w.close_requested.connect(func() -> void: w.hide())
+			_windows.append(w)
+			host = w
+		var grid: Container
+		if group.size() == 2:
+			grid = VBoxContainer.new()
+		else:
+			var gc := GridContainer.new()
+			gc.columns = 2 if group.size() > 1 else 1
+			grid = gc
+		grid.add_theme_constant_override("separation", 4)
+		grid.add_theme_constant_override("h_separation", 4)
+		grid.add_theme_constant_override("v_separation", 4)
+		grid.set_anchors_preset(Control.PRESET_FULL_RECT)
+		grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		host.add_child(grid)
+		for r in group:
+			var v := SplitView.new().setup(r, laps)
+			grid.add_child(v)
+			views.append(v)
+		if group.size() == 3:
+			# 4. Viertel: Übersichtskarte
+			var fill := ColorRect.new()
+			fill.color = Color(0.05, 0.02, 0.12, 0.92)
+			fill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			fill.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			grid.add_child(fill)
+			var mm := MiniMap.new()
+			mm.race = self
+			UI.place(mm, Control.PRESET_CENTER, Vector2(-120, -120), Vector2(240, 240))
+			fill.add_child(mm)
+			_extra_maps.append(mm)
+	if focus.is_cpu and not humans.is_empty():
+		focus = humans[0]
+	# Haupt-HUD im Split nur für Meldungen + Karte
+	_pos_label.get_parent().visible = not _split_in_main
+	_item_panel.visible = not _split_in_main
+	_speed_label.get_parent().visible = not _split_in_main
+	if _split_in_main:
+		UI.place(_minimap, Control.PRESET_CENTER, Vector2(-80, -80), Vector2(160, 160))
+		_minimap.visible = humans.size() != 3
+	_set_views_on(_views_on)
+
+
+func _set_views_on(on: bool) -> void:
+	_views_on = on
+	if _split_layer:
+		_split_layer.visible = on
+	for w in _windows:
+		w.visible = on
+	# Hauptansicht nicht doppelt rendern, solange das Raster sie komplett verdeckt
+	get_viewport().disable_3d = on and _split_in_main
+	for v in views:
+		v.vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
+		v.fit_hud.call_deferred()
 
 
 # --- Kamera ---------------------------------------------------------------------------------------------
@@ -259,6 +414,7 @@ func _flow() -> void:
 	await get_tree().process_frame
 	await CutsceneManager.play("RaceIntro", {"race": self})
 	InputHub.set_touch_profile("race")
+	_set_views_on(true)
 	state = "countdown"
 	var early := {}
 	_countdown_watch(early)
@@ -313,6 +469,19 @@ func _physics_process(delta: float) -> void:
 func _process(delta: float) -> void:
 	_update_camera(delta)
 	_update_hud(delta)
+	for v in views:
+		v.tick(delta, race_time)
+	for m in _extra_maps:
+		m.queue_redraw()
+	_screen_poll -= delta
+	if _screen_poll <= 0.0:
+		_screen_poll = 2.0
+		var sc := DisplayServer.get_screen_count()
+		if sc != _screen_count and state in ["countdown", "race"]:
+			_screen_count = sc
+			_message("Bildschirme erkannt: %d" % sc, UI.ACCENT2, 1.2)
+			_setup_views()
+			_set_views_on(true)
 	_update_underwater(delta)
 	for c in get_children():
 		if c.has_meta("swim"):
@@ -377,7 +546,23 @@ func _rank() -> void:
 		(order[i] as Racer).place = i + 1
 
 
+var _lap_t0 := 0.0
+var lap_times: Array[float] = []
+
+
 func _on_lap(r: Racer, lap: int) -> void:
+	if r == focus:
+		if lap <= 0:
+			_lap_t0 = race_time
+		else:
+			lap_times.append(race_time - _lap_t0)
+			_lap_t0 = race_time
+			if _mode() == "time":
+				var lt := lap_times[lap_times.size() - 1]
+				var rec := Game.record_for(String(def.id))
+				var best_lap: float = rec.get("lap", INF)
+				var is_best: bool = lt < best_lap and lap_times.min() == lt
+				_message("Runde: %s%s" % [_fmt(lt), "  NEUER RUNDENREKORD!" if is_best else ""], UI.GOLD if is_best else Color.WHITE, 1.4)
 	if lap >= laps and not r.finished:
 		r.finished = true
 		r.finish_time = race_time
@@ -405,6 +590,7 @@ func _on_lap(r: Racer, lap: int) -> void:
 
 func _end_race() -> void:
 	state = "done"
+	_set_views_on(false)
 	Audio.set_music_pitch(1.0)
 	InputHub.set_touch_profile("none")
 	var order := racers.duplicate()
@@ -412,15 +598,165 @@ func _end_race() -> void:
 	var entries: Array = []
 	for r in order:
 		entries.append({"model": r.visual.hero.model_key, "name": r.display_name, "color": r.color, "player": r.slot})
+	match _mode():
+		"time":
+			await _time_trial_results()
+			Router.goto("res://scenes/menu/MainMenu.tscn")
+			return
+		"gp":
+			await _results(order)
+			await _gp_standings(order)
+			return
 	var podium := [entries[0], entries[1], entries[2], entries[entries.size() - 1]]
 	await CutsceneManager.play("Podium", {"entries": podium, "skippable": true})
 	await _results(order)
 	Router.goto("res://scenes/menu/MainMenu.tscn")
 
 
+static func _fmt(t: float) -> String:
+	if t == INF:
+		return "—"
+	return "%d:%05.2f" % [int(t) / 60, fmod(t, 60.0)]
+
+
+# --- Zeitfahren ---------------------------------------------------------------------------------------------
+
+func _time_trial_results() -> void:
+	var total := focus.finish_time if focus.finished else race_time
+	var best_lap := INF
+	for lt in lap_times:
+		best_lap = minf(best_lap, lt)
+	var res := Game.submit_time(String(def.id), total, best_lap)
+	if res.total_record:
+		Audio.voice("new_highscore")
+		FX.confetti(focus.global_position + Vector3.UP * 3.0, 100)
+	var layer := CanvasLayer.new()
+	layer.layer = 40
+	add_child(layer)
+	var root := UI.center_root(layer)
+	var panel := UI.panel()
+	root.add_child(panel)
+	panel.custom_minimum_size = Vector2(640, 0)
+	var v := UI.vbox(10)
+	panel.add_child(v)
+	var t := UI.label("Zeitfahren – %s" % def.name, 46, UI.GOLD, true, 10)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	for i in lap_times.size():
+		var row := UI.hbox(14)
+		var l := UI.label("Runde %d" % (i + 1), 28, Color.WHITE, true)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(l)
+		row.add_child(UI.label(_fmt(lap_times[i]), 28, UI.GOLD if lap_times[i] == best_lap else Color.WHITE, true))
+		v.add_child(row)
+	var tot := UI.label("Gesamt: %s" % _fmt(total), 40, Color.WHITE, true, 8)
+	tot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(tot)
+	var rec_txt := "NEUER STRECKENREKORD!" if res.total_record else "Rekord: %s" % _fmt(float(res.best_total))
+	var rec := UI.label(rec_txt, 32, Color("#7dff9a") if res.total_record else Color(1, 1, 1, 0.8), true)
+	rec.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(rec)
+	v.add_child(UI.prompt("a", "Weiter", 26))
+	await get_tree().process_frame
+	panel.position = (root.size - panel.size) / 2.0
+	Juice.pop_in(panel, 0.4)
+	if res.total_record:
+		Juice.ui_punch(rec, 0.3, 0.6)
+	var wait := 0.0
+	while wait < (15.0 if not focus.is_cpu else 3.0):
+		await get_tree().process_frame
+		wait += get_process_delta_time()
+		if wait > 0.6 and InputHub.any_human_pressed("a"):
+			break
+
+
+# --- Grand Prix ------------------------------------------------------------------------------------------------
+
+func _gp_standings(order: Array) -> void:
+	var gp: Dictionary = Game.gp
+	if gp.is_empty():
+		Router.goto("res://scenes/menu/MainMenu.tscn")
+		return
+	var pts: Dictionary = gp.points
+	var gained := {}
+	for r in order:
+		var rr := r as Racer
+		var add: int = Game.GP_POINTS[clampi(rr.place - 1, 0, Game.GP_POINTS.size() - 1)]
+		pts[rr.display_name] = int(pts.get(rr.display_name, 0)) + add
+		gained[rr.display_name] = add
+		gp.colors[rr.display_name] = rr.color
+		gp.models[rr.display_name] = rr.visual.hero.model_key
+		gp.slots[rr.display_name] = rr.slot
+	var names: Array = pts.keys()
+	names.sort_custom(func(a: String, b: String) -> bool: return int(pts[a]) > int(pts[b]))
+	var last_race := int(gp.index) + 1 >= (gp.tracks as Array).size()
+	var layer := CanvasLayer.new()
+	layer.layer = 41
+	add_child(layer)
+	var root := UI.center_root(layer)
+	var panel := UI.panel()
+	root.add_child(panel)
+	panel.custom_minimum_size = Vector2(700, 0)
+	var v := UI.vbox(6)
+	panel.add_child(v)
+	var t := UI.label("%s – %s" % [gp.cup, "Endstand" if last_race else "Rennen %d/%d" % [int(gp.index) + 1, (gp.tracks as Array).size()]], 42, UI.GOLD, true, 10)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	for k in names.size():
+		var nm: String = names[k]
+		var row := UI.hbox(12)
+		var pl := UI.label("%d." % (k + 1), 28, UI.GOLD if k == 0 else Color.WHITE, true)
+		pl.custom_minimum_size.x = 50
+		row.add_child(pl)
+		var slot: int = int(gp.slots.get(nm, -1))
+		var n := UI.label(nm + ("" if slot < 0 else "  (P%d)" % (slot + 1)), 26, (gp.colors[nm] as Color).lightened(0.3), true)
+		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(n)
+		row.add_child(UI.label("+%d" % int(gained.get(nm, 0)), 22, Color("#7dff9a"), true))
+		var p := UI.label("%d" % int(pts[nm]), 28, Color.WHITE, true)
+		p.custom_minimum_size.x = 56
+		p.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row.add_child(p)
+		v.add_child(row)
+	if not last_race:
+		var next_id: String = gp.tracks[int(gp.index) + 1]
+		var nl := UI.label("Nächstes Rennen: %s" % Game.track_info(next_id).name, 28, UI.ACCENT2, true)
+		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(nl)
+	v.add_child(UI.prompt("a", "Siegerehrung" if last_race else "Weiter", 26))
+	await get_tree().process_frame
+	panel.position = (root.size - panel.size) / 2.0
+	Juice.pop_in(panel, 0.4)
+	var human := false
+	for r in racers:
+		if not r.is_cpu:
+			human = true
+	var wait := 0.0
+	while wait < (15.0 if human else 3.0):
+		await get_tree().process_frame
+		wait += get_process_delta_time()
+		if wait > 0.6 and InputHub.any_human_pressed("a"):
+			break
+	layer.queue_free()
+	if last_race:
+		var entries: Array = []
+		for nm in names:
+			entries.append({"model": gp.models[nm], "name": nm, "color": gp.colors[nm], "player": int(gp.slots[nm])})
+		await CutsceneManager.play("Podium", {"entries": [entries[0], entries[1], entries[2], entries[entries.size() - 1]], "skippable": true})
+		Game.gp = {}
+		Game.race_cfg.mode = "single"
+		Router.goto("res://scenes/menu/MainMenu.tscn")
+	else:
+		gp.index = int(gp.index) + 1
+		Game.race_cfg.track = gp.tracks[int(gp.index)]
+		Router.goto("res://scenes/racer/NitroDash.tscn")
+
+
 # --- Items --------------------------------------------------------------------------------------------------
 
 func _roll_item(place: int) -> String:
+	if _mode() == "time":
+		return "nitro"
 	var table: Dictionary = ITEM_TABLE[1]
 	for k in [1, 2, 4, 7]:
 		if place >= k:
@@ -680,8 +1016,8 @@ func _impact(r: Racer, p: Dictionary) -> void:
 
 
 func _maybe_closeup(victim: Racer, attacker: Racer) -> void:
-	if _closeup_cd > 0.0 or CutsceneManager.active:
-		return
+	if _closeup_cd > 0.0 or CutsceneManager.active or not views.is_empty():
+		return   # im Split-Screen keine Zeitlupen-Nahaufnahme: jeder braucht seine Ansicht
 	if victim != focus and attacker != focus:
 		return
 	_closeup_cd = 6.0
@@ -723,16 +1059,14 @@ func _build_hud() -> void:
 	left.add_child(_time_label)
 	_item_panel = UI.panel(Color(0.08, 0.04, 0.2, 0.85), 26)
 	_hud.add_child(_item_panel)
-	_item_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_item_panel.position = Vector2(-150, 18)
 	_item_panel.custom_minimum_size = Vector2(124, 124)
+	UI.place(_item_panel, Control.PRESET_TOP_RIGHT, Vector2(-150, 18), Vector2(124, 124))
 	_item_icon = UIIcon.new("question", 90)
 	_item_panel.add_child(_item_icon)
 	_item_icon.visible = false
 	var bottom := UI.vbox(4)
 	_hud.add_child(bottom)
-	bottom.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	bottom.position = Vector2(24, -96)
+	UI.place(bottom, Control.PRESET_BOTTOM_LEFT, Vector2(24, -96), Vector2(240, 70))
 	_speed_label = UI.label("0 km/h", 34, Color.WHITE, true, 8)
 	bottom.add_child(_speed_label)
 	var bar_bg := ColorRect.new()
@@ -752,9 +1086,10 @@ func _build_hud() -> void:
 	_minimap = MiniMap.new()
 	(_minimap as MiniMap).race = self
 	_hud.add_child(_minimap)
-	_minimap.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT if not Game.is_touch_device else Control.PRESET_TOP_RIGHT)
-	_minimap.position = Vector2(-230, -230) if not Game.is_touch_device else Vector2(-380, 18)
-	_minimap.size = Vector2(210, 210)
+	if Game.is_touch_device:
+		UI.place(_minimap, Control.PRESET_TOP_RIGHT, Vector2(-380, 18), Vector2(210, 210))
+	else:
+		UI.place(_minimap, Control.PRESET_BOTTOM_RIGHT, Vector2(-230, -230), Vector2(210, 210))
 	_splat = Control.new()
 	_splat.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_splat.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -793,7 +1128,10 @@ func _update_hud(delta: float) -> void:
 
 
 func _on_item_changed(r: Racer) -> void:
-	if r == focus and r.item != "":
+	for v in views:
+		if v.racer == r and r.item != "":
+			v.message(ITEM_NAMES.get(r.item, ""), Color("#ffe066"), 0.7)
+	if r == focus and r.item != "" and not _split_in_main:
 		Juice.ui_punch(_item_panel, 0.25, 0.4)
 		_message(ITEM_NAMES.get(r.item, ""), Color("#ffe066"), 0.7)
 
@@ -875,6 +1213,10 @@ func _results(order: Array) -> void:
 		wait += get_process_delta_time()
 		if wait > 0.6 and InputHub.any_human_pressed("a"):
 			break
+	var fade := create_tween()
+	fade.tween_property(panel, "modulate:a", 0.0, 0.2)
+	await fade.finished
+	layer.queue_free()
 
 
 # --- Minimap ----------------------------------------------------------------------------------------------------

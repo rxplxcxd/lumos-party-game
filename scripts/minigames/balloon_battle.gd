@@ -286,7 +286,8 @@ func _knock_out(i: int) -> void:
 	var node: KartVisual = karts[i].node
 	_elim_time[i] = time_limit - time_left
 	FX.explosion(node.global_position, 0.8)
-	node.hero.react("soot_blast")
+	node.hero.set_soot(3.0)
+	node.hero.react("launch")
 	var tw := node.create_tween()
 	tw.tween_property(node, "position", node.position + Vector3.UP * 10.0 + Vector3(randf_range(-3, 3), 0, -4), 0.9).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tw.parallel().tween_property(node.body, "rotation:x", TAU * 2.0, 0.9)

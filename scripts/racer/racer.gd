@@ -193,10 +193,13 @@ func tick(delta: float) -> void:
 	var turn := TURN * clampf(absf(v) / 14.0, 0.25, 1.0) * (1.25 if drift_dir != 0 else 1.0)
 	if airborne and not gliding:
 		turn *= 0.5
+	var on_ice := track.is_ice(s) and not airborne
+	if on_ice:
+		turn *= 0.7   # Eis: träge Lenkung, der Kart schiebt über die Vorderräder
 	var kappa := track.curvature(s)
 	psi += (steer * turn - kappa * v * cos(psi)) * delta
 	psi = clampf(psi, -1.1, 1.1)
-	if drift_dir == 0 and not airborne:
+	if drift_dir == 0 and not airborne and not on_ice:
 		psi = lerpf(psi, psi * 0.9, delta * 2.0)
 	# Bewegung
 	var ds := v * cos(psi) * delta
