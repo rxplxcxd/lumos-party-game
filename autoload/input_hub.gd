@@ -1,0 +1,271 @@
+extends Node
+## Vereinheitlichte Eingabe für bis zu 4 Spieler-Slots.
+##
+## Slot 0: Tastatur + Touch + erstes Gamepad. Slots 1–3: weitere Gamepads.
+## CPU-Spieler schreiben über set_virtual() in denselben Kanal – Minispiele fragen
+## also immer nur move()/held()/pressed() ab, egal ob Mensch oder KI.
+
+const ACTIONS := ["a", "b", "x", "y", "r", "l", "start"]
+const DEADZONE := 0.22
+
+const KEYS := {
+	"a": [KEY_SPACE, KEY_ENTER, KEY_J, KEY_Z],
+	"b": [KEY_K, KEY_X, KEY_BACKSPACE],
+	"x": [KEY_E, KEY_L, KEY_C, KEY_CTRL],
+	"y": [KEY_Q, KEY_I, KEY_V],
+	"r": [KEY_SHIFT, KEY_SPACE],
+	"l": [KEY_TAB],
+	"start": [KEY_ESCAPE, KEY_P],
+}
+const PAD := {
+	"a": [JOY_BUTTON_A], "b": [JOY_BUTTON_B], "x": [JOY_BUTTON_X, JOY_BUTTON_LEFT_SHOULDER],
+	"y": [JOY_BUTTON_Y], "r": [JOY_BUTTON_RIGHT_SHOULDER], "l": [JOY_BUTTON_LEFT_SHOULDER],
+	"start": [JOY_BUTTON_START, JOY_BUTTON_BACK],
+}
+
+signal device_changed(kind: String)
+
+var last_device := "keyboard"   # keyboard | gamepad | touch
+var touch_controls: CanvasLayer
+
+var _held_phys: Array = []
+var _held_proc: Array = []
+var _edge_phys: Array = []
+var _edge_proc: Array = []
+var _latch_phys: Array = []
+var _latch_proc: Array = []
+var _virtual: Array = []
+var _touch := {"move": Vector2.ZERO, "held": {}}
+
+
+func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	process_priority = -1000
+	process_physics_priority = -1000
+	for i in 4:
+		_held_phys.append({})
+		_held_proc.append({})
+		_edge_phys.append({})
+		_edge_proc.append({})
+		_latch_phys.append({})
+		_latch_proc.append({})
+		_virtual.append({"move": Vector2.ZERO, "held": {}})
+	var tc_script: GDScript = load("res://scripts/ui/touch_controls.gd")
+	touch_controls = tc_script.new()
+	add_child(touch_controls)
+	Input.joy_connection_changed.connect(_on_joy_changed)
+	# Kanten-Erkennung an die Frame-Signale hängen: InputHub verbindet sich als Erster und läuft
+	# damit vor allen Koroutinen (await process_frame) und vor jedem _process/_physics_process.
+	get_tree().process_frame.connect(_on_process_frame)
+	get_tree().physics_frame.connect(_on_physics_frame)
+	_detect_lumos()
+
+
+func _on_joy_changed(_device: int, _connected: bool) -> void:
+	_detect_lumos()
+
+
+func _detect_lumos() -> void:
+	for d in Input.get_connected_joypads():
+		if Input.get_joy_name(d).to_lower().contains("lumos"):
+			Game.is_lumos_device = true
+
+
+func pad_for_slot(slot: int) -> int:
+	var pads := Input.get_connected_joypads()
+	if slot < pads.size():
+		return pads[slot]
+	return -1
+
+
+func is_slot_human(slot: int) -> bool:
+	if slot < 0 or slot >= Game.players.size():
+		return false
+	return not Game.players[slot].cpu
+
+
+# --- Rohdaten ---------------------------------------------------------------------
+
+func _raw_held(slot: int, action: String) -> bool:
+	if not is_slot_human(slot):
+		return _virtual[slot].held.get(action, false)
+	var pad := pad_for_slot(slot)
+	if pad >= 0:
+		for b in PAD[action]:
+			if Input.is_joy_button_pressed(pad, b):
+				return true
+		if action == "r" and Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_RIGHT) > 0.5:
+			return true
+		if action == "x" and Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_LEFT) > 0.5:
+			return true
+	if slot == 0:
+		for k in KEYS[action]:
+			if Input.is_physical_key_pressed(k):
+				return true
+		if _touch.held.get(action, false):
+			return true
+	return false
+
+
+func _raw_move(slot: int) -> Vector2:
+	if not is_slot_human(slot):
+		return (_virtual[slot].move as Vector2).limit_length(1.0)
+	var v := Vector2.ZERO
+	var pad := pad_for_slot(slot)
+	if pad >= 0:
+		var s := Vector2(Input.get_joy_axis(pad, JOY_AXIS_LEFT_X), Input.get_joy_axis(pad, JOY_AXIS_LEFT_Y))
+		if s.length() > DEADZONE:
+			v += s.normalized() * inverse_lerp(DEADZONE, 1.0, minf(s.length(), 1.0))
+		if Input.is_joy_button_pressed(pad, JOY_BUTTON_DPAD_LEFT): v.x -= 1
+		if Input.is_joy_button_pressed(pad, JOY_BUTTON_DPAD_RIGHT): v.x += 1
+		if Input.is_joy_button_pressed(pad, JOY_BUTTON_DPAD_UP): v.y -= 1
+		if Input.is_joy_button_pressed(pad, JOY_BUTTON_DPAD_DOWN): v.y += 1
+	if slot == 0:
+		if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT): v.x -= 1
+		if Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT): v.x += 1
+		if Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP): v.y -= 1
+		if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN): v.y += 1
+		v += _touch.move
+	return v.limit_length(1.0)
+
+
+# --- Abfrage-API -----------------------------------------------------------------------
+
+func move(slot: int) -> Vector2:
+	return _raw_move(slot)
+
+
+func held(slot: int, action: String) -> bool:
+	return _raw_held(slot, action) or _latch_phys[slot].get(action, false)
+
+
+## Gerade gedrückt. Erkennt automatisch, ob aus _physics_process oder _process gefragt wird.
+func pressed(slot: int, action: String) -> bool:
+	if Engine.is_in_physics_frame():
+		return _edge_phys[slot].get(action, -1) == Engine.get_physics_frames()
+	return _edge_proc[slot].get(action, -1) == Engine.get_process_frames()
+
+
+## Gerade gedrückt (Prozess-Frame-genau; für _process / UI-Logik).
+func ui_pressed(slot: int, action: String) -> bool:
+	return _edge_proc[slot].get(action, -1) == Engine.get_process_frames()
+
+
+## Irgendein menschlicher Spieler hat die Aktion gedrückt (Prozess-Frame).
+func any_human_pressed(action: String) -> bool:
+	for i in 4:
+		if is_slot_human(i) and ui_pressed(i, action):
+			return true
+	return false
+
+
+func set_virtual(slot: int, mv: Vector2, held_actions: Dictionary = {}) -> void:
+	_virtual[slot].move = mv
+	_virtual[slot].held = held_actions
+
+
+func clear_virtual() -> void:
+	for v in _virtual:
+		v.move = Vector2.ZERO
+		v.held = {}
+
+
+func set_touch_state(mv: Vector2, held_actions: Dictionary) -> void:
+	_touch.move = mv
+	_touch.held = held_actions
+
+
+func latch_touch_press(action: String) -> void:
+	_latch_phys[0][action] = true
+	_latch_proc[0][action] = true
+	_set_device("touch")
+
+
+func set_touch_profile(profile: String) -> void:
+	if touch_controls:
+		touch_controls.call("set_profile", profile)
+
+
+# --- Kanten-Erkennung ---------------------------------------------------------------------
+
+func _on_physics_frame() -> void:
+	_update_edges(_held_phys, _edge_phys, _latch_phys, Engine.get_physics_frames())
+
+
+func _on_process_frame() -> void:
+	_update_edges(_held_proc, _edge_proc, _latch_proc, Engine.get_process_frames())
+
+
+func _update_edges(held_store: Array, edge_store: Array, latch_store: Array, frame: int) -> void:
+	for slot in 4:
+		var hs: Dictionary = held_store[slot]
+		var latch: Dictionary = latch_store[slot]
+		for a in ACTIONS:
+			var now: bool = _raw_held(slot, a) or latch.get(a, false)
+			if now and not hs.get(a, false):
+				edge_store[slot][a] = frame
+			hs[a] = now
+		latch.clear()
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		_set_device("keyboard")
+		for a in ACTIONS:
+			if (event as InputEventKey).physical_keycode in KEYS[a]:
+				_latch_phys[0][a] = true
+				_latch_proc[0][a] = true
+	elif event is InputEventJoypadButton and event.pressed:
+		_set_device("gamepad")
+		var pads := Input.get_connected_joypads()
+		var slot := pads.find(event.device)
+		if slot >= 0 and slot < 4:
+			for a in ACTIONS:
+				if (event as InputEventJoypadButton).button_index in PAD[a]:
+					_latch_phys[slot][a] = true
+					_latch_proc[slot][a] = true
+	elif event is InputEventJoypadMotion and absf(event.axis_value) > 0.5:
+		_set_device("gamepad")
+	elif event is InputEventScreenTouch:
+		_set_device("touch")
+
+
+func _set_device(kind: String) -> void:
+	if kind != last_device:
+		last_device = kind
+		if kind == "touch":
+			Game.is_touch_device = true
+		device_changed.emit(kind)
+
+
+# --- Haptik ------------------------------------------------------------------------------------
+
+## Vibration für einen Spieler-Slot (Gamepad-Rumble, Handy-Vibration im Browser/nativ).
+func rumble(slot: int, strength := 0.5, duration := 0.15) -> void:
+	if not Game.settings.haptics or not is_slot_human(slot):
+		return
+	var pad := pad_for_slot(slot)
+	if pad >= 0:
+		Input.start_joy_vibration(pad, clampf(strength * 0.7, 0, 1), clampf(strength, 0, 1), duration)
+	if slot == 0 and last_device == "touch":
+		vibrate_device(int(duration * 1000.0 * clampf(strength + 0.3, 0.3, 1.0)))
+
+
+func vibrate_device(ms: int) -> void:
+	if not Game.settings.haptics:
+		return
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("try{navigator.vibrate&&navigator.vibrate(%d)}catch(e){}" % ms, true)
+	elif OS.has_feature("mobile"):
+		Input.vibrate_handheld(ms)
+
+
+## Bezeichnung einer Taste je nach zuletzt genutztem Eingabegerät.
+func glyph(action: String) -> String:
+	match last_device:
+		"touch":
+			return {"a": "Ⓐ", "b": "Ⓑ", "x": "★", "r": "R", "start": "II"}.get(action, action.to_upper())
+		"gamepad":
+			return {"a": "Ⓐ", "b": "Ⓑ", "x": "Ⓧ", "y": "Ⓨ", "r": "R", "l": "L", "start": "+"}.get(action, action.to_upper())
+		_:
+			return {"a": "Leertaste", "b": "K", "x": "E", "y": "Q", "r": "Shift", "l": "Tab", "start": "Esc"}.get(action, action.to_upper())

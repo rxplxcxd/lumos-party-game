@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ReactionClip" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/reaction_clip.gd" id="1_rc"]
+
+[resource]
+script = ExtResource("1_rc")
+id = "big_hit"
+clip = "hit_b"
+clip_speed = 1.0
+hold = 1.8
+squash = Vector2(1.35, 0.65)
+hop = 0.3
+spin = 0.0
+modifier = "dizzy"
+modifier_time = 1.7
+fx = "dizzy"
+emote = ""
+emote_color = Color(1, 1, 1, 1)
+sfx = "hit_soft"
+shake = 0.35
+then_clip = ""
