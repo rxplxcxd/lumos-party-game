@@ -123,6 +123,9 @@ const MINIGAMES := [
 	{"id": "boss_cloud", "name": "Boss: Pustebacke, der Wolkendrache", "scene": "res://scenes/minigames/BossCloud.tscn", "kind": "score", "online": true, "cats": ["boss"],
 		"desc": "Gemeinsam gegen den Wolkendrachen! Sonnenbälle sammeln und werfen – wer am meisten trifft, gewinnt.",
 		"controls": "Stick: Laufen · A: Springen · B: Werfen"},
+	{"id": "rhythm_kitchen", "name": "Rhythmus-Küche", "scene": "res://scenes/minigames/RhythmKitchen.tscn", "kind": "score", "online": true, "cats": ["coop"], "mode": true,
+		"desc": "Gemeinsam ein Fünf-Gänge-Menü im Takt kochen: schnippeln, rühren, wenden, würzen, verzieren. Am Ende vergibt Chefkoch Brummbär die Küchen-Note!",
+		"controls": "A/B: Noten · Stick: Pfeil-Noten schnippen"},
 ]
 
 const TRACKS := [
@@ -357,7 +360,10 @@ func start_gp(cup_index: int) -> void:
 # --- Minispiel-Marathon ---------------------------------------------------------
 
 func start_marathon(count: int) -> void:
-	var ids: Array = MINIGAMES.map(func(m: Dictionary) -> String: return m.id)
+	var ids: Array = []
+	for m in MINIGAMES:
+		if not bool(m.get("mode", false)) and not ("boss" in (m.get("cats", []) as Array)):
+			ids.append(m.id)
 	ids.shuffle()
 	marathon = {"games": ids.slice(0, mini(count, ids.size())), "index": 0, "points": [0, 0, 0, 0]}
 	mode = "marathon"
@@ -378,6 +384,25 @@ func submit_time(track_id: String, total: float, best_lap: float) -> Dictionary:
 	cfg.save(RECORDS_PATH)
 	EventBus.record_set.emit(track_id, float(res.best_total), float(res.best_lap))
 	return res
+
+
+## Bestwert speichern (z. B. beste Küchen-Note); gibt true zurück, wenn es ein neuer Rekord ist.
+func records_note(key: String, value: int) -> bool:
+	var cfg := ConfigFile.new()
+	cfg.load(RECORDS_PATH)
+	var old := int(cfg.get_value("stats", key, -1))
+	if value <= old:
+		return false
+	cfg.set_value("stats", key, value)
+	cfg.save(RECORDS_PATH)
+	return true
+
+
+func stat(key: String, default := -1) -> int:
+	var cfg := ConfigFile.new()
+	if cfg.load(RECORDS_PATH) != OK:
+		return default
+	return int(cfg.get_value("stats", key, default))
 
 
 func record_for(track_id: String) -> Dictionary:

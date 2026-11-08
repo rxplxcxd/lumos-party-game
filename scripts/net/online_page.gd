@@ -211,7 +211,8 @@ func _start_game() -> void:
 		if id == "_random":
 			var ids: Array = []
 			for k in range(3, GAMES.size()):
-				ids.append(GAMES[k].id)
+				if not bool(Game.minigame_info(String(GAMES[k].id)).get("mode", false)):
+					ids.append(GAMES[k].id)
 			id = String(ids[randi() % ids.size()])
 		cfg["id"] = id
 	Net.start_game(cfg)
