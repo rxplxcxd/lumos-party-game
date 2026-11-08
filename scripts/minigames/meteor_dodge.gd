@@ -1,6 +1,8 @@
 extends MinigameBase
 ## Meteor-Ausweichen: Auf einem Mond-Plateau regnen Meteore herab. Rote Zielkreise wachsen vor dem
 ## Einschlag. Später zielen manche Meteore direkt auf Spieler. Wer getroffen wird, fliegt raus.
+## 1 gegen 3: Das Solo schwebt in der Sternwarten-Kuppel und lenkt mit einem Zielkreis eigene Meteore (A),
+## das Trio muss 30 Sekunden überstehen.
 
 const RADIUS := 10.0
 
@@ -40,6 +42,54 @@ func build_arena() -> void:
 	world.add_child(planet)
 
 
+var _reticle: MeshInstance3D
+var _ret_pos := Vector3.ZERO
+var _solo_cd := 0.0
+
+
+func spawn_players() -> void:
+	super.spawn_players()
+	if category == "1v3":
+		time_limit = 30.0
+		var sav := avatars[solo_slot] as PartyAvatar
+		sav.set_physics_process(false)
+		var perch := WorldKit.cylinder(world, 1.4, 0.4, Vector3(0, 0, -RADIUS - 3.0), Color("#c8c4e0"), false)
+		perch.name = "Perch"
+		sav.position = Vector3(0, 0.2, -RADIUS - 3.0)
+		sav.rig.face_now(Vector3(0, 0, 1))
+		_reticle = MeshInstance3D.new()
+		var q := QuadMesh.new()
+		q.size = Vector2(3.0, 3.0)
+		q.orientation = PlaneMesh.FACE_Y
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.albedo_texture = FX.tex_ring
+		m.albedo_color = Game.player_color(solo_slot)
+		q.material = m
+		_reticle.mesh = q
+		world.add_child(_reticle)
+		_reticle.position = Vector3(0, 0.08, 0)
+
+
+func team_result() -> int:
+	if category == "1v3":
+		for i in active_slots():
+			if i != solo_slot and alive[i]:
+				return 1
+		return 0
+	return super.team_result()
+
+
+func check_end() -> bool:
+	if category == "1v3":
+		for i in active_slots():
+			if i != solo_slot and alive[i]:
+				return false
+		return true
+	return super.check_end()
+
+
 func on_start() -> void:
 	for av in avatars:
 		(av as PartyAvatar).rig.surface = "stone"
@@ -47,9 +97,23 @@ func on_start() -> void:
 
 
 func on_tick(delta: float) -> void:
+	if category == "1v3":
+		var mv := InputHub.move(solo_slot)
+		_ret_pos += Vector3(mv.x, 0, mv.y) * 10.0 * delta
+		var flat := Vector2(_ret_pos.x, _ret_pos.z)
+		if flat.length() > RADIUS - 0.5:
+			flat = flat.normalized() * (RADIUS - 0.5)
+		_ret_pos = Vector3(flat.x, 0, flat.y)
+		_reticle.position = _ret_pos + Vector3.UP * 0.08
+		_reticle.rotation.y += delta * 2.0
+		_solo_cd -= delta
+		if _solo_cd <= 0.0 and InputHub.pressed(solo_slot, "a"):
+			_solo_cd = 0.75
+			_spawn(_ret_pos)
+			(avatars[solo_slot] as PartyAvatar).rig.play("cast", 0.05, 1.6, true)
 	_spawn_t -= delta
 	if _spawn_t <= 0.0:
-		_spawn_t = lerpf(0.35, 1.1, time_left / time_limit)
+		_spawn_t = lerpf(0.35, 1.1, time_left / time_limit) * (2.4 if category == "1v3" else 1.0)
 		var target := Vector3(randf_range(-RADIUS, RADIUS), 0, randf_range(-RADIUS, RADIUS))
 		if randf() < 0.35 * (1.0 - time_left / time_limit) + 0.1:
 			var living: Array = []
@@ -108,7 +172,7 @@ func _impact(m: Dictionary) -> void:
 	Juice.pop_in(crater, 0.2)
 	for i in 4:
 		var av := avatars[i] as PartyAvatar
-		if not alive[i]:
+		if not alive[i] or i == solo_slot:
 			continue
 		var d := Vector2(av.global_position.x - p.x, av.global_position.z - p.z).length()
 		if d < 1.7:
@@ -138,6 +202,24 @@ func _blast(i: int) -> void:
 
 func cpu_think(slot: int, _delta: float) -> void:
 	var av := avatars[slot] as PartyAvatar
+	if slot == solo_slot:
+		# Solo-KI: Zielkreis zum nächsten Trio-Mitglied (mit Vorhalt), dann werfen
+		var tgt := Vector3.INF
+		for i in active_slots():
+			if i != solo_slot and alive[i]:
+				var ap := (avatars[i] as PartyAvatar)
+				var pp := ap.global_position + ap.velocity * 0.8
+				if tgt == Vector3.INF or pp.distance_to(_ret_pos) < tgt.distance_to(_ret_pos):
+					tgt = pp
+		var mv2 := Vector2.ZERO
+		var held := {}
+		if tgt != Vector3.INF:
+			var to := Vector2(tgt.x - _ret_pos.x, tgt.z - _ret_pos.z)
+			mv2 = to.normalized() * clampf(to.length() / 2.0, 0.0, 1.0)
+			if to.length() < [2.2, 1.6, 1.1][Game.players[slot].cpu_level]:
+				held["a"] = true
+		InputHub.set_virtual(slot, mv2, held)
+		return
 	if not alive[slot]:
 		InputHub.set_virtual(slot, Vector2.ZERO)
 		return

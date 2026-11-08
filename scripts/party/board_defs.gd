@@ -8,7 +8,8 @@ extends RefCounted
 ##
 ## Feldtypen:  S Start · B Blau (+3) · R Rot (-3) · L Glücksrad-Kiste · P Piraten-Planke
 ##             C Dungeon-Fluch · T Fackel-Falle · K Wolken-Kanone/Rakete · N Händler (Durchgang)
-##             G Geister-Taxi (fliegt dich vor/zurück) · E Eis-Rutsche · W Warp-Pad (Teleport zu anderem W)
+##             G Geister-Taxi (fliegt dich vor/zurück) · E Eis-/Schoko-Rutsche · W Warp-Pad/Feenkreis/Komet
+##             D Duell-Feld (Duell um 10 Münzen gegen einen Mitspieler deiner Wahl)
 ## toggle:    Route ist nur in geraden/ungeraden Runden offen (Lava-Steg, Ebbe, Zugbrücke)
 ## gate:      Skelett-Wächter verlangt Wegzoll
 
@@ -27,7 +28,7 @@ const BOARDS := {
 		],
 	},
 	"pirates": {
-		"name": "Pirates Cove", "env": "pirates", "music": "board_pirates", "surface": "sand",
+		"name": "Sonnige Palmen-Bucht", "env": "pirates", "music": "board_pirates", "surface": "sand",
 		"main": [Vector3(-20, 0, -6), Vector3(-12, 0, -13), Vector3(0, 0, -15), Vector3(12, 0, -12), Vector3(20, 0, -4),
 			Vector3(18, 0, 7), Vector3(8, 0, 13), Vector3(-5, 0, 13), Vector3(-16, 0, 8)],
 		"main_count": 30,
@@ -40,7 +41,7 @@ const BOARDS := {
 		],
 	},
 	"sky": {
-		"name": "Sky Kingdom", "env": "sky", "music": "board_sky", "surface": "grass",
+		"name": "Sternen-Wolkenland", "env": "sky", "music": "board_sky", "surface": "cloud",
 		"main": [Vector3(-20, 0, -4), Vector3(-14, 2, -13), Vector3(-2, 4, -16), Vector3(11, 3, -13), Vector3(20, 1, -4),
 			Vector3(19, 0, 7), Vector3(9, 2, 14), Vector3(-4, 3, 14), Vector3(-16, 1, 9)],
 		"main_count": 30,
@@ -79,7 +80,7 @@ const BOARDS := {
 		],
 	},
 	"station": {
-		"name": "Orbit-Station", "env": "station", "music": "board_sky", "surface": "metal",
+		"name": "Sternen-Sternwarte", "env": "observatory", "music": "board_sky", "surface": "grass",
 		"main": [Vector3(-20, 0, -5), Vector3(-13, 0, -13), Vector3(-1, 0, -15), Vector3(11, 0, -13), Vector3(20, 0, -5),
 			Vector3(19, 0, 6), Vector3(10, 0, 13), Vector3(-3, 0, 14), Vector3(-15, 0, 10)],
 		"main_count": 30,
@@ -89,6 +90,45 @@ const BOARDS := {
 				"pattern": "BLWB", "toggle": "odd", "kind": "airlock"},
 			{"from": 16, "to": 25, "points": [Vector3(11, 0, 5), Vector3(4, 0, 4), Vector3(-4, 0, 5), Vector3(-11, 0, 4)],
 				"pattern": "BKLB", "toggle": "even", "kind": "airlock"},
+		],
+	},
+	"glowforest": {
+		"name": "Glühwürmchen-Zauberwald", "env": "day", "music": "board_dungeon", "surface": "grass", "daynight": true,
+		"main": [Vector3(-20, 0, -7), Vector3(-11, 0, -14), Vector3(1, 0, -15), Vector3(13, 0, -12), Vector3(21, 0, -3),
+			Vector3(18, 0, 8), Vector3(8, 0, 14), Vector3(-5, 0, 14), Vector3(-16, 0, 9)],
+		"main_count": 30,
+		"pattern": "SBBWBLBRBNBBGBLBRBBWBBLBRBGBRB",
+		"branches": [
+			{"from": 4, "to": 12, "points": [Vector3(-6, 0, -9), Vector3(0, 0, -6), Vector3(7, 0, -6), Vector3(12, 0, -8)],
+				"pattern": "BLWB", "toggle": "odd", "kind": "mushroom_path"},
+			{"from": 18, "to": 25, "points": [Vector3(9, 0, 6), Vector3(2, 0, 5), Vector3(-6, 0, 6)],
+				"pattern": "LBR", "kind": "sled"},
+		],
+	},
+	"meadow": {
+		"name": "Wuschel-Wiesen", "env": "day", "music": "board_pirates", "surface": "grass",
+		"main": [Vector3(-21, 0, -5), Vector3(-13, 0, -13), Vector3(0, 0, -15), Vector3(12, 0, -13), Vector3(21, 0, -5),
+			Vector3(19, 0, 7), Vector3(9, 0, 13), Vector3(-4, 0, 14), Vector3(-15, 0, 10)],
+		"main_count": 30,
+		"pattern": "SBBKBLBRBDBBKBLBRBNBBKBLBRBDBB",
+		"branches": [
+			{"from": 3, "to": 11, "points": [Vector3(-8, 0, -6), Vector3(-1, 0, -4), Vector3(6, 0, -5), Vector3(12, 0, -7)],
+				"pattern": "BLBK", "toggle": "even", "kind": "sunflower_path"},
+			{"from": 17, "to": 25, "points": [Vector3(10, 0, 5), Vector3(3, 0, 6), Vector3(-5, 0, 5)],
+				"pattern": "LBD", "kind": "sled"},
+		],
+	},
+	"cake": {
+		"name": "Zuckerback-Torte", "env": "sunset", "music": "board_sky", "surface": "cloud",
+		"main": [Vector3(-19, 0, -6), Vector3(-11, 0, -13), Vector3(0, 0, -15), Vector3(11, 0, -13), Vector3(19, 0, -6),
+			Vector3(19, 0, 6), Vector3(11, 0, 13), Vector3(0, 0, 15), Vector3(-11, 0, 13), Vector3(-19, 0, 6)],
+		"main_count": 32,
+		"pattern": "SBBEBLBRBNBBTBLBRBDBBEBLBRBTBBLB",
+		"branches": [
+			{"from": 4, "to": 12, "points": [Vector3(-7, 0, -6), Vector3(0, 0, -4), Vector3(7, 0, -6)],
+				"pattern": "BLE", "toggle": "odd", "kind": "cherry_lift"},
+			{"from": 20, "to": 28, "points": [Vector3(7, 0, 6), Vector3(0, 0, 4), Vector3(-7, 0, 6)],
+				"pattern": "LBR", "toggle": "even", "kind": "cherry_lift"},
 		],
 	},
 }

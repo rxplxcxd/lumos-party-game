@@ -39,6 +39,10 @@ func set_text(t: String) -> void:
 func _refresh() -> void:
 	if not is_instance_valid(_label):
 		return
+	if action == "":
+		_icon.visible = false
+		_label.text = text
+		return
 	var tex := InputHub.glyph_texture(action)
 	_icon.texture = tex
 	_icon.visible = tex != null

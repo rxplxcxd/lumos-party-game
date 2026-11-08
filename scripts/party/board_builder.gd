@@ -6,11 +6,11 @@ extends RefCounted
 
 const TILE_KEYS := {"B": "bg/tile_blue", "R": "bg/tile_red", "L": "bg/tile_yellow", "P": "bg/tile_green", "C": "bg/tile_purple",
 	"T": "bg/tile_purple", "K": "bg/tile_green", "N": "bg/tile_yellow", "S": "bg/tile_green", "G": "bg/tile_purple",
-	"E": "bg/tile_blue", "W": "bg/tile_green"}
-const SYMBOLS := {"B": "+", "R": "-", "L": "?", "P": "!", "C": "?!", "T": "!", "K": "!", "N": "$", "S": "GO", "G": "~", "E": "»", "W": "@"}
+	"E": "bg/tile_blue", "W": "bg/tile_green", "D": "bg/tile_yellow"}
+const SYMBOLS := {"B": "+", "R": "-", "L": "?", "P": "!", "C": "?!", "T": "!", "K": "!", "N": "$", "S": "GO", "G": "~", "E": "»", "W": "@", "D": "VS"}
 const SYMBOL_COLORS := {"B": Color("#dff2ff"), "R": Color("#ffe0e0"), "L": Color("#7a4a00"), "P": Color("#eaffea"),
 	"C": Color("#f2e0ff"), "T": Color("#ffd0a0"), "K": Color("#eaffea"), "N": Color("#7a4a00"), "S": Color("#ffffff"),
-	"G": Color("#d8ffe8"), "E": Color("#e8fbff"), "W": Color("#eaffea")}
+	"G": Color("#d8ffe8"), "E": Color("#e8fbff"), "W": Color("#eaffea"), "D": Color("#7a2a00")}
 const TILE_SCALE := 2.3
 
 var root: Node3D
@@ -46,6 +46,12 @@ func build(parent: Node3D, id: String, graph: Array) -> void:
 			_build_frost()
 		"station":
 			_build_station()
+		"glowforest":
+			_build_glowforest()
+		"meadow":
+			_build_meadow()
+		"cake":
+			_build_cake()
 		_:
 			_build_dungeon()
 	_build_spaces()
@@ -87,7 +93,7 @@ func _space_prop(holder: Node3D, t: String, sp: Dictionary) -> void:
 	var side := _outward(sp) * 1.9
 	match t:
 		"L":
-			var key: String = {"dungeon": "dun/chest", "sky": "plat/chest", "graveyard": "dun/chest", "frost": "hol/present_red", "station": "sb/cargo"}.get(board_id, "pirate/chest")
+			var key: String = {"dungeon": "dun/chest", "sky": "plat/chest", "graveyard": "dun/chest", "frost": "hol/present_red", "station": "plat/chest", "glowforest": "plat/chest", "meadow": "plat/chest", "cake": "hol/present_red"}.get(board_id, "pirate/chest")
 			var chest := Assets.spawn(key, holder, side, 0.0, 0.9 if board_id == "dungeon" else 1.2)
 			chest.look_at(holder.global_position + Vector3(0, chest.global_position.y - holder.global_position.y, 0), Vector3.UP)
 			chest.rotate_object_local(Vector3.UP, PI)
@@ -112,8 +118,11 @@ func _space_prop(holder: Node3D, t: String, sp: Dictionary) -> void:
 			WorldKit.torch_light(holder, Vector3(0, 1.6, 0), Color(1.0, 0.55, 0.2), 1.4, 5.0)
 			traps.append(holder)
 		"K":
-			if board_id == "station":
-				var rk := Assets.spawn("space/rocket", holder, side * 1.1, 0.0, 0.8)
+			if board_id == "meadow":
+				var dd := _dandelion(holder, side * 1.1, 1.1)
+				traps.append(dd)
+			elif board_id == "station":
+				var rk := _toy_rocket(holder, side * 1.2, 0.9)
 				traps.append(rk)
 			else:
 				var c := Assets.spawn("pirate/cannon", holder, side, 0.0, 1.3)
@@ -144,14 +153,31 @@ func _space_prop(holder: Node3D, t: String, sp: Dictionary) -> void:
 			holder.add_child(ice)
 			Assets.spawn("hk/snow_pile", holder, side * 1.1, _rng.randf() * 360.0, 1.4)
 			traps.append(holder)
+		"D":
+			for sd in [-1.0, 1.0]:
+				var fl := Assets.spawn("plat/flag", holder, Vector3(-side.z, 0, side.x) * 1.2 * float(sd), 0.0, 1.4)
+				Assets.tint(fl, Color("#ff9f1a") if sd < 0 else Color("#7ec8ff"))
 		"W":
-			var pad := Assets.spawn("sb/landingpad", holder, Vector3(0, 0.02, 0), 0.0, 0.55)
-			pad.position.y = -0.05
+			if board_id == "glowforest":
+				for m in 8:
+					var am := TAU * m / 8.0
+					var mush := Assets.spawn("plat/mushrooms", holder, Vector3(cos(am), 0, sin(am)) * 1.5, randf() * 360.0, 0.9)
+					Assets.tint(mush, Color(1.0, 0.85, 1.2), false, 0.5)
+			else:
+				var pad := MeshInstance3D.new()
+				var pcm := CylinderMesh.new()
+				pcm.top_radius = 1.4
+				pcm.bottom_radius = 1.5
+				pcm.height = 0.12
+				pcm.material = WorldKit.mat(Color("#ffe9a8"), 0.5, 0.3)
+				pad.mesh = pcm
+				pad.position.y = 0.02
+				holder.add_child(pad)
 			var ring := MeshInstance3D.new()
 			var tm := TorusMesh.new()
 			tm.inner_radius = 1.25
 			tm.outer_radius = 1.45
-			tm.material = WorldKit.mat(Color("#40f0ff"), 0.3, 2.0)
+			tm.material = WorldKit.mat(Color("#ffd27a") if board_id != "glowforest" else Color("#d9a8ff"), 0.4, 0.9)
 			ring.mesh = tm
 			ring.position.y = 0.5
 			holder.add_child(ring)
@@ -166,7 +192,7 @@ func _space_prop(holder: Node3D, t: String, sp: Dictionary) -> void:
 			if merchant == null:
 				merchant = CharacterRig.new()
 				holder.add_child(merchant)
-				var mkey: String = {"frost": "pet/deer", "station": "mini/robot"}.get(board_id, "pet/crab")
+				var mkey: String = {"frost": "pet/deer", "station": "pet/chick", "glowforest": "pet/deer", "meadow": "pet/cow", "cake": "pet/bunny", "graveyard": "npc/ghost", "dungeon": "npc/bear"}.get(board_id, "pet/crab")
 				merchant.setup(mkey, -1, 0.9 if mkey.begins_with("pet/") else 1.3)
 				merchant.position = side * 0.75
 				merchant.face_now(-side)
@@ -519,69 +545,429 @@ func _build_frost() -> void:
 # --- Orbit-Station -------------------------------------------------------------------------------------------
 
 func _build_station() -> void:
-	# Metall-Deck aus Space-Station-Bodenplatten
-	var bb := Assets.model_aabb("ss/floor")
-	var step := maxf(bb.size.x, 1.0) * 2.0
-	var tiles: Array = []
-	var nx := int(56.0 / step)
-	var nz := int(44.0 / step)
-	for x in nx:
-		for z in nz:
-			var px := -28.0 + step * (x + 0.5)
-			var pz := -22.0 + step * (z + 0.5)
-			tiles.append(Transform3D(Basis().scaled(Vector3(2, 2, 2)), Vector3(px, -bb.end.y * 2.0, pz)))
-	WorldKit.multimesh(root, "ss/floor", tiles)
-	WorldKit.box(root, Vector3(60, 1, 48), Vector3(0, -0.56, 0), Color("#3a4054"), false)
-	# Rand: Geländer + Module, dahinter das All mit Planet
-	for x in range(-27, 28, 3):
-		WorldKit.place(root, "ss/rail", Vector3(x, 0, -23), 0.0, 2.0)
-	for z in range(-21, 22, 3):
-		WorldKit.place(root, "ss/rail", Vector3(-29, 0, z), 90.0, 2.0)
-		WorldKit.place(root, "ss/rail", Vector3(29, 0, z), -90.0, 2.0)
-	_scatter_free(["sb/solarpanel", "sb/module_a", "sb/module_c", "ss/container", "ss/computer", "ss/display", "space/machine", "sb/cargo"],
-		26, Rect2(-27, -21, 54, 42), 0.0, Vector2(1.4, 2.0), 3.0)
-	WorldKit.place(root, "space/rocket", Vector3(-24, 0, -16), 0.0, 3.0)
-	WorldKit.place(root, "sb/lander", Vector3(24, 0, 16), -130.0, 2.4)
-	WorldKit.place(root, "space/hangar", Vector3(0, 0, -1), 0.0, 2.2)
-	WorldKit.place(root, "ss/table_planet", Vector3(-8, 0, 1), 0.0, 2.2)
-	WorldKit.place(root, "sb/windturbine", Vector3(10, 0, 1), 0.0, 2.0)
-	var planet := MeshInstance3D.new()
-	var sm := SphereMesh.new()
-	sm.radius = 40.0
-	sm.height = 80.0
-	sm.material = WorldKit.mat(Color("#3e7be0"), 0.9, 0.35)
-	planet.mesh = sm
-	planet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	root.add_child(planet)
-	planet.position = Vector3(60, -30, -110)
-	var ring := MeshInstance3D.new()
-	var tm := TorusMesh.new()
-	tm.inner_radius = 50.0
-	tm.outer_radius = 62.0
-	tm.material = WorldKit.mat(Color(0.9, 0.8, 0.6, 1), 0.9, 0.4)
-	ring.mesh = tm
-	ring.rotation_degrees = Vector3(18, 0, 12)
-	planet.add_child(ring)
-	var stars := FX.emitter({"amount": 160, "life": 30.0, "one_shot": false, "explosive": 0.0, "spread": 180.0, "vel_min": 0.0, "vel_max": 0.05,
-		"gravity": Vector3.ZERO, "size": 0.6, "tex": FX.tex_star, "additive": true, "color": Color(1, 1, 1, 0.9), "box": Vector3(120, 30, 20)})
+	# Gemütliche Sternwarte auf einer schwebenden Wiesen-Insel im Abendhimmel
+	var isle := WorldKit.cylinder(root, 30.0, 3.0, Vector3(0, -1.5, 0), Color("#7cc46a"), false)
+	isle.name = "Isle"
+	WorldKit.cylinder(root, 27.0, 6.0, Vector3(0, -6.0, 0), Color("#a88a6a"), false)
+	for i in 30:
+		var a := TAU * i / 30.0
+		WorldKit.place(root, ["plat/flowers", "nat/bush", "plat/mushrooms", "nat/flower_purple"][i % 4], Vector3(cos(a), 0, sin(a)) * 28.0, randf() * 360.0, 1.8)
+	# Sternwarte: Turm + Kuppel + Fernrohr
+	var tower := WorldKit.cylinder(root, 2.6, 6.0, Vector3(0, 3.0, -1), Color("#f2ead8"), false)
+	tower.name = "Observatory"
+	var dome := MeshInstance3D.new()
+	var dm := SphereMesh.new()
+	dm.radius = 2.8
+	dm.height = 2.8
+	dm.is_hemisphere = true
+	dm.material = WorldKit.mat(Color("#8fb0ff"), 0.5, 0.15)
+	dome.mesh = dm
+	dome.position = Vector3(0, 6.0, -1)
+	root.add_child(dome)
+	var scope := WorldKit.cylinder(root, 0.45, 4.0, Vector3(0, 7.6, 0.2), Color("#c9a86a"), false)
+	scope.rotation.x = -0.7
+	for p in [Vector3(-3, 0, 2), Vector3(3, 0, 2)]:
+		WorldKit.torch_light(root, p + Vector3.UP * 2.2, Color(1.0, 0.8, 0.5), 1.4, 7.0)
+		WorldKit.place(root, "town/lantern", p, 0.0, 2.0)
+	_toy_rocket(root, Vector3(-22, 0, -14), 2.4)
+	_patches([Color("#6fb85e"), Color("#8acb6c"), Color("#a6d884"), Color("#f2e6a0")], 22, Rect2(-24, -20, 48, 40))
+	_ring(["nat/bush", "plat/tree", "nat/flower_purple", "plat/flowers"], 34, 24.5, 27.0, Vector2(1.8, 2.6))
+	WorldKit.place(root, "town/windmill", Vector3(23, 0, 14), -140.0, 2.4)
+	# Pastell-Planeten mit Ringen am Himmel
+	var cols := [Color("#ffb3c7"), Color("#a8dcff"), Color("#ffe08a"), Color("#c9b5ff")]
+	for k in 4:
+		var pl := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = [9.0, 5.0, 7.0, 4.0][k]
+		sm.height = sm.radius * 2.0
+		sm.material = WorldKit.mat(cols[k], 0.9, 0.35)
+		pl.mesh = sm
+		pl.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(pl)
+		pl.position = [Vector3(-60, 30, -90), Vector3(55, 22, -70), Vector3(70, 40, 40), Vector3(-70, 18, 50)][k]
+		if k % 2 == 0:
+			var ring := MeshInstance3D.new()
+			var tm := TorusMesh.new()
+			tm.inner_radius = sm.radius * 1.4
+			tm.outer_radius = sm.radius * 1.9
+			tm.material = WorldKit.mat(Color(1, 1, 1, 1).lerp(cols[k], 0.4), 0.9, 0.3)
+			ring.mesh = tm
+			ring.scale = Vector3(1, 0.05, 1)
+			ring.rotation_degrees = Vector3(20, 0, 15)
+			pl.add_child(ring)
+	var stars := FX.emitter({"amount": 180, "life": 40.0, "one_shot": false, "explosive": 0.0, "spread": 180.0, "vel_min": 0.0, "vel_max": 0.03,
+		"gravity": Vector3.ZERO, "size": 0.7, "tex": FX.tex_star, "additive": true, "color": Color(1, 0.95, 0.8, 0.9), "box": Vector3(140, 30, 30)})
 	root.add_child(stars)
-	stars.position = Vector3(0, 30, -90)
-	stars.preprocess = 30.0
+	stars.position = Vector3(0, 40, -80)
+	stars.preprocess = 40.0
 	stars.emitting = true
-	# Leuchtstreifen am Deck
-	for p in [Vector3(-20, 0.05, 0), Vector3(20, 0.05, 0), Vector3(0, 0.05, -19), Vector3(0, 0.05, 19)]:
-		WorldKit.torch_light(root, p + Vector3.UP * 2.0, Color(0.4, 0.8, 1.0), 1.6, 12.0)
 	for p in [Vector3(-14, 0, 4), Vector3(14, 0, -3), Vector3(-4, 0, 18)]:
 		var r := CharacterRig.new()
 		root.add_child(r)
-		r.setup(["mini/robot", "mini/alien", "npc/duck"][sleepers.size() % 3], -1, 1.4)
+		r.setup(["pet/bunny", "pet/cat", "pet/deer"][sleepers.size() % 3], -1, 1.1)
 		r.position = p
 		r.rotation.y = _rng.randf() * TAU
 		r.play("idle")
 		sleepers.append(r)
-	# Luftschleusen-Routen: ausfahrende Brückenplatten
-	_toggle_platforms(0, "sb/landingpad", 0.5, Vector3(0, -0.25, 0))
-	_toggle_platforms(1, "sb/landingpad", 0.5, Vector3(0, -0.25, 0))
+	# Sternenbrücken (Routen): Wolkenplatten
+	_toggle_platforms(0, "plat/block_snow", 0.75, Vector3(0, -0.85, 0))
+	_toggle_platforms(1, "plat/block_snow", 0.75, Vector3(0, -0.85, 0))
+
+
+# --- Glühwürmchen-Zauberwald ----------------------------------------------------------------------------------
+
+var _night_lights: Array[OmniLight3D] = []
+var _night_glows: Array[Node3D] = []
+
+
+func _build_glowforest() -> void:
+	WorldKit.box(root, Vector3(96, 1, 76), Vector3(0, -0.5, 0), Color("#4f9a46"), false)
+	_patches([Color("#3f8a3a"), Color("#5aa84c"), Color("#6bb256"), Color("#3a7d40"), Color("#77b85a")], 34, Rect2(-36, -27, 72, 54))
+	_ring(["nat/tree_fat", "nat/tree_oak", "nat/tree_pine", "nat/tree_default", "castle/tree", "plat/tree"], 52, 31.0, 40.0, Vector2(4.2, 6.4))
+	_ring(["nat/bush", "nat/tree_pine", "plat/tree_pine"], 30, 28.0, 31.0, Vector2(2.4, 3.4))
+	_scatter_free(["nat/tree_oak", "nat/tree_fat", "nat/tree_default", "nat/tree_pine", "plat/tree", "castle/tree"], 34, Rect2(-28, -21, 56, 42), 0.0, Vector2(2.4, 3.6), 3.7)
+	_scatter_free(["nat/bush", "nat/flower_purple", "nat/flower_yellow", "nat/grass", "nat/mushroom", "nat/stump", "nat/log", "nat/rock_small", "plat/flowers"], 80, Rect2(-28, -21, 56, 42), 0.0, Vector2(1.4, 2.2), 2.5)
+	_pond(Vector2(11, 8), [Vector3(-19, 0, 12), Vector3(19, 0, -12), Vector3(-20, 0, -10), Vector3(18, 0, 13), Vector3(0, 0, 15)], Color(0.08, 0.32, 0.42), Color(0.35, 0.75, 0.7), "nat/lily")
+	# Zauberbaum in der Mitte mit Laternen
+	WorldKit.place(root, "nat/tree_fat", Vector3(0, 0, -1), 0.0, 7.5)
+	for k in 6:
+		var a := TAU * k / 6.0
+		var lp := Vector3(cos(a) * 3.4, 0, sin(a) * 3.4 - 1.0)
+		WorldKit.place(root, "town/lantern", lp, rad_to_deg(-a), 1.6)
+		var ll := OmniLight3D.new()
+		ll.light_color = Color(1.0, 0.8, 0.5)
+		ll.light_energy = 0.6
+		ll.omni_range = 4.0
+		ll.position = lp + Vector3.UP * 1.8
+		root.add_child(ll)
+		_night_lights.append(ll)
+	# Leuchtpilze: tagsüber bunt, nachts erhellen sie den Weg
+	var k2 := 0
+	for sp in spaces:
+		if k2 % 2 == 0:
+			var side := _outward(sp) * (2.4 if k2 % 4 == 0 else -2.4)
+			var col: Color = [Color("#d9a8ff"), Color("#8fe8ff"), Color("#ffb3e6"), Color("#b6f29a")][(k2 / 2) % 4]
+			var m := Assets.spawn("plat/mushrooms", root, (sp.pos as Vector3) + side, _rng.randf() * 360.0, 1.6)
+			Assets.tint(m, col.lightened(0.2))
+			m.set_meta("glow", col)
+			_night_glows.append(m)
+			var l := OmniLight3D.new()
+			l.light_color = col
+			l.light_energy = 0.0
+			l.omni_range = 5.5
+			l.position = (sp.pos as Vector3) + side + Vector3.UP * 1.3
+			root.add_child(l)
+			_night_lights.append(l)
+		k2 += 1
+	var fireflies := FX.emitter({"amount": 160, "life": 5.0, "one_shot": false, "explosive": 0.0, "spread": 180.0, "vel_min": 0.1, "vel_max": 0.5,
+		"gravity": Vector3(0, 0.05, 0), "size": 0.22, "additive": true, "color": Color(1.0, 0.95, 0.55, 0.95), "box": Vector3(30, 3, 22)})
+	root.add_child(fireflies)
+	fireflies.position = Vector3(0, 2.5, 0)
+	fireflies.emitting = true
+	fireflies.name = "Fireflies"
+	for p in [Vector3(-22, 0, -4), Vector3(22, 0, 10), Vector3(6, 0, 19), Vector3(-8, 0, -18)]:
+		var r := CharacterRig.new()
+		root.add_child(r)
+		r.setup(["pet/deer", "pet/bunny", "pet/cat", "pet/bee"][sleepers.size() % 4], -1, 1.1)
+		r.position = p + (Vector3.UP * 1.6 if sleepers.size() % 4 == 3 else Vector3.ZERO)
+		r.rotation.y = _rng.randf() * TAU
+		r.play("idle")
+		sleepers.append(r)
+	_toggle_platforms(0, "plat/mushrooms", 1.6, Vector3(0, -0.9, 0))
+
+
+## Bodenflecken (Moos, Blumenteppich, Sand …) für mehr Tiefe: flache Scheiben knapp über dem Boden.
+func _patches(cols: Array, count: int, area: Rect2, rad := Vector2(2.5, 6.5)) -> void:
+	for i in count:
+		var d := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		var r := _rng.randf_range(rad.x, rad.y)
+		cm.top_radius = r
+		cm.bottom_radius = r
+		cm.height = 0.04
+		cm.radial_segments = 24
+		cm.material = WorldKit.mat(cols[i % cols.size()], 1.0)
+		d.mesh = cm
+		d.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(d)
+		d.position = Vector3(_rng.randf_range(area.position.x, area.end.x), 0.004 + i * 0.0006, _rng.randf_range(area.position.y, area.end.y))
+		d.scale = Vector3(1, 1, _rng.randf_range(0.55, 1.0))
+		d.rotation.y = _rng.randf() * TAU
+
+
+## Kulissenring um das Brett, damit der Horizont nie leer wirkt (vorne kleiner für freie Kamerasicht).
+func _ring(keys: Array, count: int, r_min: float, r_max: float, scl: Vector2, y := 0.0) -> void:
+	for i in count:
+		var a := TAU * i / count + _rng.randf_range(-0.07, 0.07)
+		var r := _rng.randf_range(r_min, r_max)
+		var p := Vector3(cos(a) * r, y, sin(a) * r * 0.78)
+		var front := clampf(sin(a), 0.0, 1.0)
+		WorldKit.place(root, keys[_rng.randi() % keys.size()], p, _rng.randf() * 360.0, _rng.randf_range(scl.x, scl.y) * (1.0 - front * 0.45))
+
+
+## Kleiner Teich an der ersten freien Kandidaten-Stelle, mit Seerosen.
+func _pond(size: Vector2, cands: Array, deep: Color, shallow: Color, deco := "") -> Vector3:
+	for c in cands:
+		var p: Vector3 = c
+		if _free_spot(p, maxf(size.x, size.y) * 0.5 + 2.6):
+			var rim := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = size.x * 0.5 + 0.8
+			cm.bottom_radius = size.x * 0.5 + 0.8
+			cm.height = 0.1
+			cm.material = WorldKit.mat(Color("#b9a27a"), 1.0)
+			rim.mesh = cm
+			rim.scale = Vector3(1, 1, (size.y + 1.6) / (size.x + 1.6))
+			rim.position = p + Vector3(0, 0.02, 0)
+			root.add_child(rim)
+			var w := WorldKit.water(root, size, 0.09, deep, shallow)
+			w.position.x = p.x
+			w.position.z = p.z
+			for k in 6:
+				WorldKit.place(root, "nat/rock_small", p + Vector3(cos(TAU * k / 6.0) * size.x * 0.55, 0, sin(TAU * k / 6.0) * size.y * 0.55), _rng.randf() * 360.0, 1.3)
+			if deco != "":
+				for k in 4:
+					WorldKit.place(root, deco, p + Vector3(_rng.randf_range(-size.x, size.x) * 0.3, 0.12, _rng.randf_range(-size.y, size.y) * 0.3), _rng.randf() * 360.0, 1.4)
+			return p
+	return Vector3.INF
+
+
+## Spielzeugrakete (Sternwarte): weißer Rumpf, rote Spitze, Bullauge und Flossen.
+func _toy_rocket(parent: Node3D, pos: Vector3, s := 1.0) -> Node3D:
+	var n := Node3D.new()
+	parent.add_child(n)
+	n.position = pos
+	WorldKit.cylinder(n, 0.55 * s, 2.0 * s, Vector3(0, 1.4 * s, 0), Color("#fbf6ec"), false)
+	var nose := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.0
+	cm.bottom_radius = 0.55 * s
+	cm.height = 1.0 * s
+	cm.material = WorldKit.mat(Color("#ff6b6b"), 0.6)
+	nose.mesh = cm
+	nose.position = Vector3(0, 2.9 * s, 0)
+	n.add_child(nose)
+	var win := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.26 * s
+	sm.height = 0.52 * s
+	sm.material = WorldKit.mat(Color("#8fd0ff"), 0.2, 0.3)
+	win.mesh = sm
+	win.position = Vector3(0, 1.8 * s, 0.48 * s)
+	n.add_child(win)
+	for k in 3:
+		var fin := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.12, 0.8, 0.6) * s
+		bm.material = WorldKit.mat(Color("#ff9f43"), 0.6)
+		fin.mesh = bm
+		var a := TAU * k / 3.0
+		fin.position = Vector3(cos(a) * 0.6, 0.55, sin(a) * 0.6) * s
+		fin.rotation.y = -a
+		n.add_child(fin)
+	return n
+
+
+## Pusteblume (Wuschel-Wiesen): Stiel + flauschiger Samenkopf.
+func _dandelion(parent: Node3D, pos: Vector3, s := 1.0) -> Node3D:
+	var n := Node3D.new()
+	parent.add_child(n)
+	n.position = pos
+	var stem := WorldKit.cylinder(n, 0.07 * s, 2.2 * s, Vector3(0, 1.1 * s, 0), Color("#6cbf4a"), false)
+	stem.rotation.z = 0.06
+	var puff := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.75 * s
+	sm.height = 1.5 * s
+	sm.material = WorldKit.mat(Color("#fffdf6"), 1.0, 0.12)
+	puff.mesh = sm
+	puff.position = Vector3(0.1 * s, 2.35 * s, 0)
+	n.add_child(puff)
+	var core := MeshInstance3D.new()
+	var cs := SphereMesh.new()
+	cs.radius = 0.22 * s
+	cs.height = 0.44 * s
+	cs.material = WorldKit.mat(Color("#e8c25a"), 0.9)
+	core.mesh = cs
+	core.position = puff.position
+	n.add_child(core)
+	var tw := n.create_tween().set_loops()
+	tw.tween_property(n, "rotation:z", 0.05, 1.4 + _rng.randf() * 0.6).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(n, "rotation:z", -0.05, 1.4 + _rng.randf() * 0.6).set_trans(Tween.TRANS_SINE)
+	return n
+
+
+## Tag/Nacht (Zauberwald): nachts dunkler Himmel, Leuchtpilze und Glühwürmchen strahlen.
+func apply_time_of_day(night: bool, board: Node, animate := true) -> void:
+	var env: WorldEnvironment = null
+	var sun: DirectionalLight3D = null
+	for c in board.get_children():
+		if c is WorldEnvironment:
+			env = c
+		for cc in c.get_children():
+			if cc is DirectionalLight3D:
+				sun = cc
+		if c is DirectionalLight3D:
+			sun = c
+	var dur := 1.6 if animate else 0.0
+	if env and env.environment:
+		var e := env.environment
+		var tw := board.create_tween().set_parallel(true)
+		tw.tween_property(e, "ambient_light_energy", 0.35 if night else 0.45, maxf(dur, 0.01))
+		tw.tween_property(e, "ambient_light_color", Color("#5a6aa8") if night else Color("#9fb8dc"), maxf(dur, 0.01))
+		tw.tween_property(e, "background_energy_multiplier", 0.25 if night else 1.0, maxf(dur, 0.01))
+		if e.fog_enabled:
+			tw.tween_property(e, "fog_light_color", Color("#283060") if night else Color("#a9cfee"), maxf(dur, 0.01))
+	if sun:
+		board.create_tween().tween_property(sun, "light_energy", 0.25 if night else 1.0, maxf(dur, 0.01))
+	for l in _night_lights:
+		board.create_tween().tween_property(l, "light_energy", 1.8 if night else 0.0, maxf(dur, 0.01))
+	for m in _night_glows:
+		var gc: Color = m.get_meta("glow", Color(1, 0.9, 1))
+		for mi in Assets.find_meshes(m):
+			for si in mi.get_surface_override_material_count():
+				var mat := mi.get_surface_override_material(si) as StandardMaterial3D
+				if mat == null:
+					continue
+				mat.emission_enabled = true
+				mat.emission = gc
+				board.create_tween().tween_property(mat, "emission_energy_multiplier", 1.6 if night else 0.0, maxf(dur, 0.01))
+	var ff := root.get_node_or_null("Fireflies") as GPUParticles3D
+	if ff:
+		ff.amount_ratio = 1.0 if night else 0.35
+
+
+# --- Wuschel-Wiesen -----------------------------------------------------------------------------------------------
+
+func _build_meadow() -> void:
+	WorldKit.box(root, Vector3(96, 1, 76), Vector3(0, -0.5, 0), Color("#86d06a"), false)
+	_patches([Color("#9bdc76"), Color("#7cc860"), Color("#a6e283"), Color("#f2e6a0"), Color("#93d470")], 34, Rect2(-36, -27, 72, 54))
+	for i in 14:
+		var hill := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = _rng.randf_range(7, 12)
+		sm.height = sm.radius * 0.9
+		sm.material = WorldKit.mat(Color("#7cc860").lerp(Color("#a6dc7a"), _rng.randf()), 1.0)
+		hill.mesh = sm
+		hill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(hill)
+		var a := TAU * i / 14.0
+		hill.position = Vector3(cos(a) * 42.0, -2.2, sin(a) * 33.0)
+	_ring(["plat/tree", "nat/tree_oak", "castle/tree", "nat/tree_default"], 34, 31.0, 38.0, Vector2(3.2, 4.6))
+	_scatter_free(["plat/flowers", "nat/flower_yellow", "nat/flower_red", "nat/flower_purple", "plat/mushrooms", "nat/bush", "nat/grass", "nat/grass"], 90, Rect2(-30, -22, 60, 44), 0.0, Vector2(1.4, 2.2), 2.4)
+	_scatter_free(["plat/tree", "nat/tree_oak", "castle/tree"], 18, Rect2(-30, -22, 60, 44), 0.0, Vector2(2.2, 3.0), 4.0)
+	for i in 12:
+		var dp := Vector3(_rng.randf_range(-28, 28), 0, _rng.randf_range(-21, 21))
+		if _free_spot(dp, 3.0, true):
+			_dandelion(root, dp, _rng.randf_range(1.0, 1.6))
+	WorldKit.place(root, "town/windmill", Vector3(-25, 0, -15), 30.0, 2.8)
+	WorldKit.place(root, "town/house", Vector3(25, 0, -14), -140.0, 2.4)
+	WorldKit.place(root, "town/fountain", Vector3(0, 0, -1), 0.0, 2.2)
+	for k in 8:
+		WorldKit.place(root, "nat/fence", Vector3(-30 + k * 2.2, 0, -21), 0.0, 1.6)
+	var pond := _pond(Vector2(10, 7), [Vector3(19, 0, 12), Vector3(-19, 0, 12), Vector3(0, 0, 16), Vector3(-20, 0, -8)], Color(0.1, 0.4, 0.6), Color(0.45, 0.85, 0.9), "nat/lily")
+	if pond != Vector3.INF:
+		for k in 2:
+			var duck := CharacterRig.new()
+			root.add_child(duck)
+			duck.setup("npc/duck", -1, 0.9)
+			duck.position = pond + Vector3(-1.5 + k * 3.0, 0.05, 0)
+			duck.play("idle")
+			var tw := duck.create_tween().set_loops()
+			tw.tween_property(duck, "position:x", duck.position.x + 1.6, 3.0 + k).set_trans(Tween.TRANS_SINE)
+			tw.tween_property(duck, "position:x", duck.position.x - 0.4, 3.0 + k).set_trans(Tween.TRANS_SINE)
+	# Wuschelige Schäfchen (weiche Kugeln mit Köpfchen und Beinchen)
+	for i in 12:
+		var p := Vector3(_rng.randf_range(-28, 28), 0, _rng.randf_range(-21, 21))
+		if not _free_spot(p, 3.4):
+			continue
+		var sheep := Node3D.new()
+		root.add_child(sheep)
+		sheep.position = p
+		sheep.rotation.y = _rng.randf() * TAU
+		var body := Node3D.new()
+		sheep.add_child(body)
+		body.position.y = 0.95
+		for q in [Vector3(0, 0, 0), Vector3(0.45, 0.15, 0.2), Vector3(-0.45, 0.12, -0.1), Vector3(0, 0.3, -0.35), Vector3(0.1, 0.25, 0.45)]:
+			var puff := MeshInstance3D.new()
+			var bm := SphereMesh.new()
+			bm.radius = 0.62
+			bm.height = 1.15
+			bm.material = WorldKit.mat(Color("#fbf8f0"), 1.0, 0.04)
+			puff.mesh = bm
+			puff.position = q
+			body.add_child(puff)
+		var head := MeshInstance3D.new()
+		var hm := SphereMesh.new()
+		hm.radius = 0.36
+		hm.height = 0.66
+		hm.material = WorldKit.mat(Color("#4a3a3a"), 0.8)
+		head.mesh = hm
+		head.position = Vector3(0, 0.2, -0.95)
+		body.add_child(head)
+		for lx in [-0.3, 0.3]:
+			for lz in [-0.35, 0.35]:
+				var leg := WorldKit.cylinder(sheep, 0.09, 0.6, Vector3(lx, 0.3, lz), Color("#4a3a3a"), false)
+				leg.name = "Leg"
+		var tw2 := sheep.create_tween().set_loops()
+		tw2.tween_property(body, "position:y", 1.08, 0.7 + i * 0.04).set_trans(Tween.TRANS_SINE)
+		tw2.tween_property(body, "position:y", 0.95, 0.7 + i * 0.04).set_trans(Tween.TRANS_SINE)
+	for p in [Vector3(-14, 0, 3), Vector3(15, 0, -2), Vector3(4, 0, 19)]:
+		var r := CharacterRig.new()
+		root.add_child(r)
+		r.setup(["pet/bunny", "pet/chick", "pet/cow"][sleepers.size() % 3], -1, 1.1)
+		r.position = p
+		r.rotation.y = _rng.randf() * TAU
+		r.play("idle")
+		sleepers.append(r)
+	_toggle_platforms(0, "nat/flower_yellow", 3.0, Vector3(0, -0.2, 0))
+
+
+# --- Zuckerback-Torte ------------------------------------------------------------------------------------------------
+
+func _build_cake() -> void:
+	# Drei Tortenstockwerke, Sahnetupfen, Kerzen und Kirschen
+	var layers := [[30.0, Color("#f7d6e0")], [26.0, Color("#fff3d6")]]
+	WorldKit.cylinder(root, 31.0, 6.0, Vector3(0, -3.2, 0), Color("#c98d5a"), false)
+	for k in 2:
+		WorldKit.cylinder(root, float(layers[k][0]), 0.4, Vector3(0, -0.2 - k * 0.01, 0), layers[k][1], false)
+	for i in 36:
+		var a := TAU * i / 36.0
+		var dollop := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = 1.0
+		sm.height = 1.3
+		sm.material = WorldKit.mat(Color("#fffaf2"), 0.6)
+		dollop.mesh = sm
+		root.add_child(dollop)
+		dollop.position = Vector3(cos(a) * 29.0, 0.4, sin(a) * 29.0)
+		if i % 3 == 0:
+			var cherry := MeshInstance3D.new()
+			var cs := SphereMesh.new()
+			cs.radius = 0.5
+			cs.height = 1.0
+			cs.material = WorldKit.mat(Color("#e8304a"), 0.25, 0.1)
+			cherry.mesh = cs
+			cherry.position = Vector3(0, 0.9, 0)
+			dollop.add_child(cherry)
+	for i in 10:
+		var a2 := TAU * i / 10.0 + 0.15
+		var p := Vector3(cos(a2), 0, sin(a2)) * 24.5
+		var candle := WorldKit.cylinder(root, 0.35, 3.0, p + Vector3.UP * 1.5, [Color("#ffb3c7"), Color("#a8dcff"), Color("#ffe08a")][i % 3], false)
+		candle.name = "Candle"
+		WorldKit.torch_light(root, p + Vector3.UP * 3.3, Color(1.0, 0.75, 0.45), 1.4, 6.0)
+	_scatter_free(["hol/cookie", "hol/present_red", "hk/candy_cane", "hol/present_blue", "plat/mushrooms", "hol/gingerbread_house"], 26, Rect2(-22, -18, 44, 36), 0.0, Vector2(1.6, 2.4), 3.0)
+	WorldKit.place(root, "hol/gingerbread_house", Vector3(0, 0, -1), 0.0, 3.0)
+	for p in [Vector3(-14, 0, 3), Vector3(14, 0, -2), Vector3(4, 0, 19)]:
+		var r := CharacterRig.new()
+		root.add_child(r)
+		r.setup(["pet/bunny", "pet/chick", "pet/cat"][sleepers.size() % 3], -1, 1.1)
+		r.position = p
+		r.rotation.y = _rng.randf() * TAU
+		r.play("idle")
+		sleepers.append(r)
+	_toggle_platforms(0, "hol/cookie", 2.6, Vector3(0, -0.3, 0))
+	_toggle_platforms(1, "hol/cookie", 2.6, Vector3(0, -0.3, 0))
 
 
 # --- Wechselnde Routen ---------------------------------------------------------------------------------------
@@ -624,8 +1010,10 @@ func set_route_open(bi: int, open: bool, animate := true) -> void:
 			dy = 0.0 if open else -1.4
 		"drawbridge":
 			dy = 0.0 if open else -0.3
-		"fog_bridge", "ice_bridge":
+		"fog_bridge", "ice_bridge", "mushroom_path":
 			dy = 0.0 if open else -2.4
+		"sunflower_path", "cherry_lift":
+			dy = 0.0 if open else -1.8
 		"airlock":
 			dy = 0.0 if open else -1.6
 	for k in ids.size():
@@ -641,7 +1029,7 @@ func set_route_open(bi: int, open: bool, animate := true) -> void:
 			node.rotation = tilt
 		if k < parts.size():
 			var part: Node3D = parts[k]
-			var sink: float = {"lava_bridge": 0.85, "fog_bridge": 0.85, "ice_bridge": 0.85, "tide": 0.2, "airlock": 0.25}.get(kind, 0.0)
+			var sink: float = {"lava_bridge": 0.85, "fog_bridge": 0.85, "ice_bridge": 0.85, "mushroom_path": 0.9, "tide": 0.2, "airlock": 0.25, "sunflower_path": 0.2, "cherry_lift": 0.3}.get(kind, 0.0)
 			var ptarget := (spaces[ids[k]].pos as Vector3) + Vector3.UP * (dy - sink)
 			if animate:
 				var tw2 := part.create_tween().set_parallel(true)

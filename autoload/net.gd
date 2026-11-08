@@ -37,6 +37,8 @@ var meta: Dictionary = {}
 var transport := "—"
 var rtt_ms := -1.0
 var game_cfg: Dictionary = {}
+var session := false               # läuft gerade ein gemeinsames Spiel (Rennen, Minispiel, Party)?
+var decisions: Dictionary = {}     # Brett-Lockstep: Entscheidungsnummer -> Wert
 
 var _db: RtdbClient
 var _pcs: Dictionary = {}          # id -> {pc, rel, unrel, open}
@@ -147,9 +149,12 @@ func leave(reason := "Raum verlassen.") -> void:
 	_relay_peers.clear()
 	_connect_watch.clear()
 	var was := online
-	if Game.mode == "online":
+	if Game.mode == "online" or session:
 		Game.mode = "menu"
+	session = false
+	decisions.clear()
 	InputHub.online_local = -1
+	InputHub.net_driven.clear()
 	Game.reset_players(1)
 	online = false
 	is_host = false
@@ -256,6 +261,7 @@ func _on_child(tag: String, ev: String, key: String, val: Variant) -> void:
 					(_pcs[key].pc as WebRTCPeerConnection).close()
 					_pcs.erase(key)
 				_relay_peers.erase(key)
+				_takeover_slot(key)
 				message.emit(key, {"k": "left"})
 			elif val is Dictionary:
 				var isnew := not players.has(key)
@@ -451,11 +457,13 @@ func _receive(from: String, msg: Dictionary) -> void:
 	if k == "pong":
 		rtt_ms = float(Time.get_ticks_msec() - int(msg.get("t", 0)))
 		return
+	if k == "bd":
+		decisions[int(msg.get("n", -1))] = msg.get("v")
 	if is_host and msg.has("b"):
 		msg.erase("b")
 		for id in players:
 			if id != me and id != from:
-				_send_to(id, msg, true if k in ["item", "hit", "fell", "shove", "end", "start", "ready", "finish"] else false)
+				_send_to(id, msg, true if k in ["item", "hit", "fell", "shove", "end", "start", "ready", "finish", "bd", "sc"] else false)
 	message.emit(String(msg.get("f", from)), msg)
 
 
@@ -481,8 +489,36 @@ func start_game(cfg: Dictionary) -> void:
 	_start_local(cfg)
 
 
+## Läuft gerade ein gemeinsames Online-Spiel (Rennen, Minispiel oder Party)?
+func in_game() -> bool:
+	return online and session
+
+
+## Brett-Lockstep: eigene Entscheidung Nummer n verteilen.
+func decide_send(n: int, v: Variant) -> void:
+	decisions[n] = v
+	send({"k": "bd", "n": n, "v": v}, true)
+
+
+## Spieler hat den Raum während des Spiels verlassen: Sein Slot wird zur CPU (vom Host gesteuert).
+func _takeover_slot(id: String) -> void:
+	if not session:
+		return
+	var slots: Dictionary = game_cfg.get("slots", {})
+	if not slots.has(id):
+		return
+	var sl := int(slots[id])
+	slots.erase(id)
+	Game.players[sl].cpu = true
+	Game.players[sl].remote = false
+	InputHub.net_driven.erase(sl)
+	Account.toast("%s hat das Spiel verlassen – die CPU übernimmt." % String(Game.players[sl].name), Color("#ffb070"))
+
+
 ## Zurück in die Lobby (Host), z. B. nach Rennende.
 func back_to_lobby() -> void:
+	session = false
+	decisions.clear()
 	if not online:
 		return
 	if is_host:
@@ -490,6 +526,7 @@ func back_to_lobby() -> void:
 	_db.update("rooms/%s/players/%s" % [code, me], {"ready": false})
 	meta["state"] = "lobby"
 	InputHub.online_local = -1
+	InputHub.net_driven.clear()
 
 
 func _start_local(cfg: Dictionary) -> void:
@@ -511,8 +548,18 @@ func _start_local(cfg: Dictionary) -> void:
 	seed(int(cfg.get("seed", 0)))
 	InputHub.online_local = my_slot
 	Game.mode = "online"
+	session = true
+	decisions.clear()
 	started.emit(cfg)
 	match String(cfg.get("mode", "race")):
+		"party":
+			var humans: Array[bool] = []
+			for i in 4:
+				humans.append(not Game.players[i].cpu)
+			Game.start_party(String(cfg.get("board", "meadow")), int(cfg.get("rounds", 10)), String(cfg.get("pmode", "classic")))
+			for i in 4:
+				Game.players[i].cpu = not humans[i]
+			Router.goto("res://scenes/party/PartyBoard.tscn")
 		"race":
 			Game.race_cfg.track = String(cfg.get("track", "lumos_ring"))
 			Game.race_cfg.laps = int(cfg.get("laps", 3))

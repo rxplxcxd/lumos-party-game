@@ -91,8 +91,20 @@ var online_local := -1
 
 
 ## Eingabegerät-Index für einen Spiel-Slot: -2 = virtuell (CPU), -1 = keine lokale Eingabe (Online-Mitspieler).
+var net_driven: Dictionary = {}   # Online (Host-Modell): Slot -> true, Eingaben kommen vom Client
+
+
+## Online (Host-Modell): Eingaben eines entfernten Spielers einspeisen.
+func set_net_input(slot: int, mv: Vector2, held_actions: Dictionary) -> void:
+	if slot < 0 or slot > 3:
+		return
+	net_driven[slot] = true
+	_virtual[slot].move = mv
+	_virtual[slot].held = held_actions
+
+
 func _dev(slot: int) -> int:
-	if not is_slot_human(slot):
+	if not is_slot_human(slot) or net_driven.has(slot):
 		return -2
 	if online_local >= 0:
 		return 0 if slot == online_local else -1

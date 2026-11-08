@@ -13,6 +13,7 @@ var radius := 220.0
 var _last_seg := -1
 var _done := false
 var _font: Font
+var _decel := 5.5
 
 
 func setup(segs: Array) -> FortuneWheel:
@@ -32,7 +33,29 @@ func spin() -> void:
 func stop() -> void:
 	if not stopping:
 		stopping = true
+		_decel = 5.5
 		Audio.sfx("ui_confirm")
+
+
+## Segment, auf dem das Rad bei normalem Abbremsen ab jetzt landen würde.
+func predict_stop() -> int:
+	return _segment_for(angle + speed * speed / (2.0 * 5.5))
+
+
+## Abbremsen, sodass das Rad genau in der Mitte von Segment idx landet (Online: alle sehen dasselbe).
+func stop_on(idx: int) -> void:
+	if stopping:
+		return
+	var total := _total_weight()
+	var acc := 0.0
+	for i in clampi(idx, 0, segments.size() - 1):
+		acc += float(segments[i].weight) / total * TAU
+	var mid := acc + float(segments[clampi(idx, 0, segments.size() - 1)].weight) / total * TAU * 0.5
+	var natural := angle + speed * speed / (2.0 * 5.5)
+	var final := -mid + ceilf((natural + mid) / TAU) * TAU
+	_decel = speed * speed / (2.0 * maxf(0.6, final - angle))
+	stopping = true
+	Audio.sfx("ui_confirm")
 
 
 func _total_weight() -> float:
@@ -43,8 +66,12 @@ func _total_weight() -> float:
 
 
 func _segment_at_pointer() -> int:
+	return _segment_for(angle)
+
+
+func _segment_for(ang: float) -> int:
 	var total := _total_weight()
-	var a := fposmod(-angle - PI / 2.0 + PI / 2.0, TAU)   # Zeiger oben
+	var a := fposmod(-ang, TAU)   # Zeiger oben
 	var acc := 0.0
 	for i in segments.size():
 		var w: float = segments[i].weight / total * TAU
@@ -58,7 +85,7 @@ func _process(delta: float) -> void:
 	if speed <= 0.0 and _done:
 		return
 	if stopping:
-		speed = maxf(0.0, speed - delta * 5.5)
+		speed = maxf(0.0, speed - delta * _decel)
 	angle += speed * delta
 	var seg := _segment_at_pointer()
 	if seg != _last_seg:

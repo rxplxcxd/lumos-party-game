@@ -8,6 +8,9 @@ extends Node3D
 ## check_end() und compute_placements().
 
 const REWARDS := [10, 5, 2, 0]
+const CATEGORY_LABELS := {"ffa": "Jeder gegen Jeden", "1v3": "1 gegen 3", "2v2": "2 gegen 2", "duel": "Duell",
+	"coin": "Münzen-Minispiel", "luck": "Glücks-Minispiel", "boss": "Boss-Minispiel", "showdown": "Showdown", "coop": "Gemeinsam"}
+const TEAM_COLORS := [Color("#3fa7ff"), Color("#ff4d6d")]
 
 var game_id := ""
 var info: Dictionary = {}
@@ -47,6 +50,18 @@ var _hud_root: Control
 var _hurry_said := false
 var _last_tick := -1
 var cpu_mem: Array[Dictionary] = [{}, {}, {}, {}]
+## Kategorie & Teams (vom Brett/Menü über Game.minigame_setup gesetzt)
+var category := "ffa"
+var teams: Array[int] = [0, 1, 2, 3]
+var active: Array[bool] = [true, true, true, true]
+var solo_slot := -1
+## Online-Modell: "owner" = Figuren simuliert ihr Besitzer (NetAvatarSync), "host" = Host simuliert alles,
+## Clients senden Eingaben und zeigen den Zustand aus net_pack()/net_unpack().
+var net_model := "owner"
+var _net_pack_t := 0.0
+var _handicap := -1
+## Spiel-Zufall: online auf allen Geräten gleich geseedet → identische Ereignisse (Farben, Bälle, Folgen).
+var rng := RandomNumberGenerator.new()
 var forced_placements: Array[int] = []
 var net_sync: NetAvatarSync
 var _net_ready: Dictionary = {}
@@ -56,6 +71,10 @@ var _debug_ai := "--debug-ai" in OS.get_cmdline_user_args()
 
 func _ready() -> void:
 	info = Game.minigame_info(game_id)
+	if Net.in_game():
+		rng.seed = int(Net.game_cfg.get("seed", 1)) ^ hash(game_id) ^ (int(Game.party.get("dseq", 0)) * 7919 if Game.mode == "party" else 0)
+	else:
+		rng.randomize()
 	world = Node3D.new()
 	world.name = "World"
 	add_child(world)
@@ -65,8 +84,10 @@ func _ready() -> void:
 	if spawn_points.is_empty():
 		for i in 4:
 			spawn_points.append(arena_center + Vector3(-4.5 + i * 3.0, 0.5, 0))
+	_apply_setup()
 	build_arena()
 	spawn_players()
+	_bench_inactive()
 	_setup_camera()
 	_build_hud()
 	InputHub.set_touch_profile("none")
@@ -108,6 +129,8 @@ func on_timeout() -> void:
 
 func check_end() -> bool:
 	if survival:
+		if is_team_game():
+			return _alive_teams().size() <= 1
 		return alive_count() <= 1
 	return false
 
@@ -138,7 +161,11 @@ func setup_camera(c: ArenaCamera) -> void:
 
 func _setup_camera() -> void:
 	cam = ArenaCamera.new()
-	cam.targets = actors.filter(func(a: Variant) -> bool: return a != null)
+	var tg: Array = []
+	for i in 4:
+		if actors[i] != null and active[i]:
+			tg.append(actors[i])
+	cam.targets = tg
 	setup_camera(cam)
 	add_child(cam)
 	cam.make_current()
@@ -157,9 +184,13 @@ func _flow() -> void:
 	await get_tree().process_frame
 	await CutsceneManager.play("MinigameTeaser", {"game": self})
 	await _instructions()
-	if Game.mode == "online" and Net.online:
-		net_sync = NetAvatarSync.new().setup(self)
-		add_child(net_sync)
+	if Net.in_game():
+		Net.message.connect(_on_score_msg)
+		if net_model == "owner":
+			net_sync = NetAvatarSync.new().setup(self)
+			add_child(net_sync)
+		else:
+			Net.message.connect(_on_host_model_msg)
 		await _net_barrier()
 	InputHub.set_touch_profile(touch_profile)
 	await CutsceneManager.countdown()
@@ -167,6 +198,10 @@ func _flow() -> void:
 	state = "play"
 	_freeze_all(false)
 	on_start()
+	# Partner-Minispiel: kleiner Startvorteil für den Auslöser
+	if _handicap >= 0 and avatars[_handicap] is PartyAvatar:
+		(avatars[_handicap] as PartyAvatar).max_speed *= 1.15
+		scores[_handicap] += 0.5 if not survival else 0.0
 
 
 func _process(delta: float) -> void:
@@ -184,9 +219,17 @@ func _process(delta: float) -> void:
 			_last_tick = secs
 			Audio.sfx("tick", null, 0.0, 1.0 + (5 - secs) * 0.08, 0.0)
 			Juice.ui_punch(timer_label, 0.3, 0.3)
+	if _is_host_model_client():
+		_update_badges()
+		return   # Online (Host-Modell): Zustand kommt vom Host
 	on_tick(delta)
 	_update_badges()
-	if net_sync and not Net.is_host:
+	if _host_model_online() and Net.is_host:
+		_net_pack_t -= delta
+		if _net_pack_t <= 0.0:
+			_net_pack_t = 1.0 / minf(Net.state_rate(), 15.0)
+			Net.send({"k": "gs", "d": net_pack(), "tl": snappedf(time_left, 0.01), "sc": scores, "al": alive}, false)
+	if (net_sync or _host_model_online()) and not Net.is_host:
 		return   # Online: das Ende entscheidet der Host
 	if state == "play" and show_timer and time_left <= 0.0:
 		on_timeout()
@@ -197,8 +240,15 @@ func _process(delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if state == "play":
 		for i in 4:
-			if Game.players[i].cpu and Net.owns_slot(i):
+			if Game.players[i].cpu and active[i] and Net.owns_slot(i):
 				cpu_think(i, delta)
+		if _is_host_model_client() and not Game.players[Net.my_slot].cpu:
+			var mv := InputHub.move(Net.my_slot)
+			var held := {}
+			for a in ["a", "b", "x", "r"]:
+				if InputHub.held(Net.my_slot, a):
+					held[a] = true
+			Net.send({"k": "in", "s": Net.my_slot, "m": [snappedf(mv.x, 0.01), snappedf(mv.y, 0.01)], "h": held}, false, false)
 		if _debug_ai and Engine.get_physics_frames() % 90 == 0:
 			for i in 4:
 				var a: Node3D = actors[i]
@@ -283,23 +333,40 @@ func end_game() -> void:
 	InputHub.set_touch_profile("none")
 	Audio.sfx("bell")
 	await CutsceneManager.big_word("FERTIG!", Color("#ffcc33"), 1.0)
+	# Online-Client: Endergebnis kommt vom Host (alle Geräte zeigen und verbuchen dasselbe)
+	if (net_sync or _host_model_online()) and not Net.is_host:
+		var w := 0.0
+		while forced_placements.size() != 4 and w < 5.0 and Net.online:
+			await get_tree().process_frame
+			w += get_process_delta_time()
 	var placements := forced_placements if forced_placements.size() == 4 else compute_placements()
 	if net_sync and "--net-test" in str(OS.get_cmdline_user_args()):
 		print("[NET] Minispiel-Ende · Platzierungen %s · alive %s · empfangen %s" % [placements, alive, Net.debug_counts])
-	if net_sync and Net.is_host:
-		Net.send({"k": "end", "pl": placements}, true)
+	if (net_sync or _host_model_online()) and Net.is_host:
+		Net.send({"k": "end", "pl": placements, "sc": scores}, true)
 	await CutsceneManager.play("MinigameWin", {"game": self, "placements": placements})
 	await _show_results(placements)
 	_return(placements)
 
 
-## Platzierung pro Spieler (1..4, Gleichstand teilt Platz).
+## Platzierung pro Spieler (1..4, Gleichstand teilt Platz). Nicht teilnehmende Slots erhalten 0.
+## Team-Spiele: Siegerteam = Platz 1, Verlierer = Platz 2 (Unentschieden: alle Platz 2).
 func compute_placements() -> Array[int]:
-	var places: Array[int] = [4, 4, 4, 4]
-	if race:
-		var order: Array[int] = finish_order.duplicate()
-		var rest: Array[int] = []
+	var places: Array[int] = [0, 0, 0, 0]
+	if is_team_game():
+		var win := team_result()
 		for i in 4:
+			if active[i]:
+				places[i] = 1 if teams[i] == win else 2
+		return places
+	var act := active_slots()
+	if race:
+		var order: Array[int] = []
+		for f in finish_order:
+			if active[f]:
+				order.append(f)
+		var rest: Array[int] = []
+		for i in act:
 			if not (i in order):
 				rest.append(i)
 		rest.sort_custom(func(a: int, b: int) -> bool: return scores[a] > scores[b])
@@ -309,17 +376,18 @@ func compute_placements() -> Array[int]:
 		return places
 	if survival:
 		var survivors: Array[int] = []
-		for i in 4:
+		for i in act:
 			if alive[i]:
 				survivors.append(i)
-		for s in survivors:
-			places[s] = 1
+		for sv in survivors:
+			places[sv] = 1
 		var place := survivors.size() + 1
 		for k in range(out_order.size() - 1, -1, -1):
-			places[out_order[k]] = place
-			place += 1
+			if active[out_order[k]]:
+				places[out_order[k]] = place
+				place += 1
 		return places
-	var idx: Array[int] = [0, 1, 2, 3]
+	var idx: Array[int] = act.duplicate()
 	idx.sort_custom(func(a: int, b: int) -> bool: return scores[a] > scores[b])
 	for pos in idx.size():
 		var p := idx[pos]
@@ -329,8 +397,254 @@ func compute_placements() -> Array[int]:
 	return places
 
 
+## Siegerteam (Team-ID) oder -1 bei Gleichstand. Überschreibbar.
+func team_result() -> int:
+	if survival:
+		var at := _alive_teams()
+		if at.size() == 1:
+			return at[0]
+		if at.is_empty():
+			return teams[out_order[out_order.size() - 1]] if not out_order.is_empty() else -1
+		var cnt := {}
+		for i in active_slots():
+			if alive[i]:
+				cnt[teams[i]] = int(cnt.get(teams[i], 0)) + 1
+		var best := -1
+		var bc := -1
+		var tie := false
+		for t in cnt:
+			if int(cnt[t]) > bc:
+				bc = int(cnt[t])
+				best = int(t)
+				tie = false
+			elif int(cnt[t]) == bc:
+				tie = true
+		return -1 if tie else best
+	if race and not finish_order.is_empty():
+		for f in finish_order:
+			if active[f]:
+				return teams[f]
+	var sums := {}
+	for i in active_slots():
+		sums[teams[i]] = float(sums.get(teams[i], 0.0)) + scores[i]
+	var best_t := -1
+	var best_s := -INF
+	var tie2 := false
+	for t in sums:
+		if float(sums[t]) > best_s:
+			best_s = float(sums[t])
+			best_t = int(t)
+			tie2 = false
+		elif is_equal_approx(float(sums[t]), best_s):
+			tie2 = true
+	return -1 if tie2 else best_t
+
+
+# --- Teams & Kategorien -----------------------------------------------------------------------------------
+
+func _apply_setup() -> void:
+	var st: Dictionary = Game.minigame_setup
+	Game.minigame_setup = {}
+	var cats: Array = info.get("cats", ["ffa"])
+	category = String(st.get("cat", cats[0] if not cats.is_empty() else "ffa"))
+	if not (category in cats) and not cats.is_empty():
+		category = String(cats[0])
+	match category:
+		"1v3":
+			solo_slot = int(st.get("solo", 0))
+			for i in 4:
+				teams[i] = 0 if i == solo_slot else 1
+		"2v2":
+			var tm: Array = st.get("teams", [0, 1, 0, 1])
+			for i in 4:
+				teams[i] = int(tm[i])
+		"duel":
+			var ac: Array = st.get("active", [true, true, false, false])
+			for i in 4:
+				active[i] = bool(ac[i])
+	if bool(st.get("short", false)):
+		time_limit = maxf(15.0, time_limit * 0.55)
+	_handicap = int(st.get("handicap", -1))
+	if st.has("active") and category != "duel":
+		var ac2: Array = st.active
+		for i in 4:
+			active[i] = bool(ac2[i])
+	on_setup()
+
+
+## Hook: nach Kategorie/Teams, vor build_arena() (z. B. Solo-Rolle vorbereiten).
+func on_setup() -> void:
+	pass
+
+
+func is_team_game() -> bool:
+	return category in ["1v3", "2v2"]
+
+
+func same_team(a: int, b: int) -> bool:
+	return is_team_game() and teams[a] == teams[b]
+
+
+func active_slots() -> Array[int]:
+	var out: Array[int] = []
+	for i in 4:
+		if active[i]:
+			out.append(i)
+	return out
+
+
+func _alive_teams() -> Array:
+	var out: Array = []
+	for i in active_slots():
+		if alive[i] and not (teams[i] in out):
+			out.append(teams[i])
+	return out
+
+
+## Nicht teilnehmende Figuren (z. B. im Duell) aus dem Spiel nehmen.
+func _bench_inactive() -> void:
+	for i in 4:
+		if active[i]:
+			continue
+		alive[i] = false
+		var a: Node3D = actors[i]
+		if a:
+			a.visible = false
+			a.global_position = Vector3(0, -300, 0)
+			a.set_physics_process(false)
+			a.process_mode = Node.PROCESS_MODE_DISABLED
+		if avatars[i] is PartyAvatar:
+			(avatars[i] as PartyAvatar).alive = false
+
+
+## Münzen-Belohnung je Platz und Kategorie (Party-Modus).
+static func reward_for(place: int, cat: String, score := 0.0) -> int:
+	if place <= 0:
+		return 0
+	match cat:
+		"1v3", "2v2":
+			return 10 if place == 1 else 0
+		"coin":
+			return int(score)
+		"duel", "luck", "showdown":
+			return 0
+	return REWARDS[clampi(place - 1, 0, 3)]
+
+
+# --- Online: Host-Modell ---------------------------------------------------------------------------------
+
+func _host_model_online() -> bool:
+	return net_model == "host" and Net.in_game()
+
+
+func _is_host_model_client() -> bool:
+	return _host_model_online() and not Net.is_host
+
+
+## Besitzer meldet Punktestand/Status seiner Figur (Owner-Modell, z. B. Rhythmus, Würfe, Glücksspiele).
+func report_score(slot: int) -> void:
+	if Net.in_game() and Net.owns_slot(slot):
+		Net.send({"k": "sc", "s": slot, "v": scores[slot], "al": alive[slot], "x": score_extra(slot)}, true)
+
+
+## Zusatzdaten zur Punktemeldung (z. B. Wurfwinkel für die Wiederholung bei anderen).
+func score_extra(_slot: int) -> Dictionary:
+	return {}
+
+
+## Hook: Punktemeldung eines anderen Geräts angekommen.
+func on_remote_score(_slot: int, _extra: Dictionary) -> void:
+	pass
+
+
+func _on_score_msg(_from: String, msg: Dictionary) -> void:
+	if String(msg.get("k", "")) != "sc":
+		return
+	var sl := int(msg.get("s", -1))
+	if sl < 0 or sl > 3 or Net.owns_slot(sl):
+		return
+	scores[sl] = float(msg.get("v", 0.0))
+	var was := alive[sl]
+	alive[sl] = bool(msg.get("al", true))
+	if was and not alive[sl] and not (sl in out_order):
+		out_order.append(sl)
+	on_remote_score(sl, msg.get("x", {}))
+
+
+func _on_host_model_msg(_from: String, msg: Dictionary) -> void:
+	match String(msg.get("k", "")):
+		"in":
+			if Net.is_host:
+				var sl := int(msg.get("s", -1))
+				var m: Array = msg.get("m", [0, 0])
+				InputHub.set_net_input(sl, Vector2(float(m[0]), float(m[1])), msg.get("h", {}))
+		"gs":
+			if not Net.is_host:
+				time_left = float(msg.get("tl", time_left))
+				var sc: Array = msg.get("sc", [])
+				for i in mini(4, sc.size()):
+					scores[i] = float(sc[i])
+				var al: Array = msg.get("al", [])
+				for i in mini(4, al.size()):
+					alive[i] = bool(al[i])
+				net_unpack(msg.get("d", {}))
+		"end":
+			if not Net.is_host:
+				var pl: Array = msg.get("pl", [])
+				var places: Array[int] = []
+				for p in pl:
+					places.append(int(p))
+				if places.size() == 4:
+					var fsc: Array = msg.get("sc", [])
+					for fi in mini(4, fsc.size()):
+						scores[fi] = float(fsc[fi])
+					forced_placements = places
+					end_game()
+
+
+## Host: kompakter Spielzustand für Clients (Host-Modell). Figuren werden automatisch mitgeschickt.
+func net_pack() -> Dictionary:
+	return {"av": _pack_avatars()}
+
+
+## Client: Spielzustand vom Host anwenden (Host-Modell).
+func net_unpack(d: Dictionary) -> void:
+	_unpack_avatars(d.get("av", []))
+
+
+func _pack_avatars() -> Array:
+	var out: Array = []
+	for i in 4:
+		var a: Node3D = actors[i]
+		if a == null or not active[i]:
+			out.append(null)
+			continue
+		var p := a.global_position
+		var ry: float = (avatars[i] as PartyAvatar).rig.rotation.y if avatars[i] is PartyAvatar else a.rotation.y
+		var hs: float = Vector2((avatars[i] as PartyAvatar).velocity.x, (avatars[i] as PartyAvatar).velocity.z).length() if avatars[i] is PartyAvatar else 0.0
+		out.append([snappedf(p.x, 0.01), snappedf(p.y, 0.01), snappedf(p.z, 0.01), snappedf(ry, 0.01), snappedf(hs, 0.1)])
+	return out
+
+
+func _unpack_avatars(arr: Array) -> void:
+	for i in mini(4, arr.size()):
+		if arr[i] == null or actors[i] == null:
+			continue
+		var e: Array = arr[i]
+		var a: Node3D = actors[i]
+		var target := Vector3(float(e[0]), float(e[1]), float(e[2]))
+		a.set_physics_process(false)
+		a.global_position = a.global_position.lerp(target, 0.5) if a.global_position.distance_to(target) < 4.0 else target
+		if avatars[i] is PartyAvatar:
+			var av := avatars[i] as PartyAvatar
+			av.rig.rotation.y = lerp_angle(av.rig.rotation.y, float(e[3]), 0.5)
+			av.rig.locomote(float(e[4]), av.max_speed, true, 0.0, 0.05)
+		else:
+			a.rotation.y = lerp_angle(a.rotation.y, float(e[3]), 0.5)
+
+
 func _return(placements: Array[int]) -> void:
-	Game.last_results = {"game": game_id, "placements": placements, "scores": scores.duplicate()}
+	Game.last_results = {"game": game_id, "placements": placements, "scores": scores.duplicate(), "cat": category, "teams": teams.duplicate()}
 	if not Game.players[0].cpu:
 		EventBus.minigame_result.emit(placements)
 	match Game.mode:
@@ -375,6 +689,7 @@ func _build_hud() -> void:
 
 func _update_badges() -> void:
 	for i in badges.size():
+		badges[i].visible = active[i]
 		if survival:
 			badges[i].set_status("alive" if alive[i] else "out")
 		else:
@@ -396,9 +711,14 @@ func _instructions() -> void:
 	panel.custom_minimum_size = Vector2(760, 0)
 	var v := UI.vbox(16)
 	panel.add_child(v)
+	var cat_l := UI.label(CATEGORY_LABELS.get(category, "").to_upper(), 26, UI.ACCENT2, true, 8)
+	cat_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(cat_l)
 	var t := UI.label(info.get("name", game_id), 64, UI.GOLD, true, 12)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
+	if is_team_game() or category == "duel":
+		v.add_child(_team_lineup())
 	var d := UI.label(info.get("desc", ""), 28)
 	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -437,6 +757,25 @@ func _instructions() -> void:
 var _touch_tap := false
 
 
+## "Rot & Grün  VS  Blau & Gelb" mit Spielerfarben.
+func _team_lineup() -> Control:
+	var row := UI.hbox(18)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	var groups: Array = [[], []]
+	for i in active_slots():
+		(groups[0 if (category == "duel" and i == active_slots()[0]) or (category != "duel" and teams[i] == 0) else 1] as Array).append(i)
+	for g in 2:
+		var col := UI.vbox(2)
+		for i in groups[g]:
+			var l := UI.label(Game.hero(Game.players[i].hero).name, 26, Game.player_color(i).lightened(0.3), true, 6)
+			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			col.add_child(l)
+		row.add_child(col)
+		if g == 0:
+			row.add_child(UI.label("VS", 48, UI.GOLD, true, 10))
+	return row
+
+
 func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed and state in ["intro", "results"]:
 		_touch_tap = true
@@ -458,8 +797,19 @@ func _show_results(placements: Array[int]) -> void:
 	var t := UI.label("Ergebnis", 56, UI.GOLD, true, 10)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
-	var order: Array[int] = [0, 1, 2, 3]
+	var order: Array[int] = []
+	for i in 4:
+		if placements[i] > 0:
+			order.append(i)
 	order.sort_custom(func(a: int, b: int) -> bool: return placements[a] < placements[b])
+	if is_team_game():
+		var win := -1
+		for i in order:
+			if placements[i] == 1:
+				win = teams[i]
+		var tl := UI.label("Unentschieden!" if win < 0 else ("Das Solo gewinnt!" if category == "1v3" and win == 0 else ("Das Dreier-Team gewinnt!" if category == "1v3" else "Team %s gewinnt!" % ["Blau", "Rot"][win])), 34, Color.WHITE, true, 8)
+		tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(tl)
 	var rows: Array[Control] = []
 	for p in order:
 		var row := UI.hbox(16)
@@ -479,8 +829,8 @@ func _show_results(placements: Array[int]) -> void:
 		row.add_child(nm)
 		if not survival:
 			row.add_child(UI.label(score_format % scores[p], 32, Color.WHITE, true))
-		if Game.mode == "party":
-			var reward: int = REWARDS[clampi(place - 1, 0, 3)]
+		if Game.mode == "party" and category not in ["duel", "luck", "showdown"]:
+			var reward: int = reward_for(place, category, scores[p])
 			var rw := UI.hbox(4)
 			rw.add_child(UIIcon.new("coin", 30))
 			rw.add_child(UI.label("+%d" % reward, 32, Color("#7dff9a"), true))

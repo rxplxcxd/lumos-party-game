@@ -12,6 +12,7 @@ extends Node
 ##   --party-mode=classic|blitz|team                     Party-Modus
 ##   --race-mode=single|gp|time --cup=0                  Renn-Modus (Grand Prix mit Cup-Index)
 ##   --marathon=5                                        Minispiel-Marathon mit n Spielen
+##   --cat=1v3|2v2|duel --solo=0                         Minispiel-Kategorie/Teams für Direktstart
 ##   --touch                                             Touch-Steuerung erzwingen
 
 const PRELOAD := [
@@ -48,6 +49,15 @@ func _ready() -> void:
 		Game.race_cfg.mode = _args["race-mode"]
 		if Game.race_cfg.mode == "gp":
 			Game.start_gp(int(_args.get("cup", "0")))
+	if _args.has("cat"):
+		var cs := {"cat": String(_args.cat)}
+		if _args.has("solo"):
+			cs["solo"] = int(_args.solo)
+		if String(_args.cat) == "2v2":
+			cs["teams"] = [0, 1, 0, 1]
+		if String(_args.cat) == "duel":
+			cs["active"] = [true, true, false, false]
+		Game.minigame_setup = cs
 	if _args.has("marathon"):
 		Game.start_marathon(int(_args.marathon))
 		target = "res://scenes/menu/MarathonHub.tscn"
@@ -85,6 +95,8 @@ func _net_test() -> void:
 		var game := String(_args.get("net-game", "race"))
 		if game == "race":
 			Net.start_game({"mode": "race", "track": String(_args.get("track", "lumos_ring")), "laps": int(_args.get("laps", "1"))})
+		elif game == "party":
+			Net.start_game({"mode": "party", "board": String(_args.get("net-board", "meadow")), "rounds": int(_args.get("net-rounds", "5")), "pmode": String(_args.get("party-mode", "classic"))})
 		else:
 			Net.start_game({"mode": "minigame", "id": game})
 	else:

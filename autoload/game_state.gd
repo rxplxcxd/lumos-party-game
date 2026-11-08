@@ -16,74 +16,113 @@ const CPU_LEVELS := ["Leicht", "Normal", "Profi"]
 
 const BOARDS := [
 	{"id": "dungeon", "name": "Dungeon Deep", "desc": "Fackeln, Fallen und ein Lavasee mit fahrender Plattform. Skelette bewachen das Tor.", "music": "board_dungeon"},
-	{"id": "pirates", "name": "Pirates Cove", "desc": "Sonnige Bucht mit Planken-Katapulten, Schiffen und einem gierigen Händler.", "music": "board_pirates"},
-	{"id": "sky", "name": "Sky Kingdom", "desc": "Schwebende Inseln, eine Zugbrücke, die sich jede Runde dreht, und Wolken-Kanonen.", "music": "board_sky"},
+	{"id": "pirates", "name": "Sonnige Palmen-Bucht", "desc": "Tropenbucht mit Planken-Katapulten, verspielten Delfinen und einer Sandbank, die bei Ebbe auftaucht.", "music": "board_pirates"},
+	{"id": "sky", "name": "Sternen-Wolkenland", "desc": "Flauschige Wolkeninseln, Regenbögen, Zugbrücken und Wolken-Kanonen.", "music": "board_sky"},
 	{"id": "graveyard", "name": "Geisterfriedhof", "desc": "Mondlicht, Bodennebel und ein Geister-Taxi, das dich vor- oder zurückfliegt. Die Geisterbrücke erscheint nur in ungeraden Runden.", "music": "board_dungeon"},
 	{"id": "frost", "name": "Frostdorf", "desc": "Verschneites Dorf mit Eis-Rutschen, Schlittenbahn und einem See, der in geraden Runden zufriert.", "music": "board_sky"},
-	{"id": "station", "name": "Orbit-Station", "desc": "Raumstation über einem Ringplaneten: Warp-Pads, Raketenstarts und Luftschleusen, die abwechselnd öffnen.", "music": "board_sky"},
+	{"id": "station", "name": "Sternen-Sternwarte", "desc": "Gemütliche Sternwarte auf einer schwebenden Wiese: Kometen-Pads, Raketen und Sternenbrücken.", "music": "board_sky"},
+	{"id": "glowforest", "name": "Glühwürmchen-Zauberwald", "desc": "Tag und Nacht wechseln jede Runde – nachts leuchten die Pilze und ein geheimer Pilzpfad öffnet sich.", "music": "board_dungeon"},
+	{"id": "meadow", "name": "Wuschel-Wiesen", "desc": "Weiche Hügel, wuschelige Schäfchen, Pusteblumen-Flüge und Duell-Felder.", "music": "board_pirates"},
+	{"id": "cake", "name": "Zuckerback-Torte", "desc": "Ein Spielbrett auf einer riesigen Torte: Schoko-Rutschen, Sahne-Spritzer und Kirsch-Lifte.", "music": "board_sky"},
 ]
 
 const MINIGAMES := [
-	{"id": "plank_panic", "name": "Plank-Panic", "scene": "res://scenes/minigames/PlankPanic.tscn", "kind": "survival",
+	{"id": "plank_panic", "name": "Plank-Panic", "scene": "res://scenes/minigames/PlankPanic.tscn", "kind": "survival", "cats": ["ffa", "2v2"],
 		"desc": "Die morsche Planke über dem Haifischbecken bricht Stück für Stück. Schubse die anderen ins Wasser!",
 		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
-	{"id": "dungeon_drop", "name": "Dungeon Drop", "scene": "res://scenes/minigames/DungeonDrop.tscn", "kind": "survival",
+	{"id": "dungeon_drop", "name": "Dungeon Drop", "scene": "res://scenes/minigames/DungeonDrop.tscn", "kind": "survival", "cats": ["ffa", "2v2", "duel"],
 		"desc": "Steinplatten brechen 1,5 Sekunden nach dem Betreten ein. Bleib in Bewegung oder fall in die Lava!",
 		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
-	{"id": "kart_bowling", "name": "Kart-Bowling", "scene": "res://scenes/minigames/KartBowling.tscn", "kind": "survival",
+	{"id": "kart_bowling", "name": "Kart-Bowling", "scene": "res://scenes/minigames/KartBowling.tscn", "kind": "survival", "cats": ["ffa", "2v2"],
 		"desc": "Riesige Dungeon-Felsen rollen durch die Arena. Weiche aus und rempel Gegner mit Turbo in die Bahn!",
 		"controls": "Stick: Lenken · A: Gas · B: Turbo-Rempler"},
-	{"id": "treasure_zipline", "name": "Schatz-Seilbahn", "scene": "res://scenes/minigames/TreasureZipline.tscn", "kind": "score",
+	{"id": "treasure_zipline", "name": "Schatz-Seilbahn", "scene": "res://scenes/minigames/TreasureZipline.tscn", "kind": "score", "cats": ["ffa", "2v2"],
 		"desc": "Sause an der Seilbahn über die Schlucht. Spring im richtigen Moment ab, um Schatzkisten zu schnappen!",
 		"controls": "A: Absprung / Greifen · Stick: Seil wechseln"},
-	{"id": "ghost_castle", "name": "Geister-Schloss Schwindel", "scene": "res://scenes/minigames/GhostCastle.tscn", "kind": "race",
+	{"id": "ghost_castle", "name": "Geister-Schloss Schwindel", "scene": "res://scenes/minigames/GhostCastle.tscn", "kind": "race", "cats": ["ffa", "2v2", "duel"],
 		"desc": "Stockfinster! Nur die Blitze zeigen kurz den sicheren Weg durchs Geisterschloss. Merk ihn dir!",
 		"controls": "Stick: Laufen · A: Springen"},
-	{"id": "barrel_chaos", "name": "Fässer-Chaos", "scene": "res://scenes/minigames/BarrelChaos.tscn", "kind": "score",
+	{"id": "barrel_chaos", "name": "Fässer-Chaos", "scene": "res://scenes/minigames/BarrelChaos.tscn", "kind": "score", "cats": ["ffa", "2v2"],
 		"desc": "Der Kapitän versteckt den Schatz in einem tanzenden Fass. Folge ihm mit den Augen und spring ins richtige!",
 		"controls": "Stick: Laufen · A: Ins Fass springen"},
-	{"id": "lava_surf", "name": "Lavastrom-Surfen", "scene": "res://scenes/minigames/LavaSurf.tscn", "kind": "score",
+	{"id": "lava_surf", "name": "Lavastrom-Surfen", "scene": "res://scenes/minigames/LavaSurf.tscn", "kind": "score", "cats": ["ffa", "2v2"],
 		"desc": "Surfe auf deinem Floß den Lavastrom hinab, sammle Edelsteine und boxe Gegner vom Floß!",
 		"controls": "Stick: Steuern · B: Boxhandschuh · A: Hüpfen"},
-	{"id": "tower_balance", "name": "Turm-Balancieren", "scene": "res://scenes/minigames/TowerBalance.tscn", "kind": "score",
+	{"id": "tower_balance", "name": "Turm-Balancieren", "scene": "res://scenes/minigames/TowerBalance.tscn", "kind": "score", "cats": ["ffa", "duel"],
 		"desc": "Staple wackelige Dungeon-Blöcke zum höchsten Turm – aber der Wind dreht ständig!",
 		"controls": "A: Block fallen lassen"},
-	{"id": "hot_bomb", "name": "Bomben-Heißer-Hut", "scene": "res://scenes/minigames/HotBomb.tscn", "kind": "survival",
+	{"id": "hot_bomb", "name": "Bomben-Heißer-Hut", "scene": "res://scenes/minigames/HotBomb.tscn", "kind": "survival", "cats": ["ffa"],
 		"desc": "Die Kanonenkugel tickt! Wirf sie schnell weiter – wer sie beim Knall hält, fliegt spektakulär in die Luft.",
 		"controls": "Stick: Laufen/Zielen · B: Werfen"},
-	{"id": "slime_sprint", "name": "Schleim-Spur Sprint", "scene": "res://scenes/minigames/SlimeSprint.tscn", "kind": "race",
+	{"id": "slime_sprint", "name": "Schleim-Spur Sprint", "scene": "res://scenes/minigames/SlimeSprint.tscn", "kind": "race", "cats": ["ffa", "2v2", "duel"],
 		"desc": "Sprinte durch den Parcours! Schleimpfützen sind glitschig und Pendel-Fallen schwingen gnadenlos.",
 		"controls": "Stick: Laufen · A: Springen"},
-	{"id": "coin_rain", "name": "Münzregen", "scene": "res://scenes/minigames/CoinRain.tscn", "kind": "score",
+	{"id": "coin_rain", "name": "Münzregen", "scene": "res://scenes/minigames/CoinRain.tscn", "kind": "score", "cats": ["coin", "ffa", "2v2", "duel"],
 		"desc": "Münzen, Sterne – und Bomben regnen vom Himmel! Schnapp dir die meisten Münzen und schubse Gegner, damit sie welche verlieren.",
 		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
-	{"id": "sumo_shove", "name": "Sumo-Schubser", "scene": "res://scenes/minigames/SumoShove.tscn", "kind": "survival", "online": true,
+	{"id": "sumo_shove", "name": "Sumo-Schubser", "scene": "res://scenes/minigames/SumoShove.tscn", "kind": "survival", "online": true, "cats": ["ffa", "2v2", "duel"],
 		"desc": "Die runde Plattform über dem Meer schrumpft! Doppelt starke Schubser – wer zuletzt oben steht, gewinnt.",
 		"controls": "Stick: Laufen · A: Springen · B: Super-Schubser"},
-	{"id": "snowball_fight", "name": "Schneeball-Schlacht", "scene": "res://scenes/minigames/SnowballFight.tscn", "kind": "score",
+	{"id": "snowball_fight", "name": "Schneeball-Schlacht", "scene": "res://scenes/minigames/SnowballFight.tscn", "kind": "score", "cats": ["ffa", "2v2"],
 		"desc": "Verschanz dich hinter Schneemännern und triff die anderen! Am Schneehaufen lädt Munition schneller nach.",
 		"controls": "Stick: Laufen · A: Springen · B: Werfen"},
-	{"id": "color_chaos", "name": "Farb-Chaos", "scene": "res://scenes/minigames/ColorChaos.tscn", "kind": "score",
+	{"id": "color_chaos", "name": "Farb-Chaos", "scene": "res://scenes/minigames/ColorChaos.tscn", "kind": "score", "cats": ["ffa", "2v2"],
 		"desc": "Jedes Feld, über das du läufst, wird in deiner Farbe eingefärbt. Farbbomben färben ganze Bereiche!",
 		"controls": "Stick: Laufen · A: Springen · B: Schubsen (betäubt)"},
-	{"id": "hammer_hop", "name": "Hammer-Hüpfen", "scene": "res://scenes/minigames/HammerHop.tscn", "kind": "survival",
+	{"id": "hammer_hop", "name": "Hammer-Hüpfen", "scene": "res://scenes/minigames/HammerHop.tscn", "kind": "survival", "cats": ["ffa", "1v3"],
 		"desc": "Ein Riesenhammer kreist über den Turm – spring rechtzeitig! Später kommt ein hoher Balken dazu: darunter bloß nicht springen.",
 		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
-	{"id": "fish_catch", "name": "Fischfang", "scene": "res://scenes/minigames/FishCatch.tscn", "kind": "score",
+	{"id": "fish_catch", "name": "Fischfang", "scene": "res://scenes/minigames/FishCatch.tscn", "kind": "score", "cats": ["ffa", "duel", "coin"],
 		"desc": "Steuere deinen Schwimmer zu den Fisch-Schatten. Taucht er ab, sofort A! Goldfische bringen 6 Punkte – Stiefel nichts.",
 		"controls": "Stick: Schwimmer bewegen · A: Anschlagen"},
-	{"id": "meteor_dodge", "name": "Meteor-Ausweichen", "scene": "res://scenes/minigames/MeteorDodge.tscn", "kind": "survival",
+	{"id": "meteor_dodge", "name": "Meteor-Ausweichen", "scene": "res://scenes/minigames/MeteorDodge.tscn", "kind": "survival", "cats": ["ffa", "1v3"],
 		"desc": "Auf dem Mond regnen Meteore! Rote Kreise zeigen den Einschlag – und manche zielen direkt auf dich.",
 		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
-	{"id": "rhythm_dance", "name": "Rhythmus-Tanz", "scene": "res://scenes/minigames/RhythmDance.tscn", "kind": "score",
+	{"id": "rhythm_dance", "name": "Rhythmus-Tanz", "scene": "res://scenes/minigames/RhythmDance.tscn", "kind": "score", "cats": ["ffa", "2v2"],
 		"desc": "Schnipp den Stick genau im Takt in Pfeilrichtung oder drück A! PERFEKT gibt 3 Punkte, Serien geben Bonus.",
 		"controls": "Stick: Richtung schnippen · A: A-Note"},
-	{"id": "minigolf_duel", "name": "Minigolf-Duell", "scene": "res://scenes/minigames/MinigolfDuel.tscn", "kind": "score",
+	{"id": "minigolf_duel", "name": "Minigolf-Duell", "scene": "res://scenes/minigames/MinigolfDuel.tscn", "kind": "score", "cats": ["ffa", "duel"],
 		"desc": "Alle putten gleichzeitig! Wer zuerst einlocht, kassiert 4 Punkte. Pilz-Bumper schleudern Bälle quer über die Bahn.",
 		"controls": "Stick: Zielen · A halten: Kraft laden · loslassen: Schlag"},
-	{"id": "balloon_battle", "name": "Ballon-Kart-Battle", "scene": "res://scenes/minigames/BalloonBattle.tscn", "kind": "survival",
+	{"id": "balloon_battle", "name": "Ballon-Kart-Battle", "scene": "res://scenes/minigames/BalloonBattle.tscn", "kind": "survival", "cats": ["ffa", "2v2"],
 		"desc": "Platze die Ballons der anderen per Turbo-Rempler und klau sie dir! Item-Boxen geben Torten-Kanonen.",
 		"controls": "Stick: Lenken · A: Gas · B: Turbo-Rempler · X: Torte"},
+	{"id": "flower_rush", "name": "Blumen-Farbenrausch", "scene": "res://scenes/minigames/FlowerRush.tscn", "kind": "survival", "online": true, "cats": ["ffa"],
+		"desc": "Das Vögelchen zwitschert eine Farbe – flitz aufs passende Blütenbeet, bevor die anderen in den Teich sinken!",
+		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
+	{"id": "plush_balls", "name": "Kuschel-Bälle-Hüpfen", "scene": "res://scenes/minigames/PlushBalls.tscn", "kind": "survival", "online": true, "cats": ["ffa"],
+		"desc": "Riesige Plüschbälle kullern über das Wolkenkissen. Kleine überspringen, vor großen flüchten!",
+		"controls": "Stick: Laufen · A: Springen"},
+	{"id": "sleepy_stars", "name": "Schlummer-Sternchen-Tanz", "scene": "res://scenes/minigames/SleepyStars.tscn", "kind": "survival", "online": true, "cats": ["ffa"],
+		"desc": "Die Wiesentiere singen eine Melodie vor – spiel sie fehlerfrei mit dem Stick nach, sonst schläfst du ein!",
+		"controls": "Stick/Steuerkreuz: oben · rechts · unten · links"},
+	{"id": "pumpkin_toss", "name": "Kürbis-Weitwurf", "scene": "res://scenes/minigames/PumpkinToss.tscn", "kind": "score", "online": true, "cats": ["ffa", "duel"],
+		"desc": "Stick kreisen lassen für Schwung und A drücken, wenn der Pfeil nach vorn zeigt. Wer wirft den Kürbis am weitesten?",
+		"controls": "Stick kreisen / B hämmern: Schwung · A: Loslassen"},
+	{"id": "tug_of_war", "name": "Seilziehen am Pilzbach", "scene": "res://scenes/minigames/TugOfWar.tscn", "kind": "score", "online": true, "cats": ["1v3", "2v2"],
+		"desc": "A hämmern zum Ziehen – im Kraft-Takt doppelt! Wer zuerst in den Bach gezogen wird, verliert.",
+		"controls": "A: Ziehen (im Takt = doppelt)"},
+	{"id": "honey_chase", "name": "Honigbären-Flucht", "scene": "res://scenes/minigames/HoneyChase.tscn", "kind": "score", "online": true, "cats": ["1v3"],
+		"desc": "Das Solo flieht im Honigwägelchen und legt Honigfallen, das Trio reitet die Riesenbiene hinterher!",
+		"controls": "Solo: Stick Spur · A Sprung · B Honigfalle — Trio: A Tempo · Stick Spur"},
+	{"id": "hollow_hide", "name": "Baumhöhlen-Versteck", "scene": "res://scenes/minigames/HollowHide.tscn", "kind": "score", "online": true, "cats": ["1v3"],
+		"desc": "Das Solo versteckt sich und wirbelt die Baumstümpfe durcheinander. Folgt ihm das Trio mit den Augen?",
+		"controls": "Solo: Stick wirbeln — Trio: Stick wählen · A tippen"},
+	{"id": "rail_express", "name": "Schienen-Express", "scene": "res://scenes/minigames/RailExpress.tscn", "kind": "race", "online": true, "cats": ["2v2"],
+		"desc": "Einer pumpt, einer springt: Bringt eure quietschbunte Lore als Erste über die Schranken ins Ziel!",
+		"controls": "Pumper: A hämmern · Springer: A springen"},
+	{"id": "star_hoops", "name": "Sternen-Korbschlacht", "scene": "res://scenes/minigames/StarHoops.tscn", "kind": "score", "online": true, "cats": ["2v2"],
+		"desc": "Sternenbälle schnappen und in den Wolkenkorb der anderen werfen. Von weit weg zählt doppelt!",
+		"controls": "Stick: Laufen · B: Werfen / Schubsen"},
+	{"id": "lucky_bells", "name": "Glücks-Glöckchen", "scene": "res://scenes/minigames/LuckyBells.tscn", "kind": "score", "online": true, "cats": ["luck", "coin", "ffa"],
+		"desc": "Drei Walzen, drei Drehungen: Stoppe Kirschen, Glocken, Kleeblätter, Sterne und Kronen – drei Gleiche läuten groß ab!",
+		"controls": "A: Walze stoppen"},
+	{"id": "chest_sniff", "name": "Schatzkisten-Schnüffeln", "scene": "res://scenes/minigames/ChestSniff.tscn", "kind": "score", "online": true, "cats": ["luck", "ffa"],
+		"desc": "Reihum eine Kiste wählen: Gold, Münzen – oder der Kistengeist ruft Buh!",
+		"controls": "Stick: Kiste wählen · A: Nehmen"},
+	{"id": "boss_cloud", "name": "Boss: Pustebacke, der Wolkendrache", "scene": "res://scenes/minigames/BossCloud.tscn", "kind": "score", "online": true, "cats": ["boss"],
+		"desc": "Gemeinsam gegen den Wolkendrachen! Sonnenbälle sammeln und werfen – wer am meisten trifft, gewinnt.",
+		"controls": "Stick: Laufen · A: Springen · B: Werfen"},
 ]
 
 const TRACKS := [
@@ -105,8 +144,9 @@ const CUPS := [
 const GP_POINTS := [15, 12, 10, 8, 6, 4, 2, 1]
 const PARTY_MODES := [
 	{"id": "classic", "name": "Klassisch", "desc": "Sterne sammeln, Münzen horten, Minispiele nach jeder Runde."},
-	{"id": "blitz", "name": "Blitz-Party", "desc": "Doppelt würfeln, Sterne kosten nur 10 Münzen, 20 Startmünzen – schnelle Runden voller Chaos."},
-	{"id": "team", "name": "Team-Party (2 gegen 2)", "desc": "Rot + Grün gegen Blau + Gelb: Sterne und Münzen zählen fürs Team."},
+	{"id": "pro", "name": "Profi-Regeln", "desc": "12 Runden, angekündigte Bonussterne (Abenteuer, Flitzer, Trödler), Minispiele per Abstimmung, Laden mit begrenztem Vorrat, Stern-Duelle."},
+	{"id": "blitz", "name": "Blitz-Party", "desc": "5 Runden, alle starten mit 50 Münzen, einem Stern und einem Doppelwürfel – Endspurt ab der ersten Runde."},
+	{"id": "team", "name": "Team-Party (2 gegen 2)", "desc": "Rot + Grün gegen Blau + Gelb: Teampartner teilen sich Münzen, Sterne und Items."},
 ]
 const RECORDS_PATH := "user://records.cfg"
 const SETTINGS_PATH := "user://settings.cfg"
@@ -124,6 +164,8 @@ var gp: Dictionary = {}           # {cup, tracks, index, points: {name: pts}, co
 var marathon: Dictionary = {}     # {games: [ids], index, points: [4]}
 var mode := "menu"          # menu | party | free_play | race | marathon
 var pending_minigame := ""
+## Kategorie/Teams für das nächste Minispiel: {cat, teams, solo, active}
+var minigame_setup: Dictionary = {}
 var last_results: Dictionary = {}
 var free_play_queue: Array = []
 var is_touch_device := false
@@ -146,7 +188,7 @@ func reset_players(human_count := 1) -> void:
 func new_player(idx: int, hero_id: String, cpu: bool, cpu_level: int) -> Dictionary:
 	return {
 		"idx": idx, "hero": hero_id, "name": hero(hero_id).name, "color": SLOT_COLORS[idx],
-		"cpu": cpu, "cpu_level": cpu_level, "device": idx, "remote": false,
+		"cpu": cpu, "cpu_level": cpu_level, "device": idx, "remote": false, "last_color": "blue",
 		"coins": 10, "stars": 0, "space": -1, "items": [], "minigame_wins": 0, "coins_max": 10,
 		"swaps": 0, "last_roll": 0,
 	}
@@ -195,6 +237,12 @@ func add_coins(i: int, delta: int) -> int:
 	p.coins_max = maxi(p.coins_max, p.coins)
 	var real := int(p.coins) - before
 	EventBus.coins_changed.emit(i, p.coins, real)
+	# Team-Regeln: Teampartner teilen sich die Kasse
+	if is_team_mode():
+		var mate: Dictionary = players[(i + 2) % 4]
+		mate.coins = p.coins
+		mate.coins_max = maxi(int(mate.coins_max), int(mate.coins))
+		EventBus.coins_changed.emit((i + 2) % 4, mate.coins, real)
 	return real
 
 
@@ -202,6 +250,9 @@ func add_stars(i: int, delta: int) -> void:
 	var p: Dictionary = players[i]
 	p.stars = maxi(0, int(p.stars) + delta)
 	EventBus.stars_changed.emit(i, p.stars, delta)
+	if is_team_mode():
+		players[(i + 2) % 4].stars = p.stars
+		EventBus.stars_changed.emit((i + 2) % 4, p.stars, delta)
 
 
 ## Rangliste (Sterne, dann Münzen). Gibt Spielerindizes in Platzierungsreihenfolge zurück.
@@ -256,20 +307,41 @@ func team_ranking() -> Array[int]:
 	return [0, 1] if co[0] >= co[1] else [1, 0]
 
 
+## Brett-Zufall (Ereignisse, Stern, Partner, Roulette): online deterministisch auf allen Geräten.
+var prng := RandomNumberGenerator.new()
+
+
 func start_party(board_id: String, rounds: int, party_mode := "classic") -> void:
-	var start_coins := 20 if party_mode == "blitz" else 10
+	var start_coins := 50 if party_mode == "blitz" else 10
+	if party_mode == "pro":
+		rounds = 12
+	elif party_mode == "blitz":
+		rounds = 5
 	for p in players:
 		p.coins = start_coins
-		p.stars = 0
+		p.stars = 1 if party_mode == "blitz" else 0
 		p.space = -1
-		p.items = []
+		p.items = ["double_dice"] if party_mode == "blitz" else []
+		p.dice_total = 0
+		p.events_landed = 0
+		p.last_color = "blue"
 		p.minigame_wins = 0
 		p.coins_max = start_coins
 	party = {
 		"board": board_id, "max_rounds": rounds, "round": 1, "turn": 0, "phase": "intro", "mode": party_mode,
-		"star_space": -1, "minigames_played": [], "events": {}, "first_intro_done": false,
+		"star_space": -1, "minigames_played": [], "events": {}, "first_intro_done": false, "dseq": 0,
 	}
+	# Brett-Zufall: online auf allen Geräten identisch (gleicher Startwert aus der Raum-Konfiguration)
+	if Net.in_game():
+		prng.seed = int(Net.game_cfg.get("seed", 1)) ^ 0x5eed
+	else:
+		prng.randomize()
 	mode = "party"
+
+
+## Darf dieses Minispiel gerade laufen? (Online nur netzwerkfähige Spiele.)
+func minigame_allowed(m: Dictionary) -> bool:
+	return not Net.in_game() or bool(m.get("online", false))
 
 
 # --- Grand Prix ---------------------------------------------------------------

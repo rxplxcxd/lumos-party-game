@@ -2,6 +2,8 @@ extends MinigameBase
 ## Hammer-Hüpfen: Ein riesiger Holzhammer-Balken kreist knapp über dem Boden einer runden
 ## Turmplattform – spring im richtigen Moment! Er wird schneller, wechselt die Richtung, und ab der
 ## Hälfte kreist ein zweiter, hoher Balken mit, unter dem man NICHT springen darf.
+## 1 gegen 3: Das Solo sitzt oben auf dem Getriebeturm und steuert Tempo (Stick) und Drehrichtung (A),
+## das Trio muss 35 Sekunden durchhalten.
 
 const RADIUS := 8.0
 const ARM_LOW_Y := 0.45
@@ -88,16 +90,45 @@ func _add_arm(angle: float, high: bool) -> void:
 		Juice.pop_in(pivot, 0.5)
 
 
+var _solo_flip_cd := 0.0
+
+
+func spawn_players() -> void:
+	super.spawn_players()
+	if category == "1v3":
+		time_limit = 35.0
+		var sav := avatars[solo_slot] as PartyAvatar
+		sav.set_physics_process(false)
+		sav.position = Vector3(0, 3.55, 0)
+		sav.rig.face_now(Vector3(0, 0, 1))
+		sav.rig.play("sit_chair")
+		var crank := WorldKit.cylinder(world, 0.12, 1.4, Vector3(0.6, 3.6, 0.3), Color("#ffd23f"), false)
+		crank.rotation.z = PI * 0.5
+		crank.name = "Crank"
+
+
 func on_start() -> void:
 	for av in avatars:
 		(av as PartyAvatar).can_shove = true
 		(av as PartyAvatar).rig.surface = "wood"
+	if category == "1v3":
+		(avatars[solo_slot] as PartyAvatar).can_move = false
 
 
 func on_tick(delta: float) -> void:
 	var prog := 1.0 - time_left / time_limit
 	_speed = lerpf(1.25, 3.1, prog)
 	_flip_t -= delta
+	if category == "1v3":
+		# Solo bestimmt das Tempo (1,2–3,4) und darf alle 1,5 s die Richtung wechseln
+		var mv := InputHub.move(solo_slot)
+		_speed = lerpf(1.2, 3.4, clampf(maxf(mv.length(), 0.25 + prog * 0.4), 0.0, 1.0))
+		_flip_t = 99.0
+		_solo_flip_cd -= delta
+		if _solo_flip_cd <= 0.0 and InputHub.pressed(solo_slot, "a"):
+			_solo_flip_cd = 1.5
+			_flip_t = 0.0
+			(avatars[solo_slot] as PartyAvatar).rig.play("interact", 0.05, 1.6, true)
 	if _flip_t <= 0.0:
 		_flip_t = randf_range(6.0, 10.0)
 		_dir = -_dir
@@ -126,7 +157,7 @@ func _check_hits(a: Dictionary) -> void:
 	var high: bool = a.high
 	for i in 4:
 		var av := avatars[i] as PartyAvatar
-		if not alive[i] or not av.alive:
+		if not alive[i] or not av.alive or i == solo_slot:
 			continue
 		var p := av.global_position
 		var r := Vector2(p.x, p.z).length()
@@ -177,8 +208,39 @@ func _bonk(i: int, a: Dictionary) -> void:
 		av.visible = false)
 
 
+## 1 gegen 3: Das Trio gewinnt, wenn bei Zeitablauf noch jemand steht.
+func team_result() -> int:
+	if category == "1v3":
+		for i in active_slots():
+			if i != solo_slot and alive[i]:
+				return 1
+		return 0
+	return super.team_result()
+
+
+func check_end() -> bool:
+	if category == "1v3":
+		for i in active_slots():
+			if i != solo_slot and alive[i]:
+				return false
+		return true
+	return super.check_end()
+
+
 func cpu_think(slot: int, delta: float) -> void:
 	var av := avatars[slot] as PartyAvatar
+	if slot == solo_slot:
+		# Solo-KI: Vollgas und Richtungswechsel, kurz bevor der Balken jemanden erreicht hätte
+		var held := {}
+		for a in arms:
+			for i in active_slots():
+				if i == solo_slot or not alive[i]:
+					continue
+				var gap := wrapf((_ang((avatars[i] as Node3D).global_position) - float(a.angle)) * _dir, 0.0, TAU)
+				if gap / maxf(_speed, 0.1) > 0.9 and gap / maxf(_speed, 0.1) < 1.0 and randf() < 0.06 * (Game.players[slot].cpu_level + 1):
+					held["a"] = true
+		InputHub.set_virtual(slot, Vector2(0.4 + 0.3 * Game.players[slot].cpu_level, 0), held)
+		return
 	if not alive[slot]:
 		InputHub.set_virtual(slot, Vector2.ZERO)
 		return

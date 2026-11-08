@@ -111,6 +111,9 @@ func _on_msg(_from: String, msg: Dictionary) -> void:
 			for p in pl:
 				places.append(int(p))
 			if places.size() == 4:
+				var fsc: Array = msg.get("sc", [])
+				for fi in mini(4, fsc.size()):
+					game.scores[fi] = float(fsc[fi])
 				game.forced_placements = places
 				game.end_game()
 

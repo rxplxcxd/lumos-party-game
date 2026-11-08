@@ -235,6 +235,14 @@ const SVG_ICONS := {
 	"trophy": "<path d='M18 8 H46 V22 C46 32 40 38 32 38 C24 38 18 32 18 22 Z' fill='#C'/><path d='M18 14 H8 C8 24 12 28 18 28 M46 14 H56 C56 24 52 28 46 28' fill='none' stroke='#C' stroke-width='5'/><rect x='28' y='38' width='8' height='10' fill='#C'/><rect x='18' y='48' width='28' height='8' rx='3' fill='#C'/>",
 	"bolt": "<path d='M36 4 L12 36 H30 L26 60 L52 26 H34 Z' fill='#C' stroke-linejoin='round'/>",
 	"dice": "<rect x='8' y='8' width='48' height='48' rx='10' fill='#C'/><circle cx='22' cy='22' r='5' fill='#1a0833'/><circle cx='42' cy='42' r='5' fill='#1a0833'/><circle cx='32' cy='32' r='5' fill='#1a0833'/>",
+	"cherry": "<path d='M22 44 C24 30 30 18 44 8 M42 44 C40 32 40 22 44 8' fill='none' stroke='#C' stroke-width='4' stroke-linecap='round'/><circle cx='20' cy='46' r='12' fill='#C'/><circle cx='44' cy='46' r='12' fill='#C'/>",
+	"bell": "<path d='M32 6 C20 6 14 16 14 28 V40 L8 48 H56 L50 40 V28 C50 16 44 6 32 6 Z' fill='#C'/><circle cx='32' cy='54' r='6' fill='#C'/>",
+	"clover": "<circle cx='22' cy='22' r='12' fill='#C'/><circle cx='42' cy='22' r='12' fill='#C'/><circle cx='22' cy='40' r='12' fill='#C'/><circle cx='42' cy='40' r='12' fill='#C'/><path d='M32 32 L40 60' stroke='#C' stroke-width='5' stroke-linecap='round'/>",
+	"coin": "<circle cx='32' cy='32' r='26' fill='#C'/><circle cx='32' cy='32' r='17' fill='none' stroke='#FFFFFF' stroke-opacity='0.55' stroke-width='4'/><rect x='29' y='20' width='6' height='24' rx='3' fill='#FFFFFF' fill-opacity='0.6'/>",
+	"mushroom": "<path d='M6 34 C6 16 18 6 32 6 C46 6 58 16 58 34 Z' fill='#C'/><rect x='22' y='32' width='20' height='24' rx='8' fill='#C' fill-opacity='0.65'/><circle cx='22' cy='20' r='5' fill='#FFFFFF' fill-opacity='0.8'/><circle cx='42' cy='22' r='4' fill='#FFFFFF' fill-opacity='0.8'/>",
+	"ghost": "<path d='M12 58 V28 C12 14 20 6 32 6 C44 6 52 14 52 28 V58 L44 52 L38 58 L32 52 L26 58 L20 52 Z' fill='#C'/><circle cx='25' cy='28' r='4' fill='#000000' fill-opacity='0.7'/><circle cx='39' cy='28' r='4' fill='#000000' fill-opacity='0.7'/>",
+	"crown": "<path d='M6 22 L18 34 L32 12 L46 34 L58 22 L52 52 H12 Z' fill='#C' stroke-linejoin='round'/>",
+	"chest": "<rect x='6' y='26' width='52' height='30' rx='4' fill='#C'/><path d='M6 28 C6 14 16 10 32 10 C48 10 58 14 58 28 Z' fill='#C' fill-opacity='0.8'/><rect x='28' y='26' width='8' height='12' rx='2' fill='#FFFFFF' fill-opacity='0.7'/>",
 }
 
 static var _icon_cache := {}

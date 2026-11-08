@@ -1,12 +1,15 @@
 class_name OnlinePage
 extends Control
 ## Online-Lobby im Hauptmenü: Raum erstellen/beitreten per Raumcode, Figur wählen, bereit melden,
-## Host wählt Spiel (Nitro-Dash-Rennen oder Sumo-Schubser) und startet für bis zu 4 Geräte.
+## Host wählt Spiel (Lumos Party auf dem Brett, Nitro-Dash-Rennen oder ein netzwerkfähiges Minispiel)
+## und startet für bis zu 4 Geräte. Freie Plätze übernehmen CPUs (vom Host gesteuert).
 
-const GAMES := [
-	{"mode": "race", "name": "Nitro Dash – Online-Rennen"},
-	{"mode": "minigame", "id": "sumo_shove", "name": "Minispiel: Sumo-Schubser"},
-]
+const ROUNDS := [5, 10, 15, 20]
+
+var GAMES: Array = []
+var _board_idx := 0
+var _rounds_idx := 1
+var _pmode_idx := 0
 
 var menu: Node
 var _v: VBoxContainer
@@ -28,6 +31,11 @@ var _ready := false
 
 func build(m: Node) -> OnlinePage:
 	menu = m
+	GAMES = [{"mode": "party", "name": "Lumos Party – Brettspiel"}, {"mode": "race", "name": "Nitro Dash – Online-Rennen"},
+		{"mode": "minigame", "id": "_random", "name": "Minispiel: Zufall!"}]
+	for mg in Game.MINIGAMES:
+		if bool(mg.get("online", false)) and not ("boss" in (mg.get("cats", []) as Array) and (mg.get("cats", []) as Array).size() == 1):
+			GAMES.append({"mode": "minigame", "id": mg.id, "name": "Minispiel: " + String(mg.name)})
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var panel := UI.panel()
@@ -156,10 +164,27 @@ func _build_room() -> void:
 	ls.changed.connect(func(i: int) -> void: _laps_idx = i)
 	var laps_row := _row("Runden", ls)
 	_host_box.add_child(laps_row)
-	gs.changed.connect(func(i: int) -> void:
+	var bs := Stepper.new().setup(Game.BOARDS.map(func(b: Dictionary) -> String: return b.name), _board_idx, 380, Color("#ff9f1a"))
+	bs.changed.connect(func(i: int) -> void: _board_idx = i)
+	var board_row := _row("Brett", bs)
+	_host_box.add_child(board_row)
+	var rs := Stepper.new().setup(ROUNDS.map(func(r: int) -> String: return "%d Runden" % r), _rounds_idx, 220, Color("#ff9f1a"))
+	rs.changed.connect(func(i: int) -> void: _rounds_idx = i)
+	var rounds_row := _row("Länge", rs)
+	_host_box.add_child(rounds_row)
+	var ms := Stepper.new().setup(Game.PARTY_MODES.map(func(pm: Dictionary) -> String: return pm.name), _pmode_idx, 320, Color("#ff9f1a"))
+	ms.changed.connect(func(i: int) -> void: _pmode_idx = i)
+	var mode_row := _row("Regeln", ms)
+	_host_box.add_child(mode_row)
+	var vis := func(i: int) -> void:
 		_game_idx = i
 		track_row.visible = GAMES[i].mode == "race"
-		laps_row.visible = GAMES[i].mode == "race")
+		laps_row.visible = GAMES[i].mode == "race"
+		board_row.visible = GAMES[i].mode == "party"
+		rounds_row.visible = GAMES[i].mode == "party"
+		mode_row.visible = GAMES[i].mode == "party"
+	gs.changed.connect(vis)
+	vis.call(_game_idx)
 	_start = UI.button("Spiel starten!", Color("#ff4fb8"), 34, 420)
 	_start.custom_minimum_size.y = 70
 	_start.pressed.connect(_start_game)
@@ -177,8 +202,18 @@ func _start_game() -> void:
 	if g.mode == "race":
 		cfg["track"] = Game.TRACKS[_track_idx].id
 		cfg["laps"] = [2, 3, 5][_laps_idx]
+	elif g.mode == "party":
+		cfg["board"] = Game.BOARDS[_board_idx].id
+		cfg["rounds"] = ROUNDS[_rounds_idx]
+		cfg["pmode"] = Game.PARTY_MODES[_pmode_idx].id
 	else:
-		cfg["id"] = g.id
+		var id := String(g.id)
+		if id == "_random":
+			var ids: Array = []
+			for k in range(3, GAMES.size()):
+				ids.append(GAMES[k].id)
+			id = String(ids[randi() % ids.size()])
+		cfg["id"] = id
 	Net.start_game(cfg)
 
 
