@@ -296,10 +296,19 @@ func alive_count() -> int:
 	return n
 
 
+## Online (Owner-Modell): Gehört die Figur diesem Gerät? Nur dann wird über sie entschieden.
+func net_owned(slot: int) -> bool:
+	return net_sync == null or Net.owns_slot(slot)
+
+
 func eliminate(slot: int) -> void:
 	if not alive[slot]:
 		return
+	if not net_owned(slot):
+		return   # der Besitzer meldet das Ausscheiden selbst
 	alive[slot] = false
+	if net_sync:
+		report_score(slot)
 	out_order.append(slot)
 	if slot < badges.size():
 		badges[slot].set_out(true)
@@ -318,7 +327,11 @@ func finish_player(slot: int) -> void:
 
 
 func add_score(slot: int, amount: float, at: Vector3 = Vector3.INF) -> void:
+	if not net_owned(slot):
+		return
 	scores[slot] += amount
+	if net_sync:
+		report_score(slot)
 	if at != Vector3.INF:
 		var txt := ("+%d" % int(amount)) if amount > 0 else ("%d" % int(amount))
 		Juice.float_text(self, at, txt, Color("#7dff9a") if amount > 0 else Color("#ff6b6b"), 90)
@@ -573,7 +586,20 @@ func _on_score_msg(_from: String, msg: Dictionary) -> void:
 	alive[sl] = bool(msg.get("al", true))
 	if was and not alive[sl] and not (sl in out_order):
 		out_order.append(sl)
+		_remote_out(sl)
 	on_remote_score(sl, msg.get("x", {}))
+
+
+## Eine fremde Figur ist laut ihrem Besitzer ausgeschieden: Anzeige nachziehen.
+func _remote_out(sl: int) -> void:
+	if sl < badges.size():
+		badges[sl].set_out(true)
+	var av := avatars[sl] as PartyAvatar
+	if av and av.alive:
+		av.alive = false
+		av.freeze(true)
+		av.rig.react("sad")
+	Audio.sfx("bong", null, -6.0)
 
 
 func _on_host_model_msg(_from: String, msg: Dictionary) -> void:

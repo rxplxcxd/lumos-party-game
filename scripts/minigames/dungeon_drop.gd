@@ -103,7 +103,7 @@ func on_tick(delta: float) -> void:
 			_random_drop_t = lerpf(0.5, 1.4, time_left / time_limit)
 			var ok := tiles.keys().filter(func(k: Vector2i) -> bool: return tiles[k].state == "ok")
 			if ok.size() > 3:
-				_trigger(ok[randi() % ok.size()])
+				_trigger(ok[rng.randi() % ok.size()])
 	# Wackeln & Fallen
 	for k in tiles:
 		var t: Dictionary = tiles[k]

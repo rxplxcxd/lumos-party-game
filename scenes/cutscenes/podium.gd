@@ -7,6 +7,10 @@ extends Cutscene
 ## ctx.ranking: Array[int] Spielerindizes (Party) ODER ctx.entries: [{model, name, color}]
 
 const STAGE := Vector3(0, 0, 90)
+## Letzter Platz: vorne rechts auf der Bühne – deutlich vor und neben den Konfetti-Kanonen (x = ±7,5 / z = 2,5),
+## damit beim Sturz nach vorne nichts ineinander clippt.
+const LOSER_SPOT := Vector3(5.3, 0.7, 2.4)
+const CANNON_X := 7.5
 
 var _rigs: Array[CharacterRig] = []
 
@@ -28,7 +32,7 @@ func run(d: Node, ctx: Dictionary) -> void:
 		if i < 3:
 			r.global_position = STAGE + spots[i] + Vector3.UP * heights[i]
 		else:
-			r.global_position = STAGE + Vector3(6.4, 0.6, 1.6)
+			r.global_position = STAGE + LOSER_SPOT
 		r.face_now(Vector3(0, 0, 1))
 		r.visible = i >= 3
 		_rigs.append(r)
@@ -107,6 +111,8 @@ func _build_stage() -> void:
 	var s := Node3D.new()
 	add_child(s)
 	s.global_position = STAGE
+	# Boden vor der Bühne (dort landet der Letzte) und die Bühne selbst
+	WorldKit.box(s, Vector3(34, 0.2, 20), Vector3(0, -0.1, 4), Color("#3a2a5a"), false)
 	WorldKit.box(s, Vector3(16, 0.6, 8), Vector3(0, 0.3, 0), Color("#5a2a8a"), false)
 	WorldKit.box(s, Vector3(16.4, 0.15, 8.4), Vector3(0, 0.62, 0), Color("#ffcc33"), false)
 	WorldKit.box(s, Vector3(2.4, 2.4, 2.4), Vector3(0, 1.2, 0), Color("#ffcc33"), false)
@@ -171,8 +177,8 @@ func _golden_shower(pos: Vector3) -> void:
 
 
 func _confetti_cannons() -> void:
-	for x in [-7.5, 7.5]:
-		var c := Assets.spawn("pirate/cannon", self, STAGE + Vector3(x, 0.6, 2.5), 0.0, 1.8)
+	for x in [-CANNON_X, CANNON_X]:
+		var c := Assets.spawn("pirate/cannon", self, STAGE + Vector3(x, 0.7, 2.5), 0.0, 1.6)
 		c.look_at(STAGE + Vector3(0, 6, 0), Vector3.UP)
 		c.rotate_object_local(Vector3.UP, PI)
 		Audio.sfx("cannon", c.global_position)
@@ -184,32 +190,42 @@ func _confetti_cannons() -> void:
 func _loser_gag(d: Node, e: Dictionary) -> void:
 	var r := _rigs[3]
 	var pos := r.global_position
-	d.cut(pos + Vector3(-1.5, 1.6, 6.5), pos + Vector3.UP * 1.2, 42.0)
+	d.cut(pos + Vector3(-2.5, 1.8, 7.0), pos + Vector3.UP * 1.2, 42.0)
 	d.subtitle("Und auf dem letzten Platz … %s!" % e.name, 1.4)
+	r.face_now(Vector3(0, 0, 1))
 	r.react("wave")
 	await d.wait(1.2)
-	# Stolpert über die eigenen Füße
-	r.face_now(Vector3(-1, 0, 0))
+	# Stolpert über die eigenen Füße – nach vorne von der Bühne auf den Boden (weg von den Kanonen)
 	r.play("walk", 0.1, 1.0)
 	var tw := r.create_tween()
-	tw.tween_property(r, "global_position", pos + Vector3(0.9, 0, 0.0), 0.5)
+	tw.tween_property(r, "global_position", pos + Vector3(0, 0, 1.4), 0.6)
 	await tw.finished
 	r.react("trip_fall")
 	Audio.sfx("whistle_fall", pos)
+	var land := Vector3(pos.x - 0.4, STAGE.y, STAGE.z + 5.6)
+	var start := r.global_position
+	d.move(land + Vector3(-1.8, 2.4, 6.2), land + Vector3.UP * 0.8, 0.55, 42.0)
 	var tw2 := r.create_tween()
-	tw2.tween_property(r, "global_position", pos + Vector3(2.2, -0.6, 1.4), 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw2.tween_method(func(t: float) -> void:
+		r.global_position = start.lerp(land, t) + Vector3.UP * sin(t * PI) * 0.6, 0.0, 1.0, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await tw2.finished
+	r.global_position = land
 	r.land_impact(1.2)
 	d.shake(0.25)
 	await d.wait(0.8)
 	# … und dann der Amboss
 	var hit_pos := r.global_position
-	var anvil := Assets.spawn("rpg/anvil", self, hit_pos + Vector3.UP * 14.0, 0.0, 1.3)
+	var anvil := Assets.spawn("rpg/anvil", self, hit_pos + Vector3.UP * 14.0, 0.0, 1.2)
+	# Amboss steht mit der Unterseite exakt auf dem Kopf bzw. danach auf der plattgedrückten Figur
+	var ab := _bounds(anvil)
+	var foot := anvil.global_position.y - ab.position.y
 	Audio.sfx("whistle_fall", hit_pos)
-	d.move(hit_pos + Vector3(0, 2.0, 5.5), hit_pos + Vector3.UP * 1.0, 0.6, 40.0)
+	d.move(hit_pos + Vector3(-1.0, 2.2, 6.0), hit_pos + Vector3.UP * 1.0, 0.6, 40.0)
+	var head_y := hit_pos.y + _bounds(r).size.y * 0.9
 	var tw3 := anvil.create_tween()
-	tw3.tween_property(anvil, "global_position", hit_pos + Vector3.UP * 1.1, 0.75).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw3.tween_property(anvil, "global_position", Vector3(hit_pos.x, head_y + foot, hit_pos.z), 0.75).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await tw3.finished
+	anvil.create_tween().tween_property(anvil, "global_position:y", hit_pos.y + 0.42 + foot, 0.08)
 	Audio.sfx("metal_hit", hit_pos)
 	Audio.sfx("bell", hit_pos)
 	Juice.hitstop(0.1)
@@ -224,5 +240,21 @@ func _loser_gag(d: Node, e: Dictionary) -> void:
 	var tw4 := r.pivot.create_tween()
 	tw4.tween_property(r.pivot, "scale", Vector3.ONE, 0.6).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 	r.react("dizzy")
-	anvil.queue_free()
+	var tw5 := anvil.create_tween()
+	tw5.tween_property(anvil, "global_position", anvil.global_position + Vector3(-1.2, 0, 0.6), 0.4).set_trans(Tween.TRANS_BACK)
+	await tw5.finished
 	await d.wait(0.8)
+	anvil.queue_free()
+
+
+## Weltraum-Begrenzungsbox eines Modells (für passgenaues Aufsetzen).
+func _bounds(n: Node3D) -> AABB:
+	var out := AABB()
+	var first := true
+	for mi in Assets.find_meshes(n):
+		var bb := mi.global_transform * mi.get_aabb()
+		out = bb if first else out.merge(bb)
+		first = false
+	if first:
+		return AABB(n.global_position, Vector3(1, 1.6, 1))
+	return out

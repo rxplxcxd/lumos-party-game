@@ -36,6 +36,26 @@ gebündelt, verarbeitete Einträge werden in einem Request gelöscht).
 
 Start: Alle Geräte melden „bereit“, der Host gibt „go“ → gleichzeitiger Countdown.
 
+### Minispiel-Modelle
+* **Owner-Modell** (Standard): Jede Figur wird auf ihrem Gerät simuliert. Gefahren entstehen aus dem gemeinsamen
+  Spiel-Zufall (`rng`, Startwert aus der Raum-Konfiguration), Ausscheiden und Punkte entscheidet nur der Besitzer
+  (`eliminate`/`add_score` → Meldung `sc`). 1-gegen-3-Solo-Steuerungen (Hammer-Hüpfen, Sternschnuppen-Regen)
+  werden zusätzlich vom Solo-Gerät gesendet.
+* **Host-Modell** (`net_model = "host"`): Der Host simuliert alles, Clients schicken nur Eingaben (`in`) und
+  zeigen den Zustand (`gs`) – für Spiele mit gemeinsamen Objekten (Seilziehen, Korbschlacht, Schatzkisten …).
+* **Endergebnis** kommt immer vom Host (`end` mit Platzierungen und Punkten) – alle Geräte verbuchen dasselbe.
+
+### Online-Party (Brett)
+Alle Geräte führen den Brettablauf identisch aus (`Game.prng`, gleicher Startwert). Jede Spieler-Entscheidung –
+Würfel, Wegwahl, Ja/Nein, Glücksrad, Gegnerwahl, Abstimmung – bekommt eine fortlaufende Nummer (`Game.party.dseq`).
+Das Gerät des Spielers (CPUs: Host) entscheidet und sendet `{"k": "bd", "n", "v"}`; die anderen zeigen dieselbe
+Animation und übernehmen genau diesen Wert. Test: `tools/dev/net_test.sh <ordner> party` vergleicht den
+Brettzustand von Host und Client nach jedem Zug.
+
+### Lumos-Athlon (bis 20 Geräte)
+Athlon-Räume (`max = 20`) laufen host-gesteuert: `ath_round` (Herausforderung), `ath_sc` (Münzen der Clients),
+`ath_res` (Rundenergebnis inkl. CPUs). Alle Geräte bewegen die Läufer daraus identisch.
+
 ## Konten
 
 | Umgebung | Anmeldung |

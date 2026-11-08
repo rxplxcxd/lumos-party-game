@@ -12,7 +12,10 @@ const STYLES := {
 		"edge_glow": 1.0, "glow_col": Color(1.0, 0.8, 0.35), "under": Color(0.16, 0.16, 0.2), "wall_a": Color("#2a2c34"), "wall_b": Color("#f2c230"), "wall_emit": 0.45},
 	"snow": {"asphalt": Color(0.48, 0.52, 0.6), "kerb_a": Color(0.2, 0.5, 0.95), "kerb_b": Color(0.97, 0.98, 1.0), "under": Color(0.75, 0.82, 0.92),
 		"wall_a": Color("#2f7de0"), "wall_b": Color("#ffffff"), "edge_glow": 0.4, "glow_col": Color(0.7, 0.9, 1.0)},
-	"space": {"neon": 1.0, "neon_col": Color(0.3, 0.95, 1.0), "under": Color(0.08, 0.08, 0.16), "wall_neon": Color(0.3, 0.9, 1.0)},
+	"space": {"asphalt": Color(0.58, 0.52, 0.78), "kerb_a": Color(1.0, 0.62, 0.78), "kerb_b": Color(0.99, 0.97, 1.0), "under": Color(0.82, 0.78, 0.95),
+		"wall_a": Color("#ffb3c7"), "wall_b": Color("#fffaf2"), "edge_glow": 0.35, "glow_col": Color(1.0, 0.9, 0.7)},
+	"volcano": {"asphalt": Color(0.3, 0.24, 0.22), "kerb_a": Color(1.0, 0.62, 0.25), "kerb_b": Color(0.99, 0.95, 0.85), "under": Color(0.42, 0.3, 0.24),
+		"wall_a": Color("#ff9f43"), "wall_b": Color("#fff3e0")},
 	"city": {"asphalt": Color(0.27, 0.27, 0.3), "kerb_a": Color(0.95, 0.8, 0.1), "kerb_b": Color(0.12, 0.12, 0.12), "under": Color(0.42, 0.42, 0.46),
 		"wall_a": Color("#ffd23f"), "wall_b": Color("#26262a")},
 	"desert": {"asphalt": Color(0.6, 0.47, 0.32), "kerb_a": Color(0.95, 0.45, 0.15), "kerb_b": Color(0.98, 0.93, 0.8), "under": Color(0.55, 0.4, 0.26),
@@ -239,9 +242,7 @@ func _build_mesh() -> void:
 	rm.set_shader_parameter("track_len", length)
 	rm.set_shader_parameter("start_v", 0.0)
 	var style: Dictionary = STYLES.get(def.theme, {})
-	if def.theme == "neon":
-		rm.set_shader_parameter("neon", 1.0)
-	elif def.theme == "pirates":
+	if def.theme == "pirates":
 		rm.set_shader_parameter("asphalt", Color(0.78, 0.68, 0.5))
 		rm.set_shader_parameter("kerb_a", Color(0.2, 0.55, 0.95))
 	for key in ["asphalt", "kerb_a", "kerb_b", "wet", "edge_glow", "glow_col", "neon", "neon_col"]:
@@ -251,7 +252,7 @@ func _build_mesh() -> void:
 	add_child(road_mi)
 	var under_mi := MeshInstance3D.new()
 	under_mi.mesh = under.commit()
-	var um := WorldKit.mat(style.get("under", Color(0.35, 0.3, 0.38) if def.theme != "neon" else Color(0.12, 0.08, 0.2)))
+	var um := WorldKit.mat(style.get("under", Color(0.35, 0.3, 0.38)))
 	um.cull_mode = BaseMaterial3D.CULL_DISABLED
 	under_mi.material_override = um
 	add_child(under_mi)
@@ -261,7 +262,7 @@ func _build_mesh() -> void:
 	wm.vertex_color_use_as_albedo = false
 	wm.albedo_color = Color(1, 1, 1)
 	wm.cull_mode = BaseMaterial3D.CULL_DISABLED
-	if def.theme == "neon" or style.has("wall_neon"):
+	if style.has("wall_neon"):
 		wm.emission_enabled = true
 		wm.emission = style.get("wall_neon", Color(1.0, 0.2, 0.8))
 		wm.emission_energy_multiplier = 1.5

@@ -111,8 +111,8 @@ func on_tick(delta: float) -> void:
 				Audio.sfx("slime", av.global_position, -16.0, 1.4)
 	_bomb_t -= delta
 	if _bomb_t <= 0.0 and bombs.size() < 3:
-		_bomb_t = randf_range(3.5, 6.0)
-		var t := Vector2i(randi_range(1, N - 2), randi_range(1, N - 2))
+		_bomb_t = rng.randf_range(3.5, 6.0)
+		var t := Vector2i(rng.randi_range(1, N - 2), rng.randi_range(1, N - 2))
 		var p := _tile_pos(t.x, t.y)
 		var node := Assets.spawn("mg/powerup_bomb", world, p + Vector3.UP * 0.6, 0.0, 1.1)
 		Assets.tint(node, Color(1.2, 0.6, 1.4), false, 0.5)

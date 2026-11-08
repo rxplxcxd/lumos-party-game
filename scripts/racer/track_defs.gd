@@ -110,7 +110,7 @@ static func _coral() -> Dictionary:
 
 
 static func _neon() -> Dictionary:
-	var d := {"id": "neon_volcano", "name": "Neon-Vulkan", "env": "night", "theme": "neon", "width": 15.0,
+	var d := {"id": "neon_volcano", "name": "Vulkan-Inselchen", "env": "sunset", "theme": "volcano", "width": 15.0,
 		"loops": [], "glide": [], "water": [], "ramps": [], "boosts": [], "items": [], "bank": {}, "ground_y": -0.15}
 	var p: Array = []
 	p.append(Vector3(0, 0, 40))       # 0 Start
@@ -200,9 +200,9 @@ static func _frost() -> Dictionary:
 	return d
 
 
-## Orbit-Bahn: Schwebende Neon-Fahrbahn im All mit Looping und langem Schwerelos-Gleiter.
+## Sternenstaub-Bahn: Schwebende Pastell-Fahrbahn im Abendhimmel mit Looping und langem Schwebe-Gleiter.
 static func _orbit() -> Dictionary:
-	var d := _base("orbit_ring", "Orbit-Bahn", "space", "space")
+	var d := _base("orbit_ring", "Sternenstaub-Bahn", "observatory", "space")
 	var p: Array = []
 	p.append(Vector3(0, 0, 40))       # 0 Start
 	p.append(Vector3(0, 0, -8))       # 1

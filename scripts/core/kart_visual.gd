@@ -21,6 +21,18 @@ var kart_scale := 2.2
 var _wheel_rot := 0.0
 var _hue := 0.0
 var _bob := 0.0
+# Federung (Feder-Dämpfer je Achse): Einfedern bei Landung, Nicken bei Gas/Bremse, Wanken in Kurven
+var _sy := 0.0
+var _svy := 0.0
+var _pitch := 0.0
+var _pitch_v := 0.0
+var _roll := 0.0
+var _roll_v := 0.0
+var _prev_speed := 0.0
+var _was_air := false
+var _lock_t := 0.0     # während Dreh-/Überschlag-Animationen keine Federung auf die Rotation
+const SPRING := 120.0
+const DAMP := 11.0
 
 
 func setup(kart_key: String, hero_key: String, player_idx := -1, scl := 2.2) -> KartVisual:
@@ -92,13 +104,34 @@ func update_visual(speed: float, steer: float, drift_dir: int, drift_level: int,
 	for w in wheels:
 		w.rotation.x = _wheel_rot
 	for fw in front_wheels:
-		fw.rotation.y = -steer * 0.45
+		fw.rotation.y = lerpf(fw.rotation.y, -steer * 0.45, clampf(delta * 10.0, 0, 1))
 	_bob += delta * (8.0 + speed * 0.3)
-	var target_roll := -steer * 0.06 * clampf(speed / 20.0, 0, 1) + float(drift_dir) * 0.12
+	var dt := maxf(delta, 0.0001)
+	var acc := clampf((speed - _prev_speed) / dt, -60.0, 60.0)
+	_prev_speed = speed
+	# Ziele: Wanken nach außen in Kurven, Nicken beim Beschleunigen (Heck runter) und Bremsen (Nase runter)
+	var target_roll := -steer * 0.11 * clampf(speed / 20.0, 0, 1) + float(drift_dir) * 0.16
+	var target_pitch := clampf(-acc * 0.0035, -0.09, 0.07)
+	if airborne:
+		target_pitch = -0.06
+	_roll_v += ((target_roll - _roll) * SPRING - _roll_v * DAMP) * dt
+	_roll += _roll_v * dt
+	_pitch_v += ((target_pitch - _pitch) * SPRING - _pitch_v * DAMP) * dt
+	_pitch += _pitch_v * dt
+	# Einfedern: Landestoß + leichtes Rütteln der Fahrbahn
+	if _was_air and not airborne:
+		_svy -= 2.6
+	_was_air = airborne
+	var road := 0.0 if airborne else sin(_bob) * 0.02 * clampf(speed / 15.0, 0.2, 1.0)
+	_svy += ((road - _sy) * SPRING - _svy * (DAMP * 0.8)) * dt
+	_sy += _svy * dt
 	var target_yaw := float(drift_dir) * 0.42
-	body.rotation.z = lerpf(body.rotation.z, target_roll, clampf(delta * 8.0, 0, 1))
-	body.rotation.y = lerpf(body.rotation.y, target_yaw, clampf(delta * 7.0, 0, 1))
-	body.position.y = (0.0 if airborne else sin(_bob) * 0.025 * clampf(speed / 15.0, 0.2, 1.0))
+	_lock_t = maxf(0.0, _lock_t - delta)
+	body.rotation.z = _roll
+	if _lock_t <= 0.0:
+		body.rotation.x = _pitch
+		body.rotation.y = lerpf(body.rotation.y, target_yaw, clampf(delta * 6.0, 0, 1))
+	body.position.y = clampf(_sy, -0.22, 0.2)
 	if hero.modifier:
 		hero.set_steer_pose(true, steer)
 		hero.set_lean(-steer * 0.8 - drift_dir * 0.4)
@@ -120,6 +153,7 @@ func update_visual(speed: float, steer: float, drift_dir: int, drift_level: int,
 
 ## Wackel-/Dreh-Effekt bei Treffern.
 func spin_out(turns := 2.0, duration := 1.0) -> void:
+	_lock_t = duration + 0.05
 	var tw := create_tween()
 	tw.tween_property(body, "rotation:y", body.rotation.y + TAU * turns, duration).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_callback(func() -> void: body.rotation.y = 0.0)
@@ -127,6 +161,7 @@ func spin_out(turns := 2.0, duration := 1.0) -> void:
 
 
 func flip(duration := 0.9) -> void:
+	_lock_t = duration + 0.05
 	var tw := create_tween()
 	tw.tween_property(body, "rotation:x", TAU, duration).as_relative().set_trans(Tween.TRANS_QUAD)
 	tw.tween_callback(func() -> void: body.rotation.x = 0.0)

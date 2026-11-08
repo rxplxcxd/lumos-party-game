@@ -35,7 +35,7 @@ func build_arena() -> void:
 	for i in 6:
 		var a0 := TAU * i / 6.0
 		WorldKit.cylinder(world, 0.35, 3.0, Vector3(cos(a0) * 2.2, -2.2, sin(a0) * 2.2), Color("#6b4a2b"), false)
-	var mat := WorldKit.mat(Color("#ff4fb8"), 0.4, 1.2)
+	var mat := WorldKit.mat(Color("#e8c79a"), 0.9, 0.05)
 	_rim = MeshInstance3D.new()
 	var tm := TorusMesh.new()
 	tm.inner_radius = 0.96
@@ -74,7 +74,7 @@ func on_tick(delta: float) -> void:
 	var target := lerpf(3.2, 9.0, time_left / time_limit)
 	_radius = move_toward(_radius, target, delta * 0.25)
 	_rim.scale = Vector3(_radius, 1.0, _radius)
-	(_rim.mesh.surface_get_material(0) as StandardMaterial3D).emission_energy_multiplier = 1.0 + sin(Time.get_ticks_msec() / 150.0) * 0.5
+	pass
 	# Kollision & Mesh nur in kleinen Schritten neu aufbauen (Physik-sicher, kein nicht-uniformer Scale)
 	if absf(_shown_radius - _radius) > 0.04:
 		_shown_radius = _radius

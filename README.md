@@ -17,25 +17,37 @@ vier Gamepads.
 ## Inhalt
 
 ### Modus A – Lumos Party
-* **3 Bretter** mit eigenem Look, eigener Musik und sich verändernden Routen:
-  * **Dungeon Deep** – Lavakanal mit auf- und abtauchendem Lava-Steg, Skelett-Wächter verlangt Wegzoll, Fackel-Fallen
-  * **Pirates Cove** – Sandbank, die mit der Flut verschwindet, Krabben-Händler, Piraten-Planken
-  * **Sky Kingdom** – schwebende Inseln, Zugbrücken, die jede Runde umschalten, Wolken-Kanonen
-* **Felder:** Blau (+3), Rot (−3), **Glücksrad-Kiste** (Mini-Glücksrad auf dem Bildschirm), **Piraten-Planke**
-  (katapultiert ein Brett zurück, klaut 10 Münzen), **Dungeon-Fluch** (tauscht die zwei am weitesten
-  entfernten Spieler), Fackel-Falle, Wolken-Kanone, Händler; Lumos-Stern für 20 Münzen, Bonus-Sterne am Ende.
-* **10 Minispiele:** Plank-Panic · Dungeon Drop · Kart-Bowling · Schatz-Seilbahn · Geister-Schloss Schwindel ·
-  Fässer-Chaos · Lavastrom-Surfen · Turm-Balancieren (Jolt-Physik + Wind) · Bomben-Heißer-Hut · Schleim-Spur Sprint.
-  Alle auch einzeln in der **Minispiel-Arena** spielbar.
+* **9 Bretter** mit eigenem Look, eigener Musik und wechselnden Routen: Dungeon Deep · Sonnige Palmen-Bucht
+  (Ebbe/Flut-Sandbank) · Sternen-Wolkenland (Zugbrücken, Wolken-Kanonen) · Geisterfriedhof (Geister-Taxi) ·
+  Frostdorf (Eis-Rutschen) · Sternen-Sternwarte (Sternen-Tore, Spielzeugraketen) · **Glühwürmchen-Zauberwald**
+  (Tag/Nacht-Wechsel jede Runde, nachts leuchten die Pilze den Weg) · **Wuschel-Wiesen** (Pusteblumen-Flüge,
+  Schäfchen, Duell-Felder) · **Zuckerback-Torte** (Schoko-Rutschen, Kerzen-Fallen, Kirsch-Lifte).
+* **Felder:** Blau (+3), Rot (−3), Glücksrad-Kiste, Ereignisfelder je Brett, Händler, **Duell-Feld** (Gegner
+  herausfordern), Lumos-Stern; im **Endspurt** zählen Felder doppelt und Spieler auf gleichem Feld duellieren sich.
+* **Partner:** Hoppel, Piepsi, Mauzi, Hirschi, Muhla, Summsi, Kraxi, Robbi, Zippy und Bauli erscheinen auf dem
+  Brett – wer sie zuerst erreicht, spielt ein Partner-Minispiel mit Startvorteil; Partner begleiten 3 Runden,
+  verdoppeln Feld-Effekte und haben eigene Fähigkeiten (Würfelbonus, halber Sternpreis, Münzen klauen …).
+* **Regeln:** Klassisch · **Profi** (12 Runden, angekündigte Bonussterne, Minispiel-Abstimmung, begrenzter Laden,
+  Stern-Duelle) · **Blitz** (5 Runden, Start mit 50 Münzen, Stern und Doppelwürfel) · **Team** (2 gegen 2,
+  geteilte Münzen und Sterne).
+* **Minispiel-Ablauf wie im Vorbild:** Die Feldfarben bestimmen **Jeder gegen Jeden**, **1 gegen 3** oder
+  **2 gegen 2** (Farbrad für Ereignisfelder), Team-Intro-Cutscene, Roulette bzw. Abstimmung; dazu **Duelle**,
+  **Glücks-** und **Münz-Minispiele**, eine **Boss-Runde** (Pustebacke, der Wolkendrache) zur Brettmitte und der
+  **Showdown-Dreikampf** im Endspurt.
+* **33 Minispiele** (Kategorien siehe `docs/MINIGAMES.md`), alle auch einzeln in der **Minispiel-Arena**.
 
-### Modus B – Nitro Dash
-* **3 Strecken:** Lumos-Ring (Looping, Gleiter-Schlucht), Korallen-Kanal (gläserner Unterwasser-Tunnel mit
-  Lichtkegeln und Blasen), Neon-Vulkan (Looping + Gleiter über Lava, Neonlicht).
-* **Arcade-Handling** mit dreistufigem Drift-Boost (Funken Blau → Orange → Regenbogen), Raketenstart, Rampen,
-  Boost-Feldern, Gummiband-KI und 8 Karts (deine Helden + 4 Zusatz-Fahrer).
-* **Items:** Kuchendeckel (prallt von Wänden ab) · Homing-Kanonenkugel (verfolgt den Vordermann mit fiesem Lachen) ·
-  Megafon-Schock (Schrumpfen/Drehen in der Umgebung) · Piraten-Anker (20 m zurück) · Nitro.
-  Super-Treffer schalten in eine 0,5-s-Matrix-Zeitlupe um das Opfer.
+### Abenteuer & Modi
+* **Partyhelfer-Reise** (Einzelspieler): frei begehbare Pusteblumen-Insel, 10 Bewohner mit Minispiel-Aufträgen,
+  10 versteckte Mini-Sterne, Wolkentor und Bosskampf gegen Pustebacke; Fortschritt wird gespeichert.
+* **Rhythmus-Küche** (1–4, kooperativ): Fünf-Gänge-Menü im Takt – schnippeln, rühren, Pfannkuchen wenden,
+  Gewürz-Duett, Torte verzieren – mit Team-Bonus und Küchen-Note S/A/B/C. Auch online.
+* **Lumos-Athlon** (lokal 1–4 + CPUs, **online bis 20 Spieler**): Alle spielen gleichzeitig 12-Sekunden-Solo-
+  Herausforderungen; jede Münze bringt ein Feld weiter, Glücks-/Pusteböen-/Sternenfelder, Pustebacke-Ereignis.
+
+### Online
+* **Online-Party auf dem Brett** (Lockstep: gemeinsamer Brett-Zufall, jede Spieler-Entscheidung wird vom
+  Besitzer-Gerät verteilt), Nitro-Dash-Rennen, 21 netzwerkfähige Minispiele, Rhythmus-Küche und Athlon-Räume
+  für bis zu 20 Geräte. Verlässt jemand das Spiel, übernimmt eine CPU.
 
 ### Animations-, Effekt- & Cutscene-System
 * `CharacterRig` überträgt die **KayKit-Rig_Medium-Animationsbibliothek** (100+ Clips) auf alle Helden,
@@ -61,7 +73,16 @@ vier Gamepads.
 | Drift (Nitro Dash) | Shift / Leertaste | RB oder RT | blauer Button |
 | Pause | Esc | Start | ‖ |
 
-Touch-Buttons sind in **Einstellungen → Layout anpassen** frei verschiebbar (Größe/Deckkraft per Regler),
+* **Menüs wie auf der Konsole:** Steuerkreuz/Stick bewegen den Fokus, **A bestätigt, B geht zurück** – überall
+  (auch Dialoge, Pausenmenü, Lobby). Nach einem Mausklick holt sich der erste Pad-Druck automatisch den Fokus.
+* **Pausenmenü** (Start/Esc/‖) in Brett, Minispielen, Rennen und Modi: Weiter, Lautstärke, Steuerung, Zum Menü
+  (online läuft das Spiel weiter, dort „Raum verlassen“).
+* **Touch-Steuerelemente erscheinen nur auf echten Mobilgeräten** (Handy/Tablet, iPadOS); Desktop-Browser, App
+  und Laptops mit Touchscreen zeigen sie nicht. Layout in **Einstellungen → Layout anpassen** (Größe/Deckkraft).
+* **Nitro Dash** fährt sich wie ein klassischer Arcade-Kart: weich ansprechende Lenkung mit Trägheit,
+  Federung (Einfedern bei Landungen, Nicken beim Gasgeben/Bremsen, Wanken in Kurven) und ein Regler
+  **Einstellungen → Kart-Lenkung** für die Empfindlichkeit.
+
 Vibration läuft über Gamepad-Rumble bzw. `navigator.vibrate`. CPU-Züge lassen sich mit gehaltenem A vorspulen.
 
 ## Entwicklung

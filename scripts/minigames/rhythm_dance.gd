@@ -26,7 +26,7 @@ var _cpu_plan: Array[Dictionary] = [{}, {}, {}, {}]
 func _init() -> void:
 	game_id = "rhythm_dance"
 	touch_profile = "dance"
-	env_preset = "night"
+	env_preset = "sunset"
 	time_limit = 42.0
 	arena_radius = 7.0
 	teaser_height = 1.2
@@ -35,38 +35,55 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.box(world, Vector3(14, 1.0, 7), Vector3(0, -0.5, 0), Color("#241a3a"))
-	var cols := [Color("#ff4fb8"), Color("#4fd0ff"), Color("#ffd23f"), Color("#7dff6a")]
+	# Gartenfest-Bühne: Holzbühne mit Pastell-Tanzfliesen, Lichterketten, Vorhang und Wiesen-Publikum
+	WorldKit.box(world, Vector3(30, 1, 22), Vector3(0, -0.6, 2), Color("#7cc860"), false)
+	WorldKit.box(world, Vector3(14, 1.0, 7), Vector3(0, -0.5, 0), Color("#c98d5a"))
+	var cols := [Color("#ffb3c7"), Color("#a8dcff"), Color("#ffe08a"), Color("#b6f29a")]
 	var bm := BoxMesh.new()
 	bm.size = Vector3(1.9, 0.06, 1.9)
 	for x in 7:
 		for z in 3:
 			var mi := MeshInstance3D.new()
 			mi.mesh = bm
-			mi.material_override = WorldKit.mat(cols[(x + z) % 4], 0.3, 0.4)
+			mi.material_override = WorldKit.mat(cols[(x + z) % 4], 0.6, 0.15)
 			world.add_child(mi)
 			mi.position = Vector3(-6 + x * 2.0, 0.03, -2 + z * 2.0)
 			_floor_tiles.append(mi)
-	WorldKit.place(world, "arcade/dance", Vector3(-8.5, 0, -2.5), 30.0, 2.2)
-	WorldKit.place(world, "arcade/dance", Vector3(8.5, 0, -2.5), -30.0, 2.2)
-	WorldKit.place(world, "arcade/machine", Vector3(-7, 0, -6), 10.0, 2.0)
-	WorldKit.place(world, "arcade/gamer", Vector3(7, 0, -6), -10.0, 2.0)
-	# Bühnenrückwand + Lautsprecher
-	WorldKit.box(world, Vector3(18, 7, 0.6), Vector3(0, 3.5, -4.5), Color("#130d22"), false)
+	# Rückwand mit Vorhang und Wimpelkette
+	WorldKit.box(world, Vector3(18, 7, 0.6), Vector3(0, 3.5, -4.5), Color("#fff1d8"), false)
+	for k in 9:
+		var cur := WorldKit.box(world, Vector3(1.9, 6.2, 0.3), Vector3(-8 + k * 2.0, 3.3, -4.0), Color("#e8546a") if k % 2 == 0 else Color("#d0405a"), false)
+		cur.name = "Curtain"
+	for k in 14:
+		var flag := MeshInstance3D.new()
+		var pm := PrismMesh.new()
+		pm.size = Vector3(0.7, 0.8, 0.05)
+		pm.material = WorldKit.mat(cols[k % 4], 0.7)
+		flag.mesh = pm
+		flag.rotation.z = PI
+		flag.position = Vector3(-8.5 + k * 1.3, 6.4 - absf(k - 6.5) * 0.06, -3.6)
+		world.add_child(flag)
 	for side in [-1.0, 1.0]:
-		WorldKit.box(world, Vector3(1.6, 3.2, 1.4), Vector3(side * 7.8, 1.6, -3.4), Color("#2a2a33"), false)
+		WorldKit.place(world, "plat/flowers", Vector3(side * 7.8, 0, -3.2), 0.0, 2.0)
+		WorldKit.place(world, "town/lantern", Vector3(side * 7.6, 0, 2.6), 0.0, 2.0)
+		WorldKit.place(world, "nat/tree_oak", Vector3(side * 12.0, 0, -5.0), 0.0, 3.0)
 	for i in 4:
 		var l := OmniLight3D.new()
-		l.light_color = cols[i]
-		l.light_energy = 2.2
-		l.omni_range = 9.0
+		l.light_color = Color(1.0, 0.85, 0.6).lerp(cols[i], 0.4)
+		l.light_energy = 1.4
+		l.omni_range = 8.0
 		world.add_child(l)
 		l.position = Vector3(-6 + i * 4.0, 5.5, 1.0)
 		_spots.append(l)
-	# Publikum (kleine Figuren) vor der Bühne
+	# Publikum: Wiesentiere vor der Bühne
 	for i in 9:
-		var who: String = ["mini/female_b", "mini/male_a", "mini/robot", "mini/female_d", "mini/male_c", "mini/alien"][i % 6]
-		var fan := WorldKit.place(world, who, Vector3(-8 + i * 2.0, 0, 6.8), 180.0, 1.4)
+		var who: String = ["pet/bunny", "pet/chick", "pet/cat", "pet/deer", "pet/cow", "npc/duck"][i % 6]
+		var fan := CharacterRig.new()
+		world.add_child(fan)
+		fan.setup(who, -1, 0.9)
+		fan.position = Vector3(-8 + i * 2.0, 0, 6.8)
+		fan.face_now(Vector3(0, 0, -1))
+		fan.play("idle")
 		var tw := fan.create_tween().set_loops()
 		tw.tween_property(fan, "position:y", 0.35, 0.3 + (i % 3) * 0.04).set_trans(Tween.TRANS_SINE)
 		tw.tween_property(fan, "position:y", 0.0, 0.3 + (i % 3) * 0.04).set_trans(Tween.TRANS_SINE)
@@ -101,7 +118,7 @@ func _build_lane() -> void:
 	_hud_root.add_child(root)
 	var bar := Panel.new()
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.06, 0.03, 0.14, 0.72)
+	sb.bg_color = Color(0.25, 0.14, 0.08, 0.72)
 	sb.set_corner_radius_all(40)
 	sb.border_color = Color(1, 1, 1, 0.25)
 	sb.set_border_width_all(3)
@@ -165,7 +182,7 @@ func on_tick(delta: float) -> void:
 	_marker.scale = Vector2.ONE * (1.0 + (1.0 - beat_phase) * 0.12)
 	_marker.pivot_offset = _marker.size * 0.5
 	for i in _spots.size():
-		_spots[i].light_energy = 1.2 + (1.0 - beat_phase) * 2.2 * (1.0 if (int(song_t / spb) + i) % 2 == 0 else 0.4)
+		_spots[i].light_energy = 0.9 + (1.0 - beat_phase) * 1.3 * (1.0 if (int(song_t / spb) + i) % 2 == 0 else 0.4)
 	for k in _floor_tiles.size():
 		var on := (k + int(song_t / spb)) % 3 == 0
 		(_floor_tiles[k].material_override as StandardMaterial3D).emission_energy_multiplier = 1.4 if on else 0.15

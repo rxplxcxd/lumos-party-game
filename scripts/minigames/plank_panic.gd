@@ -125,9 +125,9 @@ func _crack_next() -> void:
 	if ok.size() <= 2:
 		return
 	# Bevorzugt Ränder, später auch Mitte
-	var pick := ok[0] if randf() < 0.5 else ok[ok.size() - 1]
-	if time_left < time_limit * 0.6 and randf() < 0.45:
-		pick = ok[randi() % ok.size()]
+	var pick := ok[0] if rng.randf() < 0.5 else ok[ok.size() - 1]
+	if time_left < time_limit * 0.6 and rng.randf() < 0.45:
+		pick = ok[rng.randi() % ok.size()]
 	var sg := segs[pick]
 	sg.state = "cracking"
 	sg.t = 0.0
@@ -158,7 +158,7 @@ func on_fell(slot: int, hz: String) -> void:
 
 
 func _shark_chomp(at: Vector3) -> void:
-	var s: Node3D = sharks[randi() % sharks.size()]
+	var s: Node3D = sharks[rng.randi() % sharks.size()]
 	s.set_meta("busy", true)
 	var from := Vector3(at.x - 3.0, -3.0, at.z + 1.0)
 	var to := Vector3(at.x + 3.0, -3.0, at.z)

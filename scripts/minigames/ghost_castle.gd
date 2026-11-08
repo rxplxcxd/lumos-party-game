@@ -54,9 +54,9 @@ func build_arena() -> void:
 	for r in ROWS:
 		safe[Vector2i(col, r)] = true
 		path.append(col)
-		var step := randi_range(-1, 1)
+		var step := rng.randi_range(-1, 1)
 		if r % 3 == 2:
-			step = (1 if col < COLS / 2 else -1) * randi_range(1, 2)
+			step = (1 if col < COLS / 2 else -1) * rng.randi_range(1, 2)
 		var ncol := clampi(col + step, 0, COLS - 1)
 		if ncol != col:
 			# Querverbindung auf derselben Reihe
@@ -65,7 +65,7 @@ func build_arena() -> void:
 		col = ncol
 	for r in ROWS:
 		for c3 in COLS:
-			if randf() < 0.12:
+			if rng.randf() < 0.12:
 				safe[Vector2i(c3, r)] = true
 	# Platten
 	for r in ROWS:
@@ -85,7 +85,7 @@ func build_arena() -> void:
 				Assets.spawn("dun/floor_small", body)
 			else:
 				# Attrappe: sieht im Dunkeln gleich aus, trägt aber nicht (wackelnde Falltür)
-				var fake := Assets.spawn("dun/floor_grate" if randf() < 0.3 else "dun/floor_small", world, pos, 0.0, 1.0)
+				var fake := Assets.spawn("dun/floor_grate" if rng.randf() < 0.3 else "dun/floor_small", world, pos, 0.0, 1.0)
 				fake.scale = Vector3(0.5, 1.0, 0.5) if fake.name.contains("grate") else Vector3.ONE
 				fake.set_meta("fake", true)
 				Assets.tint(fake, Color(0.75, 0.7, 0.75))
@@ -113,7 +113,7 @@ func build_arena() -> void:
 		var row := 3 + i * 3
 		g.position = Vector3(0, 0.6, _z(row))
 		g.play("idle")
-		ghosts.append({"rig": g, "row": row, "phase": randf() * TAU, "speed": randf_range(0.9, 1.5)})
+		ghosts.append({"rig": g, "row": row, "phase": rng.randf() * TAU, "speed": rng.randf_range(0.9, 1.5)})
 	# Blitz-Overlay
 	var layer := CanvasLayer.new()
 	layer.layer = 8
@@ -153,7 +153,7 @@ func on_start() -> void:
 func on_tick(delta: float) -> void:
 	_flash_t -= delta
 	if _flash_t <= 0.0:
-		_flash_t = randf_range(3.0, 4.6)
+		_flash_t = rng.randf_range(3.0, 4.6)
 		_lightning(false)
 	var t := Time.get_ticks_msec() / 1000.0
 	for g in ghosts:

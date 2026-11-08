@@ -121,9 +121,33 @@ func _process(_delta: float) -> void:
 # --- Ablaufsteuerung ----------------------------------------------------------------------------
 
 ## Spielt eine Cutscene-Szene und wartet, bis sie fertig ist.
+## Szenenwechsel während einer Cutscene: Zustand hart zurücksetzen, sonst wartet die nächste Szene ewig
+## auf ihr Intro (hängender Bildschirm).
+func abort() -> void:
+	if not active:
+		return
+	letterbox(false, 0.0)
+	_hint.visible = false
+	hide_text()
+	if is_instance_valid(cam):
+		cam.queue_free()
+	cam = null
+	active = false
+	Juice.base_time_scale = 1.0
+	var id := current_id
+	current_id = ""
+	finished.emit(id)
+
+
 func play(id: String, ctx: Dictionary = {}) -> void:
+	var waited := 0.0
 	while active:
-		await finished
+		# Verwaiste Cutscene (Host-Szene schon weg) oder Hänger: nicht ewig warten
+		if not is_instance_valid(cam) or not cam.is_inside_tree() or waited > 30.0:
+			abort()
+			break
+		await get_tree().process_frame
+		waited += get_process_delta_time()
 	var path := "res://scenes/cutscenes/%s.tscn" % id
 	if not ResourceLoader.exists(path):
 		push_warning("Cutscene fehlt: " + path)

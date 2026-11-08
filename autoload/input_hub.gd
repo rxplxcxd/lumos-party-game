@@ -38,6 +38,46 @@ var _virtual: Array = []
 var _touch := {"move": Vector2.ZERO, "held": {}}
 
 
+## Konsolen-Bedienung für die gesamte Oberfläche: A = Bestätigen, B = Zurück, D-Pad UND linker Stick
+## navigieren den Fokus (Godot belegt ui_accept standardmäßig nicht mit einer Gamepad-Taste).
+func _setup_ui_actions() -> void:
+	_ui_joy_button("ui_accept", JOY_BUTTON_A)
+	_ui_joy_button("ui_cancel", JOY_BUTTON_B)
+	_ui_joy_button("ui_up", JOY_BUTTON_DPAD_UP)
+	_ui_joy_button("ui_down", JOY_BUTTON_DPAD_DOWN)
+	_ui_joy_button("ui_left", JOY_BUTTON_DPAD_LEFT)
+	_ui_joy_button("ui_right", JOY_BUTTON_DPAD_RIGHT)
+	_ui_joy_axis("ui_up", JOY_AXIS_LEFT_Y, -1.0)
+	_ui_joy_axis("ui_down", JOY_AXIS_LEFT_Y, 1.0)
+	_ui_joy_axis("ui_left", JOY_AXIS_LEFT_X, -1.0)
+	_ui_joy_axis("ui_right", JOY_AXIS_LEFT_X, 1.0)
+	for act in ["ui_up", "ui_down", "ui_left", "ui_right"]:
+		InputMap.action_set_deadzone(act, 0.5)
+
+
+func _ui_joy_button(action: String, button: JoyButton) -> void:
+	if not InputMap.has_action(action):
+		InputMap.add_action(action)
+	for e in InputMap.action_get_events(action):
+		if e is InputEventJoypadButton and (e as InputEventJoypadButton).button_index == button:
+			return
+	var ev := InputEventJoypadButton.new()
+	ev.button_index = button
+	ev.device = -1
+	InputMap.action_add_event(action, ev)
+
+
+func _ui_joy_axis(action: String, axis: JoyAxis, dir: float) -> void:
+	for e in InputMap.action_get_events(action):
+		if e is InputEventJoypadMotion and (e as InputEventJoypadMotion).axis == axis and signf((e as InputEventJoypadMotion).axis_value) == dir:
+			return
+	var ev := InputEventJoypadMotion.new()
+	ev.axis = axis
+	ev.axis_value = dir
+	ev.device = -1
+	InputMap.action_add_event(action, ev)
+
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	process_priority = -1000
@@ -54,6 +94,7 @@ func _ready() -> void:
 	touch_controls = tc_script.new()
 	add_child(touch_controls)
 	Input.joy_connection_changed.connect(_on_joy_changed)
+	_setup_ui_actions()
 	# Kanten-Erkennung an die Frame-Signale hängen: InputHub verbindet sich als Erster und läuft
 	# damit vor allen Koroutinen (await process_frame) und vor jedem _process/_physics_process.
 	get_tree().process_frame.connect(_on_process_frame)
@@ -258,7 +299,34 @@ func _update_edges(held_store: Array, edge_store: Array, latch_store: Array, fra
 		latch.clear()
 
 
+## Gamepad-Navigation ohne aktuellen Fokus (z. B. nach Mausklick): ersten sichtbaren Button fokussieren.
+func _ensure_ui_focus(event: InputEvent) -> void:
+	if not (event is InputEventJoypadButton or event is InputEventJoypadMotion) or not event.is_pressed():
+		return
+	var nav := false
+	for act in ["ui_up", "ui_down", "ui_left", "ui_right", "ui_accept"]:
+		if event.is_action(act):
+			nav = true
+	if not nav or get_viewport().gui_get_focus_owner() != null:
+		return
+	var best := _first_button(get_tree().root)
+	if best:
+		best.grab_focus()
+		get_viewport().set_input_as_handled()
+
+
+func _first_button(n: Node) -> Button:
+	for c in n.get_children():
+		if c is Button and (c as Button).is_visible_in_tree() and not (c as Button).disabled and (c as Button).focus_mode != Control.FOCUS_NONE:
+			return c as Button
+		var r := _first_button(c)
+		if r:
+			return r
+	return null
+
+
 func _input(event: InputEvent) -> void:
+	_ensure_ui_focus(event)
 	if event is InputEventKey and event.pressed and not event.echo:
 		_set_device("keyboard")
 		for a in ACTIONS:
@@ -276,15 +344,13 @@ func _input(event: InputEvent) -> void:
 					_latch_proc[slot][a] = true
 	elif event is InputEventJoypadMotion and absf(event.axis_value) > 0.5:
 		_set_device("gamepad")
-	elif event is InputEventScreenTouch:
+	elif event is InputEventScreenTouch and Game.is_touch_device:
 		_set_device("touch")
 
 
 func _set_device(kind: String) -> void:
 	if kind != last_device:
 		last_device = kind
-		if kind == "touch":
-			Game.is_touch_device = true
 		device_changed.emit(kind)
 
 

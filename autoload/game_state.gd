@@ -27,10 +27,10 @@ const BOARDS := [
 ]
 
 const MINIGAMES := [
-	{"id": "plank_panic", "name": "Plank-Panic", "scene": "res://scenes/minigames/PlankPanic.tscn", "kind": "survival", "cats": ["ffa", "2v2"],
+	{"id": "plank_panic", "name": "Plank-Panic", "scene": "res://scenes/minigames/PlankPanic.tscn", "kind": "survival", "online": true, "cats": ["ffa", "2v2"],
 		"desc": "Die morsche Planke über dem Haifischbecken bricht Stück für Stück. Schubse die anderen ins Wasser!",
 		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
-	{"id": "dungeon_drop", "name": "Dungeon Drop", "scene": "res://scenes/minigames/DungeonDrop.tscn", "kind": "survival", "cats": ["ffa", "2v2", "duel"],
+	{"id": "dungeon_drop", "name": "Dungeon Drop", "scene": "res://scenes/minigames/DungeonDrop.tscn", "kind": "survival", "online": true, "cats": ["ffa", "2v2", "duel"],
 		"desc": "Steinplatten brechen 1,5 Sekunden nach dem Betreten ein. Bleib in Bewegung oder fall in die Lava!",
 		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
 	{"id": "kart_bowling", "name": "Kart-Bowling", "scene": "res://scenes/minigames/KartBowling.tscn", "kind": "survival", "cats": ["ffa", "2v2"],
@@ -39,7 +39,7 @@ const MINIGAMES := [
 	{"id": "treasure_zipline", "name": "Schatz-Seilbahn", "scene": "res://scenes/minigames/TreasureZipline.tscn", "kind": "score", "cats": ["ffa", "2v2"],
 		"desc": "Sause an der Seilbahn über die Schlucht. Spring im richtigen Moment ab, um Schatzkisten zu schnappen!",
 		"controls": "A: Absprung / Greifen · Stick: Seil wechseln"},
-	{"id": "ghost_castle", "name": "Geister-Schloss Schwindel", "scene": "res://scenes/minigames/GhostCastle.tscn", "kind": "race", "cats": ["ffa", "2v2", "duel"],
+	{"id": "ghost_castle", "name": "Geister-Schloss Schwindel", "scene": "res://scenes/minigames/GhostCastle.tscn", "kind": "race", "online": true, "cats": ["ffa", "2v2", "duel"],
 		"desc": "Stockfinster! Nur die Blitze zeigen kurz den sicheren Weg durchs Geisterschloss. Merk ihn dir!",
 		"controls": "Stick: Laufen · A: Springen"},
 	{"id": "barrel_chaos", "name": "Fässer-Chaos", "scene": "res://scenes/minigames/BarrelChaos.tscn", "kind": "score", "cats": ["ffa", "2v2"],
@@ -54,7 +54,7 @@ const MINIGAMES := [
 	{"id": "hot_bomb", "name": "Bomben-Heißer-Hut", "scene": "res://scenes/minigames/HotBomb.tscn", "kind": "survival", "cats": ["ffa"],
 		"desc": "Die Kanonenkugel tickt! Wirf sie schnell weiter – wer sie beim Knall hält, fliegt spektakulär in die Luft.",
 		"controls": "Stick: Laufen/Zielen · B: Werfen"},
-	{"id": "slime_sprint", "name": "Schleim-Spur Sprint", "scene": "res://scenes/minigames/SlimeSprint.tscn", "kind": "race", "cats": ["ffa", "2v2", "duel"],
+	{"id": "slime_sprint", "name": "Schleim-Spur Sprint", "scene": "res://scenes/minigames/SlimeSprint.tscn", "kind": "race", "online": true, "cats": ["ffa", "2v2", "duel"],
 		"desc": "Sprinte durch den Parcours! Schleimpfützen sind glitschig und Pendel-Fallen schwingen gnadenlos.",
 		"controls": "Stick: Laufen · A: Springen"},
 	{"id": "coin_rain", "name": "Münzregen", "scene": "res://scenes/minigames/CoinRain.tscn", "kind": "score", "cats": ["coin", "ffa", "2v2", "duel"],
@@ -66,17 +66,17 @@ const MINIGAMES := [
 	{"id": "snowball_fight", "name": "Schneeball-Schlacht", "scene": "res://scenes/minigames/SnowballFight.tscn", "kind": "score", "cats": ["ffa", "2v2"],
 		"desc": "Verschanz dich hinter Schneemännern und triff die anderen! Am Schneehaufen lädt Munition schneller nach.",
 		"controls": "Stick: Laufen · A: Springen · B: Werfen"},
-	{"id": "color_chaos", "name": "Farb-Chaos", "scene": "res://scenes/minigames/ColorChaos.tscn", "kind": "score", "cats": ["ffa", "2v2"],
+	{"id": "color_chaos", "name": "Farb-Chaos", "scene": "res://scenes/minigames/ColorChaos.tscn", "kind": "score", "online": true, "cats": ["ffa", "2v2"],
 		"desc": "Jedes Feld, über das du läufst, wird in deiner Farbe eingefärbt. Farbbomben färben ganze Bereiche!",
 		"controls": "Stick: Laufen · A: Springen · B: Schubsen (betäubt)"},
-	{"id": "hammer_hop", "name": "Hammer-Hüpfen", "scene": "res://scenes/minigames/HammerHop.tscn", "kind": "survival", "cats": ["ffa", "1v3"],
+	{"id": "hammer_hop", "name": "Hammer-Hüpfen", "scene": "res://scenes/minigames/HammerHop.tscn", "kind": "survival", "online": true, "cats": ["ffa", "1v3"],
 		"desc": "Ein Riesenhammer kreist über den Turm – spring rechtzeitig! Später kommt ein hoher Balken dazu: darunter bloß nicht springen.",
 		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
 	{"id": "fish_catch", "name": "Fischfang", "scene": "res://scenes/minigames/FishCatch.tscn", "kind": "score", "cats": ["ffa", "duel", "coin"],
 		"desc": "Steuere deinen Schwimmer zu den Fisch-Schatten. Taucht er ab, sofort A! Goldfische bringen 6 Punkte – Stiefel nichts.",
 		"controls": "Stick: Schwimmer bewegen · A: Anschlagen"},
-	{"id": "meteor_dodge", "name": "Meteor-Ausweichen", "scene": "res://scenes/minigames/MeteorDodge.tscn", "kind": "survival", "cats": ["ffa", "1v3"],
-		"desc": "Auf dem Mond regnen Meteore! Rote Kreise zeigen den Einschlag – und manche zielen direkt auf dich.",
+	{"id": "meteor_dodge", "name": "Sternschnuppen-Regen", "scene": "res://scenes/minigames/MeteorDodge.tscn", "kind": "survival", "online": true, "cats": ["ffa", "1v3"],
+		"desc": "Auf der Abendwiese purzeln Sternschnuppen-Brocken vom Himmel! Rote Kreise zeigen den Einschlag – und manche zielen direkt auf dich.",
 		"controls": "Stick: Laufen · A: Springen · B: Schubsen"},
 	{"id": "rhythm_dance", "name": "Rhythmus-Tanz", "scene": "res://scenes/minigames/RhythmDance.tscn", "kind": "score", "cats": ["ffa", "2v2"],
 		"desc": "Schnipp den Stick genau im Takt in Pfeilrichtung oder drück A! PERFEKT gibt 3 Punkte, Serien geben Bonus.",
@@ -131,10 +131,10 @@ const MINIGAMES := [
 const TRACKS := [
 	{"id": "lumos_ring", "name": "Lumos-Ring", "desc": "Sonniger Grand-Prix-Kurs mit Looping und Gleiter-Schlucht.", "music": "race"},
 	{"id": "coral_canal", "name": "Korallen-Kanal", "desc": "Piratenbucht mit gläsernem Unterwasser-Tunnel.", "music": "race"},
-	{"id": "neon_volcano", "name": "Neon-Vulkan", "desc": "Nachtrennen über Lavaseen – Looping, Gleiter und Neonlicht.", "music": "race"},
+	{"id": "neon_volcano", "name": "Vulkan-Inselchen", "desc": "Sonnenuntergang auf der Vulkaninsel: Looping, Gleiter über warme Lavaseen und Palmen am Wegesrand.", "music": "race"},
 	{"id": "storm_pass", "name": "Gewitter-Pass", "desc": "Nacht, Regen, grelle Blitze: Bergpass mit Leuchtmarkierungen und Sprung über die Schlucht.", "music": "race"},
 	{"id": "frost_peak", "name": "Frostgipfel", "desc": "Spiegelglatte Eisplatten, Schneegestöber und eine Skisprungschanze.", "music": "race"},
-	{"id": "orbit_ring", "name": "Orbit-Bahn", "desc": "Neonbahn im All: Looping, Schwerelos-Gleiter und ein Ringplanet zum Greifen nah.", "music": "race"},
+	{"id": "orbit_ring", "name": "Sternenstaub-Bahn", "desc": "Pastellbahn durch den Abendhimmel: Looping, Schwebe-Gleiter und ein Ringplanet zum Greifen nah.", "music": "race"},
 	{"id": "city_rally", "name": "Stadt-Rallye", "desc": "Enge 90°-Kurven zwischen Hochhäusern und ein Sprung über den Stadtkanal.", "music": "race"},
 	{"id": "desert_canyon", "name": "Wüsten-Canyon", "desc": "Sandpiste mit Looping und Gleitflug über eine schwindelerregende Schlucht.", "music": "race"},
 ]
@@ -158,7 +158,7 @@ var players: Array[Dictionary] = []
 var settings := {
 	"music": 0.7, "sfx": 0.9, "voice": 1.0,
 	"haptics": true, "touch_opacity": 0.8, "touch_scale": 1.0, "touch_layout": {},
-	"auto_accel": true, "screen_shake": 1.0, "quality": "auto", "show_fps": false, "dynamic_res": true,
+	"auto_accel": true, "steer_sens": 1.0, "screen_shake": 1.0, "quality": "auto", "show_fps": false, "dynamic_res": true,
 		"split_screen": true, "multi_display": true,
 }
 var party: Dictionary = {}
@@ -178,7 +178,24 @@ var is_lumos_device := false
 func _ready() -> void:
 	load_settings()
 	reset_players()
-	is_touch_device = DisplayServer.is_touchscreen_available() or OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios")
+	is_touch_device = detect_mobile()
+
+
+## Echtes Mobilgerät (Handy/Tablet)? Nur dann gibt es Touch-Steuerelemente. Desktop, Konsole/App und
+## Laptops mit Touchscreen oder Maus zählen nicht – dort reichen Gamepad, Tastatur und Maus.
+func detect_mobile() -> bool:
+	if OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios"):
+		return true
+	if OS.has_feature("web"):
+		var r: Variant = JavaScriptBridge.eval("""(function(){
+			var ua = navigator.userAgent || '';
+			var mobileUA = /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle|Opera Mini|IEMobile/i.test(ua);
+			var iPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+			var coarseOnly = window.matchMedia && matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches;
+			return (mobileUA || iPadOS || coarseOnly) && navigator.maxTouchPoints > 0;
+		})()""", true)
+		return r is bool and r
+	return false
 
 
 func reset_players(human_count := 1) -> void:

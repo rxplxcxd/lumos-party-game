@@ -235,9 +235,9 @@ func _page_main() -> Control:
 	var tw := logo.create_tween().set_loops()
 	tw.tween_property(logo, "position:y", 38.0, 1.4).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(logo, "position:y", 30.0, 1.4).set_trans(Tween.TRANS_SINE)
-	var v := UI.vbox(10)
+	var v := UI.vbox(8)
 	root.add_child(v)
-	v.position = Vector2(56, 214)
+	v.position = Vector2(56, 206)
 	var items := [
 		["Lumos Party", Color("#ff4fb8"), "party", "Das chaotische 3D-Brettspiel"],
 		["Nitro Dash", Color("#2f9bff"), "race", "High-Speed Arcade-Racer"],
@@ -248,8 +248,8 @@ func _page_main() -> Control:
 		["Credits", Color("#5a4a80"), "credits", ""],
 	]
 	for it in items:
-		var b := UI.button(it[0], it[1], 32, 380.0)
-		b.custom_minimum_size.y = 60
+		var b := UI.button(it[0], it[1], 30, 380.0)
+		b.custom_minimum_size.y = 54
 		b.tooltip_text = it[3]
 		var target: String = it[2]
 		b.pressed.connect(func() -> void: show_page(target))
@@ -749,6 +749,7 @@ func _page_settings() -> Control:
 	var arr := _side_panel("Einstellungen", 700)
 	var v: VBoxContainer = arr[1]
 	v.add_child(_slider("Musik", "music"))
+	v.add_child(_slider("Kart-Lenkung", "steer_sens", 0.5, 1.5))
 	v.add_child(_slider("Effekte", "sfx"))
 	v.add_child(_slider("Ansager", "voice"))
 	v.add_child(_slider("Kamera-Wackeln", "screen_shake"))

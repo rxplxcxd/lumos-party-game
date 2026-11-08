@@ -338,7 +338,7 @@ func _build_space() -> void:
 	var sm := SphereMesh.new()
 	sm.radius = 90.0
 	sm.height = 180.0
-	sm.material = WorldKit.mat(Color("#d88a4a"), 0.9, 0.35)
+	sm.material = WorldKit.mat(Color("#ffb3a0"), 0.9, 0.2)
 	planet.mesh = sm
 	planet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(planet)
@@ -367,7 +367,8 @@ func _build_space() -> void:
 	stars.position = Vector3(50, 40, 20)
 	stars.preprocess = 60.0
 	stars.emitting = true
-	var keys := ["space/meteor", "space/rock_crystals", "space/rock_crystals_b", "space/satellite", "space/craft_speeder", "sb/solarpanel", "space/pipe_ring"]
+	_dream_clouds()
+	var keys := ["plat/block_grass_overhang", "plat/block_snow", "plat/star", "plat/heart", "plat/jewel", "plat/mushrooms", "plat/flowers"]
 	var s := 0.0
 	while s < track.length:
 		var fr := track.frame(s)
@@ -380,20 +381,37 @@ func _build_space() -> void:
 					var tw := n.create_tween().set_loops()
 					tw.tween_property(n, "rotation:y", TAU, _rng.randf_range(14.0, 30.0)).as_relative()
 		s += 14.0
-	# Neon-Lichtinseln entlang der Bahn
+	# Sanfte Laternenlichter entlang der Bahn
 	s = 0.0
-	var colors := [Color(0.3, 0.9, 1.0), Color(0.8, 0.4, 1.0)]
+	var colors := [Color(1.0, 0.85, 0.6), Color(1.0, 0.7, 0.85)]
 	var ci := 0
 	while s < track.length:
 		var fr2 := track.frame(s)
 		var l := OmniLight3D.new()
 		l.light_color = colors[ci % 2]
-		l.light_energy = 1.8
-		l.omni_range = 16.0
+		l.light_energy = 1.0
+		l.omni_range = 14.0
 		add_child(l)
 		l.global_position = fr2.origin + fr2.basis.y * 5.0
 		ci += 1
 		s += 50.0
+
+
+## Flauschige Pastellwolken unter und neben der schwebenden Bahn.
+func _dream_clouds() -> void:
+	var cols := [Color(1, 1, 1), Color("#ffe0ec"), Color("#e6dcff"), Color("#fff2d6")]
+	for i in 70:
+		var puff := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = _rng.randf_range(8.0, 22.0)
+		sm.height = sm.radius * 1.1
+		sm.material = WorldKit.mat(cols[i % cols.size()], 1.0, 0.18)
+		puff.mesh = sm
+		puff.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(puff)
+		var a := _rng.randf() * TAU
+		var r := _rng.randf_range(60.0, 260.0)
+		puff.position = Vector3(50 + cos(a) * r, _rng.randf_range(-70.0, -25.0), 20 + sin(a) * r)
 
 
 # --- Stadt-Rallye --------------------------------------------------------------------------------------

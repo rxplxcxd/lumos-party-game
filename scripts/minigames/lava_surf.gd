@@ -36,9 +36,9 @@ func build_arena() -> void:
 	var fall := WorldKit.lava(world, Vector2(18, 12), -6.0, Vector2(0, 1.8))
 	fall.rotation.x = deg_to_rad(-80)
 	fall.position = Vector3(0, -5.5, BACK_Z + 2.5)
-	WorldKit.place(world, "space/rock_crystals", Vector3(-12, 1.5, -30), 0.0, 4.0)
-	WorldKit.place(world, "space/rock_crystals_b", Vector3(13, 1.5, -40), 0.0, 4.0)
-	WorldKit.place(world, "space/meteor", Vector3(0, 18, -60), 0.0, 8.0)
+	WorldKit.place(world, "nat/rock_tall", Vector3(-12, 1.5, -30), 0.0, 4.0)
+	WorldKit.place(world, "nat/cliff_stone", Vector3(13, 1.5, -40), 0.0, 4.0)
+	WorldKit.place(world, "pirate/palm", Vector3(0, 0, -60), 0.0, 6.0)
 
 
 func spawn_players() -> void:
@@ -84,7 +84,7 @@ func on_tick(delta: float) -> void:
 	if _decor_t <= 0.0:
 		_decor_t = 0.7
 		for side in [-1.0, 1.0]:
-			var key: String = ["td/rocks", "td/crystal", "nat/rock_large", "space/rock_crystals"][randi() % 4]
+			var key: String = ["td/rocks", "nat/rock_tall", "nat/rock_large", "pirate/rocks_a"][randi() % 4]
 			var d := Assets.spawn(key, world, Vector3(side * randf_range(HALF_W + 1.5, HALF_W + 5.0), 2.0, -50), randf() * 360.0, randf_range(1.5, 3.0))
 			decor.append(d)
 	for d in decor.duplicate():

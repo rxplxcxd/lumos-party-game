@@ -1,6 +1,6 @@
 extends MinigameBase
-## Meteor-Ausweichen: Auf einem Mond-Plateau regnen Meteore herab. Rote Zielkreise wachsen vor dem
-## Einschlag. Später zielen manche Meteore direkt auf Spieler. Wer getroffen wird, fliegt raus.
+## Sternschnuppen-Regen: Auf der Abendwiese purzeln Sternschnuppen-Brocken herab. Rote Zielkreise wachsen vor
+## dem Einschlag. Später zielen manche Brocken direkt auf Spieler. Wer getroffen wird, fliegt raus.
 ## 1 gegen 3: Das Solo schwebt in der Sternwarten-Kuppel und lenkt mit einem Zielkreis eigene Meteore (A),
 ## das Trio muss 30 Sekunden überstehen.
 
@@ -12,7 +12,7 @@ var _spawn_t := 1.0
 
 func _init() -> void:
 	game_id = "meteor_dodge"
-	env_preset = "space"
+	env_preset = "observatory"
 	time_limit = 45.0
 	survival = true
 	arena_radius = 11.0
@@ -22,29 +22,38 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.cylinder(world, RADIUS + 0.5, 2.0, Vector3(0, -1.0, 0), Color("#7a7690"))
-	for i in 10:
+	# Sternschnuppen-Wiese: Ein runder Hügel bei Abenddämmerung, Sternschnuppen-Brocken fallen herab
+	WorldKit.cylinder(world, RADIUS + 0.5, 2.0, Vector3(0, -1.0, 0), Color("#6fb85e"))
+	WorldKit.cylinder(world, RADIUS + 1.2, 1.8, Vector3(0, -1.3, 0), Color("#a8845a"), false)
+	for i in 14:
 		var a := randf() * TAU
 		var r := randf_range(2.0, RADIUS - 1.0)
-		WorldKit.place(world, "space/crater", Vector3(cos(a) * r, 0.0, sin(a) * r), randf() * 360.0, randf_range(1.0, 1.8))
-	for i in 12:
-		var a2 := TAU * i / 12.0
-		WorldKit.place(world, ["space/rock_crystals", "space/rock_crystals_b", "space/machine", "space/satellite"][i % 4], Vector3(cos(a2), 0, sin(a2)) * (RADIUS + 2.5), rad_to_deg(-a2), 1.6)
-	WorldKit.place(world, "space/rocket", Vector3(-14, 0, -12), 0.0, 3.0)
-	WorldKit.place(world, "space/hangar", Vector3(14, 0, -12), -40.0, 2.0)
-	var planet := MeshInstance3D.new()
+		WorldKit.place(world, ["plat/flowers", "nat/flower_yellow", "nat/grass", "nat/flower_purple"][i % 4], Vector3(cos(a) * r, 0.0, sin(a) * r), randf() * 360.0, randf_range(1.0, 1.5))
+	for i in 14:
+		var a2 := TAU * i / 14.0
+		WorldKit.place(world, ["nat/tree_oak", "plat/tree", "nat/bush", "town/lantern"][i % 4], Vector3(cos(a2), 0, sin(a2)) * (RADIUS + 2.6), rad_to_deg(-a2), 1.8)
+	WorldKit.place(world, "town/windmill", Vector3(-15, 0, -13), 20.0, 2.6)
+	WorldKit.cottage(world, Vector3(15, 0, -13), -40.0, 1.5, Color("#fff1d8"), Color("#7fb8ff"))
+	var moon := MeshInstance3D.new()
 	var sm := SphereMesh.new()
-	sm.radius = 30.0
-	sm.height = 60.0
-	sm.material = WorldKit.mat(Color("#4a7ad8"), 0.8, 0.4)
-	planet.mesh = sm
-	planet.position = Vector3(40, 30, -120)
-	world.add_child(planet)
+	sm.radius = 14.0
+	sm.height = 28.0
+	sm.material = WorldKit.mat(Color("#fff2c4"), 0.9, 0.6)
+	moon.mesh = sm
+	moon.position = Vector3(40, 40, -120)
+	world.add_child(moon)
+	var stars := FX.emitter({"amount": 90, "life": 30.0, "one_shot": false, "explosive": 0.0, "spread": 180.0, "vel_min": 0.0, "vel_max": 0.02,
+		"gravity": Vector3.ZERO, "size": 0.8, "tex": FX.tex_star, "additive": true, "color": Color(1, 0.95, 0.8, 0.9), "box": Vector3(120, 20, 10)})
+	world.add_child(stars)
+	stars.position = Vector3(0, 35, -80)
+	stars.preprocess = 30.0
+	stars.emitting = true
 
 
 var _reticle: MeshInstance3D
 var _ret_pos := Vector3.ZERO
 var _solo_cd := 0.0
+var _solo_net_t := 0.0
 
 
 func spawn_players() -> void:
@@ -90,14 +99,29 @@ func check_end() -> bool:
 	return super.check_end()
 
 
+func _on_solo_msg(_from: String, msg: Dictionary) -> void:
+	if String(msg.get("k", "")) != "md" or net_owned(solo_slot):
+		return
+	var r: Array = msg.get("r", [0, 0])
+	_ret_pos = Vector3(float(r[0]), 0, float(r[1]))
+	if int(msg.get("sp", 0)) == 1:
+		_spawn(_ret_pos, true)
+		(avatars[solo_slot] as PartyAvatar).rig.play("cast", 0.05, 1.6, true)
+
+
 func on_start() -> void:
+	if net_sync and category == "1v3":
+		Net.message.connect(_on_solo_msg)
 	for av in avatars:
 		(av as PartyAvatar).rig.surface = "stone"
 		(av as PartyAvatar).can_shove = true
 
 
 func on_tick(delta: float) -> void:
-	if category == "1v3":
+	if category == "1v3" and not net_owned(solo_slot):
+		_reticle.position = _reticle.position.lerp(_ret_pos + Vector3.UP * 0.08, clampf(delta * 12.0, 0.0, 1.0))
+		_reticle.rotation.y += delta * 2.0
+	elif category == "1v3":
 		var mv := InputHub.move(solo_slot)
 		_ret_pos += Vector3(mv.x, 0, mv.y) * 10.0 * delta
 		var flat := Vector2(_ret_pos.x, _ret_pos.z)
@@ -107,21 +131,27 @@ func on_tick(delta: float) -> void:
 		_reticle.position = _ret_pos + Vector3.UP * 0.08
 		_reticle.rotation.y += delta * 2.0
 		_solo_cd -= delta
+		var spawned := false
 		if _solo_cd <= 0.0 and InputHub.pressed(solo_slot, "a"):
 			_solo_cd = 0.75
-			_spawn(_ret_pos)
+			_spawn(_ret_pos, true)
+			spawned = true
 			(avatars[solo_slot] as PartyAvatar).rig.play("cast", 0.05, 1.6, true)
+		_solo_net_t -= delta
+		if net_sync and (spawned or _solo_net_t <= 0.0):
+			_solo_net_t = 0.1
+			Net.send({"k": "md", "r": [snappedf(_ret_pos.x, 0.01), snappedf(_ret_pos.z, 0.01)], "sp": 1 if spawned else 0}, spawned)
 	_spawn_t -= delta
 	if _spawn_t <= 0.0:
 		_spawn_t = lerpf(0.35, 1.1, time_left / time_limit) * (2.4 if category == "1v3" else 1.0)
-		var target := Vector3(randf_range(-RADIUS, RADIUS), 0, randf_range(-RADIUS, RADIUS))
-		if randf() < 0.35 * (1.0 - time_left / time_limit) + 0.1:
+		var target := Vector3(rng.randf_range(-RADIUS, RADIUS), 0, rng.randf_range(-RADIUS, RADIUS))
+		if rng.randf() < 0.35 * (1.0 - time_left / time_limit) + 0.1:
 			var living: Array = []
 			for i in 4:
 				if alive[i]:
 					living.append(avatars[i])
 			if not living.is_empty():
-				var v: Node3D = living[randi() % living.size()]
+				var v: Node3D = living[rng.randi() % living.size()]
 				target = Vector3(v.global_position.x, 0, v.global_position.z)
 		if Vector2(target.x, target.z).length() > RADIUS - 0.5:
 			target = Vector3(target.x, 0, target.z).normalized() * (RADIUS - 0.5)
@@ -139,8 +169,9 @@ func on_tick(delta: float) -> void:
 			_impact(m)
 
 
-func _spawn(target: Vector3) -> void:
-	var node := Assets.spawn("space/meteor", world, target + Vector3(randf_range(-8, 8), 30, -12), 0.0, 1.2)
+func _spawn(target: Vector3, solo := false) -> void:
+	var node := Assets.spawn("plat/star", world, target + Vector3(0.0 if solo else rng.randf_range(-8, 8), 30, -12), 0.0, 1.6)
+	Assets.tint(node, Color(1, 0.9, 0.55), false, 0.8)
 	Assets.tint(node, Color(1.2, 0.7, 0.4), false, 0.8)
 	var trail := FX.make_trail(node, "embers")
 	trail.emitting = true
@@ -158,7 +189,7 @@ func _spawn(target: Vector3) -> void:
 	ring.mesh = q
 	world.add_child(ring)
 	ring.position = target + Vector3.UP * 0.06
-	meteors.append({"node": node, "ring": ring, "from": node.position, "to": target, "t": 0.0, "dur": randf_range(1.4, 2.0)})
+	meteors.append({"node": node, "ring": ring, "from": node.position, "to": target, "t": 0.0, "dur": 1.6 if solo else rng.randf_range(1.4, 2.0)})
 	Audio.sfx("whistle_fall", target, -12.0)
 
 
@@ -168,11 +199,11 @@ func _impact(m: Dictionary) -> void:
 	(m.node as Node3D).queue_free()
 	(m.ring as Node3D).queue_free()
 	FX.explosion(p, 0.9)
-	var crater := Assets.spawn("space/crater", world, p, randf() * 360.0, 0.9)
+	var crater := Assets.spawn("plat/flowers", world, p, randf() * 360.0, 1.2)
 	Juice.pop_in(crater, 0.2)
 	for i in 4:
 		var av := avatars[i] as PartyAvatar
-		if not alive[i] or i == solo_slot:
+		if not alive[i] or i == solo_slot or not net_owned(i):
 			continue
 		var d := Vector2(av.global_position.x - p.x, av.global_position.z - p.z).length()
 		if d < 1.7:

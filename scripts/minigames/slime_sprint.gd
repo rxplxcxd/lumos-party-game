@@ -54,9 +54,9 @@ func build_arena() -> void:
 	mat.emission_energy_multiplier = 0.5
 	mat.roughness = 0.05
 	for i in 12:
-		var z := -8.0 - i * 7.0 + randf_range(-1.5, 1.5)
-		var x := randf_range(-HALF_W + 1.5, HALF_W - 1.5)
-		var r := randf_range(1.4, 2.4)
+		var z := -8.0 - i * 7.0 + rng.randf_range(-1.5, 1.5)
+		var x := rng.randf_range(-HALF_W + 1.5, HALF_W - 1.5)
+		var r := rng.randf_range(1.4, 2.4)
 		var mi := MeshInstance3D.new()
 		var cm := CylinderMesh.new()
 		cm.top_radius = r
@@ -65,7 +65,7 @@ func build_arena() -> void:
 		cm.material = mat
 		mi.mesh = cm
 		mi.position = Vector3(x, 0.03, z)
-		mi.scale = Vector3(1.0, 1.0, randf_range(0.7, 1.3))
+		mi.scale = Vector3(1.0, 1.0, rng.randf_range(0.7, 1.3))
 		world.add_child(mi)
 		slimes.append({"pos": Vector2(x, z), "r": r})
 	# Pendel-Fallen
@@ -91,11 +91,11 @@ func build_arena() -> void:
 		pivot.add_child(chain)
 		var ball := Assets.spawn("mg/spike_roller", pivot, Vector3(0, -7.0, 0), 0.0, 0.85)
 		ball.position = Vector3(0, -7.85, 0)
-		pendulums.append({"pivot": pivot, "phase": randf() * TAU, "speed": randf_range(1.5, 2.3), "z": z})
+		pendulums.append({"pivot": pivot, "phase": rng.randf() * TAU, "speed": rng.randf_range(1.5, 2.3), "z": z})
 	# Baumstämme
 	for i in 6:
 		var z := -20.0 - i * 13.0 + 6.0
-		var lg := Assets.spawn("nat/log", world, Vector3(randf_range(-2, 2), 0, z), 90.0, 3.2)
+		var lg := Assets.spawn("nat/log", world, Vector3(rng.randf_range(-2, 2), 0, z), 90.0, 3.2)
 		var body := StaticBody3D.new()
 		var bcs := CollisionShape3D.new()
 		var bb := BoxShape3D.new()
@@ -115,7 +115,7 @@ func build_arena() -> void:
 	for k in 44:
 		var side := -1.0 if k % 2 == 0 else 1.0
 		var z := 6.0 - k * (LENGTH + 12.0) / 44.0
-		WorldKit.place(world, keys[k % keys.size()], Vector3(side * randf_range(8.5, 16.0), 0, z), randf() * 360.0, randf_range(2.0, 3.2), false, false)
+		WorldKit.place(world, keys[k % keys.size()], Vector3(side * rng.randf_range(8.5, 16.0), 0, z), rng.randf() * 360.0, rng.randf_range(2.0, 3.2), false, false)
 
 
 func setup_camera(c: ArenaCamera) -> void:

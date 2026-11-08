@@ -33,7 +33,7 @@ const UNLOCKS := {
 	"kart_oozi": {"name": "Kart „Oozi“", "desc": "Gewinne einen Grand Prix.", "kind": "kart"},
 	"mega_cup": {"name": "Mega-Cup", "desc": "Gewinne den Lumos- oder Sternen-Cup.", "kind": "feature"},
 	"skin_gold": {"name": "Goldlack", "desc": "Gewinne 5 Rennen.", "kind": "skin"},
-	"skin_neon": {"name": "Neon-Lack", "desc": "Gewinne 10 Minispiele.", "kind": "skin"},
+	"skin_neon": {"name": "Glitzer-Lack", "desc": "Gewinne 10 Minispiele.", "kind": "skin"},
 	"skin_star": {"name": "Sternen-Glanz", "desc": "Gewinne eine Party.", "kind": "skin"},
 	"time_ace": {"name": "Zeitfahr-Ass", "desc": "Stelle auf 3 Strecken eine Bestzeit auf.", "kind": "feature"},
 }

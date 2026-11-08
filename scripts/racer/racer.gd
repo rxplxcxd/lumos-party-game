@@ -9,11 +9,16 @@ extends Node3D
 signal lap_done(r: Racer, lap: int)
 signal item_changed(r: Racer)
 
-const MAX_SPEED := 31.0
-const BOOST_SPEED := 43.0
-const ACCEL := 17.0
-const BRAKE := 30.0
-const TURN := 2.05
+const MAX_SPEED := 27.5
+const BOOST_SPEED := 38.0
+const ACCEL := 12.5
+const BRAKE := 26.0
+const TURN := 1.75
+## Lenkgefühl (Mensch): Eingabe wird weich angefahren, kehrt etwas schneller zur Mitte zurück und
+## die Gierrate hat Trägheit – wie bei klassischen Arcade-Kart-Spielen.
+const STEER_RISE := 3.4
+const STEER_FALL := 5.5
+const YAW_RESPONSE := 5.5
 const DRIFT_LEVELS := [0.6, 1.35, 2.2]
 const DRIFT_BOOST := [0.55, 1.0, 1.6]
 const RADIUS := 1.25
@@ -54,6 +59,8 @@ var gliding := false
 var airborne := false
 var speed_mult := 1.0
 var steer_in := 0.0
+var _steer_s := 0.0
+var _yaw_rate := 0.0
 var _half_passed := false
 var _glider: Node3D
 var _engine: AudioStreamPlayer3D
@@ -137,7 +144,13 @@ func _read_input(delta: float) -> Dictionary:
 	var brake := InputHub.held(slot, "b") or mv.y > 0.6
 	if Game.is_touch_device and Game.settings.auto_accel and InputHub.last_device == "touch":
 		accel = not InputHub.held(slot, "b")
-	return {"steer": mv.x, "accel": accel, "brake": brake and not accel, "drift": InputHub.held(slot, "r"),
+	# Weiche Lenkung: Ansprechkurve (feine Korrekturen um die Mitte) × Empfindlichkeit, zeitlich geglättet
+	var sens := clampf(float(Game.settings.get("steer_sens", 1.0)), 0.4, 1.6)
+	var raw := clampf(mv.x, -1.0, 1.0)
+	var target := signf(raw) * pow(absf(raw), 1.45) * sens
+	var rate := STEER_RISE * (0.7 + sens * 0.3) if absf(target) > absf(_steer_s) and signf(target) == signf(_steer_s) or _steer_s == 0.0 else STEER_FALL
+	_steer_s = move_toward(_steer_s, clampf(target, -1.0, 1.0), rate * delta)
+	return {"steer": _steer_s, "accel": accel, "brake": brake and not accel, "drift": InputHub.held(slot, "r"),
 		"item": InputHub.pressed(slot, "x"), "pitch": mv.y}
 
 
@@ -278,7 +291,9 @@ func tick(delta: float) -> void:
 	if on_ice:
 		turn *= 0.7   # Eis: träge Lenkung, der Kart schiebt über die Vorderräder
 	var kappa := track.curvature(s)
-	psi += (steer * turn - kappa * v * cos(psi)) * delta
+	# Gier-Trägheit: Das Kart dreht nicht schlagartig ein, sondern baut die Drehrate auf
+	_yaw_rate = lerpf(_yaw_rate, steer * turn, clampf(delta * (YAW_RESPONSE * (1.6 if drift_dir != 0 else 1.0)), 0.0, 1.0))
+	psi += (_yaw_rate - kappa * v * cos(psi)) * delta
 	psi = clampf(psi, -1.1, 1.1)
 	if drift_dir == 0 and not airborne and not on_ice:
 		psi = lerpf(psi, psi * 0.9, delta * 2.0)

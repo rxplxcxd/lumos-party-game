@@ -113,24 +113,51 @@ func on_start() -> void:
 		(av as PartyAvatar).rig.surface = "wood"
 	if category == "1v3":
 		(avatars[solo_slot] as PartyAvatar).can_move = false
+		if net_sync:
+			Net.message.connect(_on_solo_msg)
+
+
+var _net_speed := 1.25
+var _net_flip := false
+var _solo_net_t := 0.0
+
+
+func _on_solo_msg(_from: String, msg: Dictionary) -> void:
+	if String(msg.get("k", "")) != "hh" or net_owned(solo_slot):
+		return
+	_net_speed = float(msg.get("s", _net_speed))
+	if int(msg.get("f", 0)) == 1:
+		_net_flip = true
+		(avatars[solo_slot] as PartyAvatar).rig.play("interact", 0.05, 1.6, true)
 
 
 func on_tick(delta: float) -> void:
 	var prog := 1.0 - time_left / time_limit
 	_speed = lerpf(1.25, 3.1, prog)
 	_flip_t -= delta
-	if category == "1v3":
+	if category == "1v3" and not net_owned(solo_slot):
+		# Online: Tempo und Richtungswechsel kommen vom Gerät des Solos
+		_speed = _net_speed
+		_flip_t = 0.0 if _net_flip else 99.0
+		_net_flip = false
+	elif category == "1v3":
 		# Solo bestimmt das Tempo (1,2–3,4) und darf alle 1,5 s die Richtung wechseln
 		var mv := InputHub.move(solo_slot)
 		_speed = lerpf(1.2, 3.4, clampf(maxf(mv.length(), 0.25 + prog * 0.4), 0.0, 1.0))
 		_flip_t = 99.0
 		_solo_flip_cd -= delta
+		var flipped := false
 		if _solo_flip_cd <= 0.0 and InputHub.pressed(solo_slot, "a"):
 			_solo_flip_cd = 1.5
 			_flip_t = 0.0
+			flipped = true
 			(avatars[solo_slot] as PartyAvatar).rig.play("interact", 0.05, 1.6, true)
+		_solo_net_t -= delta
+		if net_sync and (flipped or _solo_net_t <= 0.0):
+			_solo_net_t = 0.1
+			Net.send({"k": "hh", "s": snappedf(_speed, 0.01), "f": 1 if flipped else 0}, flipped)
 	if _flip_t <= 0.0:
-		_flip_t = randf_range(6.0, 10.0)
+		_flip_t = rng.randf_range(6.0, 10.0)
 		_dir = -_dir
 		Audio.sfx("creak", Vector3.ZERO, 0.0)
 		Juice.shake(0.12)
@@ -157,7 +184,7 @@ func _check_hits(a: Dictionary) -> void:
 	var high: bool = a.high
 	for i in 4:
 		var av := avatars[i] as PartyAvatar
-		if not alive[i] or not av.alive or i == solo_slot:
+		if not alive[i] or not av.alive or i == solo_slot or not net_owned(i):
 			continue
 		var p := av.global_position
 		var r := Vector2(p.x, p.z).length()

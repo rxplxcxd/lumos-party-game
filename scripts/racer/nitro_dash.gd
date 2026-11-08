@@ -96,10 +96,27 @@ func _build_world() -> void:
 		"pirates":
 			WorldKit.water(self, Vector2(600, 600), -0.6)
 			WorldKit.box(self, Vector3(110, 1, 160), Vector3(30, -0.75, 20), Color("#f1d9a0"), false)
-		"neon":
-			WorldKit.box(self, Vector3(500, 1, 500), Vector3(60, -0.8, 30), Color("#140a24"), false)
+		"volcano":
+			WorldKit.box(self, Vector3(500, 1, 500), Vector3(60, -0.8, 30), Color("#7a9a4a"), false)
+			WorldKit.box(self, Vector3(140, 1, 170), Vector3(60, -0.75, 30), Color("#b88a5a"), false)
 			var lava := WorldKit.lava(self, Vector2(70, 90), -0.5, Vector2(0.05, 0.1))
 			lava.position = Vector3(110, -0.5, 60)
+			var cone := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = 14.0
+			cm.bottom_radius = 46.0
+			cm.height = 38.0
+			cm.material = WorldKit.mat(Color("#8a5a42"), 0.95)
+			cone.mesh = cm
+			cone.position = Vector3(-60, 18, -120)
+			add_child(cone)
+			var top := WorldKit.lava(self, Vector2(26, 26), 37.2, Vector2(0.02, 0.03))
+			top.position = Vector3(-60, 37.2, -120)
+			var smoke := FX.emitter({"amount": 30, "life": 6.0, "one_shot": false, "explosive": 0.0, "spread": 15.0, "vel_min": 2.0, "vel_max": 4.0,
+				"gravity": Vector3(0.3, 0.4, 0), "size": 6.0, "color": Color(1, 0.95, 0.9, 0.35), "box": Vector3(10, 1, 10)})
+			add_child(smoke)
+			smoke.position = Vector3(-60, 39, -120)
+			smoke.emitting = true
 		_:
 			WorldKit.box(self, Vector3(500, 1, 500), Vector3(80, -0.8, 20), Color("#4c9a36"), false)
 			var canyon := WorldKit.water(self, Vector2(50, 70), -26.0)
@@ -123,9 +140,9 @@ func _decorate(theme: String) -> void:
 		"pirates":
 			keys = ["pirate/palm", "pirate/palm_bend", "pirate/palm_detailed", "pirate/rocks_a", "pirate/rocks_b", "pirate/barrel", "pirate/crate", "pirate/flag", "pirate/tower_small"]
 			near = ["race/barrier_white", "pirate/barrel", "race/flag_red"]
-		"neon":
-			keys = ["space/rock_crystals", "space/rock_crystals_b", "space/rocket", "space/satellite", "space/machine", "space/turret", "td/crystal", "space/meteor", "space/hangar"]
-			near = ["race/light_colored", "race/pylon", "race/barrier_red"]
+		"volcano":
+			keys = ["pirate/palm", "pirate/palm_bend", "nat/rock_large", "nat/rock_tall", "nat/cliff_stone", "pirate/rocks_a", "nat/bush", "race/tent", "nat/tree_palm"]
+			near = ["race/barrier_white", "pirate/barrel", "race/flag_red", "race/pylon"]
 		_:
 			keys = ["race/tree_large", "race/tree_small", "nat/tree_oak", "nat/tree_default", "race/tent", "race/billboard", "race/banner_tower_red", "race/banner_tower_green", "race/radar", "race/pits"]
 			near = ["race/barrier_red", "race/barrier_white", "race/light_post", "race/flag_checkers", "race/pylon"]
@@ -155,19 +172,19 @@ func _decorate(theme: String) -> void:
 		var fr2 := track.frame(track.length - 20.0 + i * 12.0)
 		var p2 := fr2.origin - fr2.basis.x * (track.width * 0.5 + 6.0)
 		p2.y = 0.0
-		var gs := WorldKit.place(self, "race/grandstand_round" if theme != "neon" else "space/hangar", p2, 0.0, 5.0, false)
+		var gs := WorldKit.place(self, "race/grandstand_round", p2, 0.0, 5.0, false)
 		gs.look_at(fr2.origin, Vector3.UP)
-	# Neon-Lichter
-	if theme == "neon":
+	# Warme Fackel-Lichter am Vulkan
+	if theme == "volcano":
 		var s2 := 0.0
-		var colors := [Color(0.2, 0.9, 1.0), Color(1.0, 0.2, 0.8), Color(0.6, 0.3, 1.0)]
+		var colors := [Color(1.0, 0.75, 0.45), Color(1.0, 0.6, 0.35), Color(1.0, 0.85, 0.6)]
 		var ci := 0
 		while s2 < track.length:
 			var fr3 := track.frame(s2)
 			var l := OmniLight3D.new()
 			l.light_color = colors[ci % 3]
-			l.light_energy = 2.2
-			l.omni_range = 14.0
+			l.light_energy = 1.2
+			l.omni_range = 12.0
 			add_child(l)
 			l.global_position = fr3.origin + fr3.basis.y * 4.0
 			ci += 1

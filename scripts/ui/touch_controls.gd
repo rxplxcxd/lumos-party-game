@@ -113,7 +113,8 @@ func _relayout() -> void:
 func _input(event: InputEvent) -> void:
 	if not (event is InputEventScreenTouch or event is InputEventScreenDrag):
 		return
-	Game.is_touch_device = true
+	if not Game.is_touch_device:
+		return   # Desktop/App (auch maus-emulierte Touches): keine Bildschirm-Steuerelemente
 	if not _stick.visible and _visible_buttons().is_empty():
 		if profile != "none" and profile != "menu":
 			_refresh_visibility()

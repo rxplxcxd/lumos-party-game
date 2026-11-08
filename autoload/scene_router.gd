@@ -10,6 +10,7 @@ var _layer: CanvasLayer
 var _rect: ColorRect
 var _mat: ShaderMaterial
 var _loading: Label
+var pause_menu: PauseMenu
 
 
 func _ready() -> void:
@@ -37,6 +38,8 @@ func _ready() -> void:
 	_layer.add_child(_loading)
 	get_viewport().size_changed.connect(_update_aspect)
 	_update_aspect()
+	pause_menu = PauseMenu.new()
+	add_child(pause_menu)
 
 
 func _update_aspect() -> void:
@@ -59,16 +62,31 @@ func goto(path: String, p: Dictionary = {}) -> void:
 	await _wipe(2.6, 0.0, 0.45)
 	_loading.visible = true
 	await get_tree().process_frame
+	if pause_menu and pause_menu.open:
+		pause_menu.close()
 	get_tree().paused = false
 	Juice.base_time_scale = 1.0
 	InputHub.clear_virtual()
 	InputHub.set_touch_profile("none")
-	ResourceLoader.load_threaded_request(path)
-	while ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+	CutsceneManager.abort()
+	var ps: PackedScene = null
+	if OS.has_feature("web"):
+		# Web (ohne Threads): direkt laden – Thread-Laden kann dort bei manchen Szenen hängen bleiben
 		await get_tree().process_frame
-	var ps: PackedScene = ResourceLoader.load_threaded_get(path)
-	if ps == null:
-		ps = load(path)
+		ps = load(path) as PackedScene
+	else:
+		ResourceLoader.load_threaded_request(path)
+		var waited := 0.0
+		while ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS and waited < 20.0:
+			await get_tree().process_frame
+			waited += get_process_delta_time()
+		if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_LOADED:
+			ps = ResourceLoader.load_threaded_get(path) as PackedScene
+		if ps == null:
+			ps = load(path) as PackedScene
+	if ps == null and path != "res://scenes/menu/MainMenu.tscn":
+		push_error("Szene konnte nicht geladen werden: " + path)
+		ps = load("res://scenes/menu/MainMenu.tscn") as PackedScene
 	get_tree().change_scene_to_packed(ps)
 	await get_tree().process_frame
 	await get_tree().process_frame

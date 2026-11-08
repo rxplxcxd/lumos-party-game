@@ -579,7 +579,6 @@ func _boss_result(res: Dictionary) -> void:
 	_freeze(false)
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel") and not _busy:
+func _exit_tree() -> void:
+	if player:
 		_write()
-		Router.goto("res://scenes/menu/MainMenu.tscn", {"page": "modes"})
