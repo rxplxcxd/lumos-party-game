@@ -8,6 +8,8 @@ const ROUNDS := [5, 10, 15, 20]
 
 var GAMES: Array = []
 var _board_idx := 0
+var _game_stepper: Control
+var _party_rows: Array = []
 var _rounds_idx := 1
 var _pmode_idx := 0
 
@@ -98,6 +100,12 @@ func _build_join() -> void:
 	create.custom_minimum_size.y = 70
 	create.pressed.connect(func() -> void: Net.create_room())
 	_join_box.add_child(create)
+	var big := UI.button("  Athlon-Raum (bis 20 Spieler)", Color("#ff9f1a"), 26, 520)
+	big.icon = UI.icon_tex("trophy", 28)
+	big.custom_minimum_size.y = 58
+	big.tooltip_text = "Lumos-Athlon: Wettlauf über schnelle Solo-Minispiele für bis zu 20 Geräte"
+	big.pressed.connect(func() -> void: Net.create_room(Net.MAX_BIG))
+	_join_box.add_child(big)
 	var row := UI.hbox(12)
 	_code_edit = LineEdit.new()
 	_code_edit.placeholder_text = "Raumcode"
@@ -155,6 +163,7 @@ func _build_room() -> void:
 	_host_box = UI.vbox(10)
 	_room_box.add_child(_host_box)
 	var gs := Stepper.new().setup(GAMES.map(func(g: Dictionary) -> String: return g.name), _game_idx, 420, Color("#00b894"))
+	_game_stepper = gs
 	_host_box.add_child(_row("Spiel", gs))
 	var ts := Stepper.new().setup(Game.TRACKS.map(func(t: Dictionary) -> String: return t.name), _track_idx, 320, Color("#2f9bff"))
 	ts.changed.connect(func(i: int) -> void: _track_idx = i)
@@ -185,6 +194,7 @@ func _build_room() -> void:
 		mode_row.visible = GAMES[i].mode == "party"
 	gs.changed.connect(vis)
 	vis.call(_game_idx)
+	_party_rows = [track_row, laps_row, board_row, rounds_row, mode_row]
 	_start = UI.button("Spiel starten!", Color("#ff4fb8"), 34, 420)
 	_start.custom_minimum_size.y = 70
 	_start.pressed.connect(_start_game)
@@ -197,6 +207,9 @@ func _build_room() -> void:
 
 
 func _start_game() -> void:
+	if Net.capacity() > Net.MAX_PLAYERS:
+		Net.start_game({"mode": "athlon"})
+		return
 	var g: Dictionary = GAMES[_game_idx]
 	var cfg := {"mode": g.mode}
 	if g.mode == "race":
@@ -238,12 +251,13 @@ func _refresh() -> void:
 	var ids: Array = Net.players.keys()
 	ids.sort_custom(func(a: String, b: String) -> bool: return int(Net.players[a].get("slot", 0)) < int(Net.players[b].get("slot", 0)))
 	var all_ready := true
+	var big := Net.capacity() > Net.MAX_PLAYERS
 	for id in ids:
 		var p: Dictionary = Net.players[id]
 		var slot := int(p.get("slot", 0))
 		var row := UI.hbox(12)
-		row.add_child(UI.label("P%d" % (slot + 1), 28, Game.player_color(slot), true))
-		var nm := UI.label("%s%s" % [String(p.get("name", "Spieler")), "  (du)" if id == Net.me else ""], 24, Color.WHITE, true)
+		row.add_child(UI.label("P%d" % (slot + 1), 22 if big else 28, Game.player_color(slot % 4) if slot < 4 else Athlon.runner_color(slot), true))
+		var nm := UI.label("%s%s" % [String(p.get("name", "Spieler")), "  (du)" if id == Net.me else ""], 18 if big else 24, Color.WHITE, true)
 		nm.custom_minimum_size.x = 300
 		row.add_child(nm)
 		row.add_child(UI.label(Game.hero(String(p.get("hero", "knight"))).name, 20, Color(1, 1, 1, 0.7)))
@@ -254,8 +268,16 @@ func _refresh() -> void:
 			all_ready = false
 		row.add_child(UI.icon_rect("check" if rd else "pause", 24, Color("#7dff9a") if rd else Color(1, 1, 1, 0.35)))
 		_players_box.add_child(row)
-	for k in range(ids.size(), Net.MAX_PLAYERS):
-		_players_box.add_child(UI.label("P%d – frei (CPU)" % (k + 1), 20, Color(1, 1, 1, 0.4)))
+	if big:
+		_players_box.add_child(UI.label("%d / %d Läufer · freie Plätze bis 8 füllen CPUs auf" % [ids.size(), Net.capacity()], 18, Color(1, 1, 1, 0.5)))
+	else:
+		for k in range(ids.size(), Net.MAX_PLAYERS):
+			_players_box.add_child(UI.label("P%d – frei (CPU)" % (k + 1), 20, Color(1, 1, 1, 0.4)))
+	if is_instance_valid(_game_stepper):
+		_game_stepper.get_parent().visible = not big
+		for r in _party_rows:
+			if big:
+				(r as Control).visible = false
 	_start.disabled = not all_ready
 	_start.text = "Spiel starten!" if all_ready else "Warte auf „Bereit“ …"
 	_ready_btn.visible = not Net.is_host
@@ -264,4 +286,4 @@ func _refresh() -> void:
 func _process(_delta: float) -> void:
 	if Net.online and is_instance_valid(_net_label):
 		var ping := ("%d ms" % int(Net.rtt_ms)) if Net.rtt_ms >= 0.0 else ("Host" if Net.is_host else "…")
-		_net_label.text = "Verbindung: %s · %s · %d/%d Spieler" % [Net.transport, ping, Net.players.size(), Net.MAX_PLAYERS]
+		_net_label.text = "Verbindung: %s · %s · %d/%d Spieler" % [Net.transport, ping, Net.players.size(), Net.capacity()]

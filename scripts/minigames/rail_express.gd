@@ -88,7 +88,7 @@ func build_arena() -> void:
 		_cart_nodes.append(cart)
 	# Bahnhof am Ziel
 	WorldKit.place(world, "toy/gate_finish", Vector3(LENGTH, 0, 0), 90.0, 4.0)
-	WorldKit.place(world, "town/house", Vector3(LENGTH + 8, 0, -6), -90.0, 2.4)
+	WorldKit.cottage(world, Vector3(LENGTH + 8, 0, -6), -90.0, 1.5, Color("#fff1d8"), Color("#ff8a8a"))
 	for i in 14:
 		var px := -6.0 + i * 8.0
 		WorldKit.place(world, ["plat/tree", "plat/flowers", "nat/tree_oak", "plat/fence"][i % 4], Vector3(px, 0, -8.0 if i % 2 == 0 else 8.0), randf() * 360.0, 2.0)

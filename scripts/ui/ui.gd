@@ -232,6 +232,7 @@ const SVG_ICONS := {
 	"user": "<circle cx='32' cy='22' r='12' fill='#C'/><path d='M8 58 C10 42 20 36 32 36 C44 36 54 42 56 58 Z' fill='#C'/>",
 	"lock": "<rect x='12' y='28' width='40' height='30' rx='6' fill='#C'/><path d='M20 28 V20 C20 12 26 8 32 8 C38 8 44 12 44 20 V28' fill='none' stroke='#C' stroke-width='7'/>",
 	"gamepad": "<path d='M14 20 H50 C58 20 62 28 62 38 C62 50 56 54 50 50 L42 44 H22 L14 50 C8 54 2 50 2 38 C2 28 6 20 14 20 Z' fill='#C'/><circle cx='46' cy='31' r='4' fill='#1a0833'/><circle cx='52' cy='37' r='4' fill='#1a0833'/><path d='M14 34 H26 M20 28 V40' stroke='#1a0833' stroke-width='5' stroke-linecap='round'/>",
+	"music": "<path d='M24 46 V14 L52 7 V40' fill='none' stroke='#C' stroke-width='6' stroke-linejoin='round'/><circle cx='17' cy='46' r='9' fill='#C'/><circle cx='45' cy='40' r='9' fill='#C'/>",
 	"trophy": "<path d='M18 8 H46 V22 C46 32 40 38 32 38 C24 38 18 32 18 22 Z' fill='#C'/><path d='M18 14 H8 C8 24 12 28 18 28 M46 14 H56 C56 24 52 28 46 28' fill='none' stroke='#C' stroke-width='5'/><rect x='28' y='38' width='8' height='10' fill='#C'/><rect x='18' y='48' width='28' height='8' rx='3' fill='#C'/>",
 	"bolt": "<path d='M36 4 L12 36 H30 L26 60 L52 26 H34 Z' fill='#C' stroke-linejoin='round'/>",
 	"dice": "<rect x='8' y='8' width='48' height='48' rx='10' fill='#C'/><circle cx='22' cy='22' r='5' fill='#1a0833'/><circle cx='42' cy='42' r='5' fill='#1a0833'/><circle cx='32' cy='32' r='5' fill='#1a0833'/>",

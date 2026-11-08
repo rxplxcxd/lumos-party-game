@@ -477,3 +477,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	if Vector2(pos.x, pos.z).length() > RADIUS - 2.0:
 		mv += -Vector2(pos.x, pos.z).normalized()
 	InputHub.set_virtual(slot, mv.limit_length(1.0), held)
+
+
+func result_extra() -> Dictionary:
+	return {"boss_defeated": hp <= 0.0}

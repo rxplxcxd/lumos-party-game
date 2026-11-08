@@ -12,6 +12,7 @@ GAME=${2:-race}
 TRACK=${3:-lumos_ring}
 DUR=${DUR:-150}
 [ "$GAME" = "party" ] && DUR=${DUR_PARTY:-330}
+[ "$GAME" = "athlon" ] && DUR=${DUR_ATHLON:-150}
 [ "$GAME" = "party" ] && [ "$TRACK" = "lumos_ring" ] && TRACK=meadow
 PORT=${PORT:-9123}
 mkdir -p "$OUT"
@@ -37,9 +38,9 @@ C=$!
 wait $H $C
 kill $MOCK 2>/dev/null
 FAIL=0
-if [ "$GAME" = "party" ]; then
-  grep -o "\[NET\] Brett.*" "$OUT/host.log" > "$OUT/host.digest"
-  grep -o "\[NET\] Brett.*" "$OUT/client.log" > "$OUT/client.digest"
+if [ "$GAME" = "party" ] || [ "$GAME" = "athlon" ]; then
+  grep -o "\[NET\] \(Brett\|Athlon\).*" "$OUT/host.log" > "$OUT/host.digest"
+  grep -o "\[NET\] \(Brett\|Athlon\).*" "$OUT/client.log" > "$OUT/client.digest"
   N=$(wc -l < "$OUT/client.digest")
   echo "Brett-Zustände: Host $(wc -l < "$OUT/host.digest"), Client $N"
   if [ "$N" -lt 3 ] || ! diff <(head -n "$N" "$OUT/host.digest") "$OUT/client.digest" > "$OUT/digest.diff"; then

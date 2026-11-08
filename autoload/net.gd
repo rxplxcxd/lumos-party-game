@@ -25,6 +25,7 @@ signal peer_connected(id: String)
 const CODE_CHARS := "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const ICE := [{"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun.cloudflare.com:3478"]}]
 const MAX_PLAYERS := 4
+const MAX_BIG := 20                # Lumos-Athlon-Räume
 
 var online := false
 var is_host := false
@@ -104,9 +105,15 @@ func _player_info(slot: int) -> Dictionary:
 
 # --- Raum anlegen / beitreten / verlassen -------------------------------------------------------------------
 
-func create_room() -> void:
+## Maximale Spielerzahl im aktuellen Raum (4, im Athlon-Raum 20).
+func capacity() -> int:
+	return int(meta.get("max", MAX_PLAYERS))
+
+
+func create_room(max_players := MAX_PLAYERS) -> void:
 	if online or _joining:
 		return
+	meta["max"] = max_players
 	_joining = true
 	if not await _ensure_identity():
 		_joining = false
@@ -116,7 +123,7 @@ func create_room() -> void:
 	host_id = me
 	my_slot = 0
 	status.emit("Erstelle Raum %s …" % code)
-	_db.create_if_absent("rooms/%s/meta" % code, {"host": me, "created": int(Time.get_unix_time_from_system()), "state": "lobby", "v": 2}, "create")
+	_db.create_if_absent("rooms/%s/meta" % code, {"host": me, "created": int(Time.get_unix_time_from_system()), "state": "lobby", "v": 2, "max": max_players}, "create")
 
 
 func join_room(room: String) -> void:
@@ -214,11 +221,13 @@ func _on_value(tag: String, val: Variant) -> void:
 		code = ""
 		status.emit("Das Spiel in diesem Raum läuft bereits.")
 		return
-	if ps.size() >= MAX_PLAYERS and not ps.has(me):
+	var cap := int(m.get("max", MAX_PLAYERS))
+	if ps.size() >= cap and not ps.has(me):
 		_joining = false
 		code = ""
-		status.emit("Der Raum ist voll (4 Spieler).")
+		status.emit("Der Raum ist voll (%d Spieler)." % cap)
 		return
+	meta["max"] = cap
 	host_id = String(m.get("host", ""))
 	var used: Array = []
 	for id in ps:
@@ -552,6 +561,15 @@ func _start_local(cfg: Dictionary) -> void:
 	decisions.clear()
 	started.emit(cfg)
 	match String(cfg.get("mode", "race")):
+		"athlon":
+			# Eigener Kader bis 20 Läufer; das lokale Gerät steuert immer über Slot 0.
+			InputHub.online_local = 0
+			for i in 4:
+				Game.players[i].cpu = i != 0
+				Game.players[i].remote = false
+			Game.players[0].hero = String(heroes.get(str(my_slot), Game.players[0].hero))
+			Game.mode = "athlon"
+			Router.goto("res://scenes/modes/Athlon.tscn")
 		"party":
 			var humans: Array[bool] = []
 			for i in 4:

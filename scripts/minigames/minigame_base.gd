@@ -547,6 +547,11 @@ func report_score(slot: int) -> void:
 		Net.send({"k": "sc", "s": slot, "v": scores[slot], "al": alive[slot], "x": score_extra(slot)}, true)
 
 
+## Hook: zusätzliche Ergebnisdaten (z. B. "Boss besiegt") für Abenteuer-Aufträge.
+func result_extra() -> Dictionary:
+	return {}
+
+
 ## Zusatzdaten zur Punktemeldung (z. B. Wurfwinkel für die Wiederholung bei anderen).
 func score_extra(_slot: int) -> Dictionary:
 	return {}
@@ -645,6 +650,7 @@ func _unpack_avatars(arr: Array) -> void:
 
 func _return(placements: Array[int]) -> void:
 	Game.last_results = {"game": game_id, "placements": placements, "scores": scores.duplicate(), "cat": category, "teams": teams.duplicate()}
+	Game.last_results.merge(result_extra(), true)
 	if not Game.players[0].cpu:
 		EventBus.minigame_result.emit(placements)
 	match Game.mode:
@@ -654,6 +660,10 @@ func _return(placements: Array[int]) -> void:
 			Router.goto("res://scenes/menu/MinigameSelect.tscn")
 		"marathon":
 			Router.goto("res://scenes/menu/MarathonHub.tscn")
+		"modes":
+			Router.goto("res://scenes/menu/MainMenu.tscn", {"page": "modes"})
+		"journey":
+			Router.goto("res://scenes/modes/Journey.tscn")
 		"online":
 			Net.back_to_lobby()
 			Router.goto("res://scenes/menu/MainMenu.tscn", {"page": "online"})

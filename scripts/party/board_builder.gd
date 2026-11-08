@@ -861,7 +861,7 @@ func _build_meadow() -> void:
 		if _free_spot(dp, 3.0, true):
 			_dandelion(root, dp, _rng.randf_range(1.0, 1.6))
 	WorldKit.place(root, "town/windmill", Vector3(-25, 0, -15), 30.0, 2.8)
-	WorldKit.place(root, "town/house", Vector3(25, 0, -14), -140.0, 2.4)
+	WorldKit.cottage(root, Vector3(25, 0, -14), -140.0, 1.6, Color("#fff1d8"), Color("#7fb8ff"))
 	WorldKit.place(root, "town/fountain", Vector3(0, 0, -1), 0.0, 2.2)
 	for k in 8:
 		WorldKit.place(root, "nat/fence", Vector3(-30 + k * 2.2, 0, -21), 0.0, 1.6)

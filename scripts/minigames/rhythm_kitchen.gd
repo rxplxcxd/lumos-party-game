@@ -747,3 +747,7 @@ func _show_results(placements: Array[int]) -> void:
 	Audio.sfx("ui_confirm")
 	Game.records_note("rhythm_kitchen_grade", ["C", "B", "A", "S"].find(g))
 	layer.queue_free()
+
+
+func result_extra() -> Dictionary:
+	return {"grade": grade()}

@@ -81,7 +81,7 @@ func _net_test() -> void:
 			print("[NET] empfangen: %s rtt=%d" % [Net.debug_counts, int(Net.rtt_ms)])
 	tick.call()
 	if mode == "host":
-		Net.create_room()
+		Net.create_room(Net.MAX_BIG if String(_args.get("net-game", "race")) == "athlon" else Net.MAX_PLAYERS)
 		while not Net.online:
 			await get_tree().process_frame
 		print("[NET] CODE ", Net.code)
@@ -95,6 +95,8 @@ func _net_test() -> void:
 		var game := String(_args.get("net-game", "race"))
 		if game == "race":
 			Net.start_game({"mode": "race", "track": String(_args.get("track", "lumos_ring")), "laps": int(_args.get("laps", "1"))})
+		elif game == "athlon":
+			Net.start_game({"mode": "athlon"})
 		elif game == "party":
 			Net.start_game({"mode": "party", "board": String(_args.get("net-board", "meadow")), "rounds": int(_args.get("net-rounds", "5")), "pmode": String(_args.get("party-mode", "classic"))})
 		else:

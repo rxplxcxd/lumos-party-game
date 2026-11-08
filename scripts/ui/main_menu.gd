@@ -130,6 +130,8 @@ func show_page(name: String) -> void:
 			p = _page_profile()
 		"online":
 			p = _page_online()
+		"modes":
+			p = _page_modes()
 		_:
 			p = _page_main()
 	p.name = name
@@ -240,6 +242,7 @@ func _page_main() -> Control:
 		["Lumos Party", Color("#ff4fb8"), "party", "Das chaotische 3D-Brettspiel"],
 		["Nitro Dash", Color("#2f9bff"), "race", "High-Speed Arcade-Racer"],
 		["Minispiel-Arena", Color("#2ecc71"), "minigames", "Alle Minispiele frei spielen, Marathon"],
+		["Abenteuer & Modi", Color("#ff9f1a"), "modes", "Partyhelfer-Reise, Rhythmus-Küche, Lumos-Athlon"],
 		["Online-Spiel", Color("#00b894"), "online", "Mit bis zu 4 Smartphones über Raumcode spielen"],
 		["Einstellungen", Color("#7b3cff"), "settings", ""],
 		["Credits", Color("#5a4a80"), "credits", ""],
@@ -430,6 +433,78 @@ func _profile_view(v: VBoxContainer) -> void:
 
 func _page_online() -> Control:
 	return OnlinePage.new().build(self)
+
+
+# --- Abenteuer & Modi ----------------------------------------------------------------------------------
+
+var _athlon_size := 0
+
+
+func _mode_card(v: VBoxContainer, title: String, col: Color, icon: String, desc: String) -> VBoxContainer:
+	var card := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = col.darkened(0.55)
+	sb.bg_color.a = 0.85
+	sb.border_color = col
+	sb.set_border_width_all(3)
+	sb.set_corner_radius_all(18)
+	sb.set_content_margin_all(16)
+	card.add_theme_stylebox_override("panel", sb)
+	v.add_child(card)
+	var inner := UI.vbox(8)
+	card.add_child(inner)
+	var head := UI.hbox(12)
+	head.add_child(UI.icon_rect(icon, 40, col.lightened(0.3)))
+	head.add_child(UI.label(title, 34, col.lightened(0.35), true, 8))
+	inner.add_child(head)
+	var d := UI.label(desc, 20, Color(1, 1, 1, 0.85))
+	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	d.custom_minimum_size = Vector2(620, 0)
+	inner.add_child(d)
+	return inner
+
+
+func _page_modes() -> Control:
+	var arr := _side_panel("Abenteuer & Modi", 700)
+	var v: VBoxContainer = arr[1]
+	var stars := Game.stat("journey_ministars", 0)
+	var j := _mode_card(v, "Partyhelfer-Reise", Color("#ff9f1a"), "star",
+		"Einzelspieler-Abenteuer auf der Pusteblumen-Insel: Hilf den Inselbewohnern mit Minispiel-Aufträgen, sammle Mini-Sterne und stelle dich am Ende Pustebacke!")
+	var jp := UI.label("Fortschritt: %d Mini-Sterne" % maxi(0, stars), 20, UI.GOLD, true)
+	j.add_child(jp)
+	var jb := UI.button("Reise starten" if stars <= 0 else "Reise fortsetzen", Color("#ff9f1a"), 28, 360)
+	jb.pressed.connect(func() -> void:
+		_apply_players()
+		Game.mode = "journey"
+		Router.goto("res://scenes/modes/Journey.tscn"))
+	j.add_child(jb)
+	var k := _mode_card(v, "Rhythmus-Küche", Color("#ff7ad9"), "music",
+		"1–4 Köche, ein Fünf-Gänge-Menü, alles im Takt: schnippeln, rühren, Pfannkuchen wenden, würzen und Torte verzieren. Gemeinsam zur Sterne-Küche!")
+	var best := Game.stat("rhythm_kitchen_grade", -1)
+	if best >= 0:
+		k.add_child(UI.label("Beste Küchen-Note: %s" % ["C", "B", "A", "S"][best], 20, UI.GOLD, true))
+	var kb := UI.button("Ab in die Küche!", Color("#ff7ad9"), 28, 360)
+	kb.pressed.connect(func() -> void:
+		_apply_players()
+		Game.mode = "modes"
+		Router.goto(Game.minigame_info("rhythm_kitchen").scene))
+	k.add_child(kb)
+	var a := _mode_card(v, "Lumos-Athlon", Color("#3fa7ff"), "trophy",
+		"Großer Wettlauf um die Wiese: Alle spielen gleichzeitig schnelle Solo-Herausforderungen, jede Münze bringt ein Feld weiter. Online bis zu 20 Spieler (Athlon-Raum im Online-Menü)!")
+	var sz := Stepper.new().setup(["8 Läufer", "12 Läufer", "20 Läufer"], _athlon_size, 220, Color("#3fa7ff"))
+	sz.changed.connect(func(i: int) -> void: _athlon_size = i)
+	a.add_child(_row("Feld", sz))
+	var ab := UI.button("Auf die Plätze!", Color("#3fa7ff"), 28, 360)
+	ab.pressed.connect(func() -> void:
+		_apply_players()
+		Game.settings["athlon_size"] = [8, 12, 20][_athlon_size]
+		Game.mode = "athlon"
+		Router.goto("res://scenes/modes/Athlon.tscn"))
+	a.add_child(ab)
+	v.add_child(UI.label("Spieler", 32, UI.ACCENT2, true))
+	_players_editor(v)
+	_back_button(v)
+	return arr[0]
 
 
 # --- Party-Setup ----------------------------------------------------------------------------------------

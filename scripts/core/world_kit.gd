@@ -180,6 +180,59 @@ static func box(parent: Node, size: Vector3, pos: Vector3, color := Color(0.6, 0
 	return root
 
 
+## Niedliches Häuschen: Pastellwände, Spitzdach, Tür, zwei Fenster und Schornstein (optional mit Kollision).
+static func cottage(parent: Node, pos: Vector3, rot_y := 0.0, scl := 1.0, wall := Color("#fff1d8"), roof := Color("#ff8a8a"), collide := false) -> Node3D:
+	var root: Node3D = StaticBody3D.new() if collide else Node3D.new()
+	parent.add_child(root)
+	root.position = pos
+	root.rotation_degrees.y = rot_y
+	root.scale = Vector3.ONE * scl
+	if collide:
+		var cs := CollisionShape3D.new()
+		var bs := BoxShape3D.new()
+		bs.size = Vector3(3.0, 3.2, 2.6)
+		cs.shape = bs
+		cs.position.y = 1.6
+		root.add_child(cs)
+	var body := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(3.0, 2.0, 2.6)
+	bm.material = mat(wall, 0.9)
+	body.mesh = bm
+	body.position.y = 1.0
+	root.add_child(body)
+	var rf := MeshInstance3D.new()
+	var pm := PrismMesh.new()
+	pm.size = Vector3(3.5, 1.5, 3.0)
+	pm.material = mat(roof, 0.7)
+	rf.mesh = pm
+	rf.position.y = 2.75
+	root.add_child(rf)
+	var door := MeshInstance3D.new()
+	var dm := BoxMesh.new()
+	dm.size = Vector3(0.8, 1.3, 0.08)
+	dm.material = mat(Color("#a8704a"), 0.8)
+	door.mesh = dm
+	door.position = Vector3(0, 0.65, 1.31)
+	root.add_child(door)
+	for wx in [-0.95, 0.95]:
+		var w := MeshInstance3D.new()
+		var wm := BoxMesh.new()
+		wm.size = Vector3(0.6, 0.6, 0.08)
+		wm.material = mat(Color("#bfe6ff"), 0.2, 0.25)
+		w.mesh = wm
+		w.position = Vector3(wx, 1.25, 1.31)
+		root.add_child(w)
+	var ch := MeshInstance3D.new()
+	var cm := BoxMesh.new()
+	cm.size = Vector3(0.4, 0.9, 0.4)
+	cm.material = mat(Color("#c98d5a"), 0.9)
+	ch.mesh = cm
+	ch.position = Vector3(0.8, 3.1, -0.4)
+	root.add_child(ch)
+	return root
+
+
 static func cylinder(parent: Node, radius: float, height: float, pos: Vector3, color := Color(0.6, 0.6, 0.65), collide := true) -> Node3D:
 	var root: Node3D = StaticBody3D.new() if collide else Node3D.new()
 	if collide:
