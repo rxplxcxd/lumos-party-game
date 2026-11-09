@@ -73,7 +73,7 @@ func _ready() -> void:
 		var tmp := _order[k]
 		_order[k] = _order[j]
 		_order[j] = tmp
-	Audio.music("race", 1.0)
+	Audio.music("board_meadow", 1.0)
 	InputHub.set_touch_profile("athlon")
 	_main()
 
@@ -520,7 +520,7 @@ func _debug_digest() -> void:
 
 
 func _apply_gains(gains: Dictionary) -> void:
-	Audio.music("race", 1.5)
+	Audio.music("board_meadow", 1.5)
 	_refresh_board(gains)
 	for i in gains:
 		var rig: CharacterRig = runners[int(i)].rig

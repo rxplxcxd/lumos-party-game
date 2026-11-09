@@ -146,8 +146,11 @@ const MUSIC := {
 	"board_sky": AM + "board/sky.ogg", "board_graveyard": AM + "board/graveyard.ogg", "board_frost": AM + "board/frost.ogg",
 	"board_station": AM + "board/station.ogg", "board_glowforest": AM + "board/glowforest.ogg",
 	"board_meadow": AM + "board/meadow.ogg", "board_cake": AM + "board/cake.ogg",
-	"race": AM + "race.ogg", "podium": AM + "podium.ogg",
 }
+## Ausschließlich hochgeladene Soundtracks – keine prozedural erzeugte Hintergrundmusik.
+## Rennen: Minispiel-Soundtrack (Normal → Hurry-Up in der letzten Runde → Outro), Siegerehrung: Hauptmenü-Theme.
+const RACE_TRACK := 2
+const ALIASES := {"podium": "menu", "race": ""}
 
 ## Beat-Uhr der laufenden Musik (für Rhythmus-Minispiele, Kamera-Pulse, Board-Effekte).
 signal beat(n: int)
@@ -352,6 +355,11 @@ func music(id: String, fade := 1.0) -> void:
 	if id == "minigame":
 		minigame_music(-1)
 		return
+	if id == "race":
+		if _music_current != "minigame_%d" % RACE_TRACK or section == "outro":
+			minigame_music(RACE_TRACK, fade)
+		return
+	id = String(ALIASES.get(id, id))
 	if id == _music_current and section == "board":
 		return
 	_music_current = id

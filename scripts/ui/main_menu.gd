@@ -852,8 +852,8 @@ KayKit (CC0, Kay Lousberg) – Adventurers, Character Animations, Dungeon Pack, 
 
 [b]Audio[/b] (CC0): Kenney – Impact, Interface, Digital, RPG, Sci-Fi, UI, Music Jingles, Voiceover
 [b]UI-Sounds[/b] (CC BY 4.0): „UI Sound Effects by lolurio“ (lolurio.itch.io) · „Cute, Cozy & Magical UI SFX“ von Nomagician Music (nomagician.itch.io)
-Brett-, Menü- & Minispiel-Soundtracks: Lumos-Projekt (geschnitten, getaktet & geloopt mit tools/audio/build_music.py)
-Renn-/Podest-Musik & Cartoon-SFX: prozedural komponiert (tools/compose_music.py, tools/compose_sfx.py)
+Musik: ausschließlich die Lumos-Soundtracks (Brett-, Menü- & Minispiel-Tracks; geschnitten, getaktet & geloopt mit tools/audio/build_music.py)
+Cartoon-SFX: tools/compose_sfx.py
 
 [b]Schriften[/b] (SIL OFL 1.1): Lilita One (Juan Montoreano), Fredoka (The Fredoka Project Authors)
 [b]Icons[/b] (CC0): Kenney – Input Prompts, Medals, Crosshairs, Board Game Info"""

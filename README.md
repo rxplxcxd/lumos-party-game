@@ -128,7 +128,8 @@ Hilfswerkzeuge:
 |---|---|
 | `python3 tools/asset_pipeline.py --check` | Asset-Inventur, glTF-Validierung, `.gdignore`-Regeln, `docs/ASSET_INVENTORY.md` |
 | `python3 tools/validate_catalog.py` | prüft alle Pfade im Asset-Katalog (`autoload/assets.gd`) |
-| `python3 tools/compose_music.py` / `tools/compose_sfx.py` | erzeugt Soundtrack und Cartoon-SFX |
+| `python3 -I tools/audio/build_music.py <mp3-ordner> .` | schneidet/taktet die hochgeladenen Soundtracks (einzige Musikquelle) |
+| `python3 tools/compose_sfx.py` | erzeugt Cartoon-SFX (keine Musik) |
 | `python3 tools/gen_reactions.py` | erzeugt die Reaktionsbibliothek |
 | `godot --headless --path . res://tools/dev/Check.tscn` | lädt alle Skripte/Szenen (Fehlerprüfung) |
 | `tools/dev/test_minigames.sh <ordner>` | spielt alle Minispiele mit 4 CPUs an und speichert Screenshots |

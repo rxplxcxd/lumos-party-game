@@ -695,7 +695,7 @@ func _on_lap(r: Racer, lap: int) -> void:
 			state = "finish"
 	elif lap == laps - 1 and r == focus:
 		Audio.voice("final_round")
-		Audio.set_music_pitch(1.08)
+		Audio.minigame_hurry()   # letzte Runde: taktgenau in die Hurry-Up-Version
 		_message("LETZTE RUNDE!", Color("#ff4d6d"))
 	elif r == focus and lap > 0 and lap < laps:
 		Audio.sfx("bong")
@@ -705,7 +705,7 @@ func _on_lap(r: Racer, lap: int) -> void:
 func _end_race() -> void:
 	state = "done"
 	_set_views_on(false)
-	Audio.set_music_pitch(1.0)
+	Audio.minigame_outro()
 	InputHub.set_touch_profile("none")
 	var order := racers.duplicate()
 	order.sort_custom(func(a: Racer, b: Racer) -> bool: return a.place < b.place)

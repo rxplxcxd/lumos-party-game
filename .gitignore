@@ -6,8 +6,14 @@
 build/
 export/
 *.pck
-# Der Web-Build in web/ wird mit eingecheckt (Vorschau ohne Export, z. B. im Codespace) – inkl. Engine-Paket
-!web/index.pck
+*.wasm
+# Web-Export (./godot --headless --export-release "Web" web/index.html) – NICHT einchecken.
+# Lokal per "python3 -m http.server" in web/ testen; Deployment baut GitHub Actions selbst.
+web/index.*
+web/version.json
+web/lumos-app.json
+web/*.zip
+web/.nojekyll
 # Python
 __pycache__/
 
