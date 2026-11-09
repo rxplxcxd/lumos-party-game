@@ -40,7 +40,8 @@ func _ready() -> void:
 	builder.build(self, Game.party.board, spaces)
 	var bd: Array = {"dungeon": ["dungeon", Color("#1a0d1a")], "pirates": ["beach", Color("#e8d6a0")], "sky": ["sky", Color.WHITE],
 		"graveyard": ["night", Color("#2d3a35")], "frost": ["snow", Color("#eef4fb")], "station": ["sky_dusk", Color.WHITE],
-		"glowforest": ["meadow", Color("#4f9a46")], "meadow": ["meadow", Color("#86d06a")], "cake": ["cake", Color("#f6c9d8")]}.get(Game.party.board, ["meadow", Color("#7cc860")])
+		"glowforest": ["meadow", Color("#4f9a46")], "meadow": ["meadow", Color("#86d06a")], "cake": ["cake", Color("#f6c9d8")],
+		"tower": ["sky", Color.WHITE]}.get(Game.party.board, ["meadow", Color("#7cc860")])
 	WorldKit.backdrop(self, String(bd[0]), bd[1], -0.56)
 	if bool(BoardDefs.get_def(Game.party.board).get("daynight", false)):
 		builder.apply_time_of_day(int(Game.party.round) % 2 == 0 and int(Game.party.round) > 1, self, false)
@@ -49,6 +50,11 @@ func _ready() -> void:
 	cam = BoardCamera.new()
 	add_child(cam)
 	cam.overview_center = Vector3(0, 0, 1)
+	if bool(def.get("vertical", false)):
+		cam.radial = true
+		cam.orbit_overview = true
+		cam.overview_center = Vector3(0, float(def.helix.h) * 0.42, 0)
+		cam.overview_offset = Vector3(0, 10.0, 58.0)
 	cam.make_current()
 	cam.snap_overview()
 	_build_hud()
@@ -554,6 +560,8 @@ func _move(p: int, steps: int) -> void:
 			return
 		if cur == int(Game.party.star_space):
 			await _star_event(p)
+		elif spaces[cur].type == "Z":
+			await _summit(p)
 		elif spaces[cur].type == "N" and remaining > 0:
 			await _shop(p)
 	counter.queue_free()
@@ -561,6 +569,9 @@ func _move(p: int, steps: int) -> void:
 
 func _hop(p: int, from: int, to: int) -> void:
 	var rig := rigs[p]
+	if spaces[from].type == "Z" and int(spaces[to].branch) < 0 and to == 0:
+		await _rainbow_slide(p)
+		return
 	var a := rig.position
 	var b := _space_pos(to)
 	rig.face_now(b - a)
@@ -696,7 +707,9 @@ func _land(p: int) -> void:
 	Juice.squash(node, 1.15, 0.7, 0.4, node.scale)
 	match t:
 		"B", "S":
-			_coins(p, 3 * partners.mult(p) * (2 if _is_endspurt() else 1))
+			if _high_up(s):
+				await _show_banner("Höhenbonus! ×2", Color("#ffd23f"), 0.6)
+			_coins(p, 3 * partners.mult(p) * (2 if _is_endspurt() else 1) * (2 if _high_up(s) else 1))
 			rig.react("coin_gain")
 			await _wait(1.0)
 		"R":
@@ -704,7 +717,7 @@ func _land(p: int) -> void:
 				_coins(p, 3 * partners.mult(p))
 				rig.react("coin_gain")
 			else:
-				_coins(p, -3 * partners.mult(p) * (2 if _is_endspurt() else 1))
+				_coins(p, -3 * partners.mult(p) * (2 if _is_endspurt() else 1) * (2 if _high_up(s) else 1))
 				rig.react("coin_loss")
 			await _wait(1.0)
 		"L":
@@ -729,7 +742,83 @@ func _land(p: int) -> void:
 			await _warp(p)
 		"D":
 			await _duel_space(p)
+		"U":
+			await _updraft(p)
 	_formation_all()
+
+
+## Wolkenturm: Felder im oberen Drittel zählen doppelt (Höhenbonus).
+func _high_up(s: int) -> bool:
+	return bool(def.get("vertical", false)) and (spaces[s].pos as Vector3).y > float(def.helix.h) * 0.66
+
+
+## Wolkenturm: Aufwind trägt 3–6 Felder nach oben.
+func _updraft(p: int) -> void:
+	var rig := rigs[p]
+	await _show_banner("Aufwind!", Color("#7ed957"), 0.6)
+	var n := Game.prng.randi_range(3, 6)
+	var target: int = Game.players[p].space
+	for _i in n:
+		target = int(_available_next(target)[0])
+		if spaces[target].type == "Z":
+			break
+	Audio.sfx("whoosh", rig.global_position, 0.0, 0.8)
+	Audio.sfx("sparkle_up", null, -6.0)
+	rig.react("launch")
+	FX.dust(rig.global_position, Color(0.8, 1.0, 0.85), 14, 1.0)
+	var a := rig.position
+	var b := _space_pos(target)
+	var tw := create_tween()
+	tw.tween_method(func(t: float) -> void:
+		rig.position = a.lerp(b, t) + Vector3.UP * sin(t * PI) * 4.0
+		rig.rotation.y = t * TAU * 2.0, 0.0, 1.0, 1.2).set_trans(Tween.TRANS_SINE)
+	await tw.finished
+	rig.land_impact(1.0)
+	Game.players[p].space = target
+	await _wait(0.4)
+	if spaces[target].type == "Z":
+		await _summit(p)
+	elif target == int(Game.party.star_space):
+		await _star_event(p)
+
+
+## Wolkenturm: Gipfel erreicht → Gipfelstern (gratis) + Jubel; danach geht es per Regenbogen-Rutsche hinab.
+func _summit(p: int) -> void:
+	var rig := rigs[p]
+	cam.overview = false
+	cam.target = rig
+	cam.zoom = 0.8
+	Audio.jingle("star")
+	Audio.sfx("sparkle_up", null, -2.0)
+	FX.confetti(rig.global_position + Vector3.UP * 2.0, 90)
+	FX.stars(rig.global_position + Vector3.UP * 2.0, Color(1, 0.9, 0.4), 30)
+	rig.react("star_get")
+	Game.add_stars(p, 1)
+	Game.players[p].summits = int(Game.players[p].get("summits", 0)) + 1
+	await _show_banner("%s erreicht den Gipfel! +1 Stern" % _pname(p), UI.GOLD, 1.4)
+	cam.zoom = 1.0
+
+
+func _rainbow_slide(p: int) -> void:
+	var rig := rigs[p]
+	var h := float(def.helix.h)
+	var R := float(def.helix.r)
+	Audio.sfx("whistle_fall", rig.global_position, -2.0, 0.9)
+	Audio.sfx("woop", null, -4.0, 0.8)
+	rig.react("cheer")
+	var tw := create_tween()
+	tw.tween_method(func(t: float) -> void:
+		var a := -TAU * 2.0 * t + PI
+		rig.position = Vector3(sin(a) * (R + 4.2), h * (1.0 - t) + 0.2, cos(a) * (R + 4.2))
+		rig.rotation.y = a + PI * 0.5, 0.0, 1.0, 2.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	await tw.finished
+	FX.sparks(rig.global_position, Color(1, 0.8, 1.0), 16)
+	var b := _space_pos(0)
+	var t2 := create_tween()
+	t2.tween_property(rig, "position", b, 0.4).set_trans(Tween.TRANS_QUAD)
+	await t2.finished
+	rig.land_impact(1.2)
+	Audio.sfx("plop", null, -2.0)
 
 
 ## Brettspezifische Namen der Ereignisfelder.
@@ -741,7 +830,7 @@ func _event_name(t: String) -> String:
 		"W":
 			return {"glowforest": "Feenring!", "station": "Sternen-Tor!"}.get(b, "Warp-Blume!")
 		"T":
-			return "Kerzen-Falle!" if b == "cake" else "Fackel-Falle!"
+			return {"cake": "Kerzen-Falle!", "tower": "Windböe!"}.get(b, "Fackel-Falle!")
 		"K":
 			return {"station": "Raketen-Start!", "meadow": "Pusteblumen-Flug!"}.get(b, "Wolken-Kanone!")
 	return ""

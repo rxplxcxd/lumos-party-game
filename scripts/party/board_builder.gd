@@ -6,11 +6,11 @@ extends RefCounted
 
 const TILE_KEYS := {"B": "bg/tile_blue", "R": "bg/tile_red", "L": "bg/tile_yellow", "P": "bg/tile_green", "C": "bg/tile_purple",
 	"T": "bg/tile_purple", "K": "bg/tile_green", "N": "bg/tile_yellow", "S": "bg/tile_green", "G": "bg/tile_purple",
-	"E": "bg/tile_blue", "W": "bg/tile_green", "D": "bg/tile_yellow"}
-const SYMBOLS := {"B": "+", "R": "-", "L": "?", "P": "!", "C": "?!", "T": "!", "K": "!", "N": "$", "S": "GO", "G": "~", "E": "»", "W": "@", "D": "VS"}
+	"E": "bg/tile_blue", "W": "bg/tile_green", "D": "bg/tile_yellow", "U": "bg/tile_green", "Z": "bg/tile_yellow"}
+const SYMBOLS := {"B": "+", "R": "-", "L": "?", "P": "!", "C": "?!", "T": "!", "K": "!", "N": "$", "S": "GO", "G": "~", "E": "»", "W": "@", "D": "VS", "U": "^", "Z": "TOP"}
 const SYMBOL_COLORS := {"B": Color("#dff2ff"), "R": Color("#ffe0e0"), "L": Color("#7a4a00"), "P": Color("#eaffea"),
 	"C": Color("#f2e0ff"), "T": Color("#ffd0a0"), "K": Color("#eaffea"), "N": Color("#7a4a00"), "S": Color("#ffffff"),
-	"G": Color("#d8ffe8"), "E": Color("#e8fbff"), "W": Color("#eaffea"), "D": Color("#7a2a00")}
+	"G": Color("#d8ffe8"), "E": Color("#e8fbff"), "W": Color("#eaffea"), "D": Color("#7a2a00"), "U": Color("#eaffea"), "Z": Color("#7a4a00")}
 const TILE_SCALE := 2.3
 
 var root: Node3D
@@ -52,6 +52,8 @@ func build(parent: Node3D, id: String, graph: Array) -> void:
 			_build_meadow()
 		"cake":
 			_build_cake()
+		"tower":
+			_build_tower()
 		_:
 			_build_dungeon()
 	_build_spaces()
@@ -86,6 +88,10 @@ func _build_spaces() -> void:
 		if board_id == "sky":
 			var island := Assets.spawn("plat/block_grass_large", holder, Vector3(0, -2.05, 0), _rng.randf() * 360.0, 1.4)
 			island.scale.y = 2.0
+		elif board_id == "tower":
+			# Laufsteg-Planke unter jedem Feld, zum Turm hin ausgerichtet
+			var plank := WorldKit.box(holder, Vector3(3.4, 0.35, 3.0), Vector3(0, -0.2, 0), Color("#e8c79a") if sp.branch < 0 else Color("#8fd16a"), false)
+			plank.look_at(Vector3(0, holder.global_position.y - 0.2, 0), Vector3.UP)
 		space_nodes.append(holder)
 
 
@@ -200,6 +206,22 @@ func _space_prop(holder: Node3D, t: String, sp: Dictionary) -> void:
 				merchant.play("idle")
 		"S":
 			Assets.spawn("bg/flag_red", holder, side, 0.0, 2.5)
+		"U":
+			# Aufwind: wirbelnde Blätter über dem Feld
+			var swirl := FX.emitter({"amount": 14, "life": 1.4, "one_shot": false, "explosive": 0.0, "spread": 25.0, "dir": Vector3.UP,
+				"vel_min": 2.0, "vel_max": 3.4, "gravity": Vector3.ZERO, "size": 0.16, "color": Color(0.7, 1.0, 0.75), "box": Vector3(1.2, 0.1, 1.2)})
+			holder.add_child(swirl)
+			swirl.position = Vector3(0, 0.4, 0)
+			swirl.emitting = true
+			traps.append(holder)
+		"Z":
+			# Gipfel: goldener Stern-Sockel
+			var ped := WorldKit.cylinder(holder, 1.2, 0.5, Vector3(0, 0.3, 0), Color("#ffd23f"), false)
+			ped.name = "Summit"
+			var crown := Assets.spawn("plat/star", holder, Vector3(0, 2.6, 0), 0.0, 1.8)
+			Assets.tint(crown, Color(1.1, 1.0, 0.6), false, 0.8)
+			var spin := crown.create_tween().set_loops()
+			spin.tween_property(crown, "rotation:y", TAU, 3.0).as_relative()
 
 
 func _outward(sp: Dictionary) -> Vector3:
@@ -615,6 +637,141 @@ func _build_station() -> void:
 	_toggle_platforms(1, "plat/block_snow", 0.75, Vector3(0, -0.85, 0))
 
 
+# --- Der Wolkenturm ------------------------------------------------------------------------------------------
+
+var tower_h := 40.0
+var _cloud_rings: Array[Node3D] = []
+
+
+func _build_tower() -> void:
+	tower_h = float(def.helix.h)
+	var R := float(def.helix.r)
+	# Wolkeninsel am Fuß des Turms
+	var base := WorldKit.cylinder(root, R + 6.0, 2.0, Vector3(0, -1.2, 0), Color("#86d06a"), false)
+	base.name = "BaseIsle"
+	WorldKit.cylinder(root, R + 6.4, 1.2, Vector3(0, -2.6, 0), Color("#f4f0ff"), false)
+	for i in 18:
+		var a := TAU * i / 18.0
+		WorldKit.place(root, ["plat/flowers", "nat/bush", "plat/mushrooms", "plat/tree"][i % 4], Vector3(cos(a) * (R + 4.5), 0, sin(a) * (R + 4.5)), _rng.randf() * 360.0, 1.6)
+	# Der Turm: gestapelte Trommeln (Pastell), Fenster, Balkone, Blumenkästen – nach oben schmaler
+	var floors := 9
+	for f in floors:
+		var y := f * tower_h / floors
+		var r := lerpf(R - 2.6, R - 4.4, float(f) / floors)
+		var col: Color = [Color("#fff1d8"), Color("#ffe0ec"), Color("#e6f0ff"), Color("#eaffe6")][f % 4]
+		WorldKit.cylinder(root, r, tower_h / floors, Vector3(0, y + tower_h / floors * 0.5, 0), col, false)
+		WorldKit.cylinder(root, r + 0.35, 0.3, Vector3(0, y + 0.15, 0), Color("#c9a0dc"), false)
+		for w in 6:
+			var a2 := TAU * w / 6.0 + f * 0.5
+			var win := MeshInstance3D.new()
+			var bm := BoxMesh.new()
+			bm.size = Vector3(0.9, 1.3, 0.1)
+			bm.material = WorldKit.mat(Color("#ffe8a8"), 0.3, 0.6)
+			win.mesh = bm
+			win.position = Vector3(sin(a2) * (r + 0.02), y + tower_h / floors * 0.55, cos(a2) * (r + 0.02))
+			win.rotation.y = a2
+			root.add_child(win)
+		if f % 2 == 1:
+			# Blumenkasten-Balkon
+			var a3 := f * 1.3
+			WorldKit.box(root, Vector3(2.2, 0.3, 1.0), Vector3(sin(a3) * (r + 0.6), y + 1.0, cos(a3) * (r + 0.6)), Color("#c98d5a"), false).rotation.y = a3
+			WorldKit.place(root, "plat/flowers", Vector3(sin(a3) * (r + 0.7), y + 1.2, cos(a3) * (r + 0.7)), 0.0, 1.2)
+	# Dachspitze mit Leuchtfeuer
+	var roof := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.0
+	cm.bottom_radius = R - 3.6
+	cm.height = 6.0
+	cm.material = WorldKit.mat(Color("#b07aff"), 0.5)
+	roof.mesh = cm
+	roof.position = Vector3(0, tower_h + 3.0, 0)
+	root.add_child(roof)
+	var beacon := OmniLight3D.new()
+	beacon.light_color = Color(1.0, 0.9, 0.6)
+	beacon.light_energy = 2.0
+	beacon.omni_range = 18.0
+	beacon.position = Vector3(0, tower_h + 6.5, 0)
+	root.add_child(beacon)
+	var bstar := Assets.spawn("plat/star", root, Vector3(0, tower_h + 7.0, 0), 0.0, 3.0)
+	Assets.tint(bstar, Color(1.1, 1.0, 0.6), false, 1.0)
+	var bt := bstar.create_tween().set_loops()
+	bt.tween_property(bstar, "rotation:y", TAU, 4.0).as_relative()
+	# Ranken, die sich um den Turm winden (dicke grüne Perlen-Kette mit Blättern)
+	for v in 2:
+		for k in 90:
+			var t := float(k) / 90.0
+			var a4 := TAU * 3.2 * t + v * PI
+			var rr := lerpf(R - 2.4, R - 4.2, t)
+			var p := Vector3(sin(a4) * rr, t * tower_h, cos(a4) * rr)
+			var bead := MeshInstance3D.new()
+			var sm := SphereMesh.new()
+			sm.radius = 0.32
+			sm.height = 0.64
+			sm.radial_segments = 8
+			sm.rings = 4
+			sm.material = WorldKit.mat(Color("#5fae4a"), 0.8)
+			bead.mesh = sm
+			bead.position = p
+			root.add_child(bead)
+			if k % 6 == 0:
+				WorldKit.place(root, "nat/flower_yellow" if k % 12 == 0 else "plat/flowers", p + Vector3(sin(a4), 0, cos(a4)) * 0.3, 0.0, 0.8)
+	# Regenbogen-Rutsche vom Gipfel zurück zum Fuß (außen, zwei Windungen)
+	var cols := [Color("#ff6b6b"), Color("#ffd23f"), Color("#7ed957"), Color("#3fa7ff"), Color("#c06bff")]
+	for k in 120:
+		var t2 := float(k) / 120.0
+		var a5 := -TAU * 2.0 * t2 + PI
+		var p2 := Vector3(sin(a5) * (R + 4.2), tower_h * (1.0 - t2) - 0.6, cos(a5) * (R + 4.2))
+		for c in cols.size():
+			var seg := MeshInstance3D.new()
+			var bm2 := BoxMesh.new()
+			bm2.size = Vector3(0.32, 0.12, 1.3)
+			bm2.material = WorldKit.mat(cols[c], 0.6, 0.15)
+			seg.mesh = bm2
+			seg.position = p2 + Vector3(sin(a5), 0, cos(a5)) * (c - 2) * 0.32
+			seg.rotation.y = a5 + PI * 0.5
+			root.add_child(seg)
+	# Wolkenringe in mehreren Höhen – drehen unterschiedlich schnell (Parallaxe beim Aufstieg)
+	for h in [8.0, 18.0, 28.0, 38.0]:
+		var ring := Node3D.new()
+		root.add_child(ring)
+		ring.position.y = h - 2.5
+		for k in 10:
+			var a6 := TAU * k / 10.0 + _rng.randf() * 0.3
+			var dist := _rng.randf_range(R + 9.0, R + 16.0)
+			var puff := MeshInstance3D.new()
+			var ps := SphereMesh.new()
+			ps.radius = _rng.randf_range(1.8, 3.4)
+			ps.height = ps.radius * 1.2
+			ps.material = WorldKit.mat(Color(1, 1, 1), 1.0, 0.2)
+			puff.mesh = ps
+			puff.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			puff.position = Vector3(cos(a6) * dist, _rng.randf_range(-1.0, 1.0), sin(a6) * dist)
+			ring.add_child(puff)
+		var rt := ring.create_tween().set_loops()
+		rt.tween_property(ring, "rotation:y", TAU * (1.0 if int(h) % 20 == 8 else -1.0), 80.0 + h * 2.0).as_relative()
+		_cloud_rings.append(ring)
+	# Schwebende Inselchen mit Bewohnern ringsum
+	for k in 6:
+		var a7 := TAU * k / 6.0 + 0.4
+		var isle := Assets.spawn("plat/block_grass_overhang", root, Vector3(cos(a7) * (R + 20.0), 6.0 + k * 6.0, sin(a7) * (R + 20.0)), _rng.randf() * 360.0, 2.0)
+		var tw := isle.create_tween().set_loops()
+		tw.tween_property(isle, "position:y", isle.position.y + 1.2, 3.0 + k * 0.3).set_trans(Tween.TRANS_SINE)
+		tw.tween_property(isle, "position:y", isle.position.y, 3.0 + k * 0.3).set_trans(Tween.TRANS_SINE)
+		var r2 := CharacterRig.new()
+		isle.add_child(r2)
+		r2.setup(["pet/chick", "pet/bunny", "pet/bee", "pet/deer", "pet/cat", "pet/cow"][k], -1, 0.5)
+		r2.position = Vector3(0, 0.55, 0)
+		r2.play("idle")
+		sleepers.append(r2)
+	# Wind-Partikel, die mit der Höhe zunehmen
+	var wind := FX.emitter({"amount": 80, "life": 3.0, "one_shot": false, "explosive": 0.0, "spread": 15.0, "dir": Vector3(1, 0, 0),
+		"vel_min": 4.0, "vel_max": 7.0, "gravity": Vector3.ZERO, "size": 0.12, "color": Color(1, 1, 1, 0.6), "box": Vector3(30, 14, 30)})
+	root.add_child(wind)
+	wind.position = Vector3(0, tower_h * 0.8, 0)
+	wind.emitting = true
+	_toggle_platforms(1, "plat/block_snow", 0.9, Vector3(0, -0.7, 0))
+
+
 # --- Glühwürmchen-Zauberwald ----------------------------------------------------------------------------------
 
 var _night_lights: Array[OmniLight3D] = []
@@ -1013,7 +1170,7 @@ func set_route_open(bi: int, open: bool, animate := true) -> void:
 			dy = 0.0 if open else -0.3
 		"fog_bridge", "ice_bridge", "mushroom_path":
 			dy = 0.0 if open else -2.4
-		"sunflower_path", "cherry_lift":
+		"sunflower_path", "cherry_lift", "cloud_lift":
 			dy = 0.0 if open else -1.8
 		"airlock":
 			dy = 0.0 if open else -1.6
@@ -1030,7 +1187,7 @@ func set_route_open(bi: int, open: bool, animate := true) -> void:
 			node.rotation = tilt
 		if k < parts.size():
 			var part: Node3D = parts[k]
-			var sink: float = {"lava_bridge": 0.85, "fog_bridge": 0.85, "ice_bridge": 0.85, "mushroom_path": 0.9, "tide": 0.2, "airlock": 0.25, "sunflower_path": 0.2, "cherry_lift": 0.3}.get(kind, 0.0)
+			var sink: float = {"lava_bridge": 0.85, "fog_bridge": 0.85, "ice_bridge": 0.85, "mushroom_path": 0.9, "tide": 0.2, "airlock": 0.25, "sunflower_path": 0.2, "cherry_lift": 0.3, "cloud_lift": 0.4}.get(kind, 0.0)
 			var ptarget := (spaces[ids[k]].pos as Vector3) + Vector3.UP * (dy - sink)
 			if animate:
 				var tw2 := part.create_tween().set_parallel(true)

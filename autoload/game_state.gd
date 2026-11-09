@@ -24,6 +24,7 @@ const BOARDS := [
 	{"id": "glowforest", "name": "Glühwürmchen-Zauberwald", "desc": "Tag und Nacht wechseln jede Runde – nachts leuchten die Pilze und ein geheimer Pilzpfad öffnet sich.", "music": "board_dungeon"},
 	{"id": "meadow", "name": "Wuschel-Wiesen", "desc": "Weiche Hügel, wuschelige Schäfchen, Pusteblumen-Flüge und Duell-Felder.", "music": "board_pirates"},
 	{"id": "cake", "name": "Zuckerback-Torte", "desc": "Ein Spielbrett auf einer riesigen Torte: Schoko-Rutschen, Sahne-Spritzer und Kirsch-Lifte.", "music": "board_sky"},
+	{"id": "tower", "name": "Der Wolkenturm", "desc": "Vertikales Brett: Wendelweg um einen verwunschenen Pflanzenturm, Ranken-Abkürzungen, Wolkenlift, Aufwind – oben wartet der Gipfelstern, hinab geht es per Regenbogen-Rutsche.", "music": "board_sky"},
 ]
 
 const MINIGAMES := [

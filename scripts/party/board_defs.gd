@@ -131,6 +131,17 @@ const BOARDS := {
 				"pattern": "LBR", "toggle": "even", "kind": "cherry_lift"},
 		],
 	},
+	"tower": {
+		"name": "Der Wolkenturm", "env": "sky", "music": "board_sky", "surface": "cloud", "vertical": true,
+		"helix": {"n": 44, "r": 10.0, "turns": 2.6, "h": 40.0},
+		"main": [], "main_count": 44,
+		"pattern": "SBBRBLBUBBNBRBBTBLBUBDBBRBNBBLBTBUBBRBLBBUBZ",
+		"branches": [
+			{"from": 6, "to": 14, "auto": "vine", "pattern": "BLB", "kind": "vine", "gate": 5},
+			{"from": 20, "to": 33, "auto": "lift", "pattern": "BU", "toggle": "odd", "kind": "cloud_lift"},
+			{"from": 34, "to": 41, "auto": "vine", "pattern": "LB", "kind": "vine", "gate": 8},
+		],
+	},
 }
 
 
@@ -141,19 +152,22 @@ static func get_def(id: String) -> Dictionary:
 ## Erzeugt den Feld-Graphen: Array von Dictionaries {id, pos, type, next[], prev[], branch}
 static func build_graph(def: Dictionary) -> Array:
 	var spaces: Array = []
-	var main_pts: Array = def.main
 	var n: int = def.main_count
 	var pattern: String = def.pattern
-	var curve := _closed_curve(main_pts)
-	var length := curve.get_baked_length()
-	for i in n:
-		var pos := curve.sample_baked(length * i / n, true)
-		spaces.append({"id": i, "pos": pos, "type": pattern[i % pattern.length()], "next": [(i + 1) % n], "prev": [(i - 1 + n) % n], "branch": -1})
+	if def.has("helix"):
+		for i in n:
+			spaces.append({"id": i, "pos": helix_pos(def, float(i)), "type": pattern[i % pattern.length()], "next": [(i + 1) % n], "prev": [(i - 1 + n) % n], "branch": -1})
+	else:
+		var curve := _closed_curve(def.main)
+		var length := curve.get_baked_length()
+		for i in n:
+			var pos := curve.sample_baked(length * i / n, true)
+			spaces.append({"id": i, "pos": pos, "type": pattern[i % pattern.length()], "next": [(i + 1) % n], "prev": [(i - 1 + n) % n], "branch": -1})
 	var bi := 0
 	for br in def.branches:
 		var from: int = br.from
 		var to: int = br.to
-		var pts: Array = [spaces[from].pos] + br.points + [spaces[to].pos]
+		var pts: Array = [spaces[from].pos] + _branch_points(def, br, spaces[from].pos, spaces[to].pos) + [spaces[to].pos]
 		var bc := _open_curve(pts)
 		var blen := bc.get_baked_length()
 		var bp: String = br.pattern
@@ -172,6 +186,28 @@ static func build_graph(def: Dictionary) -> Array:
 		(spaces[to].prev as Array).append(ids[count - 1])
 		bi += 1
 	return spaces
+
+
+## Wolkenturm: Position auf dem Wendelweg (Feld-Index als Kommazahl), Start vorne (+Z), gegen den Uhrzeigersinn.
+static func helix_pos(def: Dictionary, i: float) -> Vector3:
+	var hx: Dictionary = def.helix
+	var n := float(def.main_count)
+	var a := TAU * float(hx.turns) * i / n
+	var r := float(hx.r)
+	return Vector3(sin(a) * r, float(hx.h) * i / (n - 1.0), cos(a) * r)
+
+
+## Zwischenpunkte einer Abzweigung: feste Punkte, Ranke (außen am Turm hoch) oder Wolkenlift (senkrecht).
+static func _branch_points(def: Dictionary, br: Dictionary, a: Vector3, b: Vector3) -> Array:
+	match String(br.get("auto", "")):
+		"vine":
+			var mid := (a + b) * 0.5
+			var out := Vector3(mid.x, 0, mid.z).normalized() * 2.6
+			return [a.lerp(b, 0.33) + out, a.lerp(b, 0.66) + out]
+		"lift":
+			var o := Vector3(a.x, 0, a.z).normalized() * 3.2
+			return [a + o + Vector3.UP * 1.0, Vector3(a.x, b.y, a.z) + o]
+	return br.get("points", [])
 
 
 static func _closed_curve(pts: Array) -> Curve3D:
