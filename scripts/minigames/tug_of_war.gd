@@ -17,11 +17,13 @@ var _done := false
 var _press_t: Array[float] = [0, 0, 0, 0]
 var _side: Array[int] = [0, 0, 0, 0]
 var _slot_pos: Array[float] = [0, 0, 0, 0]
+var _fans: Array[CharacterRig] = []
 
 
 func _init() -> void:
 	game_id = "tug_of_war"
 	env_preset = "day"
+	backdrop_style = "meadow"
 	time_limit = 25.0
 	arena_radius = 9.0
 	teaser_height = 0.9
@@ -45,16 +47,54 @@ func on_setup() -> void:
 
 
 func build_arena() -> void:
-	for side in [-1.0, 1.0]:
-		WorldKit.box(world, Vector3(14, 1, 12), Vector3(side * 8.6, -0.5, 0), Color("#7ec86a"))
-	WorldKit.water(world, Vector2(3.4, 40), -0.6, Color(0.1, 0.45, 0.6), Color(0.45, 0.85, 0.9))
-	WorldKit.box(world, Vector3(3.4, 1, 40), Vector3(0, -2.2, 0), Color("#4f8a6a"), false)
-	for i in 10:
-		var z := -14.0 + i * 3.2
-		WorldKit.place(world, "nat/rock_small", Vector3(-1.9 if i % 2 == 0 else 1.9, -0.1, z), randf() * 360.0, 1.6)
-		WorldKit.place(world, "plat/mushrooms", Vector3(-6.0 - (i % 3) * 2.5, 0, z * 0.6), randf() * 360.0, 1.8)
-		WorldKit.place(world, "plat/mushrooms", Vector3(6.0 + (i % 3) * 2.5, 0, -z * 0.6), randf() * 360.0, 1.8)
-	WorldKit.place(world, "nat/bridge_wood", Vector3(0, -0.2, -10), 90.0, 2.0)
+	# Der Pilzbach: ein echter, mäandernder Bach, der beidseitig bis zum Horizont fließt, mit durchgehenden
+	# Ufern, Flussbett, Schilf und Steinen. Auf dem Wasser treiben Seerosen, Blätter und Enten, Fische springen.
+	var path := WorldKit.meander_path(175.0, 8.0, 18.0, 9.0)
+	WorldKit.river(world, path, 3.4, -0.45, Color("#7ec86a"), 80.0, true)
+	var life := RiverLife.new().setup(path, 3.4, -0.45)
+	world.add_child(life)
+	# Ufer-Deko: Pilzgruppen (Pilzbach!), Blumen, Büsche, Bäume weiter hinten – Arena-Mitte bleibt frei
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 777
+	for i in 90:
+		var z := rng.randf_range(-160.0, 160.0)
+		var side := -1.0 if i % 2 == 0 else 1.0
+		var x := side * rng.randf_range(3.0, 40.0)
+		if absf(z) < 7.0 and absf(x) < 9.0:
+			continue   # Zugplatz frei halten
+		var off := 0.0
+		for k in path.size() - 1:
+			if (path[k] as Vector3).z <= z and (path[k + 1] as Vector3).z > z:
+				off = (path[k] as Vector3).x
+		var far := absf(x) > 18.0
+		var key: String = ["nat/tree_oak", "plat/tree", "nat/tree_default", "nat/bush"][i % 4] if far else ["plat/mushrooms", "plat/flowers", "nat/flower_yellow", "nat/flower_purple", "nat/bush", "plat/mushrooms"][i % 6]
+		WorldKit.place(world, key, Vector3(x + off, 0, z), rng.randf() * 360.0, rng.randf_range(2.4, 3.6) if far else rng.randf_range(1.4, 2.2))
+	# dichter Uferbewuchs rund um den Zugplatz
+	for i in 70:
+		var zz := rng.randf_range(-36.0, 36.0)
+		var xx := (-1.0 if i % 2 == 0 else 1.0) * rng.randf_range(2.6, 16.0)
+		if absf(zz) < 6.0 and absf(xx) < 8.5:
+			continue
+		WorldKit.place(world, ["plat/flowers", "nat/flower_yellow", "nat/flower_red", "nat/flower_purple", "nat/grass", "plat/mushrooms", "nat/mushroom"][i % 7],
+			Vector3(xx, 0, zz), rng.randf() * 360.0, rng.randf_range(1.2, 2.0))
+	for z in [-10.0, 34.0]:
+		WorldKit.place(world, "nat/bridge_wood", Vector3(0, -0.15, z), 90.0, 2.0)
+	# Kleine Mühle am Ufer mit drehendem Wasserrad
+	WorldKit.cottage(world, Vector3(-11, 0, -16), 20.0, 1.3, Color("#fff1d8"), Color("#ff8a8a"))
+	var wheel := WorldKit.cylinder(world, 1.6, 0.4, Vector3(-2.6, 0.3, -16), Color("#b07a4a"), false)
+	wheel.rotation.z = PI * 0.5
+	var wt := wheel.create_tween().set_loops()
+	wt.tween_property(wheel, "rotation:x", TAU, 6.0).as_relative()
+	# Zuschauer: Wiesentiere auf beiden Ufern, die mitfiebern
+	for k in 6:
+		var fan := CharacterRig.new()
+		world.add_child(fan)
+		fan.setup(["pet/bunny", "pet/chick", "pet/cat", "pet/deer", "pet/cow", "npc/duck"][k], -1, 0.8)
+		var sx := -1.0 if k % 2 == 0 else 1.0
+		fan.position = Vector3(sx * (5.0 + k * 0.8), 0, -5.5 - (k % 3) * 1.2)
+		fan.face_now(Vector3(-sx * 0.3, 0, 1))
+		fan.play("idle")
+		_fans.append(fan)
 	_rope = MeshInstance3D.new()
 	var cm := CylinderMesh.new()
 	cm.top_radius = 0.09
@@ -152,6 +192,8 @@ func _apply_visuals(delta: float) -> void:
 
 func _finish(winner_side: int) -> void:
 	_done = true
+	for f in _fans:
+		f.react("cheer")
 	var loser := 1 - winner_side
 	Audio.sfx("splash", Vector3(0, 0, 0))
 	Juice.shake(0.35)

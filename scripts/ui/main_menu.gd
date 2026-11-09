@@ -41,6 +41,7 @@ func _build_diorama() -> void:
 	var we := WorldKit.env(self, "day")
 	WorldKit.god_rays(self, Vector3(-2, 0, -2), 9.0, we.get_meta("sun"), 6, Color(1.0, 0.92, 0.7), 0.2)
 	WorldKit.water(self, Vector2(260, 260), -0.6)
+	WorldKit.backdrop(self, "beach", Color("#e8d6a0"), -0.56)
 	# Insel
 	WorldKit.cylinder(self, 9.0, 1.2, Vector3(0, -0.6, 0), Color("#f1d9a0"), false)
 	WorldKit.cylinder(self, 7.0, 0.3, Vector3(0, 0.1, 0), Color("#7fd36a"), false)
@@ -49,58 +50,328 @@ func _build_diorama() -> void:
 		if sin(a) > 0.2:
 			continue   # kein Baum zwischen Kamera und Helden
 		WorldKit.place(self, "pirate/palm" if i % 2 == 0 else "pirate/palm_bend", Vector3(cos(a) * 8.0, 0, sin(a) * 8.0), randf() * 360.0, randf_range(0.8, 1.1))
-	WorldKit.place(self, "pirate/ship_large", Vector3(-22, -1.0, -26), 35.0, 1.0)
-	WorldKit.place(self, "pirate/ship_small", Vector3(26, -0.8, -18), -60.0, 1.0)
+	for i in 18:
+		var a2 := randf() * TAU
+		var r2 := randf_range(2.0, 6.4)
+		WorldKit.place(self, ["plat/flowers", "nat/flower_yellow", "nat/flower_purple", "nat/grass"][i % 4], Vector3(cos(a2) * r2, 0.25, sin(a2) * r2), randf() * 360.0, randf_range(0.8, 1.2))
+	var ship := WorldKit.place(self, "pirate/ship_large", Vector3(-22, -1.0, -26), 35.0, 1.0)
+	var boat := WorldKit.place(self, "pirate/ship_small", Vector3(26, -0.8, -18), -60.0, 1.0)
+	for sh: Node3D in [ship, boat]:
+		var bt := sh.create_tween().set_loops()
+		bt.tween_property(sh, "rotation:z", 0.05, 2.2).set_trans(Tween.TRANS_SINE)
+		bt.tween_property(sh, "rotation:z", -0.05, 2.2).set_trans(Tween.TRANS_SINE)
 	WorldKit.place(self, "pirate/tower", Vector3(14, -0.5, -30), 0.0, 1.5)
-	var w := WorldKit.place(self, "arcade/prize_wheel", Vector3(-4.5, 0.2, -3.0), 25.0, 3.2)
-	_wheel = w
-	WorldKit.place(self, "arena/trophy", Vector3(4.6, 0.2, -3.2), -20.0, 3.0)
-	var kart := WorldKit.place(self, "kart/oopi", Vector3(5.6, 0.25, 0.6), -55.0, 2.2)
-	kart.set_meta("bob", true)
-	WorldKit.place(self, "pirate/chest", Vector3(-5.2, 0.2, 1.8), 30.0, 1.0)
+	_wheel = WorldKit.place(self, "arcade/prize_wheel", Vector3(1.8, 0.2, -4.3), 0.0, 2.8)
+	WorldKit.place(self, "arena/trophy", Vector3(-1.6, 0.2, -4.0), 10.0, 2.6)
+	var kart := WorldKit.place(self, "kart/oopi", Vector3(-2.8, 0.25, -1.6), 40.0, 2.0)
+	_kart = kart
+	WorldKit.place(self, "pirate/chest", Vector3(-0.6, 0.2, 3.4), 30.0, 0.9)
 	WorldKit.place(self, "toy/item_box", Vector3(6.2, 2.6, -1.0), 15.0, 2.4)
-	WorldKit.place(self, "plat/star", Vector3(0, 4.2, -4.0), 0.0, 4.0)
-	var heroes := ["hero/knight", "hero/mage", "hero/barbarian", "hero/rogue", "hero/ranger"]
-	var clips := ["wave", "cheer", "idle", "taunt_long", "idle_b"]
-	for i in heroes.size():
-		var r := CharacterRig.new()
-		add_child(r)
-		r.setup(heroes[i], -1, 0.95)
-		r.position = Vector3(-3.6 + i * 1.8, 0.25, 0.6 - absf(i - 2) * 0.6)
-		r.rotation.y = PI + (i - 2) * 0.18
-		r.play(clips[i])
-		_heroes.append(r)
-	for pet in [["pet/cat", Vector3(-2.4, 0.25, 3.0)], ["pet/bunny", Vector3(2.0, 0.25, 3.3)], ["pet/chick", Vector3(-0.2, 0.25, 3.8)]]:
-		var pr := CharacterRig.new()
-		add_child(pr)
-		pr.setup(pet[0], -1, 0.6)
-		pr.position = pet[1]
-		pr.rotation.y = PI
-		pr.play("dance" if randf() < 0.5 else "idle")
+	var star := WorldKit.place(self, "plat/star", Vector3(0, 4.6, -5.0), 0.0, 3.6)
+	var st := star.create_tween().set_loops()
+	st.tween_property(star, "rotation:y", TAU, 6.0).as_relative()
 	_cam = Camera3D.new()
 	_cam.fov = 45.0
 	add_child(_cam)
 	_cam.make_current()
 	_update_cam(0.0)
+	# --- Lebendige Szene: jede Figur hat eine kleine, sinnvolle Beschäftigung ---
+	var mage := _actor("hero/mage", Vector3(0.6, 0.25, 1.4))
+	var barb := _actor("hero/barbarian", Vector3(4.4, 0.25, 0.4))
+	_act_ball(mage, barb)
+	_act_fishing(_actor("hero/ranger", Vector3(6.7, 0.25, 3.0)))
+	_act_sandcastle(_actor("hero/rogue_hooded", Vector3(3.0, 0.25, -2.2)), Vector3(3.9, 0.25, -1.6))
+	_act_wheel(_actor("hero/rogue", Vector3(0.4, 0.25, -2.6)))
+	var knight := _actor("hero/knight", Vector3(-1.0, 0.25, 2.2))
+	var chick := _actor("pet/chick", Vector3(-1.8, 0.25, 2.6), 0.55)
+	_act_walk(knight, chick)
+	_act_bunny(_actor("pet/bunny", Vector3(2.0, 0.25, 3.4), 0.6))
+	_act_cat(_actor("pet/cat", Vector3(-0.2, 0.25, 2.9), 0.6))
+
+
+var _kart: Node3D
+
+
+func _actor(key: String, pos: Vector3, scl := 0.95) -> CharacterRig:
+	var r := CharacterRig.new()
+	add_child(r)
+	r.setup(key, -1, scl)
+	r.position = pos
+	r.face_now(Vector3(0, 0, 1))
+	r.play("idle")
+	_heroes.append(r)
+	return r
+
+
+func _pause(t: float) -> bool:
+	if not is_inside_tree():
+		return false
+	await get_tree().create_timer(t).timeout
+	return is_inside_tree()
+
+
+func _walk_to(r: CharacterRig, to: Vector3, speed := 1.6, clip := "walk") -> void:
+	if not is_instance_valid(r):
+		return
+	r.face_now(to - r.position)
+	r.play(clip)
+	var tw := r.create_tween()
+	tw.tween_property(r, "position", to, maxf(0.2, r.position.distance_to(to) / speed))
+	await tw.finished
+	if is_instance_valid(r):
+		r.play("idle")
+
+
+## Wasserball werfen und fangen – im Wechsel, mit hohem Bogen.
+func _act_ball(a: CharacterRig, b: CharacterRig) -> void:
+	var ball := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.28
+	sm.height = 0.56
+	sm.material = WorldKit.mat(Color("#ff6b6b"), 0.4, 0.05)
+	ball.mesh = sm
+	add_child(ball)
+	var stripe := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 0.27
+	tm.outer_radius = 0.3
+	tm.material = WorldKit.mat(Color.WHITE, 0.4)
+	stripe.mesh = tm
+	ball.add_child(stripe)
+	var from := a
+	var to := b
+	while await _pause(randf_range(0.4, 1.2)):
+		if not is_instance_valid(from) or not is_instance_valid(to):
+			return
+		from.face_now(to.position - from.position)
+		to.face_now(from.position - to.position)
+		from.play_once("throw")
+		await _pause(0.35)
+		var p0 := from.position + Vector3.UP * 1.4
+		var p1 := to.position + Vector3.UP * 1.3
+		var tw := ball.create_tween()
+		tw.tween_method(func(t: float) -> void:
+			ball.position = p0.lerp(p1, t) + Vector3.UP * sin(t * PI) * 2.6
+			ball.rotation.x += 0.2, 0.0, 1.0, 1.05)
+		await tw.finished
+		if randf() < 0.18:
+			# verfehlt! Ball kullert weg, kurzer Schreck, dann holen
+			to.react("surprised" if to.has_clip("surprised") else "dodge")
+			var roll := to.position + Vector3(randf_range(-1.5, 1.5), 0.2, randf_range(0.8, 1.6))
+			var rt := ball.create_tween()
+			rt.tween_property(ball, "position", roll, 0.6).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+			await rt.finished
+			var home := to.position
+			await _walk_to(to, roll + Vector3(0.3, -0.2, 0), 2.4, "run")
+			to.play_once("pickup")
+			await _pause(0.4)
+			await _walk_to(to, home, 2.0)
+		else:
+			to.play_once("pickup")
+			if randf() < 0.3:
+				to.react("cheer")
+		var tmp := from
+		from = to
+		to = tmp
+
+
+## Angeln am Ufer: Pose, Pose, Biss! Fang fliegt ins Eimerchen.
+func _act_fishing(r: CharacterRig) -> void:
+	r.face_now(Vector3(1, 0, 0.6))
+	var rod := WorldKit.cylinder(r, 0.03, 2.2, Vector3(0.35, 1.5, 0.6), Color("#b07a4a"), false)
+	rod.rotation.x = 0.9
+	var bob := MeshInstance3D.new()
+	var bs := SphereMesh.new()
+	bs.radius = 0.09
+	bs.height = 0.18
+	bs.material = WorldKit.mat(Color("#ff5c7a"), 0.4)
+	bob.mesh = bs
+	add_child(bob)
+	var water_spot := r.position + Vector3(2.2, -0.82, 1.4)
+	bob.position = water_spot
+	var bucket := WorldKit.cylinder(self, 0.25, 0.35, r.position + Vector3(-0.6, 0.18, 0.2), Color("#7fb8ff"), false)
+	bucket.name = "Bucket"
+	while await _pause(randf_range(4.0, 8.0)):
+		r.play("fish" if r.has_clip("fish") else "hold")
+		var dip := bob.create_tween()
+		for k in 3:
+			dip.tween_property(bob, "position:y", water_spot.y - 0.12, 0.12)
+			dip.tween_property(bob, "position:y", water_spot.y, 0.18)
+		await dip.finished
+		r.play_once("pickup")
+		var fish := MeshInstance3D.new()
+		var fs := SphereMesh.new()
+		fs.radius = 0.16
+		fs.height = 0.2
+		fs.material = WorldKit.mat([Color("#ffd23f"), Color("#ff9f43"), Color("#8fd0ff")][randi() % 3], 0.4)
+		fish.mesh = fs
+		fish.scale = Vector3(1, 1, 1.8)
+		add_child(fish)
+		var a := water_spot
+		var b := bucket.position + Vector3.UP * 0.3
+		var ft := fish.create_tween()
+		ft.tween_method(func(t: float) -> void:
+			fish.position = a.lerp(b, t) + Vector3.UP * sin(t * PI) * 2.2
+			fish.rotation.x = t * TAU, 0.0, 1.0, 0.8)
+		ft.tween_callback(fish.queue_free)
+		await ft.finished
+		Juice.squash(bucket, 1.2, 0.8, 0.25, Vector3.ONE)
+		r.react("cheer")
+		await _pause(1.2)
+		r.play("sit" if r.has_clip("sit") else "idle")
+
+
+## Sandburg bauen: hämmern, die Burg wächst … und stürzt manchmal ein.
+func _act_sandcastle(r: CharacterRig, at: Vector3) -> void:
+	r.face_now(at - r.position)
+	var castle := Node3D.new()
+	add_child(castle)
+	castle.position = at
+	var parts: Array[Node3D] = []
+	for k in 4:
+		var p := WorldKit.box(castle, Vector3(0.9 - k * 0.18, 0.32, 0.9 - k * 0.18), Vector3(0, 0.16 + k * 0.32, 0), Color("#f1d9a0").darkened(k * 0.04), false)
+		p.visible = false
+		parts.append(p)
+	var flag := WorldKit.place(castle, "plat/flag", Vector3(0, 1.3, 0), 0.0, 0.5)
+	flag.visible = false
+	while is_inside_tree():
+		for k in parts.size():
+			r.play("hammer" if r.has_clip("hammer") else "interact")
+			if not await _pause(1.0):
+				return
+			parts[k].visible = true
+			Juice.pop_in(parts[k], 0.25)
+		flag.visible = true
+		Juice.pop_in(flag, 0.3)
+		r.react("cheer")
+		if not await _pause(3.0):
+			return
+		if randf() < 0.6:
+			# Welle! Die Burg sackt zusammen
+			for p in parts:
+				var tw := p.create_tween()
+				tw.tween_property(p, "scale", Vector3(1.3, 0.05, 1.3), 0.35).set_trans(Tween.TRANS_BOUNCE)
+			flag.visible = false
+			r.react("sad")
+			if not await _pause(2.0):
+				return
+		for p in parts:
+			p.visible = false
+			p.scale = Vector3.ONE
+		flag.visible = false
+
+
+## Glücksrad drehen: hingehen, kräftig drehen, mitfiebern.
+func _act_wheel(r: CharacterRig) -> void:
+	var home := r.position
+	while await _pause(randf_range(5.0, 9.0)):
+		await _walk_to(r, _wheel.position + Vector3(0.4, 0.05, 1.3), 1.4)
+		r.face_now(Vector3(0, 0, -1))
+		r.play_once("interact")
+		_wheel_boost = 9.0
+		if not await _pause(2.6):
+			return
+		r.face_now(Vector3(0, 0, 1))
+		r.react(["cheer", "dizzy", "laugh", "sad"][randi() % 4])
+		if not await _pause(1.4):
+			return
+		await _walk_to(r, home, 1.4)
+
+
+var _wheel_boost := 0.0
+
+
+## Spaziergang in Etappen über die Insel, das Küken trippelt hinterher; ab und zu Winken in die Kamera.
+func _act_walk(r: CharacterRig, chick: CharacterRig) -> void:
+	var pts := [Vector3(-1.0, 0.25, 2.2), Vector3(1.6, 0.25, 4.2), Vector3(5.2, 0.25, 4.6), Vector3(5.8, 0.25, 1.2), Vector3(2.0, 0.25, -0.6)]
+	var i := 0
+	while is_inside_tree():
+		i = (i + 1) % pts.size()
+		var to: Vector3 = pts[i]
+		var follow := to - (to - r.position).normalized() * 0.9
+		chick.face_now(follow - chick.position)
+		chick.play("walk")
+		var ct := chick.create_tween()
+		ct.tween_property(chick, "position", follow, maxf(0.3, chick.position.distance_to(follow) / 1.5)).set_delay(0.3)
+		ct.tween_callback(func() -> void: chick.play("idle"))
+		await _walk_to(r, to, 1.4)
+		if not await _pause(randf_range(0.8, 2.0)):
+			return
+		if randf() < 0.45:
+			r.face_now(_cam.global_position - r.global_position)
+			r.react("wave")
+			chick.hop(0.3, 0.25)
+			if not await _pause(1.6):
+				return
+
+
+## Hase hoppelt in kleinen Sprüngen umher und schnuppert an Blumen.
+func _act_bunny(r: CharacterRig) -> void:
+	var center := r.position
+	while await _pause(randf_range(0.6, 1.8)):
+		var to := center + Vector3(randf_range(-1.6, 1.6), 0, randf_range(-1.0, 1.0))
+		r.face_now(to - r.position)
+		for k in 3:
+			var from := r.position
+			var step := from.lerp(to, (k + 1) / 3.0)
+			var tw := r.create_tween()
+			tw.tween_method(func(t: float) -> void:
+				r.position = from.lerp(step, t) + Vector3.UP * sin(t * PI) * 0.35, 0.0, 1.0, 0.28)
+			await tw.finished
+		if randf() < 0.4:
+			r.play_once("eat" if r.has_clip("eat") else "idle")
+
+
+## Katze döst (Zzz) … und jagt dann einem Schmetterling hinterher.
+func _act_cat(r: CharacterRig) -> void:
+	var fly := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(0.22, 0.02, 0.14)
+	bm.material = WorldKit.mat(Color("#ffb3e6"), 0.6, 0.2)
+	fly.mesh = bm
+	add_child(fly)
+	fly.visible = false
+	while is_inside_tree():
+		FX.zzz(r, 1.2, 4.0)
+		if not await _pause(5.0):
+			return
+		fly.visible = true
+		var c := r.position + Vector3(0, 1.0, 0)
+		r.play("run" if r.has_clip("run") else "walk")
+		for k in 6:
+			var p := c + Vector3(randf_range(-1.5, 1.5), randf_range(0.0, 0.6), randf_range(-1.0, 1.0))
+			var ft := fly.create_tween()
+			ft.tween_property(fly, "position", p, 0.5).set_trans(Tween.TRANS_SINE)
+			var rt := r.create_tween()
+			rt.tween_property(r, "position", Vector3(p.x, 0.25, p.z), 0.55)
+			r.face_now(p - r.position)
+			await ft.finished
+			if not is_inside_tree():
+				return
+			fly.rotation.z = sin(k) * 0.6
+		r.play("idle")
+		r.hop(0.4, 0.3)
+		var away := fly.create_tween()
+		away.tween_property(fly, "position", fly.position + Vector3(2, 4, -3), 1.2)
+		await away.finished
+		fly.visible = false
 
 
 func _process(delta: float) -> void:
 	_cam_t += delta
 	_update_cam(delta)
 	if _wheel:
-		_wheel.rotation.z += delta * 0.8
-	# Gelegentliche Slapstick-Momente im Hintergrund
-	if randf() < delta * 0.25 and _heroes.size() > 0:
-		var h: CharacterRig = _heroes[randi() % _heroes.size()]
-		if not h.is_locked():
-			h.react(["cheer", "laugh", "dizzy", "wave", "flex", "determined"][randi() % 6])
+		_wheel_boost = move_toward(_wheel_boost, 0.0, delta * 3.2)
+		_wheel.rotation.z += delta * (0.4 + _wheel_boost)
+	if _kart:
+		_kart.position.y = 0.25 + absf(sin(_cam_t * 2.6)) * 0.04
 
 
 func _update_cam(_d: float) -> void:
-	var a := sin(_cam_t * 0.12) * 0.45
-	var offset_x := 3.2 if _page and _page.name != "main" else 2.2
-	_cam.position = Vector3(sin(a) * 15.0 - offset_x, 4.6 + sin(_cam_t * 0.3) * 0.3, cos(a) * 15.0)
-	_cam.look_at(Vector3(-offset_x * 0.6, 1.6, 0), Vector3.UP)
+	var a := sin(_cam_t * 0.1) * 0.35
+	var offset_x := 3.2 if _page and _page.name != "main" else 2.0
+	_cam.position = Vector3(sin(a) * 15.0 - offset_x, 4.4 + sin(_cam_t * 0.3) * 0.25, cos(a) * 15.0)
+	_cam.look_at(Vector3(-offset_x * 0.55 - 1.9, 1.4, 0.5), Vector3.UP)   # Insel rechts neben den Menü-Kacheln
 
 
 # --- Seitensystem -------------------------------------------------------------------------------
@@ -223,49 +494,111 @@ func _page_main() -> Control:
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var logo := UI.vbox(-12)
+	var logo := UI.vbox(-14)
 	root.add_child(logo)
-	logo.position = Vector2(48, 30)
-	var l1 := UI.label("LUMOS PARTY", 104, Color.WHITE, true, 20)
+	logo.position = Vector2(44, 22)
+	var l1 := UI.label("LUMOS PARTY", 88, Color.WHITE, true, 18)
 	l1.add_theme_color_override("font_outline_color", Color("#5a1aa0"))
 	logo.add_child(l1)
-	var l2 := UI.label("& NITRO DASH", 54, UI.GOLD, true, 14)
+	var l2 := UI.label("& NITRO DASH", 44, UI.GOLD, true, 12)
 	logo.add_child(l2)
 	_logo = logo
 	var tw := logo.create_tween().set_loops()
-	tw.tween_property(logo, "position:y", 38.0, 1.4).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(logo, "position:y", 30.0, 1.4).set_trans(Tween.TRANS_SINE)
-	var v := UI.vbox(8)
+	tw.tween_property(logo, "position:y", 28.0, 1.6).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(logo, "position:y", 22.0, 1.6).set_trans(Tween.TRANS_SINE)
+	# Fünf große Modus-Kacheln – wie auf der Konsole
+	var v := UI.vbox(10)
 	root.add_child(v)
-	v.position = Vector2(56, 206)
+	v.position = Vector2(48, 170)
 	var items := [
-		["Lumos Party", Color("#ff4fb8"), "party", "Das chaotische 3D-Brettspiel"],
-		["Nitro Dash", Color("#2f9bff"), "race", "High-Speed Arcade-Racer"],
-		["Minispiel-Arena", Color("#2ecc71"), "minigames", "Alle Minispiele frei spielen, Marathon"],
-		["Abenteuer & Modi", Color("#ff9f1a"), "modes", "Partyhelfer-Reise, Rhythmus-Küche, Lumos-Athlon"],
-		["Online-Spiel", Color("#00b894"), "online", "Mit bis zu 4 Smartphones über Raumcode spielen"],
-		["Einstellungen", Color("#7b3cff"), "settings", ""],
-		["Credits", Color("#5a4a80"), "credits", ""],
+		["Lumos Party", "Das Brettspiel mit Freunden", "dice", Color("#ff4fb8"), "party"],
+		["Nitro Dash", "Arcade-Kart-Rennen & Grand Prix", "bolt", Color("#2f9bff"), "race"],
+		["Minispiele", "Alle Minispiele frei spielen · Marathon", "star", Color("#2ecc71"), "minigames"],
+		["Abenteuer & Modi", "Reise · Küche · Athlon · Wolkenturm · Kolosseum", "trophy", Color("#ff9f1a"), "modes"],
+		["Online", "Mit Freunden über Raumcode", "globe", Color("#00b894"), "online"],
 	]
+	var desc := UI.label("", 22, Color(1, 1, 1, 0.92), true, 8)
 	for it in items:
-		var b := UI.button(it[0], it[1], 30, 380.0)
-		b.custom_minimum_size.y = 54
-		b.tooltip_text = it[3]
-		var target: String = it[2]
+		var b := _mode_tile(String(it[0]), String(it[1]), String(it[2]), it[3])
+		var target: String = it[4]
+		var sub: String = it[1]
 		b.pressed.connect(func() -> void: show_page(target))
+		b.focus_entered.connect(func() -> void: desc.text = sub)
 		v.add_child(b)
-	# Konto-Knopf oben rechts
+	# Kleine runde Knöpfe: Einstellungen, Credits, Profil
+	var small := UI.hbox(14)
+	root.add_child(small)
+	UI.place(small, Control.PRESET_BOTTOM_LEFT, Vector2(48, -92), Vector2(0, 64))
+	for sb in [["gear", "Einstellungen", "settings"], ["heart", "Credits", "credits"], ["user", "Profil", "profile"]]:
+		var rb := UI.button("", Color("#4a3a7a"), 20, 64)
+		rb.icon = UI.icon_tex(String(sb[0]), 30)
+		rb.custom_minimum_size = Vector2(64, 64)
+		rb.tooltip_text = String(sb[1])
+		var tgt: String = sb[2]
+		var label: String = sb[1]
+		rb.pressed.connect(func() -> void: show_page(tgt))
+		rb.focus_entered.connect(func() -> void: desc.text = label)
+		small.add_child(rb)
+	# Konto-Pille oben rechts
 	var acc := UI.button("", Color("#3a2a6a"), 22, 0.0)
 	acc.icon = UI.icon_tex("user", 28)
 	acc.text = ("  " + Account.display_name()) if Account.signed_in() else "  Anmelden"
 	acc.pressed.connect(func() -> void: show_page("profile"))
 	root.add_child(acc)
 	UI.place(acc, Control.PRESET_TOP_RIGHT, Vector2(-300, 24), Vector2(276, 56))
-	var foot := UI.label("v%s · Lumos OS · %s" % [ProjectSettings.get_setting("application/config/version", "1.0"), "Touch, Tastatur & bis zu 4 Gamepads"], 18, Color(1, 1, 1, 0.75))
+	# Untere Leiste: Beschreibung des gewählten Eintrags + Bedienhilfe
+	var bar := PanelContainer.new()
+	var bs := StyleBoxFlat.new()
+	bs.bg_color = Color(0.12, 0.06, 0.25, 0.72)
+	bs.set_corner_radius_all(22)
+	bs.set_content_margin_all(10)
+	bar.add_theme_stylebox_override("panel", bs)
+	root.add_child(bar)
+	UI.place(bar, Control.PRESET_CENTER_BOTTOM, Vector2(-330, -70), Vector2(660, 52))
+	var hb := UI.hbox(18)
+	hb.alignment = BoxContainer.ALIGNMENT_CENTER
+	bar.add_child(hb)
+	hb.add_child(desc)
+	hb.add_child(UI.prompt("a", "Auswählen", 20))
+	hb.add_child(UI.prompt("b", "Zurück", 20))
+	var foot := UI.label("v%s" % ProjectSettings.get_setting("application/config/version", "1.0"), 16, Color(1, 1, 1, 0.55))
 	root.add_child(foot)
-	foot.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	foot.position = Vector2(24, -40)
+	UI.place(foot, Control.PRESET_BOTTOM_RIGHT, Vector2(-90, -32), Vector2(80, 24))
 	return root
+
+
+## Große Modus-Kachel: Icon links, Titel + Untertitel – fokussiert leicht vergrößert.
+func _mode_tile(title: String, sub: String, icon: String, col: Color) -> Button:
+	var b := UI.button("", col, 30, 430.0)
+	b.custom_minimum_size = Vector2(430, 76)
+	var h := UI.hbox(14)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(h)
+	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
+	h.offset_left = 18
+	var ic := TextureRect.new()
+	ic.texture = UI.icon_tex(icon, 46, Color.WHITE)
+	ic.custom_minimum_size = Vector2(46, 46)
+	ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(ic)
+	var tv := UI.vbox(-2)
+	tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tv.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(tv)
+	var tl := UI.label(title, 30, Color.WHITE, true, 8)
+	tl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tv.add_child(tl)
+	var sl := UI.label(sub, 17, Color(1, 1, 1, 0.85), true, 5)
+	sl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tv.add_child(sl)
+	b.focus_entered.connect(func() -> void:
+		b.pivot_offset = b.size * 0.5
+		b.create_tween().tween_property(b, "scale", Vector2(1.04, 1.04), 0.12))
+	b.focus_exited.connect(func() -> void: b.create_tween().tween_property(b, "scale", Vector2.ONE, 0.12))
+	return b
 
 
 # --- Profil & Anmeldung -----------------------------------------------------------------------------------

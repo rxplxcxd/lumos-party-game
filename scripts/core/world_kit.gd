@@ -545,3 +545,58 @@ static func _find_env(n: Node) -> WorldEnvironment:
 	if n.get_parent() and n.get_parent() != n.get_tree().root:
 		return _find_env(n.get_parent())
 	return null
+
+
+# --- Fluss ---------------------------------------------------------------------------------------------------
+
+## Mäandernder Fluss entlang "path" (Punkte von Horizont zu Horizont): Wasser-Segmente, dunkles Flussbett,
+## durchgehende Ufer (Kollision optional) und Ufersteine. Gibt die geglättete Mittellinie zurück.
+static func river(parent: Node3D, path: Array, width := 3.6, water_y := -0.45, bank_col := Color("#7ec86a"),
+		bank_w := 70.0, collide := true) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4242
+	for k in path.size() - 1:
+		var a: Vector3 = path[k]
+		var b: Vector3 = path[k + 1]
+		var mid := (a + b) * 0.5
+		var seg := b - a
+		var length := seg.length()
+		var yaw := atan2(seg.x, seg.z)
+		var perp := Vector3(seg.z, 0, -seg.x).normalized()
+		# Wasser (etwas länger für überlappende Fugen)
+		var w := water(parent, Vector2(width + 0.8, length + 1.2), water_y, Color(0.08, 0.42, 0.58), Color(0.42, 0.84, 0.9))
+		w.position = Vector3(mid.x, water_y, mid.z)
+		w.rotation.y = yaw
+		# Flussbett
+		var bed := box(parent, Vector3(width + 1.0, 1.0, length + 1.2), Vector3(mid.x, water_y - 1.0, mid.z), Color("#4f8a6a"), false)
+		bed.rotation.y = yaw
+		# Ufer links/rechts (Oberkante = 0)
+		for sd in [-1.0, 1.0]:
+			var bc := mid + perp * float(sd) * (width * 0.5 + bank_w * 0.5)
+			var bank := box(parent, Vector3(bank_w, 1.0, length + 1.6), Vector3(bc.x, -0.5, bc.z), bank_col, collide)
+			bank.rotation.y = yaw
+			# Uferkante: kleine Steine und Schilf
+			for j in 3:
+				var t := (j + rng.randf()) / 3.0
+				var p := a.lerp(b, t) + perp * float(sd) * (width * 0.5 + rng.randf_range(0.1, 0.6))
+				if rng.randf() < 0.55:
+					place(parent, "nat/rock_small", Vector3(p.x, -0.12, p.z), rng.randf() * 360.0, rng.randf_range(1.0, 1.7))
+				else:
+					place(parent, "nat/grass", Vector3(p.x, 0.0, p.z), rng.randf() * 360.0, rng.randf_range(1.4, 2.2))
+	return path
+
+
+## Hilfsfunktion: Mittellinie eines Flusses, der in z-Richtung von -length bis +length mäandert. In der
+## Arena (|z| < straight) bleibt er gerade.
+static func meander_path(length := 170.0, step := 8.0, straight := 18.0, amp := 9.0) -> Array:
+	var pts: Array = []
+	var z := -length
+	while z <= length + 0.01:
+		var off := 0.0
+		var az := absf(z)
+		if az > straight:
+			var k := clampf((az - straight) / 30.0, 0.0, 1.0)
+			off = sin((az - straight) / 22.0) * amp * k * (1.0 if z > 0 else -1.0)
+		pts.append(Vector3(off, 0, z))
+		z += step
+	return pts
