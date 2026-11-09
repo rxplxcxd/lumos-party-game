@@ -120,8 +120,10 @@ func _next_round() -> void:
 	CutsceneManager.big_word("Runde %d" % _round, Color.WHITE, 0.4)
 
 
+## Notenlänge = ein Musik-Schlag (später ein Dreiviertel-Schlag) – folgt dem BPM des Soundtracks.
 func _note_dur() -> float:
-	return clampf(0.62 - _round * 0.035, 0.3, 0.62)
+	var beat := 60.0 / Audio.music_bpm()
+	return clampf(beat * (1.0 if _round < 5 else 0.75), 0.28, 0.75)
 
 
 func on_tick(delta: float) -> void:
@@ -130,7 +132,7 @@ func on_tick(delta: float) -> void:
 		"pause":
 			if _t <= 0.0:
 				_phase = "show"
-				_t = 0.0
+				_t = Audio.time_to_next_beat()   # erste Note landet genau auf dem nächsten Schlag
 		"show":
 			if _t <= 0.0:
 				if _show_i < seq.size():

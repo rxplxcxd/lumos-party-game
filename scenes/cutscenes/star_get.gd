@@ -22,6 +22,7 @@ func run(d: Node, ctx: Dictionary) -> void:
 	await tw.finished
 	rig.react("star_get")
 	Audio.jingle("fanfare")
+	Audio.sfx("sparkle_up", null, -2.0, 1.0, 0.0)
 	FX.confetti(rp + Vector3.UP * 2.5, 90)
 	FX.stars(rp + Vector3.UP * 3.0, Color(1, 0.9, 0.3), 24)
 	FX.flash_light(rp + Vector3.UP * 3.0, Color(1, 0.9, 0.5), 8.0, 0.8)

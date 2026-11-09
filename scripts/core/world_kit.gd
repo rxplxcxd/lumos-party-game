@@ -372,3 +372,176 @@ static func multimesh(parent: Node, key: String, transforms: Array) -> Node3D:
 			stack.append([c, xf])
 	inst.free()
 	return holder
+
+
+# --- Weite & Leben: kein "Ende der Welt" ---------------------------------------------------------------------
+
+## Erweitert jede Szene über ihre Bodenplatte hinaus: weiter Boden (bzw. Meer/Wolkenmeer), dunstige
+## Hügelketten am Horizont, ziehende Wolken, kreisende Vögel und themenpassende Partikel. Dazu wird der
+## Tiefendunst so gesetzt, dass Kanten und Horizont weich ineinander übergehen.
+## style: meadow | beach | snow | night | sky | sky_dusk | cake | dungeon | none
+static func backdrop(parent: Node3D, style: String, ground: Color, ground_y := -0.55, center := Vector3.ZERO) -> Node3D:
+	var root := Node3D.new()
+	root.name = "Backdrop"
+	parent.add_child(root)
+	root.position = Vector3(center.x, 0, center.z)
+	if style == "none":
+		return root
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(style) ^ int(ground.to_rgba32())
+	var we := _find_env(parent)
+	var horizon := Color("#a9cfee")
+	if we and we.environment:
+		var e := we.environment
+		if e.sky and e.sky.sky_material is ProceduralSkyMaterial:
+			horizon = (e.sky.sky_material as ProceduralSkyMaterial).sky_horizon_color
+			# Unterhalb des Horizonts zeigt der Himmel nun die Bodenfarbe → kein sichtbarer Bruch
+			(e.sky.sky_material as ProceduralSkyMaterial).ground_bottom_color = ground.lerp(horizon, 0.35)
+			(e.sky.sky_material as ProceduralSkyMaterial).ground_horizon_color = horizon
+		e.fog_enabled = true
+		e.fog_light_color = horizon
+		e.fog_density = maxf(e.fog_density, 0.0042 if style != "dungeon" else 0.012)
+		e.fog_aerial_perspective = 0.55
+		e.fog_sky_affect = 0.25
+	if style == "dungeon":
+		return root
+	var far_col := ground
+	match style:
+		"beach":
+			var sea := water(root, Vector2(1400, 1400), ground_y - 0.35, Color(0.06, 0.4, 0.65), Color(0.3, 0.8, 0.9))
+			sea.name = "FarSea"
+			far_col = Color("#e8d6a0")
+		"sky", "sky_dusk":
+			var cl := water(root, Vector2(1400, 1400), ground_y - 14.0, Color(1, 1, 1) if style == "sky" else Color("#f4d6e8"), Color(1, 1, 1))
+			var cm := cl.mesh.surface_get_material(0) as ShaderMaterial
+			cm.set_shader_parameter("wave_height", 0.9)
+			cm.set_shader_parameter("alpha", 1.0)
+			far_col = Color("#ffffff") if style == "sky" else Color("#f0d8f0")
+		_:
+			var g := MeshInstance3D.new()
+			var pm := PlaneMesh.new()
+			pm.size = Vector2(1400, 1400)
+			pm.material = mat(ground, 1.0)
+			g.mesh = pm
+			g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			g.position.y = ground_y
+			g.name = "FarGround"
+			root.add_child(g)
+	# Hügelketten (bzw. Inseln/Wolkenberge/Tortenstücke) am Horizont – leicht ins Horizontblau gemischt
+	var hill_col := far_col.darkened(0.08).lerp(horizon, 0.28)
+	if style == "cake":
+		hill_col = Color("#ffb3c7").lerp(horizon, 0.25)
+	elif style == "snow":
+		hill_col = Color("#f4f8ff").lerp(horizon, 0.2)
+	elif style == "night":
+		hill_col = ground.darkened(0.2).lerp(horizon, 0.15)
+	for i in 22:
+		var a := TAU * i / 22.0 + rng.randf_range(-0.08, 0.08)
+		var r := rng.randf_range(150.0, 240.0)
+		var h := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = rng.randf_range(28.0, 60.0)
+		sm.height = sm.radius * rng.randf_range(0.55, 0.9)
+		sm.radial_segments = 20
+		sm.rings = 10
+		sm.material = mat(hill_col.lerp(horizon, rng.randf_range(0.0, 0.18)), 1.0)
+		h.mesh = sm
+		h.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var hy := ground_y - sm.height * 0.18
+		if style in ["sky", "sky_dusk"]:
+			hy = ground_y - 12.0 + rng.randf_range(-4.0, 6.0)
+		h.position = Vector3(cos(a) * r, hy, sin(a) * r)
+		root.add_child(h)
+	# Ziehende Wolken (langsame Rotation um die Szene)
+	var cloud_pivot := Node3D.new()
+	cloud_pivot.name = "Clouds"
+	root.add_child(cloud_pivot)
+	var cloud_col := Color(1, 1, 1) if style != "night" else Color("#5a6496")
+	if style in ["sky_dusk", "cake"]:
+		cloud_col = Color("#ffe6f0")
+	for c in 16:
+		var cluster := Node3D.new()
+		cloud_pivot.add_child(cluster)
+		var a2 := TAU * c / 16.0 + rng.randf() * 0.3
+		var r2 := rng.randf_range(90.0, 230.0)
+		cluster.position = Vector3(cos(a2) * r2, rng.randf_range(38.0, 75.0), sin(a2) * r2)
+		for k in rng.randi_range(3, 6):
+			var puff := MeshInstance3D.new()
+			var ps := SphereMesh.new()
+			ps.radius = rng.randf_range(6.0, 12.0)
+			ps.height = ps.radius * 1.3
+			ps.radial_segments = 16
+			ps.rings = 8
+			ps.material = mat(cloud_col, 1.0, 0.12 if style != "night" else 0.0)
+			puff.mesh = ps
+			puff.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			puff.position = Vector3(k * 7.0 - 14.0 + rng.randf_range(-2, 2), rng.randf_range(-2.0, 3.0), rng.randf_range(-4, 4))
+			cluster.add_child(puff)
+	var ct := cloud_pivot.create_tween().set_loops()
+	ct.tween_property(cloud_pivot, "rotation:y", TAU, 900.0).as_relative()
+	# Kreisende Vögel (Möwen am Strand, Schwalben auf der Wiese) – nachts dafür Sternschnuppen
+	if style != "night":
+		for b in 6:
+			var piv := Node3D.new()
+			root.add_child(piv)
+			piv.rotation.y = rng.randf() * TAU
+			var bird := Node3D.new()
+			piv.add_child(bird)
+			bird.position = Vector3(rng.randf_range(35.0, 75.0), rng.randf_range(16.0, 30.0), 0)
+			bird.rotation.y = PI * 0.5
+			var bcol := Color("#fdfdfd") if style == "beach" else Color("#4a4a5a")
+			var body := MeshInstance3D.new()
+			var bs := SphereMesh.new()
+			bs.radius = 0.35
+			bs.height = 0.5
+			bs.material = mat(bcol, 0.8)
+			body.mesh = bs
+			bird.add_child(body)
+			for sd in [-1.0, 1.0]:
+				var wing := MeshInstance3D.new()
+				var wb := BoxMesh.new()
+				wb.size = Vector3(1.4, 0.06, 0.45)
+				wb.material = mat(bcol, 0.8)
+				wing.mesh = wb
+				wing.position = Vector3(0.7 * sd, 0, 0)
+				var wp := Node3D.new()
+				bird.add_child(wp)
+				wp.add_child(wing)
+				var wt := wp.create_tween().set_loops()
+				wt.tween_property(wp, "rotation:z", 0.55 * sd, 0.22 + b * 0.02).set_trans(Tween.TRANS_SINE)
+				wt.tween_property(wp, "rotation:z", -0.35 * sd, 0.22 + b * 0.02).set_trans(Tween.TRANS_SINE)
+			var ft := piv.create_tween().set_loops()
+			ft.tween_property(piv, "rotation:y", TAU * (1.0 if b % 2 == 0 else -1.0), rng.randf_range(24.0, 40.0)).as_relative()
+	# Themen-Partikel in Bodennähe (bewegen sich langsam durchs Bild)
+	var pcfg := {}
+	match style:
+		"meadow":
+			pcfg = {"amount": 40, "life": 7.0, "color": Color(1.0, 0.9, 0.55, 0.9), "size": 0.16, "vel": 0.5, "grav": Vector3(0.15, 0.05, 0.0)}
+		"beach":
+			pcfg = {"amount": 30, "life": 6.0, "color": Color(1, 1, 1, 0.7), "size": 0.12, "vel": 0.6, "grav": Vector3(0.3, 0.02, 0.0)}
+		"snow":
+			pcfg = {"amount": 160, "life": 8.0, "color": Color(1, 1, 1, 0.95), "size": 0.16, "vel": 0.3, "grav": Vector3(0.2, -0.9, 0.0)}
+		"night":
+			pcfg = {"amount": 70, "life": 5.0, "color": Color(1.0, 0.95, 0.55, 0.95), "size": 0.2, "vel": 0.35, "grav": Vector3(0, 0.05, 0), "add": true}
+		"cake":
+			pcfg = {"amount": 50, "life": 7.0, "color": Color("#ffd1e3"), "size": 0.18, "vel": 0.3, "grav": Vector3(0.05, -0.4, 0.0)}
+		"sky", "sky_dusk":
+			pcfg = {"amount": 40, "life": 8.0, "color": Color(1, 1, 1, 0.8), "size": 0.2, "vel": 0.4, "grav": Vector3(0.25, 0.0, 0.0), "add": true}
+	if not pcfg.is_empty():
+		var em := FX.emitter({"amount": pcfg.amount, "life": pcfg.life, "one_shot": false, "explosive": 0.0, "spread": 180.0,
+			"vel_min": 0.05, "vel_max": pcfg.vel, "gravity": pcfg.grav, "size": pcfg.size, "additive": pcfg.get("add", false),
+			"color": pcfg.color, "box": Vector3(60, 6 if style != "snow" else 1, 46)})
+		root.add_child(em)
+		em.position = Vector3(0, 3.5 if style != "snow" else 16.0, 0)
+		em.preprocess = 6.0
+		em.emitting = true
+	return root
+
+
+static func _find_env(n: Node) -> WorldEnvironment:
+	for c in n.get_children():
+		if c is WorldEnvironment:
+			return c as WorldEnvironment
+	if n.get_parent() and n.get_parent() != n.get_tree().root:
+		return _find_env(n.get_parent())
+	return null

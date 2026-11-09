@@ -435,10 +435,13 @@ func countdown(go_text := "LOS!") -> void:
 		var n := 3 - i
 		Audio.voice(str(n))
 		Audio.sfx("countdown", null, 0.0, 1.0, 0.0)
+		Audio.sfx("ding", null, -6.0, 0.9 + i * 0.12, 0.0)
 		Juice.shake(0.12)
 		await big_word(str(n), colors[i], 0.75)
 	Audio.voice("go")
 	Audio.sfx("go")
+	Audio.sfx("sparkle_up", null, -3.0, 1.0, 0.0)
+	Audio.sfx("positive", null, -4.0, 1.1, 0.0)
 	Juice.shake(0.3)
 	InputHub.rumble(0, 0.6, 0.2)
 	big_word(go_text, Color("#5ab8ff"), 0.8)

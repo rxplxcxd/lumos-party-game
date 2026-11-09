@@ -53,6 +53,7 @@ func step(d: int) -> void:
 	index = wrapi(index + d, 0, options.size())
 	_refresh()
 	Juice.ui_punch(_label, 0.15, 0.25)
+	Audio.sfx("ui_move", null, -3.0, 1.0 + 0.04 * float(index % 5), 0.0)
 	changed.emit(index)
 
 

@@ -11,7 +11,7 @@ const KINDS := ["left", "right", "up", "down", "a"]
 var notes: Array[Dictionary] = []
 var song_t := 0.0
 var bpm := 96.0
-var _next_beat := 1.6
+var _next_beat := -1.0
 var _beat_idx := 0
 var _judged: Array[Dictionary] = [{}, {}, {}, {}]
 var _prev_mag: Array[float] = [0.0, 0.0, 0.0, 0.0]
@@ -149,7 +149,7 @@ func _spawn_note(beat_time: float) -> void:
 	var pool := KINDS.slice(0, 4)
 	if prog > 0.25:
 		pool = KINDS
-	var kind: String = pool[randi() % pool.size()]
+	var kind: String = pool[rng.randi() % pool.size()]
 	var tr := TextureRect.new()
 	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -167,16 +167,24 @@ func _spawn_note(beat_time: float) -> void:
 func on_tick(delta: float) -> void:
 	song_t += delta
 	var prog := 1.0 - time_left / time_limit
-	bpm = 96.0 if prog < 0.35 else (112.0 if prog < 0.7 else 128.0)
+	# Takt kommt vom laufenden Soundtrack (Normal → Hurry-Up mit höherem BPM, je Runde ein anderer Track)
+	bpm = Audio.music_bpm()
 	var spb := 60.0 / bpm
-	# Noten 2 s im Voraus erzeugen
-	while _next_beat < song_t + 2.2 and time_left > 2.5:
-		var gap := spb if (_beat_idx % 8 != 7) else spb * 2.0
-		if prog > 0.6 and randf() < 0.25:
-			gap = spb * 0.5
-		_spawn_note(_next_beat)
-		_next_beat += gap
+	# Noten ~2,2 s im Voraus exakt auf die kommenden Musik-Schläge legen
+	var beats := Audio.upcoming_beats(2.2)
+	for k in beats.size():
+		var at := song_t + beats[k]
+		if at <= _next_beat + spb * 0.3 or time_left - beats[k] < 2.0:
+			continue
 		_beat_idx += 1
+		if _beat_idx % 8 == 0:
+			_next_beat = at   # kleine Atempause auf jedem achten Schlag
+			continue
+		_spawn_note(at)
+		# später auch Achtel-Noten zwischen zwei Schlägen (deterministisch aus dem Spiel-Zufall)
+		if prog > 0.55 and k + 1 < beats.size() and rng.randf() < 0.22:
+			_spawn_note(at + (beats[k + 1] - beats[k]) * 0.5)
+		_next_beat = at
 	# Takt-Effekte
 	var beat_phase := fmod(song_t, spb) / spb
 	_marker.scale = Vector2.ONE * (1.0 + (1.0 - beat_phase) * 0.12)

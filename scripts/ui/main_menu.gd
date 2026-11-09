@@ -810,6 +810,7 @@ func _toggle(title: String, key: String) -> Control:
 	c.button_pressed = bool(Game.settings[key])
 	c.add_theme_font_size_override("font_size", 26)
 	c.toggled.connect(func(on: bool) -> void:
+		Audio.sfx("ui_toggle", null, -2.0, 1.15 if on else 0.9, 0.0)
 		Game.settings[key] = on
 		Game.save_settings()
 		Audio.sfx("ui_toggle"))
@@ -850,7 +851,9 @@ Engine: Godot 4 (MIT-Lizenz) · GL-Compatibility / WebGL2
 KayKit (CC0, Kay Lousberg) – Adventurers, Character Animations, Dungeon Pack, Mini-Game Variety Pack, Board Game Bits, Holiday Bits, Forest Nature, RPG Tools
 
 [b]Audio[/b] (CC0): Kenney – Impact, Interface, Digital, RPG, Sci-Fi, UI, Music Jingles, Voiceover
-Soundtrack & Cartoon-SFX: prozedural komponiert (tools/compose_music.py, tools/compose_sfx.py)
+[b]UI-Sounds[/b] (CC BY 4.0): „UI Sound Effects by lolurio“ (lolurio.itch.io) · „Cute, Cozy & Magical UI SFX“ von Nomagician Music (nomagician.itch.io)
+Brett-, Menü- & Minispiel-Soundtracks: Lumos-Projekt (geschnitten, getaktet & geloopt mit tools/audio/build_music.py)
+Renn-/Podest-Musik & Cartoon-SFX: prozedural komponiert (tools/compose_music.py, tools/compose_sfx.py)
 
 [b]Schriften[/b] (SIL OFL 1.1): Lilita One (Juan Montoreano), Fredoka (The Fredoka Project Authors)
 [b]Icons[/b] (CC0): Kenney – Input Prompts, Medals, Crosshairs, Board Game Info"""

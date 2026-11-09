@@ -75,6 +75,27 @@ const engine = new Engine(GODOT_CONFIG);
 	const status = document.getElementById('status');
 	const canvas = document.getElementById('canvas');
 
+	// Audio-Entsperrung: Jeder AudioContext (Godot legt seinen eigenen an) wird bei jeder Nutzer-Geste und bei
+	// Rückkehr in den Tab fortgesetzt – zuverlässig auch in iframes (Codespaces, VS-Code-Vorschau) und mit
+	// strengen Autoplay-Regeln.
+	(function () {
+		const ctxs = [];
+		const Orig = window.AudioContext || window.webkitAudioContext;
+		if (Orig && !Orig.__lumosWrapped) {
+			const Wrapped = function (...a) { const c = new Orig(...a); ctxs.push(c); return c; };
+			Wrapped.prototype = Orig.prototype;
+			Wrapped.__lumosWrapped = true;
+			window.AudioContext = Wrapped;
+			if (window.webkitAudioContext) window.webkitAudioContext = Wrapped;
+		}
+		const resume = () => ctxs.forEach((c) => { if (c.state !== 'running' && c.state !== 'closed') c.resume().catch(() => {}); });
+		['pointerdown', 'pointerup', 'touchend', 'mousedown', 'keydown', 'click'].forEach((e) => window.addEventListener(e, resume, { capture: true, passive: true }));
+		document.addEventListener('visibilitychange', () => { if (!document.hidden) resume(); });
+		window.addEventListener('focus', resume);
+		window.__lumosResumeAudio = resume;
+		window.__lumosAudioState = () => ctxs.map((c) => c.state).join(',');
+	})();
+
 	// Lumos-OS-Erkennung (Lumos One Handheld injiziert window.LumosCloudSDK bzw. ?lumos=1)
 	const params = new URLSearchParams(location.search);
 	window.LUMOS_HOST = !!(window.LumosCloudSDK || params.get('lumos') === '1' || /LumosOS/i.test(navigator.userAgent));

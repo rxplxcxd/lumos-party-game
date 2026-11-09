@@ -22,6 +22,9 @@ const COURSES := [
 	{"id": "deco", "name": "Torte verzieren", "bpm": 116.0, "kinds": ["up", "down", "left", "right", "a"], "beats": 26, "half": 0.25,
 		"hint": "Pfeile im Takt: Sahne-Tupfer!", "melody": [0, 4, 7, 9, 7, 4, 5, 7]},
 ]
+## Jeder Gang läuft auf einem eigenen Soundtrack (Track 1–4 normal, Finale auf Track 1 im Hurry-Up-Tempo);
+## das Notenblatt folgt exakt dessen BPM.
+const COURSE_MUSIC := [[0, "normal"], [1, "normal"], [2, "normal"], [3, "normal"], [0, "hurry"]]
 const SCALE := [1.0, 1.122, 1.26, 1.335, 1.498, 1.682, 1.888, 2.0, 2.245, 2.52]
 const DISH_NAMES := ["Knackiger Gartensalat", "Fluffiger Teig", "Pfannkuchen-Turm", "Würzige Kürbissuppe", "Sahne-Erdbeer-Torte"]
 
@@ -50,6 +53,7 @@ var _cpu_plan: Array[Dictionary] = [{}, {}, {}, {}]
 
 func _init() -> void:
 	game_id = "rhythm_kitchen"
+	music_track = -2   # Musik wird je Gang selbst gesteuert
 	touch_profile = "dance"
 	env_preset = "day"
 	time_limit = 300.0
@@ -74,7 +78,7 @@ func _build_chart() -> void:
 	var t := 2.0
 	for c in COURSES.size():
 		var cd: Dictionary = COURSES[c]
-		var bl := 60.0 / float(cd.bpm)
+		var bl := 60.0 / _course_bpm(c)
 		var start := t
 		t += COUNT_IN * bl
 		var kinds: Array = cd.kinds
@@ -373,10 +377,17 @@ func on_tick(delta: float) -> void:
 var _course_done: Array[bool] = [false, false, false, false, false]
 
 
+func _course_bpm(c: int) -> float:
+	var cm: Array = COURSE_MUSIC[clampi(c, 0, COURSE_MUSIC.size() - 1)]
+	return Audio.track_bpm(int(cm[0]), String(cm[1]))
+
+
 func _start_course(c: int) -> void:
 	course_idx = c
 	var cd: Dictionary = COURSES[c]
-	_beat_len = 60.0 / float(cd.bpm)
+	_beat_len = 60.0 / _course_bpm(c)
+	var cm: Array = COURSE_MUSIC[c]
+	Audio.minigame_music(int(cm[0]), 0.25, String(cm[1]), song_t - course_bounds[c].x)
 	_course_label.text = "Gang %d: %s" % [c + 1, String(cd.name)]
 	_hint_label.text = String(cd.hint)
 	_grade_label.text = ""
@@ -489,13 +500,11 @@ func _music_tick() -> void:
 			Audio.sfx("tick", null, -2.0, 1.4 if beat == COUNT_IN - 1 else 1.0, 0.0)
 			CutsceneManager.big_word(str(COUNT_IN - beat) if beat < COUNT_IN - 1 else "Los!", UI.GOLD if beat == COUNT_IN - 1 else Color.WHITE, 0.25)
 		return
+	# Der Soundtrack trägt den Takt – Chefkoch Brummbär wippt mit, auf jedem Taktanfang ein Marimba-Akzent
 	if on_beat:
-		Audio.sfx("wood_hit" if beat % 2 == 0 else "pop", null, -6.0 if beat % 2 == 0 else -9.0, 0.6 if beat % 2 == 0 else 1.1, 0.0)
 		_chef.hop(0.12, 0.12)
-		var mel: Array = cd.melody
-		Audio.sfx("pluck", null, -8.0, float(SCALE[int(mel[beat % mel.size()])]), 0.0)
-	else:
-		Audio.sfx("tick", null, -16.0, 1.6, 0.0)
+		if beat % 4 == 0 and cd.id == "spice":
+			Audio.sfx("marimba", null, -14.0, 1.0, 0.0)
 
 
 # --- Eingabe & Bewertung -----------------------------------------------------------------------------------------
@@ -674,6 +683,7 @@ func grade() -> String:
 
 
 func _finish_menu() -> void:
+	Audio.minigame_outro()
 	_course_label.text = "Das Menü ist fertig!"
 	_hint_label.text = ""
 	_grade_label.text = ""

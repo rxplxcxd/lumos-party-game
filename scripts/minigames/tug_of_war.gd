@@ -5,7 +5,7 @@ extends MinigameBase
 ## Online: Host-Modell (Eingaben gehen an den Host, das Seil kommt zurück).
 
 const WIN_X := 3.6
-const BEAT := 0.8
+const BEAT_BEATS := 2.0   # Kraft-Takt = alle zwei Musik-Schläge (folgt dem BPM des Soundtracks)
 
 var rope_x := 0.0
 var rope_v := 0.0
@@ -99,6 +99,11 @@ func on_start() -> void:
 		av.rig.play("hold")
 
 
+## Position im Kraft-Takt (0..1), direkt aus der Beat-Uhr der Musik – auch nach dem Hurry-Up-Tempowechsel.
+func _pull_phase() -> float:
+	return fposmod(Audio.music_beat(), BEAT_BEATS) / BEAT_BEATS
+
+
 func _strength(i: int) -> float:
 	if category == "1v3" and i == solo_slot:
 		return 2.7
@@ -109,7 +114,7 @@ func on_tick(delta: float) -> void:
 	if _done:
 		return
 	_beat_t += delta
-	var phase := fmod(_beat_t, BEAT) / BEAT
+	var phase := _pull_phase()
 	_beat_ring.scale = Vector3.ONE * (1.0 + (1.0 - phase) * 0.6)
 	var pull := [0.0, 0.0]
 	for i in active_slots():
@@ -189,7 +194,7 @@ func net_unpack(d: Dictionary) -> void:
 	rope_x = lerpf(rope_x, float(d.get("r", rope_x)), 0.6)
 	_beat_t = float(d.get("b", _beat_t))
 	_apply_visuals(0.05)
-	var phase := fmod(_beat_t, BEAT) / BEAT
+	var phase := _pull_phase()
 	_beat_ring.scale = Vector3.ONE * (1.0 + (1.0 - phase) * 0.6)
 
 
@@ -199,7 +204,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var t := float(mem.get("t", 0.0)) - get_physics_process_delta_time()
 	var held := {}
 	if t <= 0.0:
-		var phase := fmod(_beat_t, BEAT) / BEAT
+		var phase := _pull_phase()
 		var aim_beat: bool = randf() < [0.25, 0.5, 0.8][level]
 		if not aim_beat or phase > 0.86 or phase < 0.1:
 			held["a"] = true

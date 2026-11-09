@@ -127,7 +127,8 @@ func _space_prop(holder: Node3D, t: String, sp: Dictionary) -> void:
 			else:
 				var c := Assets.spawn("pirate/cannon", holder, side, 0.0, 1.3)
 				c.look_at(holder.global_position + Vector3(0, c.global_position.y - holder.global_position.y, 0), Vector3.UP)
-				c.rotate_object_local(Vector3.RIGHT, deg_to_rad(-35))
+				c.rotate_object_local(Vector3.UP, PI)                  # Mündung (-Z) vom Feld weg …
+				c.rotate_object_local(Vector3.RIGHT, deg_to_rad(38))   # … und schräg in den Himmel
 				traps.append(c)
 		"G":
 			var lamp := Assets.spawn("grave/lantern", holder, side, 0.0, 2.0)

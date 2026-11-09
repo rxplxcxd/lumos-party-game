@@ -13,6 +13,13 @@ const LOSER_SPOT := Vector3(5.3, 0.7, 2.4)
 const CANNON_X := 7.5
 
 var _rigs: Array[CharacterRig] = []
+var _win_style := "golden"   # golden | fireworks | star
+var _gag := "anvil"          # anvil | pie | rain | bounce
+
+
+func _pick(n: int) -> int:
+	# Online-Party: gemeinsamer Brett-Zufall → alle sehen dieselbe Siegerehrung
+	return (Game.prng.randi() if not Game.party.is_empty() else randi()) % n
 
 
 func run(d: Node, ctx: Dictionary) -> void:
@@ -21,6 +28,8 @@ func run(d: Node, ctx: Dictionary) -> void:
 		for p in ctx.get("ranking", [0, 1, 2, 3]):
 			entries.append({"model": Game.hero(Game.players[p].hero).model, "name": Game.hero(Game.players[p].hero).name,
 				"color": Game.player_color(p), "player": p})
+	_win_style = ["golden", "fireworks", "star"][_pick(3)]
+	_gag = ["anvil", "pie", "rain", "bounce"][_pick(4)]
 	_build_stage()
 	var heights := [2.4, 1.6, 1.0]
 	var spots := [Vector3(0, 0, 0), Vector3(-3.2, 0, 0.4), Vector3(3.2, 0, 0.4)]
@@ -57,7 +66,13 @@ func run(d: Node, ctx: Dictionary) -> void:
 	w.visible = true
 	Juice.pop_in(w.pivot, 0.4)
 	w.hop(1.6, 0.5)
-	_golden_shower(STAGE + spots[0] + Vector3.UP * 2.4)
+	match _win_style:
+		"fireworks":
+			_fireworks(STAGE + spots[0] + Vector3.UP * 2.4)
+		"star":
+			_star_float(w, STAGE + spots[0] + Vector3.UP * 2.4)
+		_:
+			_golden_shower(STAGE + spots[0] + Vector3.UP * 2.4)
 	_confetti_cannons()
 	Audio.jingle("fanfare")
 	Audio.sfx("crowd")
@@ -71,7 +86,15 @@ func run(d: Node, ctx: Dictionary) -> void:
 
 	# Letzter Platz – Slapstick
 	if _rigs.size() > 3:
-		await _loser_gag(d, entries[3])
+		match _gag:
+			"pie":
+				await _gag_pie(d, entries[3])
+			"rain":
+				await _gag_rain(d, entries[3])
+			"bounce":
+				await _gag_bounce(d, entries[3])
+			_:
+				await _loser_gag(d, entries[3])
 
 	# Schlussbild
 	for i in mini(3, _rigs.size()):
@@ -179,8 +202,7 @@ func _golden_shower(pos: Vector3) -> void:
 func _confetti_cannons() -> void:
 	for x in [-CANNON_X, CANNON_X]:
 		var c := Assets.spawn("pirate/cannon", self, STAGE + Vector3(x, 0.7, 2.5), 0.0, 1.6)
-		c.look_at(STAGE + Vector3(0, 6, 0), Vector3.UP)
-		c.rotate_object_local(Vector3.UP, PI)
+		c.look_at(STAGE + Vector3(0, 7, 0), Vector3.UP)   # Mündung (-Z) zielt schräg nach oben zur Bühnenmitte
 		Audio.sfx("cannon", c.global_position)
 		FX.confetti(c.global_position + Vector3.UP * 1.2, 90, (Vector3(-x, 9, -2)).normalized(), 18.0)
 		FX.smoke(c.global_position + Vector3.UP, Color(1, 1, 1), 6, 0.8)
@@ -258,3 +280,156 @@ func _bounds(n: Node3D) -> AABB:
 	if first:
 		return AABB(n.global_position, Vector3(1, 1.6, 1))
 	return out
+
+
+# --- Weitere Sieger-Feiern ------------------------------------------------------------------------------
+
+func _fireworks(pos: Vector3) -> void:
+	var cols := [Color("#ff5c7a"), Color("#ffd23f"), Color("#7fd6ff"), Color("#b6f29a"), Color("#c9b5ff")]
+	for k in 7:
+		var p := pos + Vector3(randf_range(-6, 6), randf_range(6, 10), randf_range(-3, 0))
+		get_tree().create_timer(0.25 + k * 0.35).timeout.connect(func() -> void:
+			if not is_inside_tree():
+				return
+			FX.stars(p, cols[k % cols.size()], 26)
+			FX.confetti(p, 30)
+			FX.flash_light(p, cols[k % cols.size()], 6.0, 0.4)
+			Audio.sfx("explosion", null, -16.0, 1.6 + randf() * 0.3, 0.0)
+			Audio.sfx("sparkle_up", null, -10.0, 1.0 + k * 0.05, 0.0))
+
+
+func _star_float(w: CharacterRig, pos: Vector3) -> void:
+	var star := Assets.spawn("plat/star", self, pos + Vector3(0, 0.5, -1.2), 0.0, 0.1)
+	Assets.tint(star, Color(1.1, 1.0, 0.6), false, 0.9)
+	var tw := star.create_tween()
+	tw.tween_property(star, "scale", Vector3.ONE * 3.2, 0.6).set_trans(Tween.TRANS_BACK)
+	tw.parallel().tween_property(star, "position:y", pos.y + 3.4, 0.6)
+	var spin := star.create_tween().set_loops()
+	spin.tween_property(star, "rotation:y", TAU, 2.0).as_relative()
+	var lift := w.create_tween()
+	lift.tween_property(w, "global_position:y", pos.y + 0.9, 1.0).set_trans(Tween.TRANS_SINE)
+	lift.tween_property(w, "global_position:y", pos.y, 1.0).set_trans(Tween.TRANS_SINE)
+	FX.stars(pos + Vector3.UP * 2.0, Color(1, 0.9, 0.4), 30)
+	Audio.sfx("sparkle_up", null, -4.0)
+
+
+# --- Weitere Verlierer-Gags (alle auf dem Boden vor der Bühne, fern der Kanonen) --------------------------
+
+func _gag_intro(d: Node, e: Dictionary) -> CharacterRig:
+	var r := _rigs[3]
+	var pos := r.global_position
+	d.cut(pos + Vector3(-2.5, 1.8, 7.0), pos + Vector3.UP * 1.2, 42.0)
+	d.subtitle("Und auf dem letzten Platz … %s!" % e.name, 1.4)
+	r.face_now(Vector3(0, 0, 1))
+	r.react("wave")
+	await d.wait(1.2)
+	return r
+
+
+## Torte ins Gesicht: aus dem Off fliegt eine Sahnetorte, Sahne spritzt.
+func _gag_pie(d: Node, e: Dictionary) -> void:
+	var r: CharacterRig = await _gag_intro(d, e)
+	var head := r.global_position + Vector3.UP * 1.4
+	var pie := Node3D.new()
+	add_child(pie)
+	var base := WorldKit.cylinder(pie, 0.45, 0.25, Vector3.ZERO, Color("#c98d5a"), false)
+	base.name = "Base"
+	var cream := MeshInstance3D.new()
+	var cs := SphereMesh.new()
+	cs.radius = 0.42
+	cs.height = 0.4
+	cs.material = WorldKit.mat(Color("#fffaf2"), 0.7)
+	cream.mesh = cs
+	cream.position = Vector3(0, 0.15, 0)
+	pie.add_child(cream)
+	pie.global_position = head + Vector3(-9, 2.5, 3)
+	pie.rotation.z = PI * 0.5
+	Audio.sfx("whoosh", head, -2.0, 1.2)
+	await arc(pie, pie.global_position, head + Vector3(0, 0, 0.3), 1.5, 0.55)
+	Audio.sfx("slime", head, 0.0, 0.9)
+	Audio.sfx("plop", head, -2.0)
+	FX.smoke(head, Color(1, 1, 0.96), 16, 0.9)
+	FX.dust(head, Color(1, 0.98, 0.92), 14, 1.2)
+	d.shake(0.3)
+	r.set_soot(4.0)
+	r.react("sad")
+	var fall := pie.create_tween()
+	fall.tween_property(pie, "global_position:y", r.global_position.y + 0.1, 0.5).set_trans(Tween.TRANS_BOUNCE)
+	await d.wait(0.6)
+	Audio.sfx("sad_trombone")
+	await d.wait(2.0)
+	pie.queue_free()
+
+
+## Persönliche Regenwolke: graue Wolke über dem Kopf, es tropft.
+func _gag_rain(d: Node, e: Dictionary) -> void:
+	var r: CharacterRig = await _gag_intro(d, e)
+	var top := r.global_position + Vector3.UP * 3.4
+	var cloud := Node3D.new()
+	add_child(cloud)
+	cloud.global_position = top + Vector3(0, 3, 0)
+	for k in 4:
+		var puff := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = 0.6
+		sm.height = 0.9
+		sm.material = WorldKit.mat(Color("#8a90a8"), 1.0)
+		puff.mesh = sm
+		puff.position = Vector3(k * 0.5 - 0.75, sin(k * 1.7) * 0.15, 0)
+		cloud.add_child(puff)
+	var tw := cloud.create_tween()
+	tw.tween_property(cloud, "global_position", top, 0.6).set_trans(Tween.TRANS_BACK)
+	await tw.finished
+	Audio.sfx("thunder", top, -12.0, 1.5)
+	var rain := FX.emitter({"amount": 60, "life": 0.6, "one_shot": false, "explosive": 0.0, "spread": 4.0, "dir": Vector3.DOWN,
+		"vel_min": 6.0, "vel_max": 8.0, "gravity": Vector3(0, -10, 0), "size": 0.08, "color": Color(0.6, 0.75, 1.0, 0.9), "box": Vector3(1.2, 0.1, 0.6)})
+	cloud.add_child(rain)
+	rain.position = Vector3(0, -0.4, 0)
+	rain.emitting = true
+	r.react("sad")
+	FX.dizzy_stars(r, 0.6, 1.0)
+	await d.wait(1.2)
+	Audio.sfx("sigh", null, -2.0)
+	Audio.sfx("sad_trombone")
+	await d.wait(2.0)
+	cloud.queue_free()
+
+
+## Hüpfpilz: wippt fröhlich, wird zu hoch katapultiert und landet kopfüber im Blumenbeet.
+func _gag_bounce(d: Node, e: Dictionary) -> void:
+	var r: CharacterRig = await _gag_intro(d, e)
+	var pos := r.global_position
+	var land := Vector3(pos.x - 1.0, STAGE.y, STAGE.z + 6.0)
+	var shroom := Assets.spawn("plat/mushrooms", self, land + Vector3(0, 0, 0), 0.0, 1.8)
+	var bed := Assets.spawn("plat/flowers", self, land + Vector3(-2.2, 0, 0.6), 0.0, 2.2)
+	bed.name = "Bed"
+	var start := r.global_position
+	await arc(r, start, land + Vector3.UP * 1.2, 1.4, 0.5)
+	Audio.sfx("boing", land, -2.0)
+	Juice.squash(shroom, 1.3, 0.6, 0.3, shroom.scale)
+	await arc(r, r.global_position, land + Vector3.UP * 1.2, 1.0, 0.4)
+	Audio.sfx("boing", land, 0.0, 1.3)
+	Juice.squash(shroom, 1.4, 0.5, 0.3, shroom.scale)
+	r.react("launch")
+	Audio.sfx("whistle_up", land, -4.0)
+	var target := land + Vector3(-2.2, 0.0, 0.6)
+	d.move(target + Vector3(-1.5, 3.0, 7.0), target + Vector3.UP * 1.5, 1.0, 44.0)
+	var spin := r.create_tween()
+	spin.tween_method(func(t: float) -> void:
+		r.global_position = (land + Vector3.UP * 1.2).lerp(target, t) + Vector3.UP * sin(t * PI) * 6.0
+		r.rotation.x = t * TAU * 1.5, 0.0, 1.0, 1.1)
+	await spin.finished
+	r.rotation.x = PI
+	r.global_position = target + Vector3.UP * 1.3
+	FX.dust(target, Color(1.0, 0.8, 0.9), 16, 1.2)
+	FX.stars(target + Vector3.UP, Color(1, 0.9, 0.4), 12)
+	Audio.sfx("plop", target, 0.0)
+	d.shake(0.35)
+	await d.wait(1.0)
+	Audio.sfx("sad_trombone")
+	await d.wait(1.2)
+	var flip := r.create_tween()
+	flip.tween_property(r, "rotation:x", 0.0, 0.4).set_trans(Tween.TRANS_BACK)
+	flip.parallel().tween_property(r, "global_position", target, 0.4)
+	r.react("dizzy")
+	await d.wait(0.8)

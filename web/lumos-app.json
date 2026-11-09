@@ -1,0 +1,106 @@
+{
+  "schema": "lumos-app/1",
+  "id": "com.lumos.party",
+  "name": "Lumos Party & Nitro Dash",
+  "short_name": "Lumos Party",
+  "version": "1.1.0",
+  "publisher": "Lumos",
+  "category": "games",
+  "tags": [
+    "party",
+    "brettspiel",
+    "minispiele",
+    "racer",
+    "lokaler-multiplayer",
+    "online",
+    "split-screen"
+  ],
+  "age_rating": "6+",
+  "languages": [
+    "de"
+  ],
+  "description": "Das gemütliche 3D-Party-Brettspiel mit 6 Welten, über 20 Minispielen, Team- und Duell-Runden – plus Nitro Dash, der Arcade-Racer mit 8 Strecken, Grand Prix und Zeitfahren. Bis zu 4 Spieler lokal (Gamepads, Split-Screen) oder online mit bis zu 4 Geräten per Raumcode. Anmeldung mit Lumos Cloud, Google oder E-Mail.",
+  "icon": "web/icons/icon-512.png",
+  "icon_maskable": "web/icons/icon-maskable-512.png",
+  "repository": "https://github.com/rxplxcxd/lumos-party-game",
+  "entry": {
+    "type": "web",
+    "url": "https://rxplxcxd.github.io/lumos-party-game/",
+    "index": "index.html",
+    "params": {
+      "lumos": "1"
+    }
+  },
+  "download": {
+    "type": "zip",
+    "url": "https://github.com/rxplxcxd/lumos-party-game/releases/latest/download/lumos-party-web.zip",
+    "launch": "index.html",
+    "serve": "static-http"
+  },
+  "engine": {
+    "name": "godot",
+    "version": "4.7.2",
+    "renderer": "gl_compatibility",
+    "webgl": 2,
+    "threads": false
+  },
+  "display": {
+    "orientation": "landscape",
+    "fullscreen": true
+  },
+  "input": [
+    "gamepad",
+    "touch",
+    "keyboard"
+  ],
+  "players": {
+    "min": 1,
+    "max": 4,
+    "local": true,
+    "online": true,
+    "online_max": 4,
+    "split_screen": true
+  },
+  "features": {
+    "offline": true,
+    "pwa": true,
+    "haptics": true,
+    "cloud_save": true,
+    "cloud": [
+      "lumos",
+      "firebase"
+    ],
+    "multi_display": true
+  },
+  "screenshots": [
+    "docs/screenshots/menu.png",
+    "docs/screenshots/board.png",
+    "docs/screenshots/minigame.png",
+    "docs/screenshots/race.png"
+  ],
+  "native": {
+    "type": "binary",
+    "asset": "lumos-party-linux.x86_64",
+    "url": "https://github.com/rxplxcxd/lumos-party-game/releases/latest/download/lumos-party-linux.x86_64",
+    "embed_pck": true,
+    "arch": "x86_64",
+    "sideload": {
+      "method": "sideload.add",
+      "name": "Lumos Party & Nitro Dash"
+    }
+  },
+  "installer": {
+    "type": "python",
+    "url": "https://raw.githubusercontent.com/rxplxcxd/lumos-party-game/main/tools/lumos/install_lumos.py",
+    "command": "python3 install_lumos.py --launch",
+    "daemon": "ws://127.0.0.1:7420"
+  },
+  "accounts": {
+    "lumos_cloud": true,
+    "google": true,
+    "email": true,
+    "guest": true
+  },
+  "build": "1.1.0-d60ec3185c",
+  "size_bytes": 89675364
+}

@@ -189,6 +189,9 @@ func _input(event: InputEvent) -> void:
 		return
 	if (event is InputEventMouseButton or event is InputEventScreenTouch or event is InputEventKey or event is InputEventJoypadButton) and event.is_pressed():
 		_started = true
+		Audio.sfx("ui_start", null, -6.0, 1.0, 0.0)
+		if OS.has_feature("web"):
+			JavaScriptBridge.eval("window.__lumosResumeAudio && window.__lumosResumeAudio()", true)
 
 
 class ShotDaemon extends Node:

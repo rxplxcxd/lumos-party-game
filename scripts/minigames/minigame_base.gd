@@ -64,6 +64,13 @@ var _handicap := -1
 var rng := RandomNumberGenerator.new()
 var forced_placements: Array[int] = []
 var net_sync: NetAvatarSync
+## Minispiel-Musik: -1 = automatisch (Rotation über die vier Soundtracks), 0..3 = fester Track,
+## -2 = das Spiel steuert seine Musik selbst (z. B. Rhythmus-Küche).
+var music_track := -1
+## Weite Umgebung hinter der Arena (Hügel, Wolken, Vögel, Dunst): "auto" nach env_preset, "none" = aus.
+var backdrop_style := "auto"
+var hurry_at := 12.0             # Sekunden vor Schluss: taktsynchroner Wechsel in die Hurry-Up-Version
+var _music_hurried := false
 var _net_ready: Dictionary = {}
 var _net_go := false
 var _debug_ai := "--debug-ai" in OS.get_cmdline_user_args()
@@ -86,12 +93,15 @@ func _ready() -> void:
 			spawn_points.append(arena_center + Vector3(-4.5 + i * 3.0, 0.5, 0))
 	_apply_setup()
 	build_arena()
+	_build_backdrop()
 	spawn_players()
 	_bench_inactive()
 	_setup_camera()
 	_build_hud()
 	InputHub.set_touch_profile("none")
-	Audio.music("minigame")
+	# Soundtrack: offline rotierend, online aus dem gemeinsamen Zufall (alle Geräte hören denselben)
+	if music_track == -1 and Net.in_game():
+		music_track = rng.randi() % MusicMeta.MINIGAME.size()
 	_flow()
 
 
@@ -195,6 +205,8 @@ func _flow() -> void:
 	InputHub.set_touch_profile(touch_profile)
 	await CutsceneManager.countdown()
 	time_left = time_limit
+	if music_track != -2:
+		Audio.minigame_music(music_track)   # Schlag 0 = Spielstart (Rhythmus-Spiele laufen im Takt)
 	state = "play"
 	_freeze_all(false)
 	on_start()
@@ -211,6 +223,8 @@ func _process(delta: float) -> void:
 		time_left = maxf(0.0, time_left - delta)
 		var secs := int(ceil(time_left))
 		timer_label.text = str(secs)
+		if time_left <= hurry_at and not _music_hurried and time_limit > hurry_at + 5.0:
+			_start_hurry()
 		if secs <= 10 and not _hurry_said:
 			_hurry_said = true
 			Audio.voice("hurry_up")
@@ -223,6 +237,9 @@ func _process(delta: float) -> void:
 		_update_badges()
 		return   # Online (Host-Modell): Zustand kommt vom Host
 	on_tick(delta)
+	# Spiele ohne Uhr: Hurry-Up, sobald nur noch zwei im Rennen sind (Showdown-Spannung)
+	if not show_timer and survival and not _music_hurried and active_slots().size() >= 3 and alive_count() == 2:
+		_start_hurry()
 	_update_badges()
 	if _host_model_online() and Net.is_host:
 		_net_pack_t -= delta
@@ -337,10 +354,39 @@ func add_score(slot: int, amount: float, at: Vector3 = Vector3.INF) -> void:
 		Juice.float_text(self, at, txt, Color("#7dff9a") if amount > 0 else Color("#ff6b6b"), 90)
 
 
+func _build_backdrop() -> void:
+	var st := backdrop_style
+	if st == "auto":
+		st = {"day": "meadow", "sunset": "meadow", "pirates": "beach", "snow": "snow", "sky": "sky", "observatory": "sky_dusk",
+			"ghost": "night", "night": "night", "forest_night": "night", "graveyard": "night", "dungeon": "dungeon",
+			"volcano": "dungeon", "space": "none", "station": "none"}.get(env_preset, "meadow")
+	var col: Color = {"meadow": Color("#7cc860"), "beach": Color("#e8d6a0"), "snow": Color("#eef4fb"), "night": Color("#26324a"),
+		"cake": Color("#f6c9d8")}.get(st, Color("#7cc860"))
+	WorldKit.backdrop(world, st, col, -7.0, arena_center)
+
+
+## Hurry-Up: Musik wechselt taktgenau in die schnellere Version, kleiner Warnton.
+func _start_hurry() -> void:
+	if _music_hurried:
+		return
+	_music_hurried = true
+	if music_track != -2:
+		Audio.minigame_hurry()
+	Audio.sfx("alert", null, -4.0, 1.0, 0.0)
+	on_hurry()
+
+
+## Hook: Hurry-Up hat begonnen (Spiele können z. B. ihr Tempo anziehen).
+func on_hurry() -> void:
+	pass
+
+
 func end_game() -> void:
 	if state != "play":
 		return
 	state = "finish"
+	if music_track != -2:
+		Audio.minigame_outro()
 	_freeze_all(true)
 	InputHub.clear_virtual()
 	InputHub.set_touch_profile("none")

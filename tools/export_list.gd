@@ -20,6 +20,7 @@ func run() -> void:
 	for d in DIRS:
 		_collect(d, files)
 	files["res://icon.svg"] = true
+	files["res://default_bus_layout.tres"] = true   # feste Busse (Web: Sample-Wiedergabe braucht sie ab Start)
 	var missing := 0
 	for f in files.keys():
 		if not FileAccess.file_exists(f) and not ResourceLoader.exists(f):

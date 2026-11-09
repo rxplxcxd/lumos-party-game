@@ -126,6 +126,6 @@ func close() -> void:
 	open = false
 	_cool = 0.25
 	get_tree().paused = false
-	Audio.sfx("ui_back")
+	Audio.sfx("ui_close")
 	if is_instance_valid(_root):
 		_root.queue_free()

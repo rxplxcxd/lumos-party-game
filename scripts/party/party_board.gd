@@ -38,6 +38,10 @@ func _ready() -> void:
 		WorldKit.god_rays(self, Vector3.ZERO, 22.0, we.get_meta("sun"), 9)
 	builder = BoardBuilder.new()
 	builder.build(self, Game.party.board, spaces)
+	var bd: Array = {"dungeon": ["dungeon", Color("#1a0d1a")], "pirates": ["beach", Color("#e8d6a0")], "sky": ["sky", Color.WHITE],
+		"graveyard": ["night", Color("#2d3a35")], "frost": ["snow", Color("#eef4fb")], "station": ["sky_dusk", Color.WHITE],
+		"glowforest": ["meadow", Color("#4f9a46")], "meadow": ["meadow", Color("#86d06a")], "cake": ["cake", Color("#f6c9d8")]}.get(Game.party.board, ["meadow", Color("#7cc860")])
+	WorldKit.backdrop(self, String(bd[0]), bd[1], -0.56)
 	if bool(BoardDefs.get_def(Game.party.board).get("daynight", false)):
 		builder.apply_time_of_day(int(Game.party.round) % 2 == 0 and int(Game.party.round) > 1, self, false)
 	partners = PartnerSystem.new(self)
@@ -177,7 +181,8 @@ func _round_start() -> void:
 		Audio.sfx("bell", null, -4.0, 0.7 if night else 1.15)
 		builder.apply_time_of_day(night, self)
 		await _wait(1.0)
-	# Wechselnde Routen
+	# Wechselnde Routen: Wer auf einer gleich schließenden Abkürzung steht, wird zuerst gerettet
+	await _rescue_from_closing_routes()
 	if _apply_routes(true):
 		await _wait(1.2)
 	if int(party.star_space) < 0:
@@ -203,6 +208,7 @@ func _turn(p: int) -> void:
 		_badges[i].modulate = Color.WHITE if i == p else Color(0.75, 0.75, 0.8)
 	Juice.ui_punch(_badges[p], 0.2, 0.4)
 	EventBus.turn_started.emit(p)
+	Audio.sfx("ding", null, -6.0, 0.95 + p * 0.08, 0.0)
 	var rig := rigs[p]
 	cam.target = rig
 	cam.overview = false
@@ -317,6 +323,7 @@ func _roll_dice(p: int, k: int, count: int) -> int:
 	rig.hop(1.4, 0.42)
 	await _wait(0.17)
 	Audio.sfx("dice_hit", holder.global_position)
+	Audio.sfx("plop", null, -4.0, 1.1, 0.05)
 	Audio.sfx("pop", holder.global_position)
 	FX.stars(holder.global_position, Color(1, 0.9, 0.3), 14)
 	FX.ring(holder.global_position, Color(1, 1, 1, 0.8), 2.5, 0.35)
@@ -376,6 +383,73 @@ func _available_next(cur: int) -> Array:
 	return out
 
 
+## Abkürzungen, die in dieser Runde schließen: Spieler darauf fliegt die Hummel Summsi zurück an die
+## Abzweigung auf dem Hauptweg (kein Vorteil, niemand bleibt in versinkenden Feldern stecken).
+func _rescue_from_closing_routes() -> void:
+	var states: Dictionary = Game.party.get("route_states", {})
+	for bi in def.branches.size():
+		var br: Dictionary = def.branches[bi]
+		if br.get("toggle", "") == "" or _route_open(bi) or states.get(bi, true) == false:
+			continue
+		for p in 4:
+			var sid: int = Game.players[p].space
+			if sid < 0 or int(spaces[sid].branch) != bi:
+				continue
+			await _helper_rescue(p, _branch_junction(sid))
+
+
+## Hauptweg-Feld, an dem die Abkürzung des Feldes sid abzweigt.
+func _branch_junction(sid: int) -> int:
+	var cur := sid
+	var guard := 0
+	while int(spaces[cur].branch) >= 0 and guard < 64:
+		cur = int(spaces[cur].prev[0])
+		guard += 1
+	return cur
+
+
+func _helper_rescue(p: int, target: int) -> void:
+	var rig := rigs[p]
+	cam.overview = false
+	cam.target = rig
+	cam.zoom = 1.2
+	await _show_banner("Die Abkürzung schließt sich!", Color("#ffcc33"), 0.8)
+	var bee := CharacterRig.new()
+	add_child(bee)
+	bee.setup("pet/bee", -1, 2.0)
+	var start := rig.position
+	bee.position = start + Vector3(-6, 9, 3)
+	bee.play("idle")
+	bee.face_now(start - bee.position)
+	Audio.sfx("whoosh", start, -4.0, 1.2)
+	var tw := bee.create_tween()
+	tw.tween_property(bee, "position", start + Vector3(0, 2.3, 0), 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	await tw.finished
+	rig.react("cheer")
+	Audio.sfx("woop", start, -2.0)
+	await _show_banner("Summsi trägt %s zurück zur Abzweigung!" % _pname(p), Color("#ffe27a"), 0.9)
+	# Gemeinsam im Bogen zur Abzweigung fliegen
+	var a := rig.position
+	var b := _space_pos(target)
+	var fly := create_tween()
+	fly.tween_method(func(t: float) -> void:
+		rig.position = a.lerp(b, t) + Vector3.UP * sin(t * PI) * 5.0
+		bee.position = rig.position + Vector3(0, 2.3, 0), 0.0, 1.0, 1.4).set_trans(Tween.TRANS_SINE)
+	bee.face_now(b - a)
+	await fly.finished
+	rig.position = b
+	rig.land_impact(0.8)
+	FX.stars(rig.global_position + Vector3.UP * 1.5, Color(1, 0.9, 0.4), 10)
+	Audio.sfx("plop", null, -2.0)
+	Game.players[p].space = target
+	var away := bee.create_tween()
+	away.tween_property(bee, "position", bee.position + Vector3(8, 10, -4), 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	away.tween_callback(bee.queue_free)
+	_formation_all()
+	cam.zoom = 1.0
+	await _wait(0.6)
+
+
 ## Wendet Routen-Zustände an. Gibt true zurück, wenn sich etwas geändert hat (mit Kamerafahrt).
 func _apply_routes(animate: bool) -> bool:
 	var changed := false
@@ -385,6 +459,13 @@ func _apply_routes(animate: bool) -> bool:
 		if br.get("toggle", "") == "":
 			continue
 		var open := _route_open(bi)
+		if not open:
+			# Sicherheitsnetz (z. B. alter Spielstand): niemand darf auf einem geschlossenen Feld stehen
+			for p in 4:
+				var sid: int = Game.players[p].space
+				if sid >= 0 and int(spaces[sid].branch) == bi:
+					Game.players[p].space = _branch_junction(sid)
+					rigs[p].position = _space_pos(Game.players[p].space)
 		if states.get(bi, null) != open:
 			changed = true
 			builder.set_route_open(bi, open, animate)
@@ -1672,6 +1753,7 @@ func _coins(p: int, delta: int) -> void:
 	if real == 0 and delta < 0:
 		return
 	var rig := rigs[p]
+	Audio.coin_cascade(real, rig.global_position)
 	FX.coins_burst(rig.global_position, absi(real), real > 0)
 	Juice.float_text(self, rig.global_position + Vector3.UP * 2.8, ("+%d" % real) if real >= 0 else str(real),
 		Color("#ffe066") if real >= 0 else Color("#ff6b6b"), 110)

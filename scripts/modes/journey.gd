@@ -51,6 +51,7 @@ var _cam_yaw := 0.0
 func _ready() -> void:
 	save.load(SAVE_PATH)
 	WorldKit.env(self, "day")
+	WorldKit.backdrop(self, "beach", Color("#e8d6a0"), -0.56)
 	_build_island()
 	for i in range(1, 4):
 		Game.players[i].cpu = true
@@ -70,7 +71,7 @@ func _ready() -> void:
 	cam.position = player.position + Vector3(0, 9, 11)
 	cam.look_at(player.position + Vector3.UP)
 	_build_hud()
-	Audio.music("board_pirates", 1.0)
+	Audio.music("board_meadow", 1.2)
 	InputHub.set_touch_profile("explore")
 	_refresh()
 	var fresh := String(save.get_value("state", "pending", "")) == ""

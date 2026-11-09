@@ -11,17 +11,44 @@ const AU := "res://assets/audio/kenney_ui-audio/Audio/"
 const AV := "res://assets/audio/kenney_voiceover-pack/Female/"
 const AVF := "res://assets/audio/kenney_voiceover-pack-fighter/Audio/"
 const AX := "res://assets/sfx/"
+const UL := "res://assets/sfx/ui_lolurio/"       # Cozy Game UI SFX – lolurio (CC BY 4.0)
+const UN := "res://assets/sfx/ui_nomagician/"    # Cute, Cozy & Magical UI SFX – Nomagician Music (CC BY 4.0)
 const AM := "res://assets/music/"
 
+## Micro-Feedback-Bibliothek: Jede Bedienung hat einen knackigen, niedlichen Klang (Plopp, Glöckchen, Marimba).
 const SFX := {
-	"ui_move": [AIF + "select_001.ogg", AIF + "select_002.ogg"],
-	"ui_confirm": [AIF + "confirmation_001.ogg"],
-	"ui_back": [AIF + "back_001.ogg"],
-	"ui_open": [AIF + "maximize_003.ogg"],
-	"ui_error": [AIF + "error_004.ogg"],
-	"ui_toggle": [AIF + "toggle_002.ogg"],
+	# --- Oberfläche --------------------------------------------------------------------------------------
+	"ui_hover": [UL + "menu_hover.ogg", UN + "magic_u2.ogg"],
+	"ui_move": [UL + "menu_scroll.ogg", UN + "magic_u.ogg"],
+	"ui_confirm": [UL + "menu_confirm.ogg", UN + "magic_h.ogg"],
+	"ui_back": [UL + "menu_back.ogg", UN + "magic_i2.ogg"],
+	"ui_open": [UL + "ingamemenu_open.ogg"],
+	"ui_close": [UL + "ingamemenu_close.ogg"],
+	"ui_error": [UL + "feedback_negative.ogg", UN + "magic_f.ogg"],
+	"ui_toggle": [UN + "magic_a.ogg"],
+	"ui_save": [UL + "ingamemenu_save.ogg"],
+	"ui_load": [UL + "ingamemenu_load.ogg"],
+	"ui_start": [UL + "extra_start_button.ogg"],
+	"ui_select_big": [UN + "magic_k.ogg"],
 	"tick": [AIF + "tick_001.ogg", AIF + "tick_002.ogg"],
-	"click": [AU + "click3.ogg"],
+	"click": [UN + "magic_h2.ogg", AU + "click3.ogg"],
+	# --- Feedback ----------------------------------------------------------------------------------------
+	"positive": [UL + "feedback_positive.ogg", UN + "magic_l.ogg"],
+	"negative": [UL + "feedback_negative.ogg"],
+	"alert": [UL + "feedback_alert.ogg"],
+	"woop": [UL + "feedback_woop.ogg"],
+	"woom": [UL + "feedback_woom.ogg"],
+	"plop": [UN + "magic_h2.ogg", UN + "magic_j.ogg", UN + "magic_a.ogg"],
+	"ding": [UN + "magic_s.ogg", UN + "magic_t.ogg"],
+	"chime": [UN + "magic_p.ogg", UN + "magic_q.ogg", UN + "magic_c.ogg"],
+	"sparkle_up": [UN + "magic_b.ogg", UN + "magic_e.ogg", UN + "magic_d.ogg"],
+	"sparkle_down": [UN + "magic_r.ogg", UN + "magic_g.ogg"],
+	"coin_chime": [UN + "magic_l.ogg", UN + "magic_d.ogg"],
+	"coin_sad": [UN + "magic_v.ogg", UN + "magic_w.ogg"],
+	"marimba": [UN + "magic_m.ogg", UN + "magic_n.ogg", UN + "magic_o.ogg"],
+	"hop_marimba": [UL + "extra_marimba_hopping.ogg"],
+	"hop_glock": [UL + "extra_glockenspiel_hopping.ogg"],
+	"sigh": [UL + "extra_quick_sub_descending.ogg"],
 	"dice_spin": [AIF + "scroll_002.ogg"],
 	"dice_hit": [AI + "impactPlate_heavy_001.ogg"],
 	"coin": [AR + "handleCoins.ogg", AR + "handleCoins2.ogg"],
@@ -113,10 +140,19 @@ const JINGLES := {
 	"fanfare": AJ + "8-Bit jingles/jingles_NES14.ogg",
 }
 
+## Musik: Brett-/Menü-Themes (nahtlose Loops aus MusicMeta) plus Rennen und Siegerehrung.
 const MUSIC := {
-	"menu": AM + "menu_theme.ogg", "board_dungeon": AM + "board_dungeon.ogg", "board_pirates": AM + "board_pirates.ogg",
-	"board_sky": AM + "board_sky.ogg", "minigame": AM + "minigame.ogg", "race": AM + "race.ogg", "podium": AM + "podium.ogg",
+	"menu": AM + "board/menu.ogg", "board_dungeon": AM + "board/dungeon.ogg", "board_pirates": AM + "board/pirates.ogg",
+	"board_sky": AM + "board/sky.ogg", "board_graveyard": AM + "board/graveyard.ogg", "board_frost": AM + "board/frost.ogg",
+	"board_station": AM + "board/station.ogg", "board_glowforest": AM + "board/glowforest.ogg",
+	"board_meadow": AM + "board/meadow.ogg", "board_cake": AM + "board/cake.ogg",
+	"race": AM + "race.ogg", "podium": AM + "podium.ogg",
 }
+
+## Beat-Uhr der laufenden Musik (für Rhythmus-Minispiele, Kamera-Pulse, Board-Effekte).
+signal beat(n: int)
+signal bar(n: int)
+signal section_changed(section: String, bpm: float)
 
 const POOL_2D := 20
 const POOL_3D := 16
@@ -127,6 +163,22 @@ var _pool3d: Array[AudioStreamPlayer3D] = []
 var _music_a: AudioStreamPlayer
 var _music_b: AudioStreamPlayer
 var _music_current := ""
+# --- Musik-Direktor ---
+var _mp: Array[AudioStreamPlayer] = []
+var _gain: Array[float] = [0.0, 0.0]
+var _gain_tw: Array = [null, null]
+var _duck_db := 0.0
+var _active := 0
+var bpm := 0.0                 # Tempo des aktuell hörbaren Abschnitts
+var section := ""              # "", "board", "normal", "hurry", "outro"
+var mg_track := -1             # 0..3 = Minispiel-Soundtrack 1..4
+var _beat := 0.0               # Schläge seit Abschnittsbeginn (phasengenau, inkl. Tempo-Rampe)
+var _last_beat_i := -1
+var _sched: Dictionary = {}    # geplanter Wechsel {"at": beat, "section": String, "fade": float}
+var _ramp_from := 1.0
+var _ramp_to := 1.0
+var _ramp_beats := 0.0
+var _ramp_start := 0.0
 var _voice: AudioStreamPlayer
 var _jingle: AudioStreamPlayer
 var _duck_tween: Tween
@@ -151,6 +203,7 @@ func _ready() -> void:
 		_pool3d.append(p3)
 	_music_a = _mk_player("Music")
 	_music_b = _mk_player("Music")
+	_mp = [_music_a, _music_b]
 	_voice = _mk_player("Voice")
 	_jingle = _mk_player("Music")
 	apply_volumes()
@@ -198,6 +251,19 @@ func _pick(id: String) -> AudioStream:
 	if list.is_empty():
 		return null
 	return _stream(list[randi() % list.size()])
+
+
+## Münz-Zählkaskade wie auf der Konsole: pro Münze ein Plink mit steigender Tonhöhe, bei Verlust Seufzer.
+func coin_cascade(amount: int, pos: Variant = null) -> void:
+	if amount > 0:
+		sfx("coin_chime", null, -6.0, 1.0, 0.0)
+		for k in mini(amount, 12):
+			get_tree().create_timer(0.05 * k).timeout.connect(func() -> void:
+				_last_play.erase("coin_single")
+				sfx("coin_single", pos, -8.0, 1.0 + k * 0.045, 0.0))
+	elif amount < 0:
+		sfx("coin_sad", null, -4.0, 1.0, 0.0)
+		sfx("woom", null, -8.0, 1.0, 0.0)
 
 
 ## Spielt einen Effekt. Mit pos != null als 3D-Sound.
@@ -277,41 +343,198 @@ func _duck(db: float, hold: float) -> void:
 	if _duck_tween:
 		_duck_tween.kill()
 	_duck_tween = create_tween()
-	for m in [_music_a, _music_b]:
-		if m.playing:
-			_duck_tween.parallel().tween_property(m, "volume_db", db, 0.15)
+	_duck_tween.tween_property(self, "_duck_db", db, 0.15)
 	_duck_tween.tween_interval(maxf(hold - 0.3, 0.1))
-	for m in [_music_a, _music_b]:
-		if m.playing and m.stream:
-			_duck_tween.parallel().tween_property(m, "volume_db", 0.0, 0.6)
+	_duck_tween.tween_property(self, "_duck_db", 0.0, 0.5)
 
 
 func music(id: String, fade := 1.0) -> void:
-	if id == _music_current:
+	if id == "minigame":
+		minigame_music(-1)
+		return
+	if id == _music_current and section == "board":
 		return
 	_music_current = id
-	var from := _music_a if _music_a.playing else _music_b
-	var to := _music_b if from == _music_a else _music_a
+	_sched.clear()
+	mg_track = -1
 	if id == "" or not MUSIC.has(id):
-		var tw0 := create_tween()
-		tw0.tween_property(from, "volume_db", -60.0, fade)
-		tw0.tween_callback(from.stop)
+		_fade_out_all(fade)
+		section = ""
+		bpm = 0.0
 		return
-	var st: AudioStream = _stream(MUSIC[id])
+	var meta: Dictionary = MusicMeta.BOARDS.get(id, {})
+	_crossfade_to(_stream(MUSIC[id]), fade, true)
+	_set_section("board", float(meta.get("bpm", 120.0)))
+
+
+## Minispiel-Soundtrack (0..3, -1 = automatisch rotierend) im Normal-Abschnitt starten.
+func minigame_music(track := -1, fade := 0.35, sect := "normal", from_pos := 0.0) -> void:
+	if track < 0:
+		track = _next_track
+		_next_track = (_next_track + 1) % MusicMeta.MINIGAME.size()
+	mg_track = clampi(track, 0, MusicMeta.MINIGAME.size() - 1)
+	_music_current = "minigame_%d" % mg_track
+	_sched.clear()
+	var sec: Dictionary = MusicMeta.MINIGAME[mg_track][sect]
+	_crossfade_to(_stream(String(sec.file)), fade, sect != "outro", maxf(0.0, from_pos))
+	_set_section(sect, float(sec.bpm))
+	_beat = maxf(0.0, from_pos) * float(sec.bpm) / 60.0
+
+
+## BPM eines Abschnitts (ohne ihn abzuspielen) – z. B. um ein Notenblatt vorab zu bauen.
+static func track_bpm(track: int, sect := "normal") -> float:
+	return float(MusicMeta.MINIGAME[clampi(track, 0, MusicMeta.MINIGAME.size() - 1)][sect].bpm)
+
+
+## Zeitpunkte (Sekunden ab jetzt) der kommenden Schläge innerhalb von "horizon" – berücksichtigt einen
+## geplanten Hurry-Wechsel samt Tempo-Rampe. Rhythmus-Spiele setzen ihre Noten exakt darauf.
+func upcoming_beats(horizon: float) -> Array[float]:
+	var out: Array[float] = []
+	var cur := music_bpm()
+	var pitch := _mp[_active].pitch_scale if not _mp.is_empty() else 1.0
+	var b := ceilf(_beat - 0.0001)
+	var t := (b - _beat) * 60.0 / cur / maxf(pitch, 0.01)
+	var switch_at := INF
+	var new_bpm := cur
+	if _sched.has("section") and String(_sched.section) == "hurry" and mg_track >= 0:
+		switch_at = float(_sched.at)
+		new_bpm = float(MusicMeta.MINIGAME[mg_track].hurry.bpm)
+	var guard := 0
+	while t < horizon and guard < 256:
+		guard += 1
+		out.append(t)
+		var p := 1.0
+		if b >= switch_at:
+			cur = new_bpm
+		elif switch_at < INF and b >= _ramp_start and _ramp_beats > 0.0:
+			var k := clampf((b - _ramp_start) / _ramp_beats, 0.0, 1.0)
+			p = lerpf(_ramp_from, _ramp_to, k * k)
+		elif switch_at == INF:
+			p = pitch
+		t += 60.0 / cur / maxf(p, 0.01)
+		b += 1.0
+	return out
+
+
+var _next_track := 0
+
+
+## Hurry-Up: Takt-synchroner Wechsel in den schnelleren Abschnitt. Im letzten Takt davor zieht das Tempo
+## sanft an (kleine Rampe), am nächsten Taktanfang wird phasengenau in die Hurry-Version überblendet.
+func minigame_hurry() -> void:
+	if mg_track < 0 or section != "normal" or _sched.has("section"):
+		return
+	var b_next := ceilf((_beat + 0.35) / 4.0) * 4.0
+	if b_next - _beat < 2.0:
+		b_next += 4.0   # mindestens zwei Schläge Anlauf für die Tempo-Rampe
+	var target: float = MusicMeta.MINIGAME[mg_track].hurry.bpm
+	_ramp_from = 1.0
+	_ramp_to = clampf(lerpf(1.0, target / maxf(bpm, 1.0), 0.35), 1.0, 1.08)
+	_ramp_start = b_next - 4.0 if b_next - 4.0 > _beat else _beat
+	_ramp_beats = b_next - _ramp_start
+	_sched = {"at": b_next, "section": "hurry", "fade": 0.18}
+
+
+## Outro: am nächsten Schlag in den Schluss-Abschnitt (spielt einmal und klingt aus).
+func minigame_outro() -> void:
+	if mg_track < 0 or section == "outro":
+		return
+	_sched = {"at": floorf(_beat) + 1.0, "section": "outro", "fade": 0.12}
+
+
+## Tempo (BPM) und Schlag-Position der laufenden Musik.
+func music_bpm() -> float:
+	return bpm if bpm > 0.0 else 120.0
+
+
+func music_beat() -> float:
+	return _beat
+
+
+## Sekunden bis zum nächsten Schlag (für exakte Rhythmus-Vorhersage).
+func time_to_next_beat() -> float:
+	return (ceilf(_beat) - _beat) * 60.0 / music_bpm() / maxf(_mp[_active].pitch_scale, 0.01)
+
+
+func _set_section(sec: String, new_bpm: float) -> void:
+	section = sec
+	bpm = new_bpm
+	_beat = 0.0
+	_last_beat_i = -1
+	section_changed.emit(sec, new_bpm)
+
+
+func _crossfade_to(st: AudioStream, fade: float, loop: bool, from_pos := 0.0) -> void:
 	if st is AudioStreamOggVorbis:
-		(st as AudioStreamOggVorbis).loop = true
+		(st as AudioStreamOggVorbis).loop = loop
+	elif st is AudioStreamMP3:
+		(st as AudioStreamMP3).loop = loop
+	var old := _active
+	var nxt := 1 - _active
+	_active = nxt
+	var to := _mp[nxt]
 	to.stream = st
-	to.volume_db = -40.0
-	to.play()
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(to, "volume_db", 0.0, fade)
-	if from.playing:
-		tw.tween_property(from, "volume_db", -60.0, fade)
-		tw.chain().tween_callback(from.stop)
+	to.pitch_scale = 1.0
+	_gain[nxt] = 0.0
+	to.play(from_pos)
+	_tween_gain(nxt, 1.0, maxf(fade * 0.6, 0.03))
+	if _mp[old].playing:
+		_tween_gain(old, 0.0, maxf(fade, 0.05), true)
+
+
+func _tween_gain(i: int, to: float, dur: float, stop_after := false) -> void:
+	if _gain_tw[i] and (_gain_tw[i] as Tween).is_valid():
+		(_gain_tw[i] as Tween).kill()
+	var tw := create_tween()
+	tw.tween_method(func(v: float) -> void: _gain[i] = v, _gain[i], to, dur)
+	if stop_after:
+		var pl := _mp[i]
+		tw.tween_callback(func() -> void:
+			if _active != i:
+				pl.stop())
+	_gain_tw[i] = tw
+
+
+func _fade_out_all(fade: float) -> void:
+	for i in 2:
+		if _mp[i].playing:
+			_tween_gain(i, 0.0, fade, true)
+	_active = 1 - _active
+
+
+func _process(delta: float) -> void:
+	if _mp.is_empty():
+		return
+	for i in 2:
+		_mp[i].volume_db = linear_to_db(maxf(_gain[i], 0.0001)) + _duck_db
+	if bpm <= 0.0 or not _mp[_active].playing:
+		return
+	var pl := _mp[_active]
+	# Tempo-Rampe vor dem Hurry-Wechsel
+	if _sched.has("section") and _sched.section == "hurry" and _beat >= _ramp_start and _ramp_beats > 0.0:
+		var k := clampf((_beat - _ramp_start) / _ramp_beats, 0.0, 1.0)
+		pl.pitch_scale = lerpf(_ramp_from, _ramp_to, k * k)
+	_beat += delta * bpm / 60.0 * pl.pitch_scale
+	var bi := int(floor(_beat))
+	if bi != _last_beat_i:
+		_last_beat_i = bi
+		beat.emit(bi)
+		if bi % 4 == 0:
+			bar.emit(bi / 4)
+	if _sched.has("section") and _beat >= float(_sched.at):
+		var late := (_beat - float(_sched.at)) * 60.0 / bpm / maxf(pl.pitch_scale, 0.01)
+		var nsec := String(_sched.section)
+		var fade := float(_sched.fade)
+		_sched.clear()
+		var data: Dictionary = MusicMeta.MINIGAME[mg_track][nsec]
+		# Spät um "late" Sekunden? Dann genauso weit in den neuen Abschnitt springen – Phase bleibt exakt.
+		_crossfade_to(_stream(String(data.file)), fade, nsec != "outro", clampf(late, 0.0, 0.25))
+		_set_section(nsec, float(data.bpm))
+		_beat = late * float(data.bpm) / 60.0
 
 
 func set_music_pitch(p: float) -> void:
-	for m in [_music_a, _music_b]:
+	for m in _mp:
 		m.pitch_scale = p
 
 
@@ -326,4 +549,7 @@ func all_paths() -> PackedStringArray:
 		out.append(p)
 	for p in MUSIC.values():
 		out.append(p)
+	for t in MusicMeta.MINIGAME:
+		for sec in ["normal", "hurry", "outro"]:
+			out.append(String(t[sec].file))
 	return out

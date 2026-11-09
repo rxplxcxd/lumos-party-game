@@ -52,6 +52,7 @@ func _ready() -> void:
 	online = Net.in_game()
 	rng.seed = (int(Net.game_cfg.get("seed", 1)) ^ 0xa7410) if online else randi()
 	WorldKit.env(self, "day")
+	WorldKit.backdrop(self, "meadow", Color("#86d06a"), -0.56)
 	_build_world()
 	_build_roster()
 	_spawn_runners()
@@ -439,9 +440,12 @@ func _play_challenge(kind: String) -> void:
 	Audio.sfx("go", null, -2.0)
 	for c in _challenges:
 		c.start()
+	Audio.minigame_music(-1, 0.3)
+	get_tree().create_timer(AthlonChallenge.DURATION - 4.5).timeout.connect(Audio.minigame_hurry)
 	if n == 0:
 		_show("Alle spielen …", "", Color.WHITE, AthlonChallenge.DURATION)
 	await get_tree().create_timer(AthlonChallenge.DURATION + 0.3).timeout
+	Audio.minigame_outro()
 	Audio.sfx("bell")
 	await get_tree().create_timer(1.0).timeout
 
@@ -516,6 +520,7 @@ func _debug_digest() -> void:
 
 
 func _apply_gains(gains: Dictionary) -> void:
+	Audio.music("race", 1.5)
 	_refresh_board(gains)
 	for i in gains:
 		var rig: CharacterRig = runners[int(i)].rig

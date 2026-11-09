@@ -35,6 +35,11 @@ func run(d: Node, ctx: Dictionary) -> void:
 	FX.confetti(focus + Vector3.UP * 3.0, 70)
 	Audio.voice("winner" if winners.size() == 1 else "tie")
 	Audio.sfx("crowd")
+	Audio.sfx("sparkle_up", null, -2.0, 1.0, 0.0)
+	Audio.sfx("ui_select_big", null, -4.0, 1.0, 0.0)
+	get_tree().create_timer(0.9).timeout.connect(func() -> void:
+		Audio.sfx("sigh", null, -6.0, 1.0, 0.0)
+		Audio.sfx("coin_sad", null, -10.0, 0.9, 0.0))
 	var who := ""
 	for w in winners:
 		who += ("" if who == "" else " & ") + Game.hero(Game.players[w].hero).name

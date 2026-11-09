@@ -6,6 +6,8 @@
 build/
 export/
 *.pck
+# Der Web-Build in web/ wird mit eingecheckt (Vorschau ohne Export, z. B. im Codespace) – inkl. Engine-Paket
+!web/index.pck
 # Python
 __pycache__/
 

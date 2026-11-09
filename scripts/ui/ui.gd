@@ -138,7 +138,7 @@ static func button(text: String, color := Color("#7b3cff"), size := 32, min_w :=
 	if min_w > 0:
 		b.custom_minimum_size.x = min_w
 	b.focus_entered.connect(func() -> void:
-		Audio.sfx("ui_move", null, -6.0)
+		Audio.sfx("ui_hover", null, -4.0, 1.0, 0.05)
 		Juice.ui_punch(b, 0.06, 0.25))
 	b.mouse_entered.connect(func() -> void:
 		if not b.has_focus() and not b.disabled:

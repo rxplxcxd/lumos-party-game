@@ -54,7 +54,7 @@ const BOARDS := {
 		],
 	},
 	"graveyard": {
-		"name": "Geisterfriedhof", "env": "graveyard", "music": "board_dungeon", "surface": "grass",
+		"name": "Geisterfriedhof", "env": "graveyard", "music": "board_graveyard", "surface": "grass",
 		"main": [Vector3(-20, 0, -8), Vector3(-11, 0, -14), Vector3(0, 0, -15), Vector3(12, 0, -13), Vector3(20, 0, -5),
 			Vector3(20, 0, 6), Vector3(10, 0, 13), Vector3(-2, 0, 14), Vector3(-13, 0, 12), Vector3(-21, 0, 3)],
 		"main_count": 32,
@@ -67,7 +67,7 @@ const BOARDS := {
 		],
 	},
 	"frost": {
-		"name": "Frostdorf", "env": "snow", "music": "board_sky", "surface": "snow",
+		"name": "Frostdorf", "env": "snow", "music": "board_frost", "surface": "snow",
 		"main": [Vector3(-20, 0, -6), Vector3(-12, 0, -14), Vector3(0, 0, -15), Vector3(12, 0, -12), Vector3(21, 0, -3),
 			Vector3(18, 0, 8), Vector3(7, 0, 14), Vector3(-6, 0, 13), Vector3(-17, 0, 8)],
 		"main_count": 30,
@@ -80,7 +80,7 @@ const BOARDS := {
 		],
 	},
 	"station": {
-		"name": "Sternen-Sternwarte", "env": "observatory", "music": "board_sky", "surface": "grass",
+		"name": "Sternen-Sternwarte", "env": "observatory", "music": "board_station", "surface": "grass",
 		"main": [Vector3(-20, 0, -5), Vector3(-13, 0, -13), Vector3(-1, 0, -15), Vector3(11, 0, -13), Vector3(20, 0, -5),
 			Vector3(19, 0, 6), Vector3(10, 0, 13), Vector3(-3, 0, 14), Vector3(-15, 0, 10)],
 		"main_count": 30,
@@ -93,7 +93,7 @@ const BOARDS := {
 		],
 	},
 	"glowforest": {
-		"name": "Glühwürmchen-Zauberwald", "env": "day", "music": "board_dungeon", "surface": "grass", "daynight": true,
+		"name": "Glühwürmchen-Zauberwald", "env": "day", "music": "board_glowforest", "surface": "grass", "daynight": true,
 		"main": [Vector3(-20, 0, -7), Vector3(-11, 0, -14), Vector3(1, 0, -15), Vector3(13, 0, -12), Vector3(21, 0, -3),
 			Vector3(18, 0, 8), Vector3(8, 0, 14), Vector3(-5, 0, 14), Vector3(-16, 0, 9)],
 		"main_count": 30,
@@ -106,7 +106,7 @@ const BOARDS := {
 		],
 	},
 	"meadow": {
-		"name": "Wuschel-Wiesen", "env": "day", "music": "board_pirates", "surface": "grass",
+		"name": "Wuschel-Wiesen", "env": "day", "music": "board_meadow", "surface": "grass",
 		"main": [Vector3(-21, 0, -5), Vector3(-13, 0, -13), Vector3(0, 0, -15), Vector3(12, 0, -13), Vector3(21, 0, -5),
 			Vector3(19, 0, 7), Vector3(9, 0, 13), Vector3(-4, 0, 14), Vector3(-15, 0, 10)],
 		"main_count": 30,
@@ -119,7 +119,7 @@ const BOARDS := {
 		],
 	},
 	"cake": {
-		"name": "Zuckerback-Torte", "env": "sunset", "music": "board_sky", "surface": "cloud",
+		"name": "Zuckerback-Torte", "env": "sunset", "music": "board_cake", "surface": "cloud",
 		"main": [Vector3(-19, 0, -6), Vector3(-11, 0, -13), Vector3(0, 0, -15), Vector3(11, 0, -13), Vector3(19, 0, -6),
 			Vector3(19, 0, 6), Vector3(11, 0, 13), Vector3(0, 0, 15), Vector3(-11, 0, 13), Vector3(-19, 0, 6)],
 		"main_count": 32,

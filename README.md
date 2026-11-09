@@ -44,6 +44,31 @@ vier Gamepads.
 * **Lumos-Athlon** (lokal 1–4 + CPUs, **online bis 20 Spieler**): Alle spielen gleichzeitig 12-Sekunden-Solo-
   Herausforderungen; jede Münze bringt ein Feld weiter, Glücks-/Pusteböen-/Sternenfelder, Pustebacke-Ereignis.
 
+### Musik & Sound („Nintendo-Layered Dynamic Audio“)
+* **Minispiel-Soundtracks 1–4** mit Abschnitten *Normal*, *Hurry-Up* und *Outro*: Schnitt auf das gemessene
+  Beat-Raster, Loops in ganzen Takten mit überblendeter Naht, Hurry-Up per tonhöhenerhaltendem Time-Stretch auf
+  die Ziel-BPM (Track 1: 120→145, Track 2: 110→138, Track 3: 120→140, Track 4: 115→145).
+  Pipeline: `python3 -I tools/audio/build_music.py <ordner-mit-mp3s> .` → `assets/music/minigame/*.ogg`
+  + `scripts/core/music_meta.gd`.
+* **Musik-Direktor** (`Audio`): Beat-Uhr (`music_bpm()`, `music_beat()`, `upcoming_beats()`, Signale `beat`/`bar`),
+  12 s vor Schluss **taktsynchroner Hurry-Up-Wechsel** am nächsten Taktanfang (mit sanfter Tempo-Rampe im letzten
+  Takt), Outro am nächsten Schlag. Rhythmus-Spiele (Rhythmus-Tanz, Seilziehen, Schlummer-Sternchen,
+  Rhythmus-Küche) richten ihre Noten nach dem laufenden Track – auch wenn er von Runde zu Runde wechselt.
+* **Brett-Themes** für alle 9 Bretter + Hauptmenü als nahtlose Loops, Crossfade bei jedem Szenenwechsel.
+* **Micro-Feedback-Bibliothek**: Fokus-Plopp, Bestätigen, Zurück, Blättern, Umschalten, Münz-Zählkaskade,
+  Würfel-Plopp, Zug-Glöckchen, Countdown-Fanfare, Triumph-Akkord, Verlierer-Seufzer (lolurio & Nomagician, CC BY 4.0).
+* **Browser-Ton**: feste Bus-Konfiguration (`default_bus_layout.tres`) – im Web-Sample-Modus werden zur Laufzeit
+  erzeugte Busse sonst nicht geroutet (Ursache für „kein Ton“), dazu Audio-Entsperrung bei jeder Geste.
+
+### Welt & Animationen
+* **Kein „Ende der Welt“**: `WorldKit.backdrop()` zieht Boden/Meer/Wolkenmeer bis zum Horizont, mit dunstigen
+  Hügelketten, ziehenden Wolken, kreisenden Vögeln, Schmetterlingen/Schnee/Glühwürmchen und weichem Tiefendunst.
+* **Minispiel-Auftritte**: Kanone zielt pro Schuss (Rohr schwenkt + richtet sich auf), Piratenschiff, Eisschollen,
+  Wolken-Plumps oder Portal je nach Thema; Deko, die die Sicht verdeckt, wird ausgeblendet.
+* **Siegerehrungen**: Goldregen, Feuerwerk oder Sternen-Schweben für den Sieger; Amboss, Sahnetorte,
+  Regenwolke oder Hüpfpilz-Bruchlandung für den letzten Platz.
+* **Abkürzungen**: Schließt eine Abkürzung, auf der jemand steht, fliegt Hummel Summsi ihn zur Abzweigung zurück.
+
 ### Online
 * **Online-Party auf dem Brett** (Lockstep: gemeinsamer Brett-Zufall, jede Spieler-Entscheidung wird vom
   Besitzer-Gerät verteilt), Nitro-Dash-Rennen, 21 netzwerkfähige Minispiele, Rhythmus-Küche und Athlon-Räume
