@@ -834,6 +834,24 @@ func _page_modes() -> Control:
 		Game.mode = "athlon"
 		Router.goto("res://scenes/modes/Athlon.tscn"))
 	a.add_child(ab)
+	var t := _mode_card(v, "Der Wolkenturm", Color("#6fd08c"), "star",
+		"Ein Brettspiel in die Höhe: Wendelwege um einen verwunschenen Pflanzenturm, Ranken-Abkürzungen, Wolkenlift und Aufwind. Wer zuerst oben ist, holt den Gipfelstern – hoch oben zählt alles doppelt!")
+	var tb := UI.button("Hinauf in die Wolken!", Color("#6fd08c"), 28, 360)
+	tb.pressed.connect(func() -> void:
+		_apply_players()
+		Game.start_party("tower", [5, 10, 15][_party_rounds], Game.PARTY_MODES[_party_mode].id)
+		Router.goto("res://scenes/party/PartyBoard.tscn"))
+	t.add_child(tb)
+	var c := _mode_card(v, "Das Kolosseum-Turnier", Color("#ff7a59"), "trophy",
+		"Acht Champions, ein Pokal: Viertelfinale, Halbfinale, Finale – jedes Match ist ein Duell-Minispiel. Großer Einlauf durchs Tor, und das ganze Publikum besteht aus Figuren des Spiels.")
+	var cb := UI.button("In die Arena!", Color("#ff7a59"), 28, 360)
+	cb.pressed.connect(func() -> void:
+		_apply_players()
+		if Game.has_meta("colosseum"):
+			Game.remove_meta("colosseum")
+		Game.mode = "colosseum"
+		Router.goto("res://scenes/modes/Colosseum.tscn"))
+	c.add_child(cb)
 	v.add_child(UI.label("Spieler", 32, UI.ACCENT2, true))
 	_players_editor(v)
 	_back_button(v)

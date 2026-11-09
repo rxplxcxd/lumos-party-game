@@ -18,12 +18,12 @@ const BOARDS := [
 	{"id": "dungeon", "name": "Dungeon Deep", "desc": "Fackeln, Fallen und ein Lavasee mit fahrender Plattform. Skelette bewachen das Tor.", "music": "board_dungeon"},
 	{"id": "pirates", "name": "Sonnige Palmen-Bucht", "desc": "Tropenbucht mit Planken-Katapulten, verspielten Delfinen und einer Sandbank, die bei Ebbe auftaucht.", "music": "board_pirates"},
 	{"id": "sky", "name": "Sternen-Wolkenland", "desc": "Flauschige Wolkeninseln, Regenbögen, Zugbrücken und Wolken-Kanonen.", "music": "board_sky"},
-	{"id": "graveyard", "name": "Geisterfriedhof", "desc": "Mondlicht, Bodennebel und ein Geister-Taxi, das dich vor- oder zurückfliegt. Die Geisterbrücke erscheint nur in ungeraden Runden.", "music": "board_dungeon"},
-	{"id": "frost", "name": "Frostdorf", "desc": "Verschneites Dorf mit Eis-Rutschen, Schlittenbahn und einem See, der in geraden Runden zufriert.", "music": "board_sky"},
-	{"id": "station", "name": "Sternen-Sternwarte", "desc": "Gemütliche Sternwarte auf einer schwebenden Wiese: Kometen-Pads, Raketen und Sternenbrücken.", "music": "board_sky"},
-	{"id": "glowforest", "name": "Glühwürmchen-Zauberwald", "desc": "Tag und Nacht wechseln jede Runde – nachts leuchten die Pilze und ein geheimer Pilzpfad öffnet sich.", "music": "board_dungeon"},
-	{"id": "meadow", "name": "Wuschel-Wiesen", "desc": "Weiche Hügel, wuschelige Schäfchen, Pusteblumen-Flüge und Duell-Felder.", "music": "board_pirates"},
-	{"id": "cake", "name": "Zuckerback-Torte", "desc": "Ein Spielbrett auf einer riesigen Torte: Schoko-Rutschen, Sahne-Spritzer und Kirsch-Lifte.", "music": "board_sky"},
+	{"id": "graveyard", "name": "Geisterfriedhof", "desc": "Mondlicht, Bodennebel und ein Geister-Taxi, das dich vor- oder zurückfliegt. Die Geisterbrücke erscheint nur in ungeraden Runden.", "music": "board_graveyard"},
+	{"id": "frost", "name": "Frostdorf", "desc": "Verschneites Dorf mit Eis-Rutschen, Schlittenbahn und einem See, der in geraden Runden zufriert.", "music": "board_frost"},
+	{"id": "station", "name": "Sternen-Sternwarte", "desc": "Gemütliche Sternwarte auf einer schwebenden Wiese: Kometen-Pads, Raketen und Sternenbrücken.", "music": "board_station"},
+	{"id": "glowforest", "name": "Glühwürmchen-Zauberwald", "desc": "Tag und Nacht wechseln jede Runde – nachts leuchten die Pilze und ein geheimer Pilzpfad öffnet sich.", "music": "board_glowforest"},
+	{"id": "meadow", "name": "Wuschel-Wiesen", "desc": "Weiche Hügel, wuschelige Schäfchen, Pusteblumen-Flüge und Duell-Felder.", "music": "board_meadow"},
+	{"id": "cake", "name": "Zuckerback-Torte", "desc": "Ein Spielbrett auf einer riesigen Torte: Schoko-Rutschen, Sahne-Spritzer und Kirsch-Lifte.", "music": "board_cake"},
 	{"id": "tower", "name": "Der Wolkenturm", "desc": "Vertikales Brett: Wendelweg um einen verwunschenen Pflanzenturm, Ranken-Abkürzungen, Wolkenlift, Aufwind – oben wartet der Gipfelstern, hinab geht es per Regenbogen-Rutsche.", "music": "board_sky"},
 ]
 

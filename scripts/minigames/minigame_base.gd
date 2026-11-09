@@ -736,6 +736,8 @@ func _return(placements: Array[int]) -> void:
 			Router.goto("res://scenes/menu/MainMenu.tscn", {"page": "modes"})
 		"journey":
 			Router.goto("res://scenes/modes/Journey.tscn")
+		"colosseum":
+			Router.goto("res://scenes/modes/Colosseum.tscn")
 		"online":
 			Net.back_to_lobby()
 			Router.goto("res://scenes/menu/MainMenu.tscn", {"page": "online"})
