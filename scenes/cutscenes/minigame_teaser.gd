@@ -37,7 +37,15 @@ func run(d: Node, ctx: Dictionary) -> void:
 		for t in targets:
 			_hide_occluders(g, g.cam.global_position, t + Vector3.UP * 1.0, true)
 
-	# 2) Auftritt
+	# 2) Auftritt (Minispiele können einen eigenen Auftritt liefern)
+	if g.has_method("custom_entrance"):
+		await g.custom_entrance(d, targets, self)
+		await d.move(g.cam.global_position, g.arena_center + g.cam.look_offset, 0.8, g.cam.fov)
+		for i in 4:
+			var a3: Node3D = g.actors[i]
+			if a3 is PartyAvatar:
+				a3.set_physics_process(true)
+		return
 	match _entrance_style(g):
 		"ship":
 			await _ship_entrance(d, g, targets)
