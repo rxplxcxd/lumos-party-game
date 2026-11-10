@@ -45,6 +45,27 @@ vier Gamepads.
   Katzen …) an jede Spielfläche, die herumhoppeln, schnüffeln, zuschauen und am Ende mitjubeln, dazu
   Schmetterlinge, Glühwürmchen oder Fledermäuse.
 
+### Boss-Kämpfe (10 Bosse, je Brett einer)
+Zur Brettmitte erscheint der Boss des Bretts. Rundenbasierter Würfel-Kampf auf einer Ring-Arena aus 20 Feldern:
+alle stoppen gleichzeitig ihren Würfel, ziehen nacheinander, Angriffsfelder treffen den Boss (Schaden = Punkte),
+danach setzt der Boss eine Fähigkeit ein. Drei Phasen (66 % / 33 %), in der Wut-Phase zwei Angriffe pro Runde.
+
+| Brett | Boss | Fähigkeiten | Einzigartigkeit |
+|---|---|---|---|
+| Dungeon Deep | Ignis, der Seelenschmied | Lava-Atem, Schweifpeitsche, Schatz-Panzerung | brüchiger Boden |
+| Palmen-Bucht | Klabautox, der Gezeiten-Leviathan | Tsunami-Welle, Blasen-Gefängnis, Scheren-Zange | Ebbe & Flut, Sandbänke |
+| Wolkenland | Astraios, der Himmelsgolem | Sternschnuppen-Regen, Wolken-Kanonade, Gravitations-Umkehr | Wolken-Kanonen in seinen Rücken |
+| Geisterfriedhof | Graf Grabstein & die Phantom-Meute | Seelenraub, Geister-Taxi-Umleitung, Nebelwand | Grabsteine machen ihn unverwundbar |
+| Frostdorf | Yeti-König Frostbart | Eisrutschen-Chaos, Lawinen-Stampfer, Frostiger Atem | Schneebälle sprengen die Frost-Rüstung |
+| Sternwarte | Galaxus, der Kosmos-Uhrmacher | Zeitsprung, Raketen-Feuersturm, Supernova-Impuls | Uhrwerke synchronisieren |
+| Zauberwald | Noxumbra, die Schattenwurzel | Ewige Finsternis, Wurzel-Schlingen, Sporen-Wolke | nachts unsichtbar, nur Leuchtpilze treffen |
+| Wuschel-Wiesen | Baaah-hemoth, das Wolken-Schaf | Rammbock-Sturm, Schäfchen-Flut, Pusteblumen-Orkan | Mini-Duelle auf Duell-Feldern |
+| Zuckerback-Torte | Marzipan-Marquise & das Sahne-Monster | Karamell-Kleister, Kerzen-Flammenwerfer, Kirsch-Bombe | Kirsch-Lifte, Bombardement von oben |
+| Der Wolkenturm | Zephyros, der Herrscher der Lüfte | Windböe, Aufwind-Wirbel, Pusteblumen-Sturm | Höhenbonus von Aufwind-Feldern |
+
+Alle Boss-Modelle sind prozedural gebaut (`scripts/bosses/boss_model.gd`) und animiert; Testen:
+`godot --path . -- --scene=res://scenes/minigames/BossBattle.tscn --cpu --boss=ignis`.
+
 ### Abenteuer & Modi
 * **Der Wolkenturm** (Brettspiel in die Höhe): Wendelweg um einen verwunschenen Pflanzenturm mit Etagen,
   Ranken-Abkürzungen (Wegzoll), Wolkenlift, Aufwind-Feldern und Händler-Etagen. Wer den Gipfel erreicht,

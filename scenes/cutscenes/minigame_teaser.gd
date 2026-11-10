@@ -88,8 +88,8 @@ func _entrance_style(g: MinigameBase) -> String:
 func _hide_occluders(g: MinigameBase, from: Vector3, to: Vector3, for_game := false) -> void:
 	for child in g.world.get_children():
 		var n := child as Node3D
-		if n == null or not n.visible or n in g.actors:
-			continue
+		if n == null or not n.visible or n in g.actors or n.has_meta("keep_visible"):
+			continue   # z. B. der Boss selbst – nie als Sichthindernis ausblenden
 		var bb := _bounds(n)
 		if bb.size == Vector3.ZERO:
 			continue

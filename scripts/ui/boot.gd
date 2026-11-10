@@ -58,6 +58,9 @@ func _ready() -> void:
 		if String(_args.cat) == "duel":
 			cs["active"] = [true, true, false, false]
 		Game.minigame_setup = cs
+	if _args.has("boss"):
+		Game.minigame_setup["cat"] = "boss"
+		Game.minigame_setup["boss"] = String(_args.boss)
 	if _args.has("marathon"):
 		Game.start_marathon(int(_args.marathon))
 		target = "res://scenes/menu/MarathonHub.tscn"

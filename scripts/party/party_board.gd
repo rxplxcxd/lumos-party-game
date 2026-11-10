@@ -1379,10 +1379,13 @@ func _after_showdown_stage() -> bool:
 
 func _start_boss() -> void:
 	cam.overview = true
+	var bid := BossDefs.for_board(String(Game.party.board))
+	var bdef := BossDefs.get_def(bid)
 	Audio.sfx("thunder", null, -4.0, 1.2)
 	Juice.shake(0.4)
-	await _show_banner("BOSS-ALARM! Pustebacke greift an!", Color("#c9b5ff"), 1.6)
-	await _launch("boss_cloud", {"cat": "boss"}, "boss_game")
+	await _show_banner("BOSS-ALARM! %s greift an!" % bdef.name, Color("#c9b5ff"), 1.6)
+	await _show_banner(String(bdef.title), Color.WHITE, 1.0)
+	await _launch("boss_battle", {"cat": "boss", "boss": bid}, "boss_game")
 
 
 func _after_boss() -> void:
@@ -1390,12 +1393,19 @@ func _after_boss() -> void:
 	cam.overview = true
 	if not res.is_empty():
 		var pl: Array = res.placements
+		var cd: Array = res.get("coin_delta", [0, 0, 0, 0])
+		var steal: Array = res.get("item_steal", [0, 0, 0, 0])
 		for i in 4:
-			var reward: int = MinigameBase.reward_for(int(pl[i]), "boss")
-			if reward > 0:
+			var reward: int = MinigameBase.reward_for(int(pl[i]), "boss") + int(cd[i])
+			if bool(res.get("boss_defeated", false)) and int(pl[i]) > 0:
+				reward += 5   # gemeinsamer Sieges-Bonus
+			if reward != 0:
 				_coins(i, reward)
+			var items: Array = Game.players[i].get("items", [])
+			for k in mini(int(steal[i]), items.size()):
+				items.pop_back()
 		Game.last_results = {}
-		await _show_banner("Boss-Belohnung verteilt!", UI.GOLD, 1.0)
+		await _show_banner("Boss besiegt! Belohnung verteilt!" if bool(res.get("boss_defeated", false)) else "Der Boss ist entkommen – Belohnung nach Schaden.", UI.GOLD, 1.2)
 	await partners.maybe_spawn()
 
 
