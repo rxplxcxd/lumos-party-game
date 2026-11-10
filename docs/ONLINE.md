@@ -61,8 +61,34 @@ Athlon-Räume (`max = 20`) laufen host-gesteuert: `ath_round` (Herausforderung),
 | Umgebung | Anmeldung |
 |---|---|
 | Lumos OS / Lumos One | Lumos Cloud (`/v1/auth/login|register|refresh`, Profil über `/v1/profile` mit Versionierung) |
-| Browser, iOS, Android, PWA | Google (Firebase-Popup bzw. Redirect auf iOS-Homescreen) oder E-Mail/Passwort |
-| Native ohne Browser | E-Mail/Passwort über die Firebase-REST-API |
+| Supabase eingerichtet (alle Plattformen) | E-Mail/Passwort über Supabase Auth, im Web zusätzlich Google (Weiterleitung) – `scripts/net/supabase.gd` |
+| Browser, iOS, Android, PWA ohne Supabase | Google oder E-Mail/Passwort über Firebase (Alt-Weg; der hinterlegte Firebase-Key ist derzeit ungültig) |
+| Native ohne Browser, ohne Supabase | E-Mail/Passwort über die Firebase-REST-API |
 | Gast | nur lokal |
 
 Profile werden beim Anmelden zusammengeführt (Bestzeiten = Minimum, Zähler = Maximum, Freischaltungen = Vereinigung).
+Ohne eingerichtetes Backend zeigt das Profil-Fenster einen Hinweis statt eines Formulars, das nicht funktionieren kann.
+
+### Supabase einrichten (Online-Konten)
+
+1. **Supabase → Project Settings → API Keys:** *Project URL* (`https://<ref>.supabase.co`) und den
+   **anon**- bzw. **publishable**-Key kopieren. **Nie** den `service_role`-/`secret`-Key verwenden – der Client-Key
+   ist öffentlich, geschützt wird per Row Level Security. Die CI bricht ab, falls doch ein Service-Key eingetragen ist.
+2. **GitHub → Settings → Secrets and variables → Actions → Variables:** `SUPABASE_URL` und `SUPABASE_ANON_KEY`
+   anlegen (Secrets mit gleichem Namen gehen auch). Danach *Actions → Build & Deploy → Run workflow* oder ein Push –
+   `tools/backend_config.py` setzt die Werte vor dem Export in `scripts/net/backend_config.gd` ein.
+   Alternativ die beiden Konstanten direkt in `scripts/net/backend_config.gd` eintragen.
+3. **SQL Editor:** `supabase/schema.sql` ausführen (Tabelle `profiles` mit RLS: jeder liest/schreibt nur sich selbst).
+4. **Authentication → URL Configuration:** *Site URL* `https://rxplxcxd.github.io/lumos-party-game/` und dieselbe
+   Adresse unter *Redirect URLs* eintragen – dorthin führen Bestätigungs-, Passwort-Reset- und Google-Links zurück.
+5. **Authentication → Sign In / Providers:** *Email* aktiv. Mit „Confirm email“ meldet das Spiel nach der
+   Registrierung „Bitte bestätige deine E-Mail“; der Link meldet direkt im Spiel an. Google optional (Client-ID/Secret
+   aus der Google Cloud Console, Callback `https://<ref>.supabase.co/auth/v1/callback`) – der Google-Knopf erscheint
+   automatisch, sobald der Provider aktiv ist (`GET /auth/v1/settings`).
+
+Technik im Web-Export: Anfragen laufen über `HTTPRequest` (= `fetch`) mit `apikey`, `Authorization` (nur echte JWTs),
+`Content-Type` und `Prefer` – alles Header, die Supabase im CORS-Preflight erlaubt; Nicht-localhost-URLs werden auf
+`https://` gezwungen (kein Mixed Content auf GitHub Pages). Die Sitzung (Refresh-Token) liegt in `user://account.cfg`
+(im Browser IndexedDB), Tokens aus Weiterleitungen werden aus dem `#`-Fragment gelesen und sofort aus der Adresse entfernt.
+Test gegen echten oder nachgebauten Server: `LUMOS_SUPABASE_URL=… LUMOS_SUPABASE_KEY=… godot --headless --path .
+res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/supabase_probe.gd`.

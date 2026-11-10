@@ -3,6 +3,34 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2** = offizieller Release.
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.1.7
+* **Fix: Anmeldung im Web-Export („Anmeldung fehlgeschlagen (keine Verbindung)“).** Ursache: Das Spiel prüfte
+  die JS-Brücke mit `JavaScriptBridge.eval(…) == true`; der JS-Boolean kam im Export nie als `true` an. Die Brücke
+  galt als fehlend, Konten liefen über den nativen REST-Weg ins Leere, und die Startroutine (Sitzung
+  wiederherstellen) brach ab. Jetzt wird als Text abgefragt.
+* Dazu: Der hinterlegte Firebase-API-Key wird von Google als ungültig abgelehnt („API key not valid“), und im
+  Projekt waren keine Supabase-Daten vorhanden.
+* **Online-Konten über Supabase** (`scripts/net/supabase.gd`):
+  * Registrierung, Login, Token-Refresh, Abmelden, Passwort vergessen mit „Neues Passwort festlegen“ und, im Web,
+    Google per Weiterleitung.
+  * Cloud-Profil in der Tabelle `profiles` mit RLS (`supabase/schema.sql`).
+  * Gleicher Code nativ und im Web-Export, nur über HTTPS und nur mit Headern, die Supabase im CORS-Preflight erlaubt.
+  * Die Sitzung bleibt über ein Neuladen erhalten. Tokens aus Bestätigungs- und Google-Links werden aus dem
+    `#`-Teil der Adresse gelesen und sofort entfernt.
+* Zugangsdaten über die Repo-Variablen `SUPABASE_URL` / `SUPABASE_ANON_KEY`. Die CI setzt sie ein und bricht bei
+  einem service_role-Key ab. Ohne Daten zeigt das Profil-Fenster einen klaren Hinweis statt eines Formulars, das
+  nicht funktionieren kann.
+* Fehlermeldungen benennen jetzt die echte Ursache: falsches Passwort, E-Mail nicht bestätigt, schon registriert,
+  ungültiger Key, Server nicht gefunden, Zeitüberschreitung, offline/blockiert. Die letzte Meldung bleibt im
+  Profil-Fenster sichtbar, die eingegebene E-Mail bleibt stehen.
+* **Fix Profil-Fenster:** Nach dem ersten Neuaufbau blieb es bei „Anmeldung läuft …“ hängen. Die gleichnamige alte
+  Seite erzwang einen Ersatznamen, Konto-Updates wurden danach ignoriert.
+* Web: Die Lumos-Cloud-Erkennung fragt `127.0.0.1:8787` nur noch auf Lumos-Geräten ab. Sonst gab es einen
+  Konsolenfehler und in neuem Chrome eventuell eine Abfrage zum Zugriff aufs lokale Netzwerk.
+* Getestet gegen einen strengen lokalen Supabase-Nachbau mit CORS-Prüfung: nativ (`tools/dev/supabase_probe.gd`)
+  und im echten Web-Export in Chromium von einer fremden Herkunft (Registrierung, Profil-Sync, Neuladen mit
+  automatischer Wiederanmeldung, Rückkehr per Weiterleitung).
+
 ## 1.1.6
 * **Fix: Unerwarteter Neustart nach Minispielen** (Rücksprung zum Startbildschirm). Ursache war ein Speicherleck:
   Gfx hielt seit 1.1.4 jedes bearbeitete Mesh in einem Dictionary fest (pro Brett-Besuch über tausend Objekte),

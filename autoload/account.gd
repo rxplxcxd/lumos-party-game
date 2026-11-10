@@ -4,13 +4,15 @@ extends Node
 ## Anmeldewege:
 ##   * Lumos-Hardware / Lumos OS erkannt  → "Mit Lumos Cloud anmelden" (still per gespeicherter Sitzung,
 ##     Lumos-OS-Sitzung oder Schlüsselbund; sonst ein Klick mit E-Mail/Passwort der Lumos-ID)
-##   * Web / iOS / Android / PWA            → Google (Firebase) oder E-Mail/Passwort (Firebase)
-##   * Nativ ohne Browser                   → E-Mail/Passwort über die Firebase-REST-API
+##   * Supabase eingerichtet (scripts/net/backend_config.gd bzw. CI-Variablen) → E-Mail/Passwort und
+##     (Web) Google über Supabase Auth – nativ wie im Web-Export per REST (scripts/net/supabase.gd)
+##   * sonst Web / iOS / Android / PWA      → Google oder E-Mail/Passwort über Firebase (Alt-Weg)
+##   * sonst nativ ohne Browser             → E-Mail/Passwort über die Firebase-REST-API
 ##   * Gast                                 → nur lokales Profil
 ##
 ## Profil: Bestzeiten, Statistiken, freigeschaltete Karts/Skins/Features. Lokal in user://profile.cfg,
 ## bei Anmeldung mit der Cloud zusammengeführt (Rekorde = Minimum, Zähler = Maximum, Freischaltungen = Vereinigung)
-## und nach Änderungen gebündelt hochgeladen (Lumos: /v1/profile, Firebase: RTDB /profiles/{uid}).
+## und nach Änderungen gebündelt hochgeladen (Lumos: /v1/profile, Supabase: Tabelle profiles, Firebase: RTDB /profiles/{uid}).
 ##
 ## Die Brücke (web/lumos_bridge.js) liefert Ereignisse über LumosBridge.poll(); andere Systeme (Net)
 ## hängen sich an bridge_event.
@@ -27,6 +29,7 @@ const FB_AUTH := "https://identitytoolkit.googleapis.com/v1/accounts:"
 const FB_TOKEN := "https://securetoken.googleapis.com/v1/token?key="
 const DB_URL := "https://lumos-party-game-default-rtdb.europe-west1.firebasedatabase.app"
 const DEFAULT_LUMOS_URL := "http://127.0.0.1:8787"
+const SupabaseClient = preload("res://scripts/net/supabase.gd")
 
 ## Freischaltungen: id -> {name, desc, kind}
 const UNLOCKS := {
@@ -46,6 +49,9 @@ var lumos_available := false
 var lumos_url := DEFAULT_LUMOS_URL
 var env: Dictionary = {}
 var busy := false
+var last_error := ""               # letzte Anmelde-Fehlermeldung (bleibt im Profil-Fenster sichtbar)
+var recovery_pending := false      # über einen „Passwort vergessen“-Link angemeldet → neues Passwort setzen
+var sb: SupabaseClient
 
 var _bridge := false
 var _profile_version := 0
@@ -56,6 +62,10 @@ var _fb_exp := 0.0
 var _lumos_access := ""
 var _lumos_refresh := ""
 var _lumos_exp := 0.0
+var _sb_access := ""
+var _sb_refresh := ""
+var _sb_exp := 0.0
+var _sb_profile_warned := false
 
 
 var _toast: Label
@@ -65,12 +75,17 @@ var _toast_tw: Tween
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_toast()
-	info.connect(func(m: String) -> void: toast(m, Color("#7dff9a")))
-	error.connect(func(m: String) -> void: toast(m, Color("#ff8a8a")))
+	sb = SupabaseClient.new(self)
+	info.connect(func(m: String) -> void: toast(m, Color("#7dff9a"), clampf(m.length() / 14.0, 2.6, 7.0)))
+	error.connect(func(m: String) -> void:
+		last_error = m
+		toast(m, Color("#ff8a8a"), clampf(m.length() / 14.0, 2.6, 7.0)))
 	_load_profile()
 	_detect_lumos_native()
 	if is_web:
-		_bridge = JavaScriptBridge.eval("typeof window.LumosBridge !== 'undefined'", true) == true
+		# Als Text abfragen: Ein JS-Boolean kam im Web-Export nicht als true an – die Brücke galt als fehlend,
+		# Konten liefen über den nativen REST-Weg („Anmeldung fehlgeschlagen (keine Verbindung)“) und _ready brach ab.
+		_bridge = str(JavaScriptBridge.eval("typeof window.LumosBridge !== 'undefined' ? 'yes' : 'no'", true)) == "yes"
 		if _bridge:
 			var e = JavaScriptBridge.eval("LumosBridge.env()", true)
 			if e is String:
@@ -144,7 +159,21 @@ func display_name() -> String:
 
 
 func provider_label() -> String:
+	if String(user.get("provider", "")) == "supabase":
+		return "Google-Konto" if String(user.get("via", "")) == "google" else "E-Mail-Konto"
 	return {"lumos": "Lumos Cloud", "google.com": "Google", "google": "Google", "password": "E-Mail", "anonymous": "Gast (online)", "guest": "Gast"}.get(String(user.get("provider", "guest")), "Konto")
+
+
+## Supabase ist für dieses Build eingerichtet (dann laufen E-Mail- und Google-Anmeldung darüber).
+func supabase_ready() -> bool:
+	return sb != null and sb.configured()
+
+
+## Google-Knopf anzeigen? (Web; bei Supabase nur, wenn der Google-Provider dort aktiviert ist)
+func google_available() -> bool:
+	if not is_web:
+		return false
+	return sb.google_enabled() if supabase_ready() else _bridge
 
 
 ## HTTP-Header für Anfragen an die Lumos Cloud (nativ; im Browser übernimmt die JS-Brücke das Token).
@@ -177,7 +206,11 @@ func _detect_lumos_native() -> void:
 ## Prüft, ob eine Lumos Cloud erreichbar ist (Web: über die Brücke, nativ: HTTP /v1/health).
 func probe_lumos() -> void:
 	if _bridge:
-		JavaScriptBridge.eval("LumosBridge.probeLumos()", true)
+		# Nur auf Lumos-Geräten bzw. mit eigener Cloud-Adresse: Sonst würde jede normale Web-Sitzung
+		# http://127.0.0.1:8787 anfragen (Konsolenfehler, in neuem Chrome Abfrage „Zugriff aufs lokale Netzwerk“).
+		if lumos_available or bool(env.get("lumosHost", false)) or bool(env.get("hasLumosSession", false)) \
+				or String(env.get("cloudUrl", DEFAULT_LUMOS_URL)) != DEFAULT_LUMOS_URL:
+			JavaScriptBridge.eval("LumosBridge.probeLumos()", true)
 		return
 	var r := await _http(HTTPClient.METHOD_GET, lumos_url + "/v1/health", [], "", 1.5)
 	var ok: bool = r.ok and (r.json is Dictionary) and String((r.json as Dictionary).get("provider", "")) == "lumos"
@@ -194,6 +227,16 @@ func _restore_session() -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(ACCOUNT_PATH)
 	var last: String = cfg.get_value("account", "provider", "")
+	if supabase_ready():
+		print("Online-Konten: Supabase %s" % sb.url)
+		_sb_settings()
+		if await _sb_take_redirect():
+			return
+		if last == "supabase":
+			_sb_refresh = String(cfg.get_value("account", "sb_refresh", ""))
+			if _sb_refresh != "":
+				await _sb_resume(cfg)
+			return
 	if _bridge:
 		if lumos_available or last == "lumos" or bool(env.get("hasLumosSession", false)):
 			JavaScriptBridge.eval("LumosBridge.lumosResume()", true)
@@ -244,6 +287,17 @@ func resume_lumos() -> void:
 
 
 func login_google() -> void:
+	if supabase_ready():
+		if not is_web:
+			error.emit("Google-Anmeldung ist im Browser bzw. in der installierten Web-App verfügbar.")
+		elif not sb.google_enabled():
+			error.emit("Google-Anmeldung ist im Supabase-Projekt nicht aktiviert (Authentication → Providers → Google).")
+		else:
+			busy = true
+			changed.emit()
+			_save_account("supabase")
+			JavaScriptBridge.eval("window.location.assign(%s)" % JSON.stringify(sb.authorize_url("google", _page_url())), true)
+		return
 	if not _bridge:
 		error.emit("Google-Anmeldung ist im Browser bzw. in der installierten Web-App verfügbar.")
 		return
@@ -253,8 +307,14 @@ func login_google() -> void:
 
 
 func login_email(email: String, password: String) -> void:
+	if not _check_credentials(email, password):
+		return
 	busy = true
+	last_error = ""
 	changed.emit()
+	if supabase_ready():
+		_sb_session(await sb.sign_in(email, password))
+		return
 	if _bridge:
 		JavaScriptBridge.eval("LumosBridge.fbEmailLogin(%s, %s)" % [JSON.stringify(email), JSON.stringify(password)], true)
 		return
@@ -264,8 +324,14 @@ func login_email(email: String, password: String) -> void:
 
 
 func register_email(email: String, password: String, name: String) -> void:
+	if not _check_credentials(email, password):
+		return
 	busy = true
+	last_error = ""
 	changed.emit()
+	if supabase_ready():
+		_sb_session(await sb.sign_up(email, password, name, _page_url()))
+		return
 	if _bridge:
 		JavaScriptBridge.eval("LumosBridge.fbEmailRegister(%s, %s, %s)" % [JSON.stringify(email), JSON.stringify(password), JSON.stringify(name)], true)
 		return
@@ -280,6 +346,16 @@ func register_email(email: String, password: String, name: String) -> void:
 
 
 func reset_password(email: String) -> void:
+	if email == "" or not email.contains("@"):
+		error.emit("Bitte zuerst deine E-Mail-Adresse eintragen.")
+		return
+	if supabase_ready():
+		var rr := await sb.recover(email, _page_url())
+		if rr.ok:
+			info.emit("Falls ein Konto existiert, ist eine E-Mail zum Zurücksetzen unterwegs.")
+		else:
+			error.emit(String(rr.error))
+		return
 	if _bridge:
 		JavaScriptBridge.eval("LumosBridge.fbResetPassword(%s)" % JSON.stringify(email), true)
 		return
@@ -322,7 +398,13 @@ func play_as_guest() -> void:
 
 func logout() -> void:
 	var prov := String(user.get("provider", ""))
-	if _bridge:
+	if prov == "supabase":
+		if _sb_access != "":
+			sb.sign_out(_sb_access)
+		_sb_access = ""
+		_sb_refresh = ""
+		recovery_pending = false
+	elif _bridge:
 		if prov == "lumos":
 			JavaScriptBridge.eval("LumosBridge.lumosLogout()", true)
 		else:
@@ -394,11 +476,177 @@ func _set_user(d: Dictionary) -> void:
 	user = {"uid": String(d.get("uid", "")), "name": String(d.get("name", "Spieler")), "email": String(d.get("email", "")), "provider": prov}
 	if d.has("friendCode"):
 		user["friend_code"] = d.friendCode
+	if d.has("via"):
+		user["via"] = String(d.via)
 	_save_account(prov)
 	profile["name"] = user.name
 	changed.emit()
 	info.emit("Angemeldet als %s (%s)" % [user.name, provider_label()])
 	_fetch_profile()
+
+
+# --- Supabase ---------------------------------------------------------------------------------------------------
+
+func _check_credentials(email: String, password: String) -> bool:
+	if email == "" or not email.contains("@"):
+		error.emit("Bitte eine gültige E-Mail-Adresse eingeben.")
+		return false
+	if password.length() < 6:
+		error.emit("Das Passwort muss mindestens 6 Zeichen haben.")
+		return false
+	return true
+
+
+## Adresse der laufenden Seite ohne #-Fragment (Ziel für Bestätigungs-, Reset- und Google-Weiterleitungen).
+func _page_url() -> String:
+	if not is_web:
+		return ""
+	var u = JavaScriptBridge.eval("window.location.origin + window.location.pathname + window.location.search", true)
+	return String(u) if u is String else ""
+
+
+func _sb_settings() -> void:
+	await sb.fetch_settings()
+	changed.emit()
+
+
+func _sb_store(j: Dictionary) -> void:
+	_sb_access = String(j.get("access_token", ""))
+	_sb_refresh = String(j.get("refresh_token", _sb_refresh))
+	_sb_exp = Time.get_unix_time_from_system() + float(j.get("expires_in", 3600))
+
+
+func _sb_apply_user(u: Variant) -> void:
+	busy = false
+	if not (u is Dictionary) or String((u as Dictionary).get("id", "")) == "":
+		error.emit("Anmeldung fehlgeschlagen (keine Nutzerdaten von Supabase).")
+		changed.emit()
+		return
+	last_error = ""
+	_set_user(SupabaseClient.user_info(u as Dictionary))
+
+
+## Antwort von Login/Registrierung/Refresh auswerten.
+func _sb_session(r: Dictionary) -> void:
+	busy = false
+	if not r.ok:
+		error.emit(String(r.error))
+		changed.emit()
+		return
+	var j: Dictionary = r.json if r.json is Dictionary else {}
+	if String(j.get("access_token", "")) == "":
+		# Registrierung mit E-Mail-Bestätigung: GoTrue liefert nur den Nutzer, noch keine Sitzung.
+		info.emit("Fast geschafft! Bitte bestätige deine E-Mail (Link im Postfach) und melde dich dann an.")
+		changed.emit()
+		return
+	_sb_store(j)
+	_sb_apply_user(j.get("user", {}))
+
+
+## Gespeicherte Sitzung beim Start erneuern. Offline bleibt das Konto mit den gespeicherten Daten aktiv.
+func _sb_resume(cfg: ConfigFile) -> void:
+	var r := await sb.refresh(_sb_refresh)
+	if r.ok and r.json is Dictionary:
+		_sb_store(r.json as Dictionary)
+		_sb_apply_user((r.json as Dictionary).get("user", {}))
+		return
+	if int(r.code) in [400, 401, 403]:
+		_sb_refresh = ""
+		_save_account("")
+		info.emit("Sitzung abgelaufen – bitte neu anmelden.")
+		changed.emit()
+		return
+	user = {"uid": "", "name": String(cfg.get_value("account", "name", "Spieler")), "email": String(cfg.get_value("account", "email", "")),
+		"provider": "supabase", "via": String(cfg.get_value("account", "via", ""))}
+	changed.emit()
+
+
+## Gültiges Supabase-Access-Token (erneuert es kurz vor Ablauf).
+func _sb_token() -> String:
+	if _sb_refresh != "" and (_sb_access == "" or Time.get_unix_time_from_system() > _sb_exp - 60.0):
+		var r := await sb.refresh(_sb_refresh)
+		if r.ok and r.json is Dictionary:
+			_sb_store(r.json as Dictionary)
+			if uid() == "":
+				_sb_apply_user((r.json as Dictionary).get("user", {}))
+			_save_account("supabase")
+		elif int(r.code) in [400, 401, 403]:
+			_sb_access = ""
+			_sb_refresh = ""
+	return _sb_access
+
+
+## Rückkehr von Supabase-Weiterleitungen (Google, E-Mail-Bestätigung, Passwort-Reset): Tokens bzw. Fehler stehen
+## im #-Fragment der Adresse. Danach wird das Fragment entfernt, damit kein Token in Verlauf/Lesezeichen bleibt.
+func _sb_take_redirect() -> bool:
+	if not is_web:
+		return false
+	var h = JavaScriptBridge.eval("window.location.hash", true)
+	if not (h is String):
+		return false
+	var hash := String(h).trim_prefix("#")
+	if not (hash.contains("access_token=") or hash.contains("error=") or hash.contains("error_code=")):
+		return false
+	JavaScriptBridge.eval("history.replaceState(null, '', window.location.pathname + window.location.search)", true)
+	var q := {}
+	for part in hash.split("&"):
+		var kv := part.split("=", true, 1)
+		if kv.size() == 2:
+			q[kv[0]] = kv[1].replace("+", " ").uri_decode()
+	if q.has("error") or q.has("error_code"):
+		var ec := String(q.get("error_code", q.get("error", "")))
+		var msg := "Der Link ist abgelaufen oder wurde schon benutzt – bitte erneut anfordern." if ec in ["otp_expired", "flow_state_expired"] \
+			else "Anmeldung abgebrochen (%s)." % String(q.get("error_description", ec))
+		error.emit(msg)
+		changed.emit()
+		return true
+	busy = true
+	changed.emit()
+	_sb_store({"access_token": q.get("access_token", ""), "refresh_token": q.get("refresh_token", ""), "expires_in": q.get("expires_in", "3600")})
+	recovery_pending = String(q.get("type", "")) == "recovery"
+	var r := await sb.get_user(_sb_access)
+	if not r.ok:
+		busy = false
+		error.emit(String(r.error))
+		changed.emit()
+		return true
+	_sb_apply_user(r.json)
+	if String(q.get("type", "")) == "signup":
+		info.emit("E-Mail bestätigt – willkommen, %s!" % display_name())
+	elif recovery_pending:
+		info.emit("Angemeldet – bitte lege jetzt im Profil ein neues Passwort fest.")
+	return true
+
+
+## Neues Passwort (nach „Passwort vergessen“-Link oder im Profil).
+func set_new_password(password: String) -> void:
+	if password.length() < 6:
+		error.emit("Das Passwort muss mindestens 6 Zeichen haben.")
+		return
+	var tok := await _sb_token()
+	if tok == "":
+		error.emit("Sitzung abgelaufen – bitte neu anmelden.")
+		return
+	var r := await sb.update_user(tok, {"password": password})
+	if r.ok:
+		recovery_pending = false
+		info.emit("Neues Passwort gespeichert.")
+		changed.emit()
+	else:
+		error.emit(String(r.error))
+
+
+func _sb_profile_problem(r: Dictionary) -> void:
+	if _sb_profile_warned:
+		return
+	_sb_profile_warned = true
+	var j: Variant = r.json
+	var code := String((j as Dictionary).get("code", "")) if j is Dictionary else ""
+	if int(r.code) == 404 or code in ["PGRST205", "42P01"]:
+		push_warning("Supabase: Tabelle public.profiles fehlt – supabase/schema.sql im SQL-Editor ausführen.")
+		toast("Cloud-Profil noch nicht eingerichtet – Fortschritt wird lokal gespeichert.", Color("#ffcc33"), 4.0)
+	elif int(r.code) in [401, 403]:
+		push_warning("Supabase: Zugriff auf profiles verweigert (RLS-Regeln aus supabase/schema.sql prüfen).")
 
 
 # --- Native REST -----------------------------------------------------------------------------------------------
@@ -471,6 +719,18 @@ func _fb_error_text(r: Dictionary) -> String:
 	var code := ""
 	if r.json is Dictionary and (r.json as Dictionary).has("error"):
 		code = String(((r.json as Dictionary).error as Dictionary).get("message", ""))
+	if code.contains("API key not valid") or code.contains("API_KEY"):
+		return "Anmeldedienst nicht eingerichtet: Der Firebase-API-Key ist ungültig."
+	if code == "":
+		match int(r.get("result", -1)):
+			HTTPRequest.RESULT_CANT_RESOLVE:
+				return "Anmeldeserver nicht gefunden – Internetverbindung prüfen."
+			HTTPRequest.RESULT_TIMEOUT:
+				return "Anmeldeserver antwortet nicht (Zeitüberschreitung)."
+			HTTPRequest.RESULT_TLS_HANDSHAKE_ERROR:
+				return "Sichere Verbindung (HTTPS) fehlgeschlagen."
+			HTTPRequest.RESULT_SUCCESS:
+				return "Anmeldung fehlgeschlagen (HTTP %d)." % int(r.get("code", 0))
 	return {"EMAIL_NOT_FOUND": "Kein Konto mit dieser E-Mail.", "INVALID_PASSWORD": "Falsches Passwort.", "INVALID_LOGIN_CREDENTIALS": "E-Mail oder Passwort falsch.",
 		"EMAIL_EXISTS": "Diese E-Mail ist bereits registriert.", "WEAK_PASSWORD : Password should be at least 6 characters": "Das Passwort muss mindestens 6 Zeichen haben.",
 		"INVALID_EMAIL": "Ungültige E-Mail-Adresse.", "TOO_MANY_ATTEMPTS_TRY_LATER": "Zu viele Versuche – bitte kurz warten."}.get(code, "Anmeldung fehlgeschlagen (%s)." % (code if code != "" else "keine Verbindung"))
@@ -483,13 +743,13 @@ func _http(method: int, url: String, headers: Array, body := "", timeout := 10.0
 	var err := req.request(url, PackedStringArray(headers), method, body)
 	if err != OK:
 		req.queue_free()
-		return {"ok": false, "code": 0, "json": null}
+		return {"ok": false, "code": 0, "json": null, "result": HTTPRequest.RESULT_CANT_CONNECT}
 	var res: Array = await req.request_completed
 	req.queue_free()
 	var code: int = res[1]
 	var text := (res[3] as PackedByteArray).get_string_from_utf8()
 	var j = JSON.parse_string(text) if text != "" else null
-	return {"ok": res[0] == HTTPRequest.RESULT_SUCCESS and code >= 200 and code < 300, "code": code, "json": j}
+	return {"ok": res[0] == HTTPRequest.RESULT_SUCCESS and code >= 200 and code < 300, "code": code, "json": j, "result": res[0]}
 
 
 func _save_account(provider: String) -> void:
@@ -497,6 +757,9 @@ func _save_account(provider: String) -> void:
 	cfg.set_value("account", "provider", provider)
 	cfg.set_value("account", "name", user.get("name", ""))
 	cfg.set_value("account", "email", user.get("email", ""))
+	cfg.set_value("account", "via", user.get("via", ""))
+	if provider == "supabase":
+		cfg.set_value("account", "sb_refresh", _sb_refresh)   # auch im Web (user:// liegt dort in IndexedDB)
 	if not is_web:
 		cfg.set_value("account", "lumos_refresh", _lumos_refresh)
 		cfg.set_value("account", "fb_refresh", _fb_refresh)
@@ -531,7 +794,18 @@ func _save_profile(push := true) -> void:
 
 func _fetch_profile() -> void:
 	var prov := String(user.get("provider", ""))
-	if prov == "lumos":
+	if prov == "supabase":
+		var tok := await _sb_token()
+		if tok == "":
+			return
+		var rs := await sb.get_profile(tok, uid())
+		if rs.ok and rs.json is Array and not (rs.json as Array).is_empty():
+			_merge_remote(((rs.json as Array)[0] as Dictionary).get("data"), 0)
+		elif rs.ok:
+			_merge_remote(null, 0)   # noch kein Profil in der Cloud → lokales hochladen
+		else:
+			_sb_profile_problem(rs)
+	elif prov == "lumos":
 		if _bridge:
 			JavaScriptBridge.eval("LumosBridge.lumosGetProfile()", true)
 		elif _lumos_access != "":
@@ -585,7 +859,13 @@ func _merge(a: Dictionary, b: Dictionary) -> Dictionary:
 func _push_profile() -> void:
 	var prov := String(user.get("provider", ""))
 	var json := JSON.stringify(profile)
-	if prov == "lumos":
+	if prov == "supabase":
+		var tok := await _sb_token()
+		if tok != "":
+			var rs := await sb.put_profile(tok, uid(), display_name(), profile)
+			if not rs.ok:
+				_sb_profile_problem(rs)
+	elif prov == "lumos":
 		if _bridge:
 			JavaScriptBridge.eval("LumosBridge.lumosPutProfile(%s, %d)" % [JSON.stringify(json), _profile_version], true)
 		elif _lumos_access != "":

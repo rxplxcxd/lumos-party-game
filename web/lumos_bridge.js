@@ -61,6 +61,7 @@
 			'auth/network-request-failed': 'Keine Verbindung zum Server.',
 			'auth/too-many-requests': 'Zu viele Versuche – bitte kurz warten.',
 		};
+		if (code.indexOf('api-key') >= 0) return 'Anmeldedienst nicht eingerichtet: Der Firebase-API-Key ist ungültig.';
 		return map[code] || (e && e.message) || String(e);
 	}
 
@@ -187,6 +188,7 @@
 			return JSON.stringify({
 				ua: ua,
 				lumosUA: /lumos-one-os|LumosOS/i.test(ua),
+				lumosHost: !!window.LUMOS_HOST,
 				electron: !!(window.lumos && window.lumos.isElectron) || /Electron/i.test(ua),
 				ios: isIOS(),
 				android: /Android/i.test(ua),

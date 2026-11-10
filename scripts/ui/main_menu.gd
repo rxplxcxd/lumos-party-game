@@ -379,6 +379,9 @@ func _update_cam(_d: float) -> void:
 func show_page(name: String) -> void:
 	if _page:
 		var old := _page
+		# Alte Seite umbenennen: Sonst bekäme die neue (gleichnamige) Seite beim add_child einen Ersatznamen,
+		# und Abfragen wie _page.name == "profile" (Konto-Updates) würden ab dem zweiten Neuaufbau nie mehr greifen.
+		old.name = "%s_leaving_%d" % [old.name, old.get_instance_id()]
 		var otw := old.create_tween().set_parallel(true)
 		otw.tween_property(old, "modulate:a", 0.0, 0.16)
 		otw.tween_property(old, "position:x", -50.0, 0.16).set_ease(Tween.EASE_IN)
@@ -604,6 +607,7 @@ func _mode_tile(title: String, sub: String, icon: String, col: Color) -> Button:
 # --- Profil & Anmeldung -----------------------------------------------------------------------------------
 
 var _need_credentials := false
+var _login_email := ""
 
 
 func _page_profile() -> Control:
@@ -636,7 +640,12 @@ func _login_view(v: VBoxContainer) -> void:
 	v.add_child(head)
 	if Account.busy:
 		v.add_child(UI.label("Anmeldung läuft …", 28, UI.GOLD, true))
-	if lumos and not _need_credentials:
+	if not lumos and not Account.supabase_ready():
+		var na := UI.label("Online-Konten sind in diesem Build noch nicht eingerichtet – dein Fortschritt wird lokal auf diesem Gerät gespeichert.", 22, Color("#ffcc33"))
+		na.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		na.custom_minimum_size.x = 640
+		v.add_child(na)
+	elif lumos and not _need_credentials:
 		var one := UI.button("  Login mit Lumos Cloud", Color("#7b3cff"), 32, 520)
 		one.icon = UI.icon_tex("user", 34)
 		one.custom_minimum_size.y = 72
@@ -648,7 +657,7 @@ func _login_view(v: VBoxContainer) -> void:
 			show_page("profile"))
 		v.add_child(reg)
 	else:
-		if Account.is_web and not lumos:
+		if Account.google_available() and not lumos:
 			var g := UI.button("  Mit Google anmelden", Color("#ffffff"), 30, 520)
 			g.add_theme_color_override("font_color", Color("#202124"))
 			g.add_theme_color_override("font_hover_color", Color("#202124"))
@@ -663,6 +672,8 @@ func _login_view(v: VBoxContainer) -> void:
 		email.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
 		email.custom_minimum_size = Vector2(520, 54)
 		email.add_theme_font_size_override("font_size", 24)
+		email.text = _login_email
+		email.text_changed.connect(func(t: String) -> void: _login_email = t)
 		v.add_child(email)
 		var pw := LineEdit.new()
 		pw.placeholder_text = "Passwort"
@@ -700,6 +711,11 @@ func _login_view(v: VBoxContainer) -> void:
 			v.add_child(forgot)
 		else:
 			v.add_child(UI.label("Lumos Cloud: %s" % Account.lumos_url, 18, Color(1, 1, 1, 0.5)))
+		if Account.last_error != "" and not Account.busy:
+			var le := UI.label(Account.last_error, 20, Color("#ff9a9a"))
+			le.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			le.custom_minimum_size.x = 640
+			v.add_child(le)
 	var guest := UI.button("Als Gast spielen", Color("#5a4a80"), 24, 520)
 	guest.pressed.connect(func() -> void:
 		Account.play_as_guest()
@@ -719,6 +735,21 @@ func _profile_view(v: VBoxContainer) -> void:
 	hv.add_child(UI.label(sub, 20, Color(1, 1, 1, 0.7)))
 	head.add_child(hv)
 	v.add_child(head)
+	if Account.recovery_pending:
+		v.add_child(UI.label("Neues Passwort festlegen", 26, UI.GOLD, true))
+		var row_pw := UI.hbox(12)
+		var npw := LineEdit.new()
+		npw.placeholder_text = "Neues Passwort (mind. 6 Zeichen)"
+		npw.secret = true
+		npw.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_PASSWORD
+		npw.custom_minimum_size = Vector2(400, 54)
+		npw.add_theme_font_size_override("font_size", 24)
+		row_pw.add_child(npw)
+		var save_pw := UI.button("Speichern", Color("#2ecc71"), 24, 200)
+		save_pw.pressed.connect(func() -> void: Account.set_new_password(npw.text))
+		npw.text_submitted.connect(func(_t: String) -> void: save_pw.pressed.emit())
+		row_pw.add_child(save_pw)
+		v.add_child(row_pw)
 	var st: Dictionary = Account.profile.get("stats", {})
 	var grid := GridContainer.new()
 	grid.columns = 4
