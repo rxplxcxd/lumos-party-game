@@ -177,6 +177,18 @@ Test-Start-Optionen (nach `--`): `--scene=res://scenes/minigames/HotBomb.tscn --
 Build-Dateien (`web/index.*`, `.pck`, `.wasm`, `version.json`, ZIPs) sind in `.gitignore` und werden **nicht**
 eingecheckt – lokal per Python-Server testen, das Deployment baut GitHub Actions selbst.
 
+* **Laden im Browser**: Der Ladebildschirm (`web/shell.html`) lädt `index.wasm`/`index.pck` selbst – mit
+  Stillstand-Erkennung, Wiederholungen und „Neu laden“-Knopf; der Service Worker (`web/sw.js`) greift online
+  nicht in diese Dateien ein und wird erst nach dem Spielstart registriert.
+* **Logo & Icons** stammen aus Spiel-Assets:
+  `xvfb-run -a ./godot --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/brand/render_logo.gd --out=/tmp/logo`
+  und danach `python3 tools/brand/make_icons.py /tmp/logo/logo_render.png`.
+
+### Versionierung
+Vor dem Release **1.1.x** (1.1.1 … 1.1.9), danach **1.2** als offizieller Release. Version immer mit
+`python3 tools/version.py <version>` (oder `--next`) setzen – das hält `project.godot`, `lumos-app.json` und
+die Anzeige im Ladebildschirm synchron. Commit-Betreff beginnt mit `vX.Y.Z:`; Änderungen in `CHANGELOG.md`.
+
 ```bash
 cd web && python3 -m http.server 8080
 ```

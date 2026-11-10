@@ -63,6 +63,11 @@ def main() -> int:
         icons.mkdir(exist_ok=True)
         for f in (src / "icons").glob("*.png"):
             shutil.copy(f, icons / f.name)
+        brand = out / "brand"
+        brand.mkdir(exist_ok=True)
+        for f in (src / "brand").iterdir():
+            if f.is_file():
+                shutil.copy(f, brand / f.name)
     # Versions-Hash über die großen Dateien
     h = hashlib.sha256()
     for name in ("index.pck", "index.wasm", "index.js", "index.html"):

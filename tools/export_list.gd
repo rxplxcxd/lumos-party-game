@@ -19,7 +19,7 @@ func run() -> void:
 		files[p] = true
 	for d in DIRS:
 		_collect(d, files)
-	files["res://icon.svg"] = true
+	files[String(ProjectSettings.get_setting("application/config/icon", "res://icon.svg"))] = true
 	files["res://default_bus_layout.tres"] = true   # feste Busse (Web: Sample-Wiedergabe braucht sie ab Start)
 	var missing := 0
 	for f in files.keys():

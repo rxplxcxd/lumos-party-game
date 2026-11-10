@@ -1,7 +1,7 @@
 {
   "name": "Lumos Party & Nitro Dash",
   "short_name": "Lumos Party",
-  "description": "Chaotisches 3D-Party-Brettspiel mit 10 Minispielen und High-Speed-Arcade-Racer – exklusiv für Lumos OS.",
+  "description": "Chaotisches 3D-Party-Brettspiel mit 38 Minispielen und High-Speed-Arcade-Racer – exklusiv für Lumos OS.",
   "id": "./",
   "start_url": "./?source=pwa",
   "scope": "./",
