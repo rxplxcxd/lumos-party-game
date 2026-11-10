@@ -21,6 +21,7 @@ var air_control := 0.65
 var jump_velocity := 10.0
 var gravity_force := 28.0
 var slippery := 0.0
+var input_mult := 1.0   # −1 = vertauschte Steuerung (z. B. Boss-Effekte)
 var cam_yaw := 0.0
 var can_move := true
 var can_jump := true
@@ -84,7 +85,7 @@ func _physics_process(delta: float) -> void:
 		return
 	var on_floor := is_on_floor()
 	var stunned := is_stunned()
-	var mv := InputHub.move(slot) if (can_move and not stunned) else Vector2.ZERO
+	var mv := (InputHub.move(slot) * input_mult) if (can_move and not stunned) else Vector2.ZERO
 	var wish := Vector3(mv.x, 0, mv.y).rotated(Vector3.UP, cam_yaw)
 
 	# horizontale Bewegung

@@ -46,9 +46,10 @@ vier Gamepads.
   Schmetterlinge, Glühwürmchen oder Fledermäuse.
 
 ### Boss-Kämpfe (10 Bosse, je Brett einer)
-Zur Brettmitte erscheint der Boss des Bretts. Rundenbasierter Würfel-Kampf auf einer Ring-Arena aus 20 Feldern:
-alle stoppen gleichzeitig ihren Würfel, ziehen nacheinander, Angriffsfelder treffen den Boss (Schaden = Punkte),
-danach setzt der Boss eine Fähigkeit ein. Drei Phasen (66 % / 33 %), in der Wut-Phase zwei Angriffe pro Runde.
+Zur Brettmitte erscheint der Boss des Bretts – als freier Echtzeit-Arenakampf: laufen, springen, themenpassende
+Wurfgeschosse sammeln und mit B werfen. Jede Fähigkeit wird sichtbar angekündigt (Bodenkreise, Bögen und Wellen
+zum Drüberspringen, Sturmangriffe, zielsuchende Geschosse, Wind …); die Einzigartigkeit jedes Bosses ist ein Ort
+in der Arena, den man taktisch nutzen muss. Phasen bei 66 % / 33 %, in der Wut-Phase Doppelangriffe; Schaden = Punkte.
 
 | Brett | Boss | Fähigkeiten | Einzigartigkeit |
 |---|---|---|---|

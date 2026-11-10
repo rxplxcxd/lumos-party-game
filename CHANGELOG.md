@@ -3,6 +3,17 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2** = offizieller Release.
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.1.5
+* **Bosskämpfe als freie Echtzeit-Arenakämpfe** statt Würfel-Ring: Alle laufen und springen frei, sammeln
+  themenpassende Wurfgeschosse (Wasserbomben, Kokosnüsse, Sternsplitter …) und werfen sie mit B auf den Boss.
+  Jede Fähigkeit ist eine sichtbar angekündigte Gefahr: leuchtende Bodenkreise (Lava, Eiszapfen, Kometen,
+  Wurzeln, Karamell), Schweif-/Flammen-/Frostbögen und Wellen zum Drüberspringen, Sturmangriffe, zielsuchende
+  Blasen/Raketen/Geisterorbs, Wind, Wirbelstürme, Schafherden, Kirsch-Bomben, vertauschte Steuerung, Nebel,
+  Glätte. Die Einzigartigkeiten sind Orte in der Arena: brüchiger Boden über Lava, Sandbänke bei Flut,
+  Wolkenkanonen in den Rücken des Bosses, Grabsteine als Schild, Riesen-Schneebälle, Uhrwerk-Felder,
+  Pilzlicht bei Nacht, Duell-Felder, Kirsch-Lifte und Aufwind-Felder (Höhenbonus ×2).
+  Phasen bei 66 %/33 % (kurz benommen, dann schneller; Wut-Phase mit Doppelangriffen), 80 Sekunden Zeit.
+
 ## 1.1.4
 * **Performance-Notfall (alle Plattformen):** gemessen statt geraten – das Hauptmenü war GPU-gebunden.
   * Wasser deckend statt transparent (zwei bildschirmfüllende, sortierte Alpha-Flächen mit je 18.800
@@ -14,7 +25,7 @@ Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--nex
 * **Pinguin-Curling neu:** Pinguin liegt beim Zielen direkt vor der Figur und dreht sich in Schussrichtung
   (Stick, Stick-Richtung oder Maus), gepunktete Ziellinie mit Bandenabprall; jede Runde eine neue Bahn aus
   7 Layouts (Geraden, Kurven, S-Kurve, Slalom, Prellbock) mit Banden und Hindernissen.
-* **10 Boss-Gegner** (je Brett einer) im neuen rundenbasierten Boss-Kampf auf einer Ring-Arena: drei
+* **10 Boss-Gegner** (je Brett einer, Kampfsystem ab 1.1.5 in Echtzeit): drei
   Fähigkeiten, drei Phasen (Wut-Phase mit Doppelangriff) und eine Einzigartigkeit pro Boss; vollständig
   prozedurale, animierte Modelle (Atmen, Schweben, Glühen, Rauch, Blasen, Zahnräder …) mit eigenen
   Aktions-Animationen. Münz- und Item-Effekte werden auf dem Brett verrechnet.
