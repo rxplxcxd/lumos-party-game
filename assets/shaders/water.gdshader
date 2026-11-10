@@ -34,5 +34,6 @@ void fragment() {
 	ROUGHNESS = 0.15;
 	SPECULAR = 0.6;
 	EMISSION = col * 0.05;
-	ALPHA = alpha;
+	// Bewusst KEIN ALPHA: deckendes Wasser läuft im Opak-Durchgang mit Tiefentest (kein Overdraw,
+	// kein Sortieren) – große Meeresflächen waren sonst der teuerste Posten auf schwachen GPUs/im Browser.
 }

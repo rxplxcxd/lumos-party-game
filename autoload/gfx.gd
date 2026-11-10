@@ -29,6 +29,10 @@ var _fps_acc := 0.0
 var _fps_frames := 0
 var _good_time := 0.0
 var _bad_time := 0.0
+var _pending_mesh: Array[Node] = []
+var _tuned_meshes := {}
+var _lod_rigs: Array[CharacterRig] = []
+var _lod_frame := 0
 var _fps_label: Label
 var _current_fps := 60.0
 
@@ -156,6 +160,9 @@ func _on_node_added(n: Node) -> void:
 
 func _tune(n: Node) -> void:
 	var cfg := preset()
+	if n is MeshInstance3D or n is CharacterRig:
+		_pending_mesh.append(n)   # erst im nächsten Bild – dann stehen Mesh, Position und Skalierung fest
+		return
 	if n is DirectionalLight3D:
 		var l := n as DirectionalLight3D
 		if not l.has_meta("gfx_shadow_wanted"):
@@ -163,24 +170,130 @@ func _tune(n: Node) -> void:
 		if not l.has_meta("gfx_dist"):
 			l.set_meta("gfx_dist", l.directional_shadow_max_distance)
 		l.shadow_enabled = bool(l.get_meta("gfx_shadow_wanted")) and bool(cfg.shadows)
-		l.directional_shadow_max_distance = minf(float(l.get_meta("gfx_dist")), float(cfg.shadow_dist))
+		l.directional_shadow_max_distance = minf(float(l.get_meta("gfx_dist")), float(cfg.shadow_dist) * (0.7 if OS.has_feature("web") else 1.0))
+		if not l.has_meta("gfx_mode"):
+			l.set_meta("gfx_mode", l.directional_shadow_mode)
+		# Eine Schattenkaskade statt zwei halbiert die Schatten-Renderdurchgänge (Browser & schwache Stufen)
+		l.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL if (OS.has_feature("web") and ORDER.find(active) < 2) or active == "low" else int(l.get_meta("gfx_mode"))
 	elif n is WorldEnvironment and (n as WorldEnvironment).environment:
 		var e := (n as WorldEnvironment).environment
 		if not e.has_meta("gfx_glow_wanted"):
 			e.set_meta("gfx_glow_wanted", e.glow_enabled)
-		e.glow_enabled = bool(e.get_meta("gfx_glow_wanted")) and bool(cfg.glow) and not (OS.has_feature("web") and ORDER.find(active) < 2)
+		e.glow_enabled = bool(e.get_meta("gfx_glow_wanted")) and bool(cfg.glow) and not (OS.has_feature("web") and active != "ultra")
 	elif n is CPUParticles3D:
 		var pp := n as CPUParticles3D
 		if not pp.has_meta("gfx_amount"):
 			pp.set_meta("gfx_amount", pp.amount)
-			pp.amount = maxi(1, int(round(pp.amount * float(cfg.particles))))
-	elif n is OmniLight3D and active == "low":
-		(n as OmniLight3D).shadow_enabled = false
+			pp.amount = maxi(1, int(round(pp.amount * float(cfg.particles) * (0.7 if OS.has_feature("web") else 1.0))))
+	elif n is OmniLight3D or n is SpotLight3D:
+		# Fackeln, Lampen & Co.: weit entfernte Lichter ausblenden (kostet sonst pro Pixel jedes Objekts)
+		var ol := n as Light3D
+		if active == "low":
+			ol.shadow_enabled = false
+		ol.distance_fade_enabled = true
+		ol.distance_fade_begin = 22.0 + 18.0 * float(cfg.detail)
+		ol.distance_fade_length = 8.0
+		ol.distance_fade_shadow = 15.0
+
+
+# --- Geometrie-Diät (gilt für alle Szenen & Plattformen) --------------------------------------------------
+
+## Prozedurale Grundkörper (WorldKit & Co.) kommen mit 64 Segmenten – im Cartoon-Look unsichtbar, aber
+## tausende Dreiecke pro Kugel. Kleine Deko wirft keinen Schatten und verschwindet in großer Entfernung.
+## Figuren (CharacterRig/Kart) bleiben unangetastet.
+func _tune_mesh(mi: MeshInstance3D) -> void:
+	var m := mi.mesh
+	if m == null:
+		return
+	if not _tuned_meshes.has(m):
+		_tuned_meshes[m] = true
+		if m is SphereMesh:
+			(m as SphereMesh).radial_segments = mini((m as SphereMesh).radial_segments, 20)
+			(m as SphereMesh).rings = mini((m as SphereMesh).rings, 10)
+		elif m is CapsuleMesh:
+			(m as CapsuleMesh).radial_segments = mini((m as CapsuleMesh).radial_segments, 16)
+			(m as CapsuleMesh).rings = mini((m as CapsuleMesh).rings, 4)
+		elif m is CylinderMesh:
+			(m as CylinderMesh).radial_segments = mini((m as CylinderMesh).radial_segments, 24 if maxf((m as CylinderMesh).top_radius, (m as CylinderMesh).bottom_radius) > 4.0 else 14)
+			(m as CylinderMesh).rings = 0
+		elif m is TorusMesh:
+			(m as TorusMesh).rings = mini((m as TorusMesh).rings, 28)
+			(m as TorusMesh).ring_segments = mini((m as TorusMesh).ring_segments, 10)
+	if _in_character(mi):
+		return
+	var size := m.get_aabb().size * mi.global_basis.get_scale().abs()
+	var ext := maxf(size.x, maxf(size.y, size.z))
+	if ext < 1.4 and mi.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON:
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if mi.visibility_range_end == 0.0 and ext < 2.5:
+		mi.visibility_range_end = (60.0 if ext < 0.7 else 110.0) * (0.75 + 0.25 * float(preset().detail))
+		mi.visibility_range_end_margin = 4.0
+
+
+# --- Animations-LOD für Statisten (Zuschauer, Tiere, NPCs – nie Spielfiguren) ------------------------------
+
+func _register_lod(r: CharacterRig) -> void:
+	if r.player >= 0 or r.anim == null or r.has_meta("gfx_lod"):
+		return
+	r.set_meta("gfx_lod", randi() % 4)   # Phase, damit nicht alle im selben Bild rechnen
+	r.set_meta("gfx_acc", 0.0)
+	r.anim.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+	_lod_rigs.append(r)
+
+
+## Nah: jedes Bild · mittel (> 16 m): jedes 2. · fern (> 34 m) oder unsichtbar: jedes 4. Bild.
+func _anim_lod(delta: float) -> void:
+	if _lod_rigs.is_empty():
+		return
+	_lod_frame += 1
+	var cam := get_viewport().get_camera_3d()
+	var cp := cam.global_position if cam else Vector3.ZERO
+	var near := 16.0 * (0.8 + 0.2 * float(preset().detail))
+	var i := _lod_rigs.size() - 1
+	while i >= 0:
+		var r := _lod_rigs[i]
+		if not is_instance_valid(r) or not r.is_inside_tree() or r.anim == null:
+			_lod_rigs.remove_at(i)
+			i -= 1
+			continue
+		var acc := float(r.get_meta("gfx_acc")) + delta
+		var d := r.global_position.distance_to(cp)
+		var step := 1 if d < near else (2 if d < near * 2.1 else 4)
+		if not r.is_visible_in_tree():
+			step = 4
+		if (_lod_frame + int(r.get_meta("gfx_lod"))) % step == 0:
+			r.anim.advance(acc)
+			acc = 0.0
+		r.set_meta("gfx_acc", acc)
+		if r.modifier:
+			r.modifier.active = d < near
+		i -= 1
+
+
+func _in_character(n: Node) -> bool:
+	var p := n.get_parent()
+	for i in 7:
+		if p == null:
+			return false
+		if p is CharacterRig or p is KartVisual:
+			return true
+		p = p.get_parent()
+	return false
 
 
 # --- Dynamische Auflösung -------------------------------------------------------------------
 
 func _process(delta: float) -> void:
+	if not _pending_mesh.is_empty():
+		var batch := _pending_mesh
+		_pending_mesh = []
+		for m in batch:
+			if is_instance_valid(m) and m.is_inside_tree():
+				if m is CharacterRig:
+					_register_lod(m as CharacterRig)
+				else:
+					_tune_mesh(m as MeshInstance3D)
+	_anim_lod(delta)
 	var real := delta / maxf(Engine.time_scale, 0.01)
 	_fps_acc += real
 	_fps_frames += 1

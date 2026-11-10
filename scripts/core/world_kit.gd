@@ -264,8 +264,10 @@ static func water(parent: Node, size := Vector2(200, 200), y := 0.0, deep := Col
 	var mi := MeshInstance3D.new()
 	var pm := PlaneMesh.new()
 	pm.size = size
-	pm.subdivide_width = int(clampf(size.x / 2.5, 8, 96))
-	pm.subdivide_depth = int(clampf(size.y / 2.5, 8, 96))
+	# Wellen brauchen ein paar Stützpunkte, aber keine 18.000 Dreiecke pro Fläche
+	var cap := 32 if maxf(size.x, size.y) > 400.0 else 48
+	pm.subdivide_width = int(clampf(size.x / 3.0, 6, cap))
+	pm.subdivide_depth = int(clampf(size.y / 3.0, 6, cap))
 	var m := ShaderMaterial.new()
 	m.shader = _water_shader
 	m.set_shader_parameter("deep", deep)
