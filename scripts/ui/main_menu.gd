@@ -1104,6 +1104,8 @@ func _page_settings() -> Control:
 	v.add_child(_slider("Effekte", "sfx"))
 	v.add_child(_slider("Ansager", "voice"))
 	v.add_child(_slider("Kamera-Wackeln", "screen_shake"))
+	v.add_child(_slider("Farbsättigung", "color_saturation", 0.5, 1.6))
+	v.add_child(_slider("Farbstärke", "color_strength", 0.6, 1.5))
 	v.add_child(_toggle("Haptik / Vibration", "haptics"))
 	v.add_child(_toggle("Auto-Gas (Touch-Racer)", "auto_accel"))
 	var qkeys := ["auto", "low", "medium", "high", "ultra"]

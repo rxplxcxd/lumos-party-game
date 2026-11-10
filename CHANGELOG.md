@@ -3,6 +3,18 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2** = offizieller Release.
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.1.6
+* **Fix: Unerwarteter Neustart nach Minispielen** (Rücksprung zum Startbildschirm). Ursache war ein Speicherleck:
+  Gfx hielt seit 1.1.4 jedes bearbeitete Mesh in einem Dictionary fest (pro Brett-Besuch über tausend Objekte),
+  dazu ein unbegrenzter Modell-Cache und 4 verwaiste Nodes pro Szene. Lange Sessions liefen voll, bis der Browser
+  den Tab neu geladen hat. Jetzt: Markierung am Mesh selbst, Modell-Cache behält nur die letzten zwei Szenen, die
+  alte Szene wird vor dem Laden der neuen freigegeben (keine doppelte Spitzenlast). Gemessen: Objektzahl bleibt
+  über viele Brett↔Minispiel-Wechsel konstant (~4.500 statt +1.100 je Wechsel), keine verwaisten Nodes mehr.
+  Neue Testoption `--log-scenes` protokolliert jeden Szenenwechsel mit Speicher und Objektzahl.
+* **Sattere Farben:** ACES statt Filmic-Tonemapping (Filmic hat helle Flächen entsättigt), weniger Dunstschleier,
+  weniger bläuliches Himmelslicht in Schatten, höhere Grund-Sättigung.
+* **Neue Regler** unter Einstellungen: *Farbsättigung* und *Farbstärke* – wirken sofort auf alle Szenen.
+
 ## 1.1.5
 * **Bosskämpfe als freie Echtzeit-Arenakämpfe** statt Würfel-Ring: Alle laufen und springen frei, sammeln
   themenpassende Wurfgeschosse (Wasserbomben, Kokosnüsse, Sternsplitter …) und werfen sie mit B auf den Boss.

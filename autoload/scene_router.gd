@@ -58,6 +58,8 @@ func goto(path: String, p: Dictionary = {}) -> void:
 		return
 	busy = true
 	params = p
+	if "--log-scenes" in OS.get_cmdline_user_args():
+		print("[SCENE] %s · Speicher %.0f MB · Objekte %d" % [path.get_file(), Performance.get_monitor(Performance.MEMORY_STATIC) / 1e6, int(Performance.get_monitor(Performance.OBJECT_COUNT))])
 	Audio.sfx("whoosh")
 	await _wipe(2.6, 0.0, 0.45)
 	_loading.visible = true
@@ -69,6 +71,13 @@ func goto(path: String, p: Dictionary = {}) -> void:
 	InputHub.clear_virtual()
 	InputHub.set_touch_profile("none")
 	CutsceneManager.abort()
+	# Erst die alte Szene vollständig freigeben, dann die neue laden – sonst liegen beide gleichzeitig im
+	# Speicher (Spitzenlast genau beim Rücksprung aus Minispielen).
+	if get_tree().current_scene:
+		get_tree().unload_current_scene()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	Assets.prune_cache()
 	var ps: PackedScene = null
 	if OS.has_feature("web"):
 		# Web (ohne Threads): direkt laden – Thread-Laden kann dort bei manchen Szenen hängen bleiben

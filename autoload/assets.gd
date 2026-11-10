@@ -549,6 +549,8 @@ const FONT_TITLE := "res://assets/fonts/LilitaOne-Regular.ttf"
 const FONT_BODY := "res://assets/fonts/Fredoka.ttf"
 
 var _cache: Dictionary = {}
+var _used: Dictionary = {}
+var _gen := 0
 var _rig_library: AnimationLibrary
 var _aabb_cache: Dictionary = {}
 
@@ -569,6 +571,7 @@ func scene(key: String) -> PackedScene:
 	if not _cache.has(p):
 		var res: Resource = load(p)
 		_cache[p] = res
+	_used[p] = _gen
 	return _cache[p] as PackedScene
 
 
@@ -576,7 +579,19 @@ func icon(key: String) -> Texture2D:
 	var p: String = ICONS.get(key, key)
 	if not _cache.has(p):
 		_cache[p] = load(p)
+	_used[p] = _gen
 	return _cache[p]
+
+
+## Beim Szenenwechsel: Modelle, die in den letzten zwei Szenen nicht gebraucht wurden, aus dem Cache werfen.
+## Vorher blieb jedes jemals geladene Modell (Meshes + Texturen, im Browser auch im Grafikspeicher) für immer
+## im Speicher – lange Sessions liefen voll, bis der Browser den Tab neu geladen hat.
+func prune_cache() -> void:
+	_gen += 1
+	for p in _cache.keys():
+		if int(_used.get(p, -99)) < _gen - 2:
+			_cache.erase(p)
+			_used.erase(p)
 
 
 ## Instanziert ein Modell. Gibt immer einen Node3D zurück (Fallback: Platzhalter-Würfel).

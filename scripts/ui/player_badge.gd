@@ -28,9 +28,6 @@ func setup(p: int, compact := false, scores := false) -> PlayerBadge:
 	add_theme_stylebox_override("panel", UI.box(Color(col.darkened(0.55), 0.92), 22, 4, col, 0, 8))
 	var h := UI.hbox(10)
 	add_child(h)
-	var dot := ColorRect.new()
-	dot.custom_minimum_size = Vector2(12, 12)
-	dot.color = col
 	_place = UI.label("", 34, UI.GOLD, true)
 	_place.custom_minimum_size.x = 30
 	h.add_child(_place)

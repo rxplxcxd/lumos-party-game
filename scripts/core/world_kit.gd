@@ -79,12 +79,14 @@ static func env(parent: Node, preset := "day", glow := true) -> WorldEnvironment
 	# Himmel als Umgebungslicht (natürlicher Verlauf statt flacher Farbe), leicht eingefärbt
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	e.ambient_light_color = p.ambient
-	e.ambient_light_sky_contribution = 0.55
+	e.ambient_light_sky_contribution = 0.4   # weniger bläuliches Himmelslicht in den Schatten → sattere Farben
 	e.ambient_light_energy = p.ambient_energy
 	e.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	e.tonemap_exposure = 0.95
-	e.tonemap_white = 1.2
+	# ACES statt Filmic: Filmic entsättigt helle Flächen stark (Ursache für den „ausgewaschenen“ Look);
+	# ACES hält Farben satt und gibt Kontrast, wie im Nachtmodus des Zauberwalds.
+	e.tonemap_mode = Environment.TONE_MAPPER_ACES
+	e.tonemap_exposure = 1.08
+	e.tonemap_white = 3.0
 	if glow:
 		e.glow_enabled = true
 		e.glow_intensity = 0.45
@@ -94,12 +96,12 @@ static func env(parent: Node, preset := "day", glow := true) -> WorldEnvironment
 	e.fog_enabled = p.fog
 	e.fog_light_color = p.fog_color
 	e.fog_density = p.fog_density
-	e.fog_sun_scatter = 0.12
-	e.fog_aerial_perspective = 0.35
+	e.fog_sun_scatter = 0.05
+	e.fog_aerial_perspective = 0.12   # weniger Dunst-Schleier über nahen Objekten
 	e.adjustment_enabled = true
-	e.adjustment_brightness = 0.98
-	e.adjustment_contrast = 1.14
-	e.adjustment_saturation = 1.22
+	e.adjustment_brightness = 1.03
+	e.adjustment_contrast = 1.12
+	e.adjustment_saturation = 1.48
 	we.environment = e
 	parent.add_child(we)
 	var sun := DirectionalLight3D.new()

@@ -30,7 +30,6 @@ var _fps_frames := 0
 var _good_time := 0.0
 var _bad_time := 0.0
 var _pending_mesh: Array[Node] = []
-var _tuned_meshes := {}
 var _lod_rigs: Array[CharacterRig] = []
 var _lod_frame := 0
 var _fps_label: Label
@@ -38,6 +37,7 @@ var _current_fps := 60.0
 
 
 func _ready() -> void:
+	EventBus.settings_changed.connect(_on_settings_changed)
 	get_viewport().size_changed.connect(func() -> void:
 		var cap := minf(float(preset().scale), _pixel_cap())
 		if dynamic_scale > cap:
@@ -180,6 +180,7 @@ func _tune(n: Node) -> void:
 		if not e.has_meta("gfx_glow_wanted"):
 			e.set_meta("gfx_glow_wanted", e.glow_enabled)
 		e.glow_enabled = bool(e.get_meta("gfx_glow_wanted")) and bool(cfg.glow) and not (OS.has_feature("web") and active != "ultra")
+		_apply_color(e)
 	elif n is CPUParticles3D:
 		var pp := n as CPUParticles3D
 		if not pp.has_meta("gfx_amount"):
@@ -196,6 +197,29 @@ func _tune(n: Node) -> void:
 		ol.distance_fade_shadow = 15.0
 
 
+# --- Farben: Sättigung & Farbstärke (Einstellungen) ------------------------------------------------------
+
+## Wendet die Regler „Farbsättigung“ und „Farbstärke“ auf eine Umgebung an (Basiswerte der Szene bleiben
+## gemerkt, damit die Regler immer relativ wirken). Farbstärke = Kontrast + leichte Belichtung.
+func _apply_color(e: Environment) -> void:
+	if not e.has_meta("gfx_sat_base"):
+		e.set_meta("gfx_sat_base", e.adjustment_saturation if e.adjustment_enabled else 1.0)
+		e.set_meta("gfx_con_base", e.adjustment_contrast if e.adjustment_enabled else 1.0)
+		e.set_meta("gfx_exp_base", e.tonemap_exposure)
+	var sat := float(Game.settings.get("color_saturation", 1.0))
+	var punch := float(Game.settings.get("color_strength", 1.0))
+	e.adjustment_enabled = true
+	e.adjustment_saturation = float(e.get_meta("gfx_sat_base")) * sat
+	e.adjustment_contrast = float(e.get_meta("gfx_con_base")) * lerpf(1.0, punch, 0.6)
+	e.tonemap_exposure = float(e.get_meta("gfx_exp_base")) * lerpf(1.0, punch, 0.15)
+
+
+func _on_settings_changed() -> void:
+	for we in get_tree().root.find_children("*", "WorldEnvironment", true, false):
+		if (we as WorldEnvironment).environment:
+			_apply_color((we as WorldEnvironment).environment)
+
+
 # --- Geometrie-Diät (gilt für alle Szenen & Plattformen) --------------------------------------------------
 
 ## Prozedurale Grundkörper (WorldKit & Co.) kommen mit 64 Segmenten – im Cartoon-Look unsichtbar, aber
@@ -205,8 +229,8 @@ func _tune_mesh(mi: MeshInstance3D) -> void:
 	var m := mi.mesh
 	if m == null:
 		return
-	if not _tuned_meshes.has(m):
-		_tuned_meshes[m] = true
+	if not m.has_meta("gfx_tuned"):
+		m.set_meta("gfx_tuned", true)   # Markierung am Mesh selbst – ein Dictionary würde jedes Mesh für immer festhalten
 		if m is SphereMesh:
 			(m as SphereMesh).radial_segments = mini((m as SphereMesh).radial_segments, 20)
 			(m as SphereMesh).rings = mini((m as SphereMesh).rings, 10)
