@@ -21,7 +21,7 @@
         "players": {
           "$uid": {
             ".write": "auth != null && (auth.uid === $uid || root.child('rooms/' + $code + '/meta/host').val() === auth.uid)",
-            ".validate": "!newData.exists() || (newData.child('slot').isNumber() && newData.child('slot').val() >= 0 && newData.child('slot').val() <= 3)"
+            ".validate": "!newData.exists() || (newData.child('slot').isNumber() && newData.child('slot').val() >= 0 && newData.child('slot').val() <= 19)"
           }
         },
         "signal": {
@@ -38,7 +38,7 @@
             ".read": "auth != null && auth.uid === $to",
             "$msg": {
               ".write": "auth != null && (auth.uid === $to || newData.child('from').val() === auth.uid)",
-              ".validate": "!newData.exists() || (newData.child('from').val() === auth.uid && newData.child('d').isString() && newData.child('d').val().length < 4096)"
+              ".validate": "!newData.exists() || (newData.child('from').val() === auth.uid && newData.child('d').isString() && newData.child('d').val().length < 65536)"
             }
           }
         }

@@ -10,7 +10,7 @@ signal done(tag: String)
 signal created(tag: String, ok: bool)
 signal failed(tag: String, message: String)
 
-const DB_URL := "https://lumos-party-game-default-rtdb.europe-west1.firebasedatabase.app"
+const DB_URL := preload("res://scripts/net/firebase_config.gd").DATABASE_URL
 
 var web := OS.has_feature("web")
 var db_url := OS.get_environment("LUMOS_RTDB_URL") if OS.get_environment("LUMOS_RTDB_URL") != "" else DB_URL

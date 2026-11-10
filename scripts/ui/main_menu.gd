@@ -640,8 +640,8 @@ func _login_view(v: VBoxContainer) -> void:
 	v.add_child(head)
 	if Account.busy:
 		v.add_child(UI.label("Anmeldung läuft …", 28, UI.GOLD, true))
-	if not lumos and not Account.supabase_ready():
-		var na := UI.label("Online-Konten sind in diesem Build noch nicht eingerichtet – dein Fortschritt wird lokal auf diesem Gerät gespeichert.", 22, Color("#ffcc33"))
+	if not lumos and not Account.backend_ready():
+		var na := UI.label("Online-Konten sind gerade nicht verfügbar (Anmeldedienst nicht geladen) – dein Fortschritt wird lokal gespeichert.", 22, Color("#ffcc33"))
 		na.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		na.custom_minimum_size.x = 640
 		v.add_child(na)
@@ -735,21 +735,6 @@ func _profile_view(v: VBoxContainer) -> void:
 	hv.add_child(UI.label(sub, 20, Color(1, 1, 1, 0.7)))
 	head.add_child(hv)
 	v.add_child(head)
-	if Account.recovery_pending:
-		v.add_child(UI.label("Neues Passwort festlegen", 26, UI.GOLD, true))
-		var row_pw := UI.hbox(12)
-		var npw := LineEdit.new()
-		npw.placeholder_text = "Neues Passwort (mind. 6 Zeichen)"
-		npw.secret = true
-		npw.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_PASSWORD
-		npw.custom_minimum_size = Vector2(400, 54)
-		npw.add_theme_font_size_override("font_size", 24)
-		row_pw.add_child(npw)
-		var save_pw := UI.button("Speichern", Color("#2ecc71"), 24, 200)
-		save_pw.pressed.connect(func() -> void: Account.set_new_password(npw.text))
-		npw.text_submitted.connect(func(_t: String) -> void: save_pw.pressed.emit())
-		row_pw.add_child(save_pw)
-		v.add_child(row_pw)
 	var st: Dictionary = Account.profile.get("stats", {})
 	var grid := GridContainer.new()
 	grid.columns = 4

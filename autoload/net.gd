@@ -88,12 +88,15 @@ func _ensure_identity() -> bool:
 	status.emit("Verbinde mit dem Online-Dienst …")
 	Account.ensure_online_identity()
 	var waited := 0.0
-	while Account.fb_uid == "" and waited < 10.0:
+	while Account.fb_uid == "" and Account.online_error == "" and waited < 10.0:
 		await get_tree().create_timer(0.2, true).timeout
 		waited += 0.2
 	me = Account.fb_uid
 	if me == "":
-		status.emit("Keine Verbindung zum Online-Dienst (Firebase). Bitte Internetverbindung prüfen.")
+		if Account.online_error != "":
+			status.emit("Online-Spiel nicht möglich: %s Mit einem Konto (im Profil anmelden) klappt es trotzdem." % Account.online_error)
+		else:
+			status.emit("Keine Verbindung zum Online-Dienst (Firebase). Bitte Internetverbindung prüfen.")
 		return false
 	return true
 

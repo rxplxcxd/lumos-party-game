@@ -59,11 +59,8 @@ jobs:
           unzip -q -j templates.tpz 'templates/web*' 'templates/linux_release.x86_64' 'templates/version.txt' -d "$T"
           rm templates.tpz
 
-      - name: Supabase-Zugang einsetzen (Repo-Variablen bzw. Secrets SUPABASE_URL / SUPABASE_ANON_KEY)
-        env:
-          SB_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
-          SB_KEY: ${{ vars.SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
-        run: python3 tools/backend_config.py
+      - name: Firebase-Konfiguration prüfen (GDScript = Web-SDK, API-Key von Google akzeptiert)
+        run: python3 tools/check_firebase_config.py
 
       - name: Asset-Inventur & Katalog prüfen
         run: |

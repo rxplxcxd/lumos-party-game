@@ -3,6 +3,27 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2** = offizieller Release.
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.1.8
+* **Firebase ist jetzt das einzige Backend** (Konten, Google-Anmeldung, Profil-Sync, Online-Lobbys). Der
+  Supabase-Client aus 1.1.7 ist komplett entfernt. Die echten Fixes aus 1.1.7 bleiben erhalten:
+  JS-Brücken-Erkennung, Fehlermeldungen, Profil-Fenster.
+* **Fix Anmeldung: Tippfehler im Firebase-API-Key.** Im Code stand `…XT0n4K0` (Ziffer 0) statt `…XTOn4K0`
+  (Buchstabe O), daher „API key not valid“.
+* Projektdaten stehen zentral in `scripts/net/firebase_config.gd` (GDScript) und `web/lumos_bridge.js` (Web-SDK).
+  Neuer CI-Schritt `tools/check_firebase_config.py`: bricht ab, wenn beide abweichen oder Google den Key ablehnt.
+* **Online-Lobbys:** Ist die anonyme Anmeldung in Firebase aus, meldet die Lobby das sofort und klar, statt
+  10 Sekunden zu warten und „keine Verbindung“ zu zeigen.
+* Google-Redirect (iOS-Homescreen) startet nach der Rückkehr Firebase wieder und meldet an.
+* Mehr verständliche Meldungen, z. B. Anmeldeweg nicht aktiviert, Domain nicht freigegeben, Konto gesperrt,
+  keine Datenbank-Berechtigung.
+* **Database-Regeln** (`firebase/database.rules.json`) passen jetzt zum Spiel: Athlon-Räume mit bis zu 20 Plätzen
+  (vorher nur 0–3 erlaubt), Relay-Nachrichten bis 64 KB.
+* Getestet:
+  * nativ und im echten Web-Export (Chromium, Firebase-SDK 10.12.2) gegen das echte Firebase-Projekt;
+  * Login landet sauber bei „E-Mail oder Passwort falsch.“;
+  * Lobby meldet korrekt, dass die Gast-Anmeldung deaktiviert ist.
+  Dabei wurde nichts angelegt, ein Test-Gastkonto wurde sofort wieder gelöscht.
+
 ## 1.1.7
 * **Fix: Anmeldung im Web-Export („Anmeldung fehlgeschlagen (keine Verbindung)“).** Ursache: Das Spiel prüfte
   die JS-Brücke mit `JavaScriptBridge.eval(…) == true`; der JS-Boolean kam im Export nie als `true` an. Die Brücke

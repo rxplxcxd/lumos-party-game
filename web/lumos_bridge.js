@@ -12,8 +12,9 @@
 (function () {
 	'use strict';
 
+	// Firebase-Projekt (einziges Backend). Gleiche Werte in scripts/net/firebase_config.gd – die CI prüft beides.
 	const FIREBASE_CONFIG = {
-		apiKey: 'AIzaSyBpCU5im11sq4YQbs5XPQ26cjs2XT0n4K0',
+		apiKey: 'AIzaSyBpCU5im11sq4YQbs5XPQ26cjs2XTOn4K0',
 		authDomain: 'lumos-party-game.firebaseapp.com',
 		projectId: 'lumos-party-game',
 		storageBucket: 'lumos-party-game.firebasestorage.app',
@@ -60,7 +61,15 @@
 			'auth/popup-closed-by-user': 'Anmeldefenster wurde geschlossen.',
 			'auth/network-request-failed': 'Keine Verbindung zum Server.',
 			'auth/too-many-requests': 'Zu viele Versuche – bitte kurz warten.',
+			'auth/missing-password': 'Bitte ein Passwort eingeben.',
+			'auth/user-disabled': 'Dieses Konto wurde gesperrt.',
+			'auth/operation-not-allowed': 'Dieser Anmeldeweg ist im Firebase-Projekt nicht aktiviert.',
+			'auth/admin-restricted-operation': 'Gast-Anmeldung (anonym) ist im Firebase-Projekt nicht aktiviert.',
+			'auth/unauthorized-domain': 'Diese Website ist in Firebase nicht freigegeben (Firebase: Authentication, Einstellungen, Autorisierte Domains).',
+			'auth/popup-blocked': 'Das Anmeldefenster wurde vom Browser blockiert.',
+			'auth/cancelled-popup-request': 'Anmeldung abgebrochen.',
 		};
+		if (/permission[_ -]denied/i.test(code) || /permission[_ -]denied/i.test((e && e.message) || '')) return 'Keine Berechtigung – Datenbank-Regeln prüfen bzw. erneut anmelden.';
 		if (code.indexOf('api-key') >= 0) return 'Anmeldedienst nicht eingerichtet: Der Firebase-API-Key ist ungültig.';
 		return map[code] || (e && e.message) || String(e);
 	}

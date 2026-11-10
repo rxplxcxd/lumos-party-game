@@ -56,39 +56,33 @@ Brettzustand von Host und Client nach jedem Zug.
 Athlon-Räume (`max = 20`) laufen host-gesteuert: `ath_round` (Herausforderung), `ath_sc` (Münzen der Clients),
 `ath_res` (Rundenergebnis inkl. CPUs). Alle Geräte bewegen die Läufer daraus identisch.
 
-## Konten
+## Konten (Firebase – einziges Backend)
 
 | Umgebung | Anmeldung |
 |---|---|
 | Lumos OS / Lumos One | Lumos Cloud (`/v1/auth/login|register|refresh`, Profil über `/v1/profile` mit Versionierung) |
-| Supabase eingerichtet (alle Plattformen) | E-Mail/Passwort über Supabase Auth, im Web zusätzlich Google (Weiterleitung) – `scripts/net/supabase.gd` |
-| Browser, iOS, Android, PWA ohne Supabase | Google oder E-Mail/Passwort über Firebase (Alt-Weg; der hinterlegte Firebase-Key ist derzeit ungültig) |
-| Native ohne Browser, ohne Supabase | E-Mail/Passwort über die Firebase-REST-API |
+| Browser, iOS, Android, PWA | Firebase-Web-SDK über `web/lumos_bridge.js`: Google (Popup, auf dem iOS-Homescreen Redirect) oder E-Mail/Passwort |
+| Native ohne Browser | E-Mail/Passwort über die Firebase-REST-API |
+| Online-Lobby ohne Konto | anonyme Firebase-Anmeldung (Gast) |
 | Gast | nur lokal |
 
-Profile werden beim Anmelden zusammengeführt (Bestzeiten = Minimum, Zähler = Maximum, Freischaltungen = Vereinigung).
-Ohne eingerichtetes Backend zeigt das Profil-Fenster einen Hinweis statt eines Formulars, das nicht funktionieren kann.
+Profile liegen unter `profiles/{uid}` in der Realtime Database und werden beim Anmelden zusammengeführt
+(Bestzeiten = Minimum, Zähler = Maximum, Freischaltungen = Vereinigung).
 
-### Supabase einrichten (Online-Konten)
+Projektdaten stehen an genau zwei Stellen: `scripts/net/firebase_config.gd` (GDScript: REST, Datenbank-URL) und
+`FIREBASE_CONFIG` in `web/lumos_bridge.js` (Web-SDK). Die CI (`tools/check_firebase_config.py`) bricht ab, wenn
+beide voneinander abweichen oder Google den API-Key ablehnt. Ein Tippfehler im Key (0 statt O) hat die Anmeldung
+bis 1.1.7 lahmgelegt. Nativer Schnelltest ohne Spuren: `godot --headless --path . res://tools/dev/Run.tscn --
+--dev-script=res://tools/dev/firebase_probe.gd [--anon]`.
 
-1. **Supabase → Project Settings → API Keys:** *Project URL* (`https://<ref>.supabase.co`) und den
-   **anon**- bzw. **publishable**-Key kopieren. **Nie** den `service_role`-/`secret`-Key verwenden – der Client-Key
-   ist öffentlich, geschützt wird per Row Level Security. Die CI bricht ab, falls doch ein Service-Key eingetragen ist.
-2. **GitHub → Settings → Secrets and variables → Actions → Variables:** `SUPABASE_URL` und `SUPABASE_ANON_KEY`
-   anlegen (Secrets mit gleichem Namen gehen auch). Danach *Actions → Build & Deploy → Run workflow* oder ein Push –
-   `tools/backend_config.py` setzt die Werte vor dem Export in `scripts/net/backend_config.gd` ein.
-   Alternativ die beiden Konstanten direkt in `scripts/net/backend_config.gd` eintragen.
-3. **SQL Editor:** `supabase/schema.sql` ausführen (Tabelle `profiles` mit RLS: jeder liest/schreibt nur sich selbst).
-4. **Authentication → URL Configuration:** *Site URL* `https://rxplxcxd.github.io/lumos-party-game/` und dieselbe
-   Adresse unter *Redirect URLs* eintragen – dorthin führen Bestätigungs-, Passwort-Reset- und Google-Links zurück.
-5. **Authentication → Sign In / Providers:** *Email* aktiv. Mit „Confirm email“ meldet das Spiel nach der
-   Registrierung „Bitte bestätige deine E-Mail“; der Link meldet direkt im Spiel an. Google optional (Client-ID/Secret
-   aus der Google Cloud Console, Callback `https://<ref>.supabase.co/auth/v1/callback`) – der Google-Knopf erscheint
-   automatisch, sobald der Provider aktiv ist (`GET /auth/v1/settings`).
+### Firebase-Konsole: Checkliste
 
-Technik im Web-Export: Anfragen laufen über `HTTPRequest` (= `fetch`) mit `apikey`, `Authorization` (nur echte JWTs),
-`Content-Type` und `Prefer` – alles Header, die Supabase im CORS-Preflight erlaubt; Nicht-localhost-URLs werden auf
-`https://` gezwungen (kein Mixed Content auf GitHub Pages). Die Sitzung (Refresh-Token) liegt in `user://account.cfg`
-(im Browser IndexedDB), Tokens aus Weiterleitungen werden aus dem `#`-Fragment gelesen und sofort aus der Adresse entfernt.
-Test gegen echten oder nachgebauten Server: `LUMOS_SUPABASE_URL=… LUMOS_SUPABASE_KEY=… godot --headless --path .
-res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/supabase_probe.gd`.
+1. **Authentication, Anmeldemethode:** *E-Mail/Passwort* (aktiv), *Google* (aktivieren) und *Anonym* (aktivieren,
+   für Online-Lobbys ohne Konto). Ohne Anonym zeigt die Lobby „Gast-Anmeldung (anonym) ist im Firebase-Projekt
+   nicht aktiviert“, und nur angemeldete Spieler können online spielen.
+2. **Authentication, Einstellungen, Autorisierte Domains:** `rxplxcxd.github.io` hinzufügen (für Google-Popup bzw.
+   -Redirect). `localhost` steht dort standardmäßig.
+3. **Realtime Database, Regeln:** Inhalt von `firebase/database.rules.json` einfügen und veröffentlichen
+   (ersetzt die ablaufende Testmodus-Regel). Grundsatz: nichts ohne Anmeldung. Profile darf nur der Besitzer
+   lesen und schreiben. Raum-Metadaten ändert nur der Host. Spieler schreiben nur ihren eigenen Eintrag (Platz
+   0–19). Signal- und Relay-Nachrichten müssen den eigenen Absender tragen. Raumcodes: 4–6 Zeichen aus A–Z/2–9.
