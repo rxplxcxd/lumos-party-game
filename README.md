@@ -17,11 +17,12 @@ vier Gamepads.
 ## Inhalt
 
 ### Modus A – Lumos Party
-* **9 Bretter** mit eigenem Look, eigener Musik und wechselnden Routen: Dungeon Deep · Sonnige Palmen-Bucht
+* **10 Bretter** mit eigenem Look, eigenem Song und wechselnden Routen: Dungeon Deep · Sonnige Palmen-Bucht
   (Ebbe/Flut-Sandbank) · Sternen-Wolkenland (Zugbrücken, Wolken-Kanonen) · Geisterfriedhof (Geister-Taxi) ·
   Frostdorf (Eis-Rutschen) · Sternen-Sternwarte (Sternen-Tore, Spielzeugraketen) · **Glühwürmchen-Zauberwald**
   (Tag/Nacht-Wechsel jede Runde, nachts leuchten die Pilze den Weg) · **Wuschel-Wiesen** (Pusteblumen-Flüge,
-  Schäfchen, Duell-Felder) · **Zuckerback-Torte** (Schoko-Rutschen, Kerzen-Fallen, Kirsch-Lifte).
+  Schäfchen, Duell-Felder) · **Zuckerback-Torte** (Schoko-Rutschen, Kerzen-Fallen, Kirsch-Lifte) ·
+  **Der Wolkenturm** (vertikal, siehe unten).
 * **Felder:** Blau (+3), Rot (−3), Glücksrad-Kiste, Ereignisfelder je Brett, Händler, **Duell-Feld** (Gegner
   herausfordern), Lumos-Stern; im **Endspurt** zählen Felder doppelt und Spieler auf gleichem Feld duellieren sich.
 * **Partner:** Hoppel, Piepsi, Mauzi, Hirschi, Muhla, Summsi, Kraxi, Robbi, Zippy und Bauli erscheinen auf dem
@@ -34,9 +35,26 @@ vier Gamepads.
   **2 gegen 2** (Farbrad für Ereignisfelder), Team-Intro-Cutscene, Roulette bzw. Abstimmung; dazu **Duelle**,
   **Glücks-** und **Münz-Minispiele**, eine **Boss-Runde** (Pustebacke, der Wolkendrache) zur Brettmitte und der
   **Showdown-Dreikampf** im Endspurt.
-* **33 Minispiele** (Kategorien siehe `docs/MINIGAMES.md`), alle auch einzeln in der **Minispiel-Arena**.
+* **38 Minispiele** (Kategorien siehe `docs/MINIGAMES.md`), alle auch einzeln in der **Minispiel-Arena** – neu:
+  **Geister-Fotograf** (Taschenlampen-Intro, Geistervilla im Halbdunkel, langsam ladende Kamera, scharf/
+  verwackelt/verzerrt je nach Timing), **Käse-Kloppe** (Mäuse auf wackelndem Federkäse, rollende Ball-Katzen,
+  Packen & Werfen), **Pinguin-Curling** (3 Runden, Rammen erlaubt, Wischen), **Seifenblasen-Ballett**
+  (Pumpen im Wechsel bläst andere weg, Blasen schrumpfen und werden rutschig, Überhitzen lässt die eigene
+  platzen) und **Schlafwandler-Parcours** (blind über Balken, jede Sekunde ein Schnellwahl-Menü).
+* **Lebendige Ränder** überall: `CritterLife` setzt Themen-Tierchen (Hasen, Küken, Füchse, Krabben, Pinguine,
+  Katzen …) an jede Spielfläche, die herumhoppeln, schnüffeln, zuschauen und am Ende mitjubeln, dazu
+  Schmetterlinge, Glühwürmchen oder Fledermäuse.
 
 ### Abenteuer & Modi
+* **Der Wolkenturm** (Brettspiel in die Höhe): Wendelweg um einen verwunschenen Pflanzenturm mit Etagen,
+  Ranken-Abkürzungen (Wegzoll), Wolkenlift, Aufwind-Feldern und Händler-Etagen. Wer den Gipfel erreicht,
+  bekommt den Gipfelstern und rutscht über die Regenbogen-Rutsche wieder hinab; ab zwei Dritteln Höhe zählen
+  Blau/Rot/Glück doppelt („Höhenbonus“), Windböen pusten Spieler zurück. Kamera folgt radial, Tiefendunst und
+  ziehende Wolkenringe sorgen für Höhengefühl.
+* **Das Kolosseum-Turnier**: 8 Teilnehmer (Spieler + Gast-Champions) im K.-o.-System – Viertelfinale,
+  Halbfinale, Finale; jedes Match mit Spielerbeteiligung ist ein Duell-Minispiel. Einlauf durch versinkende
+  Fallgitter mit Funken, Konfetti und Ansage. Das Publikum besteht nur aus Spielfiguren – einmal in einen
+  Sprite-Atlas gerendert und als MultiMesh mit Jubel-Shader auf hohle Tribünenringe gestapelt (browserschonend).
 * **Partyhelfer-Reise** (Einzelspieler): frei begehbare Pusteblumen-Insel, 10 Bewohner mit Minispiel-Aufträgen,
   10 versteckte Mini-Sterne, Wolkentor und Bosskampf gegen Pustebacke; Fortschritt wird gespeichert.
 * **Rhythmus-Küche** (1–4, kooperativ): Fünf-Gänge-Menü im Takt – schnippeln, rühren, Pfannkuchen wenden,
@@ -54,7 +72,10 @@ vier Gamepads.
   12 s vor Schluss **taktsynchroner Hurry-Up-Wechsel** am nächsten Taktanfang (mit sanfter Tempo-Rampe im letzten
   Takt), Outro am nächsten Schlag. Rhythmus-Spiele (Rhythmus-Tanz, Seilziehen, Schlummer-Sternchen,
   Rhythmus-Küche) richten ihre Noten nach dem laufenden Track – auch wenn er von Runde zu Runde wechselt.
-* **Brett-Themes** für alle 9 Bretter + Hauptmenü als nahtlose Loops, Crossfade bei jedem Szenenwechsel.
+* **Nur hochgeladene Soundtracks**: Brett- und Menümusik stammen ausschließlich aus den Ordnern Soundtracks1–3
+  (keine prozedural erzeugte Hintergrundmusik). Jedes Brett lädt genau seinen Song (`assets/music/board/<brett>.ogg`),
+  das Hauptmenü `menu.ogg`; Rennen nutzen Minispiel-Track 2 mit Hurry-Up in der letzten Runde.
+  Crossfade bei jedem Szenenwechsel.
 * **Micro-Feedback-Bibliothek**: Fokus-Plopp, Bestätigen, Zurück, Blättern, Umschalten, Münz-Zählkaskade,
   Würfel-Plopp, Zug-Glöckchen, Countdown-Fanfare, Triumph-Akkord, Verlierer-Seufzer (lolurio & Nomagician, CC BY 4.0).
 * **Browser-Ton**: feste Bus-Konfiguration (`default_bus_layout.tres`) – im Web-Sample-Modus werden zur Laufzeit
@@ -68,6 +89,16 @@ vier Gamepads.
 * **Siegerehrungen**: Goldregen, Feuerwerk oder Sternen-Schweben für den Sieger; Amboss, Sahnetorte,
   Regenwolke oder Hüpfpilz-Bruchlandung für den letzten Platz.
 * **Abkürzungen**: Schließt eine Abkürzung, auf der jemand steht, fliegt Hummel Summsi ihn zur Abzweigung zurück.
+
+### Eigene 3D-Avatare (Lumos-Profil)
+* **Kein Editor** – das Modell kommt fertig aus dem Profil: Lumos One OS (`window.LumosOS.getAvatar()`), die
+  Lumos Cloud (`GET /v1/profile/avatar` → `{url, version, forward, name}`) oder ein `avatar.url`-Feld im Profil.
+  Zwischengespeichert in `user://avatars/`, neu geladen nur bei geänderter Version.
+* **Automatisches Mapping** (`AvatarRetarget`): humanoide GLB/glTF-Modelle (Mixamo, VRM, Unity-Humanoid, Bip01,
+  Rigify …) werden auf Heldengröße normiert, die Knochen dem KayKit-Rig_Medium zugeordnet und jede Pose eines
+  unsichtbaren Referenzskeletts per Rest-Delta übertragen – laufen, sitzen im Kart, alle Reaktionen und
+  Slapstick-Effekte funktionieren wie bei den Standardhelden. Erwartet wird ein Skelett in T-Pose.
+* Der Avatar erscheint als zusätzlicher Held in der Spielerauswahl. Testen: `godot --path . -- --avatar=modell.glb`.
 
 ### Online
 * **Online-Party auf dem Brett** (Lockstep: gemeinsamer Brett-Zufall, jede Spieler-Entscheidung wird vom
@@ -143,6 +174,9 @@ Test-Start-Optionen (nach `--`): `--scene=res://scenes/minigames/HotBomb.tscn --
 ./godot --headless --export-release "Web" web/index.html
 ```
 
+Build-Dateien (`web/index.*`, `.pck`, `.wasm`, `version.json`, ZIPs) sind in `.gitignore` und werden **nicht**
+eingecheckt – lokal per Python-Server testen, das Deployment baut GitHub Actions selbst.
+
 ```bash
 cd web && python3 -m http.server 8080
 ```
@@ -161,10 +195,11 @@ cd web && python3 -m http.server 8080
 ## Projektstruktur
 
 ```
-autoload/        EventBus, Game, Assets, Audio, InputHub, Juice, FX, CutsceneManager, Router
-scripts/core/    CharacterRig, SlapstickModifier, ReactionClip, PartyAvatar, KartVisual, WorldKit, Kameras
+autoload/        EventBus, Game, Assets, Audio, InputHub, Juice, FX, CutsceneManager, Router, Account, Avatars, Net
+scripts/core/    CharacterRig, SlapstickModifier, ReactionClip, AvatarRetarget, CritterLife, RiverLife, WorldKit, …
+scripts/modes/   Partyhelfer-Reise, Lumos-Athlon, Kolosseum-Turnier
 scripts/party/   Brett-Daten, Brett-Baukasten, Brettspiel-Logik
-scripts/minigames/  MinigameBase + 10 Minispiele
+scripts/minigames/  MinigameBase + 38 Minispiele
 scripts/racer/   TrackDefs, RaceTrack, Racer (Fahrphysik + KI), NitroDash (Rennleitung, Items, HUD)
 scripts/ui/      Boot, Hauptmenü, Touch-Steuerung, Theme, Icons, Glücksrad
 scenes/          boot, menu, party, minigames, racer, cutscenes

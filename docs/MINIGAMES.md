@@ -49,6 +49,11 @@ Grüne (Ereignis-)Felder werden vor dem Minispiel per Farbrad Blau oder Rot zuge
 | Raten, unter welcher Kiste/Geist (Geister-Raten) | **Schatzkisten-Schnüffeln** | Glück |
 | Gemeinsam gegen Riesengegner (Boss-Minispiele) | **Boss: Pustebacke, der Wolkendrache** | Boss |
 | Mehrstufige Finale (Showdown) | **Lumos-Dreikampf** | Showdown |
+| Fotografieren im Dunkeln (Taschenlampe, Timing) | *Geister-Fotograf* | FFA |
+| Letzter auf wackelnder Plattform, Packen & Werfen | *Käse-Kloppe* | FFA |
+| Schieben zum Ziel, Rammen (Curling) | *Pinguin-Curling* | FFA |
+| Balancieren über dem Abgrund, Wind durch Tastenwechsel | *Seifenblasen-Ballett* | FFA |
+| Blind-Parcours mit Schnellwahl-Menü | *Schlafwandler-Parcours* | FFA |
 
-Fett = in v1.1 neu gebaut. Alle Spiele unterstützen CPU-Gegner (3 Stufen), Touch, Gamepads und Online-Spiel
+Fett = in v1.1 neu gebaut, kursiv = in v1.2 neu. Alle Spiele unterstützen CPU-Gegner (3 Stufen), Touch, Gamepads und Online-Spiel
 (Figuren-Spiele: Besitzer-Autorität mit Interpolation; Zustands-Spiele: Host-Autorität mit Eingabe-Weiterleitung).
