@@ -24,6 +24,7 @@ FX="*res://autoload/fx.gd"
 CutsceneManager="*res://autoload/cutscene_manager.gd"
 Router="*res://autoload/scene_router.gd"
 Account="*res://autoload/account.gd"
+Avatars="*res://autoload/avatars.gd"
 Net="*res://autoload/net.gd"
 Gfx="*res://autoload/gfx.gd"
 

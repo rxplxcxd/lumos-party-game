@@ -66,6 +66,12 @@ var _map: Dictionary = MAP_KAYKIT
 func setup(key: String, player_idx := -1, scl := 1.0) -> CharacterRig:
 	model_key = key
 	player = player_idx
+	var custom_id := ""
+	if key.begins_with("custom/"):
+		custom_id = key.substr(7)
+		if not Avatars.has(custom_id):
+			custom_id = ""
+		key = Avatars.REFERENCE_HERO   # Referenz-Rig (bzw. Rückfall, solange der Avatar noch lädt)
 	if key.begins_with("hero/"):
 		kind = "kaykit"
 		_map = MAP_KAYKIT
@@ -100,10 +106,32 @@ func setup(key: String, player_idx := -1, scl := 1.0) -> CharacterRig:
 		for clip in anim.get_animation_list():
 			if (clip as String) in ["idle", "walk", "sprint", "run", "fall", "drive", "sit", "dance", "eat", "holding-both", "crouch"]:
 				anim.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+	if custom_id != "":
+		_attach_custom(custom_id)
 	if player >= 0:
 		_add_ring(Game.player_color(player))
 	play("idle")
 	return self
+
+
+## Eigener Avatar: Das KayKit-Modell bleibt als unsichtbares Referenzskelett (spielt Clips, Reaktionen,
+## Slapstick), der Avatar übernimmt per AvatarRetarget jede Pose. `model` zeigt danach auf den Avatar
+## (Einfärben, Ruß-Gesicht, Sichtbarkeit wirken also auf das sichtbare Modell).
+func _attach_custom(id: String) -> void:
+	var av := Avatars.instantiate(id)
+	if av == null or skel == null:
+		return
+	for mi in Assets.find_meshes(model):
+		mi.visible = false
+	pivot.add_child(av)
+	av.rotation.y = PI
+	var dsk := _find_skel(av)
+	if dsk:
+		var rt := AvatarRetarget.new()
+		rt.name = "Retarget"
+		dsk.add_child(rt)
+		rt.bind(skel, dsk, Avatars.mapping(id))
+	model = av
 
 
 func _find_anim(n: Node) -> AnimationPlayer:

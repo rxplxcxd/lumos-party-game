@@ -37,6 +37,17 @@
 		events.push({ type: type, data: data === undefined ? null : data });
 	}
 
+	// ArrayBuffer/Blob → Base64 (in Blöcken, damit große Modelle den Stack nicht sprengen)
+	function toB64(data) {
+		const p = (typeof Blob !== 'undefined' && data instanceof Blob) ? data.arrayBuffer() : Promise.resolve(data);
+		return p.then(function (buf) {
+			const bytes = new Uint8Array(buf);
+			let bin = '';
+			for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+			return btoa(bin);
+		});
+	}
+
 	function errText(e) {
 		const code = (e && e.code) || '';
 		const map = {
@@ -245,6 +256,40 @@
 			withFreshToken().then(function () { return cloudFetch('/v1/profile'); })
 				.then(function (j) { emit('profile', { provider: 'lumos', profile: (j && j.profile) || null, version: (j && j.version) || 0 }); })
 				.catch(function (e) { emit('profile_error', { provider: 'lumos', message: e.message }); });
+		},
+
+		// Eigener 3D-Avatar (GLB). Quelle: 1) Lumos One OS (window.LumosOS.getAvatar), 2) Lumos Cloud
+		// GET /v1/profile/avatar → {url, version, forward, name}, 3) URL aus dem Profil. Ergebnis als Base64.
+		lumosGetAvatar: function (profileUrl) {
+			const os = window.LumosOS || window.lumosOS;
+			let metaP;
+			if (os && typeof os.getAvatar === 'function') {
+				metaP = Promise.resolve(os.getAvatar());
+			} else if (lumosSession()) {
+				metaP = withFreshToken().then(function () { return cloudFetch('/v1/profile/avatar'); })
+					.catch(function (e) { if (e.status === 404 && profileUrl) return { url: profileUrl }; throw e; });
+			} else if (profileUrl) {
+				metaP = Promise.resolve({ url: profileUrl });
+			} else {
+				return;
+			}
+			metaP.then(function (meta) {
+				if (!meta || (!meta.url && !meta.data)) return null;
+				const info = { name: meta.name || '', version: meta.version || 0, forward: meta.forward || '+z', url: meta.url || '' };
+				if (meta.data) return toB64(meta.data).then(function (b) { emit('avatar', { meta: info, b64: b }); });
+				let url = String(meta.url);
+				if (url.charAt(0) === '/') url = cloudUrl() + url;
+				const h = {};
+				const s = lumosSession();
+				if (s && s.accessToken && url.indexOf(cloudUrl()) === 0) h.Authorization = 'Bearer ' + s.accessToken;
+				return fetch(url, { headers: h }).then(function (r) {
+					if (!r.ok) { const e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
+					return r.arrayBuffer();
+				}).then(toB64).then(function (b) { emit('avatar', { meta: info, b64: b }); });
+			}).catch(function (e) {
+				if (e && e.status === 404) return;   // kein Avatar hinterlegt → Standardhelden
+				emit('avatar_error', { message: errText(e), status: (e && e.status) || 0 });
+			});
 		},
 
 		lumosPutProfile: function (json, version) {

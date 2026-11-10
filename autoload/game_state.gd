@@ -231,10 +231,20 @@ func new_player(idx: int, hero_id: String, cpu: bool, cpu_level: int) -> Diction
 
 
 func hero(id: String) -> Dictionary:
+	if id.begins_with("custom:"):
+		return Avatars.hero_entry(id)
 	for h in HEROES:
 		if h.id == id:
 			return h
 	return HEROES[0]
+
+
+## Wählbare Helden: Standardhelden + (falls im Lumos-Profil hinterlegt) der eigene 3D-Avatar.
+func hero_list() -> Array:
+	var out: Array = HEROES.duplicate()
+	if Avatars.has("me"):
+		out.append(Avatars.hero_entry("me"))
+	return out
 
 
 func minigame_info(id: String) -> Dictionary:

@@ -898,7 +898,7 @@ func _page_party() -> Control:
 func _players_editor(v: VBoxContainer) -> void:
 	_hero_steppers.clear()
 	_cpu_steppers.clear()
-	var hero_names := Game.HEROES.map(func(h: Dictionary) -> String: return h.name)
+	var hero_names := Game.hero_list().map(func(h: Dictionary) -> String: return h.name)
 	var pads := Input.get_connected_joypads().size()
 	for i in 4:
 		var p: Dictionary = Game.players[i]
@@ -922,8 +922,8 @@ func _players_editor(v: VBoxContainer) -> void:
 
 
 func _hero_index(id: String) -> int:
-	for i in Game.HEROES.size():
-		if Game.HEROES[i].id == id:
+	for i in Game.hero_list().size():
+		if Game.hero_list()[i].id == id:
 			return i
 	return 0
 
@@ -931,8 +931,8 @@ func _hero_index(id: String) -> int:
 func _apply_players() -> void:
 	for i in 4:
 		var p: Dictionary = Game.players[i]
-		p.hero = Game.HEROES[_hero_steppers[i].index].id
-		p.name = Game.HEROES[_hero_steppers[i].index].name
+		p.hero = Game.hero_list()[_hero_steppers[i].index].id
+		p.name = Game.hero_list()[_hero_steppers[i].index].name
 		var label: String = _cpu_steppers[i].value()
 		p.cpu = not label.begins_with("Mensch")
 		if p.cpu:

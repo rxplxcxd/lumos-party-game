@@ -147,6 +147,11 @@ func provider_label() -> String:
 	return {"lumos": "Lumos Cloud", "google.com": "Google", "google": "Google", "password": "E-Mail", "anonymous": "Gast (online)", "guest": "Gast"}.get(String(user.get("provider", "guest")), "Konto")
 
 
+## HTTP-Header für Anfragen an die Lumos Cloud (nativ; im Browser übernimmt die JS-Brücke das Token).
+func auth_headers() -> Array:
+	return ["Authorization: Bearer " + _lumos_access] if _lumos_access != "" else []
+
+
 func uid() -> String:
 	return String(user.get("uid", ""))
 
