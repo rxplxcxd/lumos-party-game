@@ -69,6 +69,8 @@ var net_sync: NetAvatarSync
 var music_track := -1
 ## Weite Umgebung hinter der Arena (Hügel, Wolken, Vögel, Dunst): "auto" nach env_preset, "none" = aus.
 var backdrop_style := "auto"
+## Themen-Tierchen am Arenarand (CritterLife); Minispiele können sie abschalten.
+var critters := true
 var hurry_at := 12.0             # Sekunden vor Schluss: taktsynchroner Wechsel in die Hurry-Up-Version
 var _music_hurried := false
 var _net_ready: Dictionary = {}
@@ -363,6 +365,8 @@ func _build_backdrop() -> void:
 	var col: Color = {"meadow": Color("#7cc860"), "beach": Color("#e8d6a0"), "snow": Color("#eef4fb"), "night": Color("#26324a"),
 		"cake": Color("#f6c9d8")}.get(st, Color("#7cc860"))
 	WorldKit.backdrop(world, st, col, -7.0, arena_center)
+	if critters:
+		CritterLife.populate(world, st, arena_center, arena_radius * 1.05, arena_radius * 1.75, 7)
 
 
 ## Hurry-Up: Musik wechselt taktgenau in die schnellere Version, kleiner Warnton.
@@ -403,6 +407,7 @@ func end_game() -> void:
 		print("[NET] Minispiel-Ende · Platzierungen %s · alive %s · empfangen %s" % [placements, alive, Net.debug_counts])
 	if (net_sync or _host_model_online()) and Net.is_host:
 		Net.send({"k": "end", "pl": placements, "sc": scores}, true)
+	get_tree().call_group("critters", "excite", 6.0)
 	await CutsceneManager.play("MinigameWin", {"game": self, "placements": placements})
 	await _show_results(placements)
 	_return(placements)

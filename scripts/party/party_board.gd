@@ -43,6 +43,16 @@ func _ready() -> void:
 		"glowforest": ["meadow", Color("#4f9a46")], "meadow": ["meadow", Color("#86d06a")], "cake": ["cake", Color("#f6c9d8")],
 		"tower": ["sky", Color.WHITE]}.get(Game.party.board, ["meadow", Color("#7cc860")])
 	WorldKit.backdrop(self, String(bd[0]), bd[1], -0.56)
+	var pts: Array[Vector3] = []
+	var top := 0.0
+	for sp in spaces:
+		pts.append(sp.pos as Vector3)
+		top = maxf(top, (sp.pos as Vector3).y)
+	var life := CritterLife.populate(self, String(bd[0]), Vector3.ZERO, 0.0, 0.0, 12, pts)
+	if life:
+		life.y_min = -2.0
+		life.y_max = top + 3.0
+		life.max_walk = 4.5
 	if bool(BoardDefs.get_def(Game.party.board).get("daynight", false)):
 		builder.apply_time_of_day(int(Game.party.round) % 2 == 0 and int(Game.party.round) > 1, self, false)
 	partners = PartnerSystem.new(self)
