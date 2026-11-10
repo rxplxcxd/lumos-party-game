@@ -207,6 +207,14 @@ func _ready() -> void:
 	_music_a = _mk_player("Music")
 	_music_b = _mk_player("Music")
 	_mp = [_music_a, _music_b]
+	if OS.has_feature("web"):
+		# Musik im Web als STREAM (stückweise dekodiert) statt als Sample. Im Sample-Modus dekodiert Godot 4.7
+		# jedes Stück beim ersten Abspielen komplett (⌀ 32 MB PCM im Browser + kurz das Doppelte im WASM-Heap)
+		# und gibt es nie wieder frei (unregister_stream_as_sample wird von der Engine nirgends aufgerufen).
+		# Jedes Minispiel bringt drei eigene Stücke mit → nach 3–5 Runden mehrere hundert MB, bis der Browser
+		# den Tab beendet und neu lädt („zurück zu Tippen zum Starten“). Kurze Effekte bleiben Samples.
+		for mp in _mp:
+			mp.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	_voice = _mk_player("Voice")
 	_jingle = _mk_player("Music")
 	apply_volumes()
@@ -479,10 +487,25 @@ func minigame_music(track := -1, fade := 0.35, sect := "normal", from_pos := 0.0
 	var sec: Dictionary = MusicMeta.MINIGAME[mg_track][sect]
 	_play_path(String(sec.file), fade, sect != "outro", maxf(0.0, from_pos))
 	_set_section(sect, float(sec.bpm))
-	_beat = maxf(0.0, from_pos) * float(sec.bpm) / 60.0
+	_beat = maxf(0.0, from_pos) * float(sec.bpm) / 60.0 - _latency_beats(float(sec.bpm))
 
 
 ## BPM eines Abschnitts (ohne ihn abzuspielen) – z. B. um ein Notenblatt vorab zu bauen.
+## Im Web läuft Musik als Stream über den Ausgabepuffer: hörbar erst nach der Ausgabelatenz. Die Beat-Uhr
+## startet um genau so viel später, damit Rhythmus-Spiele und Takt-Effekte synchron zum Ton bleiben.
+func _latency_beats(b: float) -> float:
+	if not OS.has_feature("web"):
+		return 0.0
+	return clampf(AudioServer.get_output_latency(), 0.0, 0.25) * b / 60.0
+
+
+## Vor einem Szenenwechsel (Web): Musik kurz ausblenden. Der Stream wird auf dem Hauptthread nachgemischt;
+## während die nächste Szene lädt, stünde er sonst still und würde knacksen. Die neue Szene startet ihre Musik selbst.
+func fade_for_load(fade := 0.3) -> void:
+	if OS.has_feature("web"):
+		_fade_out_all(fade)
+
+
 static func track_bpm(track: int, sect := "normal") -> float:
 	return float(MusicMeta.MINIGAME[clampi(track, 0, MusicMeta.MINIGAME.size() - 1)][sect].bpm)
 
@@ -631,7 +654,7 @@ func _process(delta: float) -> void:
 		# Spät um "late" Sekunden? Dann genauso weit in den neuen Abschnitt springen – Phase bleibt exakt.
 		_play_path(String(data.file), fade, nsec != "outro", clampf(late, 0.0, 0.25))
 		_set_section(nsec, float(data.bpm))
-		_beat = late * float(data.bpm) / 60.0
+		_beat = late * float(data.bpm) / 60.0 - _latency_beats(float(data.bpm))
 
 
 func set_music_pitch(p: float) -> void:

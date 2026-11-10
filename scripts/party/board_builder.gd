@@ -971,7 +971,8 @@ func apply_time_of_day(night: bool, board: Node, animate := true) -> void:
 	if env and env.environment:
 		var e := env.environment
 		var tw := board.create_tween().set_parallel(true)
-		tw.tween_property(e, "ambient_light_energy", 0.35 if night else 0.45, maxf(dur, 0.01))
+		var amb_day := float(env.get_meta("ambient_day", 0.45))
+		tw.tween_property(e, "ambient_light_energy", amb_day * 0.8 if night else amb_day, maxf(dur, 0.01))
 		tw.tween_property(e, "ambient_light_color", Color("#5a6aa8") if night else Color("#9fb8dc"), maxf(dur, 0.01))
 		tw.tween_property(e, "background_energy_multiplier", 0.25 if night else 1.0, maxf(dur, 0.01))
 		if e.fog_enabled:

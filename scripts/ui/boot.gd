@@ -25,6 +25,8 @@ var _args := {}
 func _ready() -> void:
 	_parse_args()
 	get_tree().root.theme = UI.theme()
+	if _args.has("log-scenes"):
+		Router.log_scenes = true
 	if _args.has("cpu"):
 		for p in Game.players:
 			p.cpu = true
@@ -126,7 +128,7 @@ func _parse_args() -> void:
 		if q is String and (q as String).length() > 1:
 			for part in (q as String).substr(1).split("&"):
 				var kv2 := part.split("=", true, 1)
-				if kv2.size() == 2 and kv2[0] in ["scene", "mode", "cpu", "board", "track"]:
+				if kv2.size() == 2 and kv2[0] in ["scene", "mode", "cpu", "board", "track", "rounds", "party-mode", "log-scenes"]:
 					_args[kv2[0]] = kv2[1].uri_decode()
 
 

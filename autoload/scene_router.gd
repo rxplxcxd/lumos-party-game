@@ -5,6 +5,7 @@ signal scene_changed(path: String)
 
 var params: Dictionary = {}
 var busy := false
+var log_scenes := "--log-scenes" in OS.get_cmdline_user_args()   # Web: ?log-scenes=1
 
 var _layer: CanvasLayer
 var _rect: ColorRect
@@ -58,9 +59,10 @@ func goto(path: String, p: Dictionary = {}) -> void:
 		return
 	busy = true
 	params = p
-	if "--log-scenes" in OS.get_cmdline_user_args():
+	if log_scenes:
 		print("[SCENE] %s · Speicher %.0f MB · Objekte %d" % [path.get_file(), Performance.get_monitor(Performance.MEMORY_STATIC) / 1e6, int(Performance.get_monitor(Performance.OBJECT_COUNT))])
 	Audio.sfx("whoosh")
+	Audio.fade_for_load(0.4)
 	await _wipe(2.6, 0.0, 0.45)
 	_loading.visible = true
 	await get_tree().process_frame

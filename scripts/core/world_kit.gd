@@ -76,16 +76,23 @@ static func env(parent: Node, preset := "day", glow := true) -> WorldEnvironment
 	sky.sky_material = sm
 	e.background_mode = Environment.BG_SKY
 	e.sky = sky
+	# Helle Tag-Szenen (Horizont hell) wirkten milchig: im Mittel 75–83 % Helligkeit bei flachem Kontrast, Farben
+	# liefen im Tonemapper ins Weiß. Dort: weniger Belichtung, Umgebungslicht und Dunst, mehr Kontrast/Sättigung.
+	# Gemessen (tools/dev/look_probe.gd): Sättigung Wiese 0,41 → 0,57, Bucht 0,52 → 0,72, Wolkenland 0,25 → 0,33.
+	# Nacht-/Höhlen-Presets waren schon satt und bleiben, wie sie sind.
+	var hz: Color = p.sky_horizon
+	var bright := 0.2126 * hz.r + 0.7152 * hz.g + 0.0722 * hz.b > 0.45
 	# Himmel als Umgebungslicht (natürlicher Verlauf statt flacher Farbe), leicht eingefärbt
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	e.ambient_light_color = p.ambient
-	e.ambient_light_sky_contribution = 0.4   # weniger bläuliches Himmelslicht in den Schatten → sattere Farben
-	e.ambient_light_energy = p.ambient_energy
+	e.ambient_light_sky_contribution = 0.2 if bright else 0.4   # weniger bläuliches Himmelslicht in den Schatten
+	e.ambient_light_energy = float(p.ambient_energy) * (0.7 if bright else 1.0)
+	we.set_meta("ambient_day", e.ambient_light_energy)
 	e.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	# ACES statt Filmic: Filmic entsättigt helle Flächen stark (Ursache für den „ausgewaschenen“ Look);
 	# ACES hält Farben satt und gibt Kontrast, wie im Nachtmodus des Zauberwalds.
 	e.tonemap_mode = Environment.TONE_MAPPER_ACES
-	e.tonemap_exposure = 1.08
+	e.tonemap_exposure = 0.86 if bright else 1.08
 	e.tonemap_white = 3.0
 	if glow:
 		e.glow_enabled = true
@@ -95,13 +102,13 @@ static func env(parent: Node, preset := "day", glow := true) -> WorldEnvironment
 		e.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	e.fog_enabled = p.fog
 	e.fog_light_color = p.fog_color
-	e.fog_density = p.fog_density
+	e.fog_density = float(p.fog_density) * (0.5 if bright else 1.0)
 	e.fog_sun_scatter = 0.05
 	e.fog_aerial_perspective = 0.12   # weniger Dunst-Schleier über nahen Objekten
 	e.adjustment_enabled = true
-	e.adjustment_brightness = 1.03
-	e.adjustment_contrast = 1.12
-	e.adjustment_saturation = 1.48
+	e.adjustment_brightness = 1.0 if bright else 1.03
+	e.adjustment_contrast = 1.22 if bright else 1.12
+	e.adjustment_saturation = 1.5 if bright else 1.48
 	we.environment = e
 	parent.add_child(we)
 	var sun := DirectionalLight3D.new()

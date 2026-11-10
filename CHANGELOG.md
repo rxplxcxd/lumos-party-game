@@ -3,6 +3,30 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2** = offizieller Release.
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.1.9
+* **Fix: Neustart ab Runde 3–5 (zurück zu „Tippen zum Starten“).** Das Spiel selbst springt nie zum Startbildschirm,
+  es war der Browser: Er hat den Tab wegen Speichermangels beendet und neu geladen. Ursache war die Musik.
+  * Im Web spielt Godot 4.7 Ton standardmäßig als „Sample“: Beim ersten Abspielen wird ein Stück komplett entpackt,
+    im Schnitt 32 MB, kurzzeitig das Doppelte im WebAssembly-Speicher. Freigegeben wird es nie, denn
+    `unregister_stream_as_sample` ruft die Engine nirgends auf.
+  * Jedes Minispiel bringt drei eigene Stücke mit (normal, Hurry-Up, Outro).
+  * Gemessen im Web-Export (Chromium, CPU-Party): **878 MB** Audio-Puffer nach zwei Runden, JS-Speicher bis 380 MB,
+    WebAssembly-Speicher 232 → 334 MB.
+* Jetzt läuft Musik im Web als Stream und wird stückweise dekodiert; kurze Effekte bleiben Samples. Gleicher Test:
+  **35 MB** Audio-Puffer, JS-Speicher stabil um 45 MB, WebAssembly 225 MB.
+  * Die Beat-Uhr gleicht die Ausgabelatenz des Streams aus, Rhythmus-Spiele bleiben synchron.
+  * Vor Szenenwechseln blendet die Musik kurz aus, damit sie während des Ladens nicht knackst.
+* **Kräftigere Farben auf hellen Brettern.** Wiese, Bucht, Wolkenland, Frostdorf, Sternwarte, Torte und Zauberwald
+  am Tag wirkten milchig: im Mittel 75–83 % Helligkeit bei flachem Kontrast, die Farben liefen im Tonemapper ins Weiß.
+  * Für helle Tag-Presets: weniger Belichtung, Umgebungslicht, Himmels-Anteil und Dunst, dafür mehr Kontrast
+    und Sättigung.
+  * Gemessene Sättigung: Wiese 0,41 → 0,53, Bucht 0,45 → 0,64, Zauberwald 0,52 → 0,65, Torte 0,44 → 0,57,
+    Frostdorf 0,20 → 0,28.
+  * Nacht- und Höhlen-Bretter waren schon satt und bleiben unverändert. Die Regler Farbsättigung/Farbstärke wirken
+    wie bisher zusätzlich.
+* Testwerkzeuge: Web-URL-Parameter `rounds`, `party-mode`, `log-scenes` für Langzeittests;
+  `tools/dev/look_probe.gd` vergleicht Farb-Varianten eines Bretts im echten Renderer.
+
 ## 1.1.8
 * **Firebase ist jetzt das einzige Backend** (Konten, Google-Anmeldung, Profil-Sync, Online-Lobbys). Der
   Supabase-Client aus 1.1.7 ist komplett entfernt. Die echten Fixes aus 1.1.7 bleiben erhalten:
