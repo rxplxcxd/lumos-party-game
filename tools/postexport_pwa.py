@@ -68,6 +68,15 @@ def main() -> int:
         for f in (src / "brand").iterdir():
             if f.is_file():
                 shutil.copy(f, brand / f.name)
+    # Musik als Einzeldateien neben das Spiel (nicht im index.pck – wird bei Bedarf gestreamt)
+    music_src = ROOT / "assets" / "music"
+    n_music = 0
+    for f in sorted(music_src.rglob("*.ogg")):
+        dst = out / "music" / f.relative_to(music_src)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(f, dst)
+        n_music += 1
+    print(f"Musik: {n_music} Songs nach {out / 'music'} kopiert")
     # Versions-Hash über die großen Dateien
     h = hashlib.sha256()
     for name in ("index.pck", "index.wasm", "index.js", "index.html"):

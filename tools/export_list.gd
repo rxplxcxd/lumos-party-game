@@ -31,7 +31,13 @@ func run() -> void:
 	var quoted := PackedStringArray()
 	for f in list:
 		quoted.append("\"%s\"" % f)
-	var cfg := (PRESET + LINUX).replace("$FILES", ", ".join(quoted))
+	# Web: Musik NICHT ins Start-Paket – sie wird als music/…-Dateien neben das Spiel gelegt
+	# (tools/postexport_pwa.py) und zur Laufzeit gestreamt (Audio._play_path). Linux behält alles im PCK.
+	var web_quoted := PackedStringArray()
+	for f in list:
+		if not String(f).begins_with("res://assets/music/"):
+			web_quoted.append("\"%s\"" % f)
+	var cfg := PRESET.replace("$FILES", ", ".join(web_quoted)) + LINUX.replace("$FILES", ", ".join(quoted))
 	var fa := FileAccess.open("res://export_presets.cfg", FileAccess.WRITE)
 	fa.store_string(cfg)
 	fa.close()

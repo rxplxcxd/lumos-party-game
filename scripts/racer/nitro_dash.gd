@@ -574,6 +574,11 @@ func _physics_process(delta: float) -> void:
 	_update_projectiles(delta)
 	_rank()
 	_closeup_cd = maxf(0.0, _closeup_cd - delta)
+	# Online: Ein entfernter Fahrer meldet sein Ziel per Zustand („fi“) – dabei läuft _on_lap nicht durch die
+	# Ziel-Logik. Deshalb hier jede Physik-Runde prüfen, ob alle menschlichen Fahrer im Ziel sind.
+	if state == "race" and _finish_wait < 0.0 and _all_humans_done():
+		_finish_wait = 3.5
+		state = "finish"
 	if _finish_wait > 0.0:
 		_finish_wait -= delta
 		if _finish_wait <= 0.0:
@@ -686,11 +691,7 @@ func _on_lap(r: Racer, lap: int) -> void:
 			_message("ZIEL! %d. Platz" % r.place, UI.GOLD)
 			FX.confetti(r.global_position + Vector3.UP * 3.0, 80)
 			r.visual.hero.react("victory")
-		var all_humans_done := true
-		for o in racers:
-			if not o.is_cpu and not o.finished:
-				all_humans_done = false
-		if (all_humans_done and _finish_wait < 0.0) or (focus.is_cpu and r == focus):
+		if (_all_humans_done() and _finish_wait < 0.0) or (focus.is_cpu and r == focus):
 			_finish_wait = 3.5
 			state = "finish"
 	elif lap == laps - 1 and r == focus:
@@ -700,6 +701,16 @@ func _on_lap(r: Racer, lap: int) -> void:
 	elif r == focus and lap > 0 and lap < laps:
 		Audio.sfx("bong")
 		_message("Runde %d / %d" % [lap + 1, laps], Color.WHITE)
+
+
+func _all_humans_done() -> bool:
+	var humans := 0
+	for o in racers:
+		if not o.is_cpu:
+			humans += 1
+			if not o.finished:
+				return false
+	return humans > 0
 
 
 func _end_race() -> void:

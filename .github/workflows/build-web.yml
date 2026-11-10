@@ -90,6 +90,14 @@ jobs:
           HEADLESS=1 GODOT=$GODOT_BIN bash tools/dev/net_test.sh build/net-race race lumos_ring
           HEADLESS=1 GODOT=$GODOT_BIN PORT=9124 bash tools/dev/net_test.sh build/net-sumo sumo_shove
 
+      - name: Online-Test-Logs (bei Fehler)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: net-test-logs
+          path: build/net-*
+          if-no-files-found: ignore
+
       - name: Web-Export (WebGL2, ohne Threads – läuft auf Vercel, GitHub Pages & iOS)
         run: |
           mkdir -p build/web
@@ -145,8 +153,20 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # GitHub Pages muss EINMAL aktiviert sein (Settings → Pages → Source: „GitHub Actions“). Mit einem
+      # Repository-Secret PAGES_TOKEN (Fine-grained PAT: Administration + Pages: write) schaltet der Workflow
+      # Pages auch selbst ein.
+      - name: GitHub Pages konfigurieren
+        uses: actions/configure-pages@v5
+        with:
+          enablement: ${{ secrets.PAGES_TOKEN != '' }}
+          token: ${{ secrets.PAGES_TOKEN || github.token }}
+
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Live-URL
+        run: echo "::notice title=Live::${{ steps.deployment.outputs.page_url }}"
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')

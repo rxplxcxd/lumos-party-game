@@ -177,6 +177,14 @@ Test-Start-Optionen (nach `--`): `--scene=res://scenes/minigames/HotBomb.tscn --
 Build-Dateien (`web/index.*`, `.pck`, `.wasm`, `version.json`, ZIPs) sind in `.gitignore` und werden **nicht**
 eingecheckt – lokal per Python-Server testen, das Deployment baut GitHub Actions selbst.
 
+* **Live-Version (GitHub Pages)**: https://rxplxcxd.github.io/lumos-party-game/ – wird bei jedem Push auf `main`
+  automatisch gebaut und veröffentlicht (Workflow `.github/workflows/build-web.yml`). Einmalig muss unter
+  *Settings → Pages* bei *Source* „GitHub Actions“ gewählt sein (alternativ Secret `PAGES_TOKEN` mit
+  Administration- + Pages-Schreibrecht, dann aktiviert der Workflow Pages selbst).
+* **Musik im Web** liegt nicht im `index.pck`, sondern als `music/…ogg` neben dem Spiel (kopiert von
+  `tools/postexport_pwa.py`) und wird zur Laufzeit gestreamt – das Start-Paket ist dadurch ~30 MB kleiner.
+* **Assets**: Im Repo liegen nur noch Runtime-Formate (GLB/glTF, PNG-Texturen, OGG). Neue Asset-Pakete mit
+  `python3 tools/asset_pipeline.py` einsortieren; Ordner mit `.gdignore` (FBX/OBJ/Previews …) danach löschen.
 * **Laden im Browser**: Der Ladebildschirm (`web/shell.html`) lädt `index.wasm`/`index.pck` selbst – mit
   Stillstand-Erkennung, Wiederholungen und „Neu laden“-Knopf; der Service Worker (`web/sw.js`) greift online
   nicht in diese Dateien ein und wird erst nach dem Spielstart registriert.

@@ -211,6 +211,7 @@ func _ready() -> void:
 	_jingle = _mk_player("Music")
 	apply_volumes()
 	EventBus.settings_changed.connect(apply_volumes)
+	get_tree().create_timer(2.0).timeout.connect(_start_prefetch)
 
 
 func _mk_player(bus: String) -> AudioStreamPlayer:
@@ -245,8 +246,100 @@ func _set_bus(bus_name: String, lin: float) -> void:
 
 func _stream(path: String) -> AudioStream:
 	if not _cache.has(path):
+		if _is_web_music(path):
+			_fetch_music(path, true)
+			return null   # kommt per Download nach (siehe _play_path)
 		_cache[path] = load(path)
 	return _cache[path]
+
+
+# --- Web: Musik nicht im Start-Paket -------------------------------------------------------------------------
+# Im Web-Export liegen die Songs NICHT in index.pck (≈ 30 MB weniger Erst-Download), sondern als einzelne
+# Dateien unter music/… neben dem Spiel. Gebraucht → sofort geladen; alle übrigen werden nach dem Start
+# nacheinander im Hintergrund vorgeladen (Menü zuerst, dann Minispiel-Tracks, dann Bretter).
+signal music_loaded(path: String)
+
+var _web_base := ""
+var _fetching := {}
+var _prefetch: Array[String] = []
+var _deferred := {}
+
+
+func _is_web_music(path: String) -> bool:
+	return OS.has_feature("web") and path.begins_with("res://assets/music/") and not ResourceLoader.exists(path)
+
+
+func _music_url(path: String) -> String:
+	if _web_base == "":
+		_web_base = str(JavaScriptBridge.eval("location.href.split('#')[0].split('?')[0].replace(/[^/]*$/, '')", true))
+	return _web_base + "music/" + path.trim_prefix("res://assets/music/")
+
+
+func _fetch_music(path: String, urgent := false) -> void:
+	if _cache.has(path) or _fetching.has(path):
+		return
+	if not urgent and not _fetching.is_empty():
+		return   # Vorladen strikt nacheinander – drängelt nie vor einen gerade gebrauchten Song
+	_fetching[path] = true
+	var req := HTTPRequest.new()
+	req.timeout = 60.0
+	add_child(req)
+	var ok := false
+	for attempt in 3:
+		if req.request(_music_url(path)) != OK:
+			break
+		var r: Array = await req.request_completed
+		if int(r[0]) == HTTPRequest.RESULT_SUCCESS and int(r[1]) == 200:
+			var st := AudioStreamOggVorbis.load_from_buffer(r[3])
+			if st:
+				_cache[path] = st
+				ok = true
+				break
+		await get_tree().create_timer(1.0 + attempt).timeout
+	req.queue_free()
+	_fetching.erase(path)
+	if not ok:
+		push_warning("[Audio] Musik nicht ladbar: " + path)
+	else:
+		music_loaded.emit(path)
+		if String(_deferred.get("path", "")) == path and String(_deferred.get("key", "")) == _music_current:
+			var d := _deferred
+			_deferred = {}
+			_crossfade_to(_cache[path], float(d.fade), bool(d.loop), float(d.from))
+	_prefetch_next()
+
+
+func _start_prefetch() -> void:
+	if not OS.has_feature("web"):
+		return
+	_prefetch.clear()
+	_prefetch.append(MUSIC.get("menu", ""))
+	for t in MusicMeta.MINIGAME:
+		for sec in ["normal", "hurry", "outro"]:
+			_prefetch.append(String(t[sec].file))
+	for p in MUSIC.values():
+		_prefetch.append(String(p))
+	_prefetch_next()
+
+
+func _prefetch_next() -> void:
+	while not _prefetch.is_empty():
+		var p: String = _prefetch.pop_front()
+		if p != "" and _is_web_music(p) and not _cache.has(p) and not _fetching.has(p):
+			_fetch_music(p)
+			return
+
+
+## Spielt einen Song ab; fehlt er im Web noch, wird er geladen und startet, sobald er da ist
+## (vorher ausblenden, damit die Beat-Uhr nicht mit einem falschen Song läuft).
+func _play_path(path: String, fade: float, loop: bool, from_pos := 0.0) -> void:
+	var st := _stream(path)
+	if st:
+		_deferred = {}
+		_crossfade_to(st, fade, loop, from_pos)
+		return
+	_deferred = {"path": path, "key": _music_current, "fade": fade, "loop": loop, "from": from_pos}
+	_fade_out_all(minf(fade, 0.4))
 
 
 func _pick(id: String) -> AudioStream:
@@ -371,7 +464,7 @@ func music(id: String, fade := 1.0) -> void:
 		bpm = 0.0
 		return
 	var meta: Dictionary = MusicMeta.BOARDS.get(id, {})
-	_crossfade_to(_stream(MUSIC[id]), fade, true)
+	_play_path(MUSIC[id], fade, true)
 	_set_section("board", float(meta.get("bpm", 120.0)))
 
 
@@ -384,7 +477,7 @@ func minigame_music(track := -1, fade := 0.35, sect := "normal", from_pos := 0.0
 	_music_current = "minigame_%d" % mg_track
 	_sched.clear()
 	var sec: Dictionary = MusicMeta.MINIGAME[mg_track][sect]
-	_crossfade_to(_stream(String(sec.file)), fade, sect != "outro", maxf(0.0, from_pos))
+	_play_path(String(sec.file), fade, sect != "outro", maxf(0.0, from_pos))
 	_set_section(sect, float(sec.bpm))
 	_beat = maxf(0.0, from_pos) * float(sec.bpm) / 60.0
 
@@ -536,7 +629,7 @@ func _process(delta: float) -> void:
 		_sched.clear()
 		var data: Dictionary = MusicMeta.MINIGAME[mg_track][nsec]
 		# Spät um "late" Sekunden? Dann genauso weit in den neuen Abschnitt springen – Phase bleibt exakt.
-		_crossfade_to(_stream(String(data.file)), fade, nsec != "outro", clampf(late, 0.0, 0.25))
+		_play_path(String(data.file), fade, nsec != "outro", clampf(late, 0.0, 0.25))
 		_set_section(nsec, float(data.bpm))
 		_beat = late * float(data.bpm) / 60.0
 
