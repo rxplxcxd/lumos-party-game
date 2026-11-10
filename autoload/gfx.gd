@@ -28,11 +28,17 @@ var on_battery := false
 var _fps_acc := 0.0
 var _fps_frames := 0
 var _good_time := 0.0
+var _bad_time := 0.0
 var _fps_label: Label
 var _current_fps := 60.0
 
 
 func _ready() -> void:
+	get_viewport().size_changed.connect(func() -> void:
+		var cap := minf(float(preset().scale), _pixel_cap())
+		if dynamic_scale > cap:
+			dynamic_scale = cap
+			get_viewport().scaling_3d_scale = cap)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_profile_hardware()
 	get_tree().node_added.connect(_on_node_added)
@@ -99,6 +105,17 @@ func _profile_hardware() -> void:
 	hardware = {"cores": cores, "memory_gb": snappedf(mem_gb, 0.1), "gpu": gpu, "mobile": mobile, "software": software}
 
 
+## 3D-Pixelbudget: Hochauflösende Displays (Retina/4K, Browser mit devicePixelRatio 2–3) rendern sonst
+## ein Vielfaches der nötigen Pixel. Die 3D-Szene wird auf ~1700 px Breite (Ultra: 2200) begrenzt und
+## hochskaliert; die UI bleibt gestochen scharf.
+func _pixel_cap() -> float:
+	var w := float(get_viewport().get_visible_rect().size.x)
+	if w <= 0.0:
+		return 1.0
+	var budget := 2200.0 if active == "ultra" else 1700.0
+	return clampf(budget / w, 0.35, 1.0)
+
+
 func _effective_preset() -> String:
 	var q: String = Game.settings.get("quality", "auto")
 	if q in PRESETS:
@@ -114,11 +131,12 @@ func apply() -> void:
 	var changed := p != active
 	active = p
 	var cfg := preset()
-	dynamic_scale = float(cfg.scale)
+	dynamic_scale = minf(float(cfg.scale), _pixel_cap())
 	var vp := get_viewport()
 	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
 	vp.scaling_3d_scale = dynamic_scale
-	vp.msaa_3d = cfg.msaa
+	# WebGL: MSAA kostet im Browser überproportional – dort nur bei „Ultra“
+	vp.msaa_3d = cfg.msaa if not OS.has_feature("web") or active == "ultra" else Viewport.MSAA_DISABLED
 	RenderingServer.directional_shadow_atlas_set_size(int(cfg.shadow_size), true)
 	_walk(get_tree().root)
 	_fps_label.visible = bool(Game.settings.get("show_fps", false))
@@ -150,7 +168,7 @@ func _tune(n: Node) -> void:
 		var e := (n as WorldEnvironment).environment
 		if not e.has_meta("gfx_glow_wanted"):
 			e.set_meta("gfx_glow_wanted", e.glow_enabled)
-		e.glow_enabled = bool(e.get_meta("gfx_glow_wanted")) and bool(cfg.glow)
+		e.glow_enabled = bool(e.get_meta("gfx_glow_wanted")) and bool(cfg.glow) and not (OS.has_feature("web") and ORDER.find(active) < 2)
 	elif n is CPUParticles3D:
 		var pp := n as CPUParticles3D
 		if not pp.has_meta("gfx_amount"):
@@ -186,13 +204,25 @@ func _process(delta: float) -> void:
 		return
 	var cfg := preset()
 	var vp := get_viewport()
-	if _current_fps < float(cfg.fps_target) - 8.0 and dynamic_scale > float(cfg.min_scale):
-		dynamic_scale = maxf(float(cfg.min_scale), dynamic_scale - 0.08)
-		vp.scaling_3d_scale = dynamic_scale
+	var top := minf(float(cfg.scale), _pixel_cap())
+	var floor_s := minf(float(cfg.min_scale), top)
+	if _current_fps < float(cfg.fps_target) - 8.0:
 		_good_time = 0.0
+		if dynamic_scale > floor_s + 0.001:
+			dynamic_scale = maxf(floor_s, dynamic_scale - 0.08)
+			vp.scaling_3d_scale = dynamic_scale
+			_bad_time = 0.0
+		else:
+			# Schon an der Untergrenze und immer noch zu langsam → eine Qualitätsstufe runter (nur bei „Auto“)
+			_bad_time += 1.0
+			if _bad_time >= 4.0 and Game.settings.get("quality", "auto") == "auto" and ORDER.find(detected) > 0:
+				_bad_time = 0.0
+				detected = ORDER[ORDER.find(detected) - 1]
+				apply()
 	elif _current_fps > float(cfg.fps_target):
+		_bad_time = 0.0
 		_good_time += 1.0
-		if _good_time > 5.0 and dynamic_scale < float(cfg.scale):
-			dynamic_scale = minf(float(cfg.scale), dynamic_scale + 0.05)
+		if _good_time > 5.0 and dynamic_scale < top:
+			dynamic_scale = minf(top, dynamic_scale + 0.05)
 			vp.scaling_3d_scale = dynamic_scale
 			_good_time = 0.0

@@ -3,6 +3,15 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2** = offizieller Release.
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.1.3
+* **Performance (vor allem im Browser):**
+  * 3D-Pixelbudget: Auf Retina-/4K-Displays (devicePixelRatio 2–3) wurde die Szene bisher in voller
+    Geräteauflösung gerendert. Jetzt max. ~1700 px Breite (Ultra 2200) mit Hochskalierung; die UI bleibt scharf.
+  * Dynamische Auflösung steigt bei dauerhaft zu niedrigen FPS jetzt auch eine Qualitätsstufe ab, statt an
+    der Untergrenze stecken zu bleiben (nur bei Qualität „Auto“).
+  * WebGL: MSAA nur noch auf „Ultra“, Glow erst ab „Hoch“, weiche Schattenfilter aus.
+  * Physik: höchstens 4 Physik-Schritte pro Bild (keine Verlangsamungs-Spirale auf schwachen Geräten).
+
 ## 1.1.2
 * **Automatisches Deployment:** Jeder Push auf `main` baut per GitHub Actions den Web-Export, führt das
   PWA-Postprocessing und den Browser-Rauchtest aus und veröffentlicht auf GitHub Pages
