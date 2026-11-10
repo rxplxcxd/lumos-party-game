@@ -120,11 +120,13 @@ func _build_toast() -> void:
 	add_child(layer)
 	_toast = Label.new()
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_toast.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	_toast.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # lange Meldungen umbrechen statt über den Rand
 	_toast.add_theme_font_size_override("font_size", 24)
 	_toast.add_theme_color_override("font_outline_color", Color(0.06, 0.02, 0.14))
 	_toast.add_theme_constant_override("outline_size", 10)
 	_toast.modulate.a = 0.0
-	UI.place(_toast, Control.PRESET_CENTER_BOTTOM, Vector2(-500, -150), Vector2(1000, 40))
+	UI.place(_toast, Control.PRESET_CENTER_BOTTOM, Vector2(-500, -190), Vector2(1000, 80))
 	layer.add_child(_toast)
 
 
@@ -265,6 +267,19 @@ func resume_lumos() -> void:
 		bridge_event.emit("lumos_resume_failed", null)
 
 
+## Google-Knopf gedrückt: Popup fürs Loslassen scharf schalten (öffnet dann im echten Browser-Ereignis,
+## sonst greift der Popup-Blocker – Godot verarbeitet Klicks erst einen Frame später).
+func google_arm() -> void:
+	if _bridge:
+		JavaScriptBridge.eval("LumosBridge.fbGoogleArm()", true)
+
+
+## Profil-Fenster offen: Firebase-SDK und Popup-iframe vorladen, damit „Mit Google anmelden“ sofort öffnet.
+func prepare_google() -> void:
+	if _bridge and not signed_in():
+		JavaScriptBridge.eval("LumosBridge.fbWarm()", true)
+
+
 func login_google() -> void:
 	if not _bridge:
 		error.emit("Google-Anmeldung ist im Browser bzw. in der installierten Web-App verfügbar.")
@@ -272,7 +287,7 @@ func login_google() -> void:
 	busy = true
 	last_error = ""
 	changed.emit()
-	_save_account("google")   # nötig für den Redirect-Weg (iOS-Homescreen): nach der Rückkehr Firebase wieder starten
+	_save_account("google")   # nach einem Neuladen Firebase wieder starten (Sitzung liegt im Firebase-Speicher)
 	JavaScriptBridge.eval("LumosBridge.fbGoogle()", true)
 
 
@@ -391,7 +406,8 @@ func _on_bridge(type: String, data: Variant) -> void:
 			_set_user(data as Dictionary)
 		"fb_user":
 			busy = false
-			last_error = ""
+			if data != null:
+				last_error = ""
 			if data == null:
 				fb_uid = ""
 				if String(user.get("provider", "")) not in ["lumos", "guest", ""]:
@@ -449,7 +465,8 @@ func _set_user(d: Dictionary) -> void:
 	_save_account(prov)
 	profile["name"] = user.name
 	changed.emit()
-	info.emit("Angemeldet als %s (%s)" % [user.name, provider_label()])
+	if prov != "anonymous":   # stille Gast-Identität für Online-Lobbys – keine „Angemeldet als“-Meldung
+		info.emit("Angemeldet als %s (%s)" % [user.name, provider_label()])
 	_fetch_profile()
 
 

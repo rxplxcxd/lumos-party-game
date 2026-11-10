@@ -664,7 +664,9 @@ func _login_view(v: VBoxContainer) -> void:
 			g.add_theme_color_override("font_focus_color", Color("#202124"))
 			g.icon = UI.icon_tex("globe", 30, Color("#4285f4"))
 			g.custom_minimum_size.y = 66
+			g.button_down.connect(func() -> void: Account.google_arm())
 			g.pressed.connect(func() -> void: Account.login_google())
+			Account.prepare_google()
 			v.add_child(g)
 			v.add_child(UI.label("oder mit E-Mail und Passwort", 20, Color(1, 1, 1, 0.6)))
 		var email := LineEdit.new()

@@ -75,6 +75,15 @@ beide voneinander abweichen oder Google den API-Key ablehnt. Ein Tippfehler im K
 bis 1.1.7 lahmgelegt. Nativer Schnelltest ohne Spuren: `godot --headless --path . res://tools/dev/Run.tscn --
 --dev-script=res://tools/dev/firebase_probe.gd [--anon]`.
 
+**Google im Browser nur per Popup:** `signInWithRedirect` funktioniert auf GitHub Pages nicht zuverlässig. Nach
+der Rückkehr liest das SDK das Ergebnis über ein iframe von `lumos-party-game.firebaseapp.com`. Für
+`rxplxcxd.github.io` ist das Drittanbieter-Speicher, und der ist in Chrome 115+, Firefox 109+ und Safari 16.1+
+partitioniert. Folge: Der Google-Login klappt, aber man kommt nicht angemeldet zurück. Das Popup wird beim Drücken
+des Knopfes scharf geschaltet (`LumosBridge.fbGoogleArm`) und beim Loslassen direkt im Browser-Ereignis geöffnet.
+Godot verarbeitet Klicks erst einen Frame später, und Popup-Blocker lassen nur Popups aus einer echten Geste zu.
+Das SDK wird beim Öffnen des Profil-Fensters vorgeladen (`fbWarm`). Ist ein Popup trotzdem blockiert, gibt es eine
+Meldung statt eines Redirects.
+
 ### Firebase-Konsole: Checkliste
 
 1. **Authentication, Anmeldemethode:** *E-Mail/Passwort* (aktiv), *Google* (aktivieren) und *Anonym* (aktivieren,

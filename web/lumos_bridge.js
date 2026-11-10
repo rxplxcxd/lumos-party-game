@@ -65,7 +65,7 @@
 			'auth/user-disabled': 'Dieses Konto wurde gesperrt.',
 			'auth/operation-not-allowed': 'Dieser Anmeldeweg ist im Firebase-Projekt nicht aktiviert.',
 			'auth/admin-restricted-operation': 'Gast-Anmeldung (anonym) ist im Firebase-Projekt nicht aktiviert.',
-			'auth/unauthorized-domain': 'Diese Website ist in Firebase nicht freigegeben (Firebase: Authentication, Einstellungen, Autorisierte Domains).',
+			'auth/unauthorized-domain': 'Domain nicht freigegeben (Firebase: Autorisierte Domains).',
 			'auth/popup-blocked': 'Das Anmeldefenster wurde vom Browser blockiert.',
 			'auth/cancelled-popup-request': 'Anmeldung abgebrochen.',
 		};
@@ -96,7 +96,11 @@
 				auth.onAuthStateChanged(function (u) {
 					emit('fb_user', u ? userInfo(u) : null);
 				});
-				return auth.getRedirectResult().catch(function () { return null; });
+				// Nicht darauf warten (das blockierte früher den ersten Google-Klick um Sekunden): nur noch für
+				// alte, angefangene Redirect-Anmeldungen – und es wärmt das Popup-iframe vor, damit es sofort öffnet.
+				auth.getRedirectResult().then(function (r) {
+					if (r && r.user) emit('fb_user', userInfo(r.user));
+				}).catch(function (e) { console.warn('Firebase getRedirectResult:', e && e.code); });
 			})
 			.catch(function (e) {
 				fbReady = null;
@@ -180,6 +184,57 @@
 		if (s.exp - Date.now() > 60000) return Promise.resolve(s);
 		return cloudFetch('/v1/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken: s.refreshToken }), noAuth: true })
 			.then(storeSession);
+	}
+
+	// --- Google-Anmeldung: nur Popup, im echten Browser-Klick geöffnet ---------------------------------------
+	// Warum kein signInWithRedirect: Nach der Rückkehr liest das SDK das Ergebnis über ein unsichtbares iframe von
+	// authDomain (lumos-party-game.firebaseapp.com). Das Spiel läuft auf rxplxcxd.github.io – für den Browser ist
+	// das iframe Drittanbieter, und dessen Speicher ist seit Chrome 115 / Firefox 109 / Safari 16.1 partitioniert.
+	// getRedirectResult() liefert dann null: Google-Login klappt, aber man kommt nicht angemeldet zurück.
+	// Das Popup reicht das Ergebnis direkt an die Seite zurück und ist davon nicht betroffen.
+	// Browser erlauben Popups nur aus einer Nutzer-Geste. Godot verarbeitet Klicks erst im nächsten Frame,
+	// deshalb wird beim Drücken scharf geschaltet und das Popup beim Loslassen im Browser-Ereignis geöffnet.
+	const G_EVENTS = ['pointerup', 'mouseup', 'touchend', 'click', 'keyup'];
+	let gArm = null;
+	let gOpened = 0;
+
+	function gDisarm() {
+		if (!gArm) return;
+		G_EVENTS.forEach(function (t) { window.removeEventListener(t, gArm.fire, true); });
+		clearTimeout(gArm.timer);
+		gArm = null;
+	}
+
+	function googleErr(e) {
+		const code = (e && e.code) || '';
+		if (code === 'auth/popup-blocked') {
+			return isIOS() && standalone()
+				? 'iOS blockiert hier das Google-Fenster – bitte E-Mail nutzen oder in Safari öffnen.'
+				: 'Pop-up blockiert – bitte Pop-ups für diese Seite erlauben und erneut tippen.';
+		}
+		if (code === 'auth/operation-not-supported-in-this-environment') {
+			return 'Google-Anmeldung geht hier nicht – bitte im Browser öffnen oder E-Mail nutzen.';
+		}
+		if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request' || code === 'auth/user-cancelled') {
+			return 'Google-Anmeldung abgebrochen.';
+		}
+		return errText(e);
+	}
+
+	function googlePopup() {
+		gOpened = Date.now();
+		const run = function () {
+			const p = new window.firebase.auth.GoogleAuthProvider();
+			p.setCustomParameters({ prompt: 'select_account' });
+			return auth.signInWithPopup(p).then(function (cred) {
+				if (cred && cred.user) emit('fb_user', userInfo(cred.user));
+			});
+		};
+		// SDK schon bereit (Normalfall dank fbWarm): sofort und synchron im Ereignis. Sonst erst laden – das Popup
+		// kann dann blockiert werden; die Meldung bittet um einen zweiten Tipp, der sofort klappt.
+		(auth ? run() : ensureFirebase().then(run)).catch(function (e) {
+			emit('auth_error', { provider: 'google', code: (e && e.code) || '', message: googleErr(e) });
+		});
 	}
 
 	const LumosBridge = {
@@ -316,17 +371,30 @@
 			ensureFirebase().then(function () { emit('fb_ready', null); }).catch(function () {});
 		},
 
+		// Google-Knopf gedrückt (Godot: button_down): Popup für das Loslassen scharf schalten.
+		fbGoogleArm: function () {
+			gDisarm();
+			ensureFirebase().catch(function () {});
+			const fire = function (ev) {
+				if ((ev.type === 'keyup' || ev.type === 'keydown') && ev.key !== 'Enter' && ev.key !== ' ') return;
+				gDisarm();
+				googlePopup();   // synchron im Browser-Ereignis → kein Popup-Blocker
+			};
+			G_EVENTS.forEach(function (t) { window.addEventListener(t, fire, true); });
+			gArm = { fire: fire, timer: setTimeout(gDisarm, 4000) };
+		},
+
+		// Google-Knopf ausgelöst (Godot: pressed, einen Frame nach dem Browser-Ereignis). Lief das Popup schon
+		// aus dem Ereignis heraus, nichts tun; sonst (sehr schneller Klick, Tastatur, Gamepad) direkt versuchen.
 		fbGoogle: function () {
-			ensureFirebase().then(function () {
-				const p = new window.firebase.auth.GoogleAuthProvider();
-				p.setCustomParameters({ prompt: 'select_account' });
-				// iOS-Homescreen-Apps blockieren Popups -> Redirect-Flow
-				if (isIOS() && standalone()) return auth.signInWithRedirect(p);
-				return auth.signInWithPopup(p).catch(function (e) {
-					if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) return auth.signInWithRedirect(p);
-					throw e;
-				});
-			}).catch(function (e) { emit('auth_error', { provider: 'google', message: errText(e) }); });
+			if (Date.now() - gOpened < 3000) return;
+			gDisarm();
+			googlePopup();
+		},
+
+		// Profil-Fenster geöffnet: SDK und Popup-iframe vorab laden, damit der Klick sofort ein Popup öffnet.
+		fbWarm: function () {
+			ensureFirebase().catch(function () {});
 		},
 
 		fbEmailLogin: function (email, pw) {
