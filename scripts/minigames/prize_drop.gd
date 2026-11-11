@@ -248,7 +248,7 @@ func net_unpack(d: Dictionary) -> void:
 
 # --- CPU --------------------------------------------------------------------------------------------------------
 
-func cpu_think(slot: int, _delta: float) -> void:
+func cpu_think(slot: int, delta: float) -> void:
 	var level: int = Game.players[slot].cpu_level
 	var mem: Dictionary = cpu_mem[slot]
 	if _left[slot] <= 0:
@@ -260,7 +260,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		mem["wait"] = randf_range(0.3, 1.4)
 	var to := float(mem.aim) - _drop_x[slot]
 	var held := {}
-	mem.wait = float(mem.wait) - 1.0 / 60.0
+	mem.wait = float(mem.wait) - delta
 	if absf(to) < 0.08 and float(mem.wait) <= 0.0:
 		held["a"] = true
 		mem.erase("aim")

@@ -171,7 +171,7 @@ func _rest(method: int, path: String, body: String) -> Dictionary:
 	var tok: String = await Account.fb_token()
 	var url := "%s/%s.json%s" % [db_url, path.trim_prefix("/"), ("?auth=" + tok) if tok != "" else ""]
 	var req := HTTPRequest.new()
-	req.timeout = 8.0
+	req.timeout = 30.0   # langsame Verbindungen/Geräte: nicht vorschnell abbrechen
 	add_child(req)
 	var err := req.request(url, PackedStringArray(["Content-Type: application/json"]), method, body)
 	if err != OK:

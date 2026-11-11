@@ -150,10 +150,12 @@ func _step(delta: float) -> void:
 		if float(s.y) <= 0.0:
 			var inc := rad_to_deg(atan2(-float(s.vy), float(s.vz)))
 			var pos := Vector3(LANE_X[int(s.slot)], 0.0, -float(s.z))
-			if inc < 24.0 and float(s.vz) > 2.8:
+			# Je flacher der Stein aufs Wasser trifft, desto mehr Schwung behält er – stetig, ohne versteckte Kante
+			# (vorher: ab 24° Aufprall sofort versunken → 20,4° Wurf = 88 m, 20,6° = 30 m). Optimum bei ~25°.
+			if inc < 40.0 and float(s.vz) > 2.8:
 				s.skips = int(s.skips) + 1
 				s.vy = -float(s.vy) * 0.6 + 0.6
-				s.vz = float(s.vz) * 0.82
+				s.vz = float(s.vz) * (0.86 - 0.31 * pow(inc / 40.0, 2.0))
 				s.y = 0.01
 				FX.ring(pos + Vector3.UP * 0.05, Color(1, 1, 1, 0.8), 0.9, 0.3)
 				Audio.sfx("plop", pos, -6.0, 1.2 + int(s.skips) * 0.05)
@@ -248,10 +250,9 @@ func cpu_think(slot: int, _delta: float) -> void:
 			InputHub.set_virtual(slot, Vector2.ZERO)
 			return
 	if not mem.has("ang"):
-		# Taktik: Am weitesten fliegt der Stein knapp unter ~20,5° mit voller Kraft – darüber versinkt er sofort.
-		# Jede Stufe hält so viel Sicherheitsabstand zu dieser Kante, wie ihre eigene Streuung verlangt.
+		# Am weitesten fliegt der Stein bei ~25° mit voller Kraft; höhere Stufen treffen das genauer.
 		var spread: float = Game.lv([9.0, 5.0, 2.0], level, true)
-		var aim := clampf(20.2 - spread * 0.95, 8.0, 19.6)
+		var aim := 25.0
 		# Streuung wie bei Menschen: meist nah am Ziel, selten weit daneben (Dreiecksverteilung)
 		mem["ang"] = clampf(aim + (randf_range(-1, 1) + randf_range(-1, 1)) * 0.5 * spread, 3.0, 30.0)
 		var pn: float = Game.lv([0.3, 0.15, 0.06], level, true)

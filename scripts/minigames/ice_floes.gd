@@ -18,6 +18,7 @@ var _snow_t := 0.0
 
 func _init() -> void:
 	game_id = "ice_floes"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "snow"
 	backdrop_style = "sky_day"
 	time_limit = 45.0

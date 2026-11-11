@@ -1266,7 +1266,15 @@ func _page_settings() -> Control:
 		Game.settings.quality = qkeys[i]
 		Game.save_settings())
 	v.add_child(_row("Grafik", q))
-	v.add_child(_toggle("Dynamische Auflösung (stabile 60 FPS)", "dynamic_res"))
+	var hz := DisplayServer.screen_get_refresh_rate()
+	var fnames := ["60 FPS (stabil)", "120 FPS (High-Hz)", "Maximal (%s)" % (("%d Hz" % int(round(hz))) if hz > 0.0 else "Bildschirm")]
+	var fs := Stepper.new().setup(fnames, maxi(0, Gfx.FPS_MODES.find(String(Game.settings.get("fps_mode", "60")))), 300)
+	fs.changed.connect(func(i: int) -> void:
+		Game.settings.fps_mode = Gfx.FPS_MODES[i]
+		Game.save_settings()
+		Gfx.apply_fps())
+	v.add_child(_row("Bildrate", fs))
+	v.add_child(_toggle("Dynamische Auflösung (stabile Bildrate)", "dynamic_res"))
 	v.add_child(_toggle("FPS anzeigen", "show_fps"))
 	v.add_child(_toggle("Split-Screen für mehrere Fahrer", "split_screen"))
 	if not OS.has_feature("web"):

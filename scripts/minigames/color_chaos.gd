@@ -16,6 +16,7 @@ var _half := N * TILE * 0.5
 
 func _init() -> void:
 	game_id = "color_chaos"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "day"
 	time_limit = 40.0
 	arena_radius = 11.0

@@ -142,10 +142,46 @@ func apply() -> void:
 	# WebGL: MSAA kostet im Browser überproportional – dort nur bei „Ultra“
 	vp.msaa_3d = cfg.msaa if not OS.has_feature("web") or active == "ultra" else Viewport.MSAA_DISABLED
 	RenderingServer.directional_shadow_atlas_set_size(int(cfg.shadow_size), true)
+	apply_fps()
 	_walk(get_tree().root)
 	_fps_label.visible = bool(Game.settings.get("show_fps", false))
 	if changed:
 		preset_changed.emit(active)
+
+
+# --- Bildrate (60 / 120 / Maximal) ----------------------------------------------------------------------------
+# Für Bildschirme über 60 Hz: Mit „120“ bzw. „Maximal“ rendert das Spiel entsprechend schneller UND die Physik
+# rechnet im selben Takt – sonst würden bewegte Figuren nur jedes zweite Bild weiterrücken (Mikroruckler).
+# Standard bleibt 60 (stabil, akkuschonend, ideal für schwächere Geräte).
+const FPS_MODES := ["60", "120", "max"]
+
+
+## Ziel-Bildrate der aktuellen Einstellung (0 = unbegrenzt bzw. Bildschirmtakt).
+func fps_cap() -> int:
+	match String(Game.settings.get("fps_mode", "60")):
+		"120":
+			return 120
+		"max":
+			var hz := DisplayServer.screen_get_refresh_rate()
+			return clampi(int(round(hz)), 60, 240) if hz > 0.0 else 0
+	return 60
+
+
+func apply_fps() -> void:
+	if DisplayServer.get_name() == "headless":
+		return   # Tests und Sweeps laufen immer mit 60 Physikschritten
+	var cap := fps_cap()
+	Engine.max_fps = cap
+	var ticks := clampi(cap, 60, 240) if cap > 0 else 120   # Bildschirmtakt unbekannt (z. B. Browser): 120
+	Engine.physics_ticks_per_second = ticks
+	# Höchstens so viele Physikschritte pro Bild, dass die Spielzeit erst unter ~15 FPS gebremst wird
+	Engine.max_physics_steps_per_frame = maxi(4, ticks / 15)
+
+
+## Zielwert der dynamischen Auflösung passend zur gewählten Bildrate.
+func _fps_target() -> float:
+	var cap := fps_cap()
+	return float(preset().fps_target) * (maxf(1.0, cap / 60.0) if cap > 0 else 1.0)
 
 
 func _walk(n: Node) -> void:
@@ -346,7 +382,7 @@ func _process(delta: float) -> void:
 	var vp := get_viewport()
 	var top := minf(float(cfg.scale), _pixel_cap())
 	var floor_s := minf(float(cfg.min_scale), top)
-	if _current_fps < float(cfg.fps_target) - 8.0:
+	if _current_fps < _fps_target() - 8.0:
 		_good_time = 0.0
 		if dynamic_scale > floor_s + 0.001:
 			dynamic_scale = maxf(floor_s, dynamic_scale - 0.08)
@@ -359,7 +395,7 @@ func _process(delta: float) -> void:
 				_bad_time = 0.0
 				detected = ORDER[ORDER.find(detected) - 1]
 				apply()
-	elif _current_fps > float(cfg.fps_target):
+	elif _current_fps > _fps_target():
 		_bad_time = 0.0
 		_good_time += 1.0
 		if _good_time > 5.0 and dynamic_scale < top:

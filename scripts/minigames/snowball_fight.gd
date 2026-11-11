@@ -18,6 +18,7 @@ var _ammo_labels: Array[Label3D] = []
 
 func _init() -> void:
 	game_id = "snowball_fight"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	touch_profile = "throw"
 	env_preset = "snow"
 	time_limit = 45.0

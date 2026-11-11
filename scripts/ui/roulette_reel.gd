@@ -5,6 +5,8 @@ extends Control
 
 signal stopped(index: int)
 
+const FONT_PX := 42
+
 var names: Array = []
 var colors: Array = []
 var offset := 0.0          # Index-Position der Walze (float), Mitte = round(offset)
@@ -21,6 +23,7 @@ func setup(entries: Array, cols: Array = []) -> RouletteReel:
 	_font = UI.title_font()
 	custom_minimum_size = Vector2(640, row_h * visible_rows + 24)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	clip_contents = true   # Zeilen nie über den Walzenrand hinaus zeichnen
 	offset = randi() % maxi(1, names.size())
 	_last_tick = int(round(offset))
 	return self
@@ -42,6 +45,22 @@ func spin_to(target: int, loops := 3, duration := 3.4) -> void:
 	create_tween().tween_property(self, "_glow", 0.0, 1.2)
 	queue_redraw()
 	stopped.emit(wrapi(int(round(offset)), 0, n))
+
+
+## Bereitet die Schrift für alle Einträge vor (einmal unsichtbar zeichnen), damit das erste Drehen nicht ruckelt.
+## Aufruf z. B. beim Laden des Bretts, solange noch der Ladebildschirm liegt.
+static func prewarm(parent: Node, entries: Array) -> void:
+	var chars := {}
+	for e in entries:
+		for c in String(e):
+			chars[c] = true
+	var warm := RouletteReel.new().setup(["".join(chars.keys()) + "0123456789!?"], [])
+	warm.modulate.a = 0.01
+	warm.position = Vector2(-4000, -4000)
+	parent.add_child(warm)
+	warm.offset = 0.0
+	warm.queue_redraw()
+	parent.get_tree().create_timer(0.3, true, false, true).timeout.connect(warm.queue_free)
 
 
 func current_index() -> int:
@@ -82,12 +101,15 @@ func _draw() -> void:
 		var alpha := clampf(1.0 - dist * 0.85, 0.0, 1.0)
 		var idx := wrapi(i, 0, n)
 		var col: Color = colors[idx] if idx < colors.size() else Color.WHITE
-		var fs := int(lerpf(42.0, 26.0, clampf(dist, 0, 1)))
+		# Eine feste Schriftgröße für alle Zeilen, verkleinert per Transformation: Jede andere Größe müsste die
+		# Engine erst neu rastern (alle Buchstaben, mit Kontur) – genau das ließ das Roulette anfangs ruckeln.
+		var sc := lerpf(1.0, 26.0 / FONT_PX, clampf(dist, 0, 1))
 		var text: String = names[idx]
-		var sz := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
-		var pos := Vector2((w - sz.x) / 2.0, y + fs * 0.35)
-		draw_string_outline(_font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 8, Color(0, 0, 0, 0.6 * alpha))
-		draw_string(_font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(col.lightened(0.35), alpha))
+		var sz := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_PX) * sc
+		draw_set_transform(Vector2((w - sz.x) / 2.0, y + FONT_PX * sc * 0.35), 0.0, Vector2(sc, sc))
+		draw_string_outline(_font, Vector2.ZERO, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_PX, 8, Color(0, 0, 0, 0.6 * alpha))
+		draw_string(_font, Vector2.ZERO, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_PX, Color(col.lightened(0.35), alpha))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	# Mittelfenster
 	var win := Rect2(10, center_y - row_h / 2.0, w - 20, row_h)
 	draw_rect(win, Color(1, 0.8, 0.2, 0.12 + _glow * 0.25), true)

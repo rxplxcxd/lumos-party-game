@@ -17,6 +17,7 @@ var _stage_t := 4.0
 
 func _init() -> void:
 	game_id = "stomp_waves"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "observatory"
 	backdrop_style = "sky_dusk"
 	time_limit = 45.0

@@ -48,6 +48,7 @@ var _dots: Array[MeshInstance3D] = []
 
 func _init() -> void:
 	game_id = "penguin_curling"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "snow"
 	time_limit = 260.0
 	show_timer = false
@@ -315,6 +316,13 @@ func on_start() -> void:
 	root.add_child(_power_bar)
 	UI.place(_power_bar, Control.PRESET_CENTER_BOTTOM, Vector2(-220, -120), Vector2(440, 28))
 	_order = active_slots()
+	# Wurf-Reihenfolge aus dem gemeinsamen Zufall: Wer zuletzt wirft, hat beim Curling einen Vorteil –
+	# der darf nicht immer am Platz hängen.
+	for k in range(_order.size() - 1, 0, -1):
+		var j := rng.randi() % (k + 1)
+		var tmp := _order[k]
+		_order[k] = _order[j]
+		_order[j] = tmp
 	if _is_host_model_client():
 		_build_course(1)
 		return

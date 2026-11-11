@@ -25,6 +25,10 @@ signal peer_connected(id: String)
 const CODE_CHARS := "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const ICE := [{"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun.cloudflare.com:3478"]}]
 const MAX_PLAYERS := 4
+## Großzügige Wartezeiten, damit auch langsamere Geräte (lange Ladezeiten) sicher dabeibleiben
+const LINK_TIMEOUT := 60.0        # so lange darf der Host schweigen, bevor ein Gast aufgibt
+const GATE_TIMEOUT := 60.0        # Synchronisationspunkte (Zugbeginn, Minispiel-Start …)
+const LOAD_GATE_TIMEOUT := 120.0  # Szene laden: langsame Laptops brauchen mitunter deutlich länger
 const MAX_BIG := 20                # Lumos-Athlon-Räume
 
 var online := false
@@ -37,6 +41,10 @@ var players: Dictionary = {}       # id -> {name, hero, slot, ready}
 var meta: Dictionary = {}
 var transport := "—"
 var rtt_ms := -1.0
+var rtt_avg := -1.0                # geglätteter Ping (für die Anzeige)
+var _relay_out: Dictionary = {}    # Empfänger -> gesammelte Relay-Nachrichten dieses Bilds
+var _rtt_log_t := 5.0
+var _test_args := str(OS.get_cmdline_user_args())
 var game_cfg: Dictionary = {}
 var session := false               # läuft gerade ein gemeinsames Spiel (Rennen, Minispiel, Party)?
 var decisions: Dictionary = {}     # Brett-Lockstep: Entscheidungsnummer -> Wert
@@ -97,7 +105,7 @@ func _ensure_identity() -> bool:
 	status.emit("Verbinde mit dem Online-Dienst …")
 	Account.ensure_online_identity()
 	var waited := 0.0
-	while Account.fb_uid == "" and Account.online_error == "" and waited < 10.0:
+	while Account.fb_uid == "" and Account.online_error == "" and waited < LINK_TIMEOUT:
 		await get_tree().create_timer(0.2, true).timeout
 		waited += 0.2
 	me = Account.fb_uid
@@ -183,6 +191,7 @@ func leave(reason := "Raum verlassen.") -> void:
 		if is_host:
 			# Mitspieler ausdrücklich informieren (sonst flögen sie wortlos raus) – kurz vor dem Löschen des Raums
 			send({"k": "bye", "r": "Der Host hat das Spiel beendet." if session else "Der Host hat den Raum geschlossen."}, true)
+			_flush_relay()
 			var room := code
 			get_tree().create_timer(0.5, true).timeout.connect(func() -> void: _db.remove("rooms/%s" % room))
 		else:
@@ -209,6 +218,8 @@ func leave(reason := "Raum verlassen.") -> void:
 	game_cfg.clear()
 	transport = "—"
 	rtt_ms = -1.0
+	rtt_avg = -1.0
+	_relay_out.clear()
 	_joining = false
 	if was:
 		left.emit(reason)
@@ -355,6 +366,10 @@ func _on_child(tag: String, ev: String, key: String, val: Variant) -> void:
 				var raw: Variant = JSON.parse_string(String(d.get("d", "")))
 				if raw is Dictionary:
 					_receive(String(d.get("from", "")), raw as Dictionary)
+				elif raw is Array:
+					for one in raw:
+						if one is Dictionary:
+							_receive(String(d.get("from", "")), one as Dictionary)
 				_relay_consumed[key] = null
 
 
@@ -451,14 +466,27 @@ func _process(delta: float) -> void:
 	if not _relay_consumed.is_empty():
 		_db.update("rooms/%s/relay/%s" % [code, me], _relay_consumed)   # null = löschen (ein Request)
 		_relay_consumed = {}
+	_flush_relay()
 	_ping_t -= delta
 	if _ping_t <= 0.0 and not is_host and connected():
 		_ping_t = 1.0
-		send({"k": "ping", "t": Time.get_ticks_msec()}, true, false)
-	# Verbindungswächter: im Spiel kommt jede Sekunde ein Pong – bleibt er 12 s aus, ist der Host weg
-	if session and not is_host and _last_pong > 0.0 and Time.get_ticks_msec() / 1000.0 - _last_pong > 12.0:
-		_last_pong = 0.0
-		end_with_notice("Die Verbindung zum Host wurde getrennt.")
+		# Über den Direktkanal unzuverlässig (kein Warten hinter Spielereignissen), sonst zuverlässig über Relay
+		var direct := _direct_open(host_id)
+		send({"k": "ping", "t": Time.get_ticks_msec(), "u": 1 if direct else 0}, not direct, false)
+	# Verbindungswächter: im Spiel kommt jede Sekunde ein Pong. Bleibt er LINK_TIMEOUT Sekunden aus, ist der Host
+	# weg. Lädt dieses Gerät gerade eine Szene (langsame Geräte: viele Sekunden), zählt diese Zeit nicht mit.
+	if session and not is_host and _last_pong > 0.0:
+		var now_s := Time.get_ticks_msec() / 1000.0
+		if Router.busy:
+			_last_pong = now_s
+		elif now_s - _last_pong > LINK_TIMEOUT:
+			_last_pong = 0.0
+			end_with_notice("Die Verbindung zum Host wurde getrennt.")
+	if "--net-test" in _test_args and not is_host and session:
+		_rtt_log_t -= delta
+		if _rtt_log_t <= 0.0:
+			_rtt_log_t = 5.0
+			print("[NET] Ping %s" % ping_text())
 
 
 func connected() -> bool:
@@ -503,9 +531,45 @@ func _send_to(id: String, msg: Dictionary, reliable: bool) -> void:
 			ch.put_packet(text.to_utf8_buffer())
 			return
 	if _relay_peers.has(id) or not webrtc_available() or reliable:
-		# Relay (bzw. zuverlässige Nachrichten, solange der Direktkanal noch aufgebaut wird)
-		_db.push("rooms/%s/relay/%s" % [code, id], {"from": me, "d": text})
+		# Relay (bzw. zuverlässige Nachrichten, solange der Direktkanal noch aufgebaut wird). Gebündelt: Alle
+		# Nachrichten eines Bilds an denselben Empfänger gehen als EIN Datenbank-Eintrag raus (_flush_relay) –
+		# vorher war jede Nachricht ein eigener Schreibzugriff (nativ: eigener HTTP-Request).
+		if not _relay_out.has(id):
+			_relay_out[id] = []
+		(_relay_out[id] as Array).append(text)
 	# unzuverlässig & Direktkanal noch nicht offen: verwerfen (der nächste Zustand kommt gleich)
+
+
+func _flush_relay() -> void:
+	if _relay_out.is_empty() or code == "":
+		return
+	for id in _relay_out:
+		var batch: Array = _relay_out[id]
+		var chunk: Array = []
+		var size := 0
+		for text in batch:
+			if size + String(text).length() > 60000 and not chunk.is_empty():
+				_db.push("rooms/%s/relay/%s" % [code, id], {"from": me, "d": "[" + ",".join(chunk) + "]"})
+				chunk = []
+				size = 0
+			chunk.append(text)
+			size += String(text).length() + 1
+		if not chunk.is_empty():
+			_db.push("rooms/%s/relay/%s" % [code, id], {"from": me, "d": "[" + ",".join(chunk) + "]"})
+	_relay_out.clear()
+
+
+func _direct_open(id: String) -> bool:
+	return _pcs.has(id) and bool(_pcs[id].open) and (_pcs[id].unrel as WebRTCDataChannel).get_ready_state() == WebRTCDataChannel.STATE_OPEN
+
+
+## Ping für die Anzeige: geglätteter Wert plus Übertragungsweg.
+func ping_text() -> String:
+	if is_host:
+		return "Host"
+	if rtt_avg < 0.0:
+		return "…"
+	return "%d ms · %s" % [int(round(rtt_avg)), "direkt" if _direct_open(host_id) else "über Server"]
 
 
 var debug_counts: Dictionary = {}
@@ -515,10 +579,12 @@ func _receive(from: String, msg: Dictionary) -> void:
 	var k := String(msg.get("k", ""))
 	debug_counts[k] = int(debug_counts.get(k, 0)) + 1
 	if k == "ping" and is_host:
-		_send_to(from, {"k": "pong", "t": msg.get("t", 0)}, true)
+		_send_to(from, {"k": "pong", "t": msg.get("t", 0)}, int(msg.get("u", 0)) == 0)
 		return
 	if k == "pong":
-		rtt_ms = float(Time.get_ticks_msec() - int(msg.get("t", 0)))
+		var sample := float(Time.get_ticks_msec() - int(msg.get("t", 0)))
+		rtt_ms = sample
+		rtt_avg = sample if rtt_avg < 0.0 else lerpf(rtt_avg, sample, 0.25)   # geglättet gegen Ausreißer
 		_last_pong = Time.get_ticks_msec() / 1000.0
 		return
 	if k == "sp":
@@ -790,7 +856,7 @@ func session_peers() -> Array:
 ## Wartet, bis ALLE Teilnehmer diesen Punkt erreicht haben (z. B. Szene fertig geladen, Zugbeginn).
 ## Der Host sammelt die Meldungen und gibt frei; Gäste melden sich wiederholt, bis die Freigabe kommt.
 ## timeout: Sicherheitsnetz gegen Hänger (dann geht es ohne Nachzügler weiter).
-func sync_point(tag: String, timeout := 45.0) -> void:
+func sync_point(tag: String, timeout := GATE_TIMEOUT) -> void:
 	if not in_game():
 		return
 	var t0 := Time.get_ticks_msec() / 1000.0
@@ -819,7 +885,7 @@ func loading_gate() -> void:
 	if not in_game():
 		return
 	scene_epoch += 1
-	await sync_point("load:%d" % scene_epoch, 60.0)
+	await sync_point("load:%d" % scene_epoch, LOAD_GATE_TIMEOUT)
 
 
 func _sp_mark(tag: String, id: String) -> void:

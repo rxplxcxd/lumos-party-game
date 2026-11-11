@@ -230,7 +230,7 @@ func net_unpack(d: Dictionary) -> void:
 
 # --- CPU --------------------------------------------------------------------------------------------------------
 
-func cpu_think(slot: int, _delta: float) -> void:
+func cpu_think(slot: int, delta: float) -> void:
 	var av := avatars[slot] as PartyAvatar
 	var level: int = Game.players[slot].cpu_level
 	var mem: Dictionary = cpu_mem[slot]
@@ -247,7 +247,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 			land = q
 			break
 	# Reaktionszeit: Ziel wird nur alle paar Zehntel neu geschätzt (mit Schätzfehler je Stufe)
-	mem["rt"] = float(mem.get("rt", 0.0)) - 1.0 / 60.0
+	mem["rt"] = float(mem.get("rt", 0.0)) - delta
 	if float(mem.rt) <= 0.0 or not mem.has("land"):
 		mem["rt"] = Game.lv_react([0.55, 0.35, 0.2], level)
 		var e: Vector2 = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * float(Game.lv([2.0, 1.2, 0.55], level))

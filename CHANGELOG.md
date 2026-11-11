@@ -3,6 +3,75 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.2.6 – Polishing-, Performance- und Fix-Update
+* **Glücksrad deterministisch:**
+  * Das Rad bremste Bild für Bild ab und meldete am Ende das Feld unter dem Zeiger. Bei unterschiedlicher
+    Bildrate (Host flüssig, Gast-Laptop ~15 FPS) landeten die Geräte auf verschiedenen Feldern und wandten
+    verschiedene Effekte an.
+  * Jetzt legt der Entscheider das Feld fest. Die Bremskurve ist eine exakte Funktion der Zeit und endet bei
+    jeder Bildrate genau dort. Angewendet wird immer das verteilte Ergebnis.
+  * Das Minispiel-Roulette lädt ebenfalls den festgelegten Eintrag.
+  * Glücks-Glöckchen zeigt Symbole und Gewinn fremder Automaten exakt wie beim Besitzer. Vorher stand dort
+    immer „+1“, und die fremden Walzen drehten nicht.
+* **Minispiele:**
+  * Hammer-Hüpfen: Der obere Balken kreiste starr gegenüber (180°) und war so keine echte Gefahr. Jetzt wandert
+    sein Abstand zum unteren ständig, er rückt bei niedrigem Tempo deutlich näher heran. Zwischen beiden
+    bleibt immer mindestens ~1 s, damit es fair bleibt.
+  * Tauziehen: Das Seil endet exakt an den Händen der äußersten Figur jeder Seite. Vorher ragte es rund 6 m
+    nach hinten durch die Figuren.
+  * Flitzestein-Wurf: keine versteckte Kante mehr (20,4° = 88 m, 20,6° = sofort versunken). Der Absprung hängt
+    stetig vom Aufprallwinkel ab, das Optimum liegt bei ~25°.
+  * Pinguin-Curling: Die Wurf-Reihenfolge wird ausgelost, damit der Vorteil des letzten Wurfs nicht am Platz
+    hängt.
+  * Faire Startplätze: In 18 Jeder-gegen-jeden-Spielen werden die Startplätze jede Runde aus dem gemeinsamen
+    Zufall verteilt. Bei fester Aufstellung in einer Reihe gewannen die Außenplätze messbar öfter (15,7 und 12,2
+    gegen 8,2 und 4,0 Siege in 40 Spielen).
+  * Jede Erklärkarte nennt jetzt in einer eigenen Zeile das **Ziel**, abgeleitet aus Spielart und Kategorie. Für
+    22 Spiele steht dort eine genaue Wertung, z. B. „Gold +3, Kiste +1, Bombe −2“.
+  * Schienen-Express erklärt die Steuerung für eine allein besetzte Lore.
+* **Erklärbildschirme:**
+  * Lokal bleibt die Anleitung stehen, bis jemand bestätigt (A, Leertaste, Klick oder Tippen); Sicherheitsgrenze
+    10 Minuten. Nur mit CPUs geht es nach 2 s weiter.
+  * Online gibt es eine Bereit-Abfrage: Jeder Mensch bestätigt, alle sehen „Bereit: 2 / 3 · Warte auf …“. Los
+    geht es, sobald alle bereit sind, spätestens nach 15 s.
+* **Welt-Begrenzung:**
+  * Viele Arenen sind erhöhte Inseln über einem tieferen Fernboden. Daneben platzierte Deko schwebte in der Luft
+    oder ragte über Kanten; eine Prüfung fand 448 solche Modelle in 34 Spielen.
+  * `PropSettler` setzt jetzt nach dem Aufbau jedes Deko-Modell sauber auf: Kanten-Objekte rücken auf die
+    Fläche, Schwebendes wird auf den Boden darunter abgesenkt, Deko im Nichts ausgeblendet.
+  * Spielelemente bleiben unberührt: alles mit Kollision und alles, was das Spielskript selbst hält.
+  * Danach bleibt in allen 69 Spielen ein einziger Stein als Grenzfall.
+* **Netzwerk:**
+  * Wartezeiten großzügig: Der Pong-Wächter wartet 60 s statt 12 s, und eigenes Laden zählt nicht mit.
+    Synchronisationspunkte warten 60 s, das Szenen-Laden 120 s, die Anmeldung 60 s, HTTP-Anfragen 30 s.
+    Langsame Laptops fliegen nicht mehr heraus.
+  * Ping-Analyse: Werte von 300–400 ms sind die Server-Weiterleitung (Relay). Die Anzeige nennt jetzt den Weg
+    („85 ms · direkt“ bzw. „über Server“) und glättet Ausreißer.
+  * Ping läuft über den Direktkanal unzuverlässig, also ohne Warten hinter Spielereignissen.
+  * Relay-Nachrichten werden pro Bild und Empfänger gebündelt, statt jede einzeln zu schreiben.
+* **Performance & Audio:**
+  * Minispiel-Roulette: Die Walze zeichnet alle Zeilen in einer Schriftgröße und skaliert sie per
+    Transformation. Vorher musste jede Größe erst neu gerastert werden.
+  * Schrift, Effekt-Klänge und Partikel-Shader werden vorab hinter dem Ladebildschirm vorbereitet, auch in
+    Minispielen.
+  * Audio auf schwachen Geräten: Im Web wird die Musik auf dem Hauptthread nachgemischt; bei ~15 FPS lief der
+    50-ms-Puffer leer und es stotterte. Der Puffer hat jetzt 160 ms; Effekte laufen weiter verzögerungsfrei
+    als Samples.
+  * Die Beat-Uhr folgt der echten Zeit statt der Spielzeit, die bei Hitstops und unter 15 FPS gebremst wird.
+  * Neue Einstellung **Bildrate**: 60 (Standard), 120 (High-Hz) und Maximal (Bildschirmtakt). Die Physik rechnet
+    im gleichen Takt, damit 120 FPS wirklich flüssig sind. CPU-Zeitgeber rechnen mit der echten Bildzeit statt
+    fester 1/60 s.
+* **Robustheit:** Wird eine Minispiel-Szene während der Anleitung verlassen, bricht der Ablauf sauber ab statt
+  mit einem Fehler.
+* **Werkzeuge:**
+  * `tools/dev/deco_audit.gd`: Deko-Prüfung aller Minispiele.
+  * `tools/dev/arena_overview.gd`: Übersichtsbilder.
+  * `tools/dev/frame_probe.gd`: Bildzeit-Sonde.
+  * `tools/dev/web_perf.js`: Web-Messung mit CPU-Drosselung.
+  * `tools/dev/decision_shot.gd`: Kontrollbilder der Entscheidungs-Dialoge.
+  * Web-Seite: `?args=` für Test-Startparameter.
+  * `test_systems.gd` prüft zusätzlich Glücksrad, Deko-Absicherung und Bildrate.
+
 ## 1.2.5 – Generalüberholung des Online-Multiplayers
 Grundlage sind Praxistests mit mehreren Spielern. Gilt für alle online spielbaren Modi (Brett, Minispiele,
 Rennen); Lumos-Athlon profitiert von der neuen Platzvergabe.

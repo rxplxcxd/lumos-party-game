@@ -10,6 +10,7 @@ var _spawn_t := 0.6
 
 func _init() -> void:
 	game_id = "coin_rain"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "day"
 	time_limit = 40.0
 	arena_radius = 10.0

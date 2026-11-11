@@ -12,6 +12,7 @@ var _mesh: CylinderMesh
 
 func _init() -> void:
 	game_id = "sumo_shove"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "sunset"
 	time_limit = 50.0
 	survival = true

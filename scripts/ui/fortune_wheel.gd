@@ -1,7 +1,10 @@
 class_name FortuneWheel
 extends Control
 ## Mini-Glücksrad für die Glücksrad-Kiste. Segmente mit Gewichten, Zeiger oben,
-## dreht schnell, bremst nach Stopp-Eingabe physikalisch ab, tickt bei jedem Segment.
+## dreht schnell, bremst nach Stopp-Eingabe gleichmäßig ab, tickt bei jedem Segment.
+## Deterministisch: Das Ergebnis wird beim Stoppen festgelegt (stop_on), die Abbremskurve ist eine exakte
+## Funktion der Zeit (nicht Bild für Bild aufsummiert) und endet genau in der Segmentmitte. finished meldet
+## das festgelegte Segment – auf jedem Gerät und bei jeder Bildrate dasselbe.
 
 signal finished(index: int)
 
@@ -14,6 +17,12 @@ var _last_seg := -1
 var _done := false
 var _font: Font
 var _decel := 5.5
+var _target := -1          # festgelegtes Ergebnis-Segment
+var _stop_t := 0.0         # Zeit seit dem Stopp-Befehl
+var _stop_dur := 0.0       # Dauer bis zum Stillstand
+var _stop_from := 0.0      # Winkel beim Stopp-Befehl
+var _stop_to := 0.0        # Endwinkel (Mitte des Ziel-Segments)
+var _stop_v0 := 0.0
 
 
 func setup(segs: Array) -> FortuneWheel:
@@ -31,10 +40,7 @@ func spin() -> void:
 
 
 func stop() -> void:
-	if not stopping:
-		stopping = true
-		_decel = 5.5
-		Audio.sfx("ui_confirm")
+	stop_on(predict_stop())
 
 
 ## Segment, auf dem das Rad bei normalem Abbremsen ab jetzt landen würde.
@@ -53,9 +59,22 @@ func stop_on(idx: int) -> void:
 	var mid := acc + float(segments[clampi(idx, 0, segments.size() - 1)].weight) / total * TAU * 0.5
 	var natural := angle + speed * speed / (2.0 * 5.5)
 	var final := -mid + ceilf((natural + mid) / TAU) * TAU
-	_decel = speed * speed / (2.0 * maxf(0.6, final - angle))
+	while final - angle < 0.6:
+		final += TAU
+	_target = clampi(idx, 0, segments.size() - 1)
+	_stop_from = angle
+	_stop_to = final
+	_stop_v0 = maxf(speed, 1.0)
+	# Gleichmäßige Verzögerung: Strecke = v0 · T / 2  →  T = 2 · Strecke / v0
+	_stop_dur = 2.0 * (final - angle) / _stop_v0
+	_stop_t = 0.0
 	stopping = true
 	Audio.sfx("ui_confirm")
+
+
+## Festgelegtes Ergebnis (-1, solange nicht gestoppt).
+func target() -> int:
+	return _target
 
 
 func _total_weight() -> float:
@@ -85,17 +104,24 @@ func _process(delta: float) -> void:
 	if speed <= 0.0 and _done:
 		return
 	if stopping:
-		speed = maxf(0.0, speed - delta * _decel)
-	angle += speed * delta
+		# Exakte Bremskurve als Funktion der Zeit: unabhängig von Bildrate und Rundungsfehlern
+		_stop_t = minf(_stop_t + delta, _stop_dur)
+		var u := _stop_t / maxf(_stop_dur, 0.001)
+		angle = _stop_from + (_stop_to - _stop_from) * (1.0 - (1.0 - u) * (1.0 - u))
+		speed = _stop_v0 * (1.0 - u)
+	else:
+		angle += speed * delta
 	var seg := _segment_at_pointer()
 	if seg != _last_seg:
 		_last_seg = seg
 		Audio.sfx("wheel_tick", null, -6.0, 1.0 + speed * 0.02, 0.02)
-	if stopping and speed <= 0.0 and not _done:
+	if stopping and _stop_t >= _stop_dur and not _done:
 		_done = true
+		speed = 0.0
+		angle = _stop_to
 		Audio.sfx("bell")
 		Juice.ui_punch(self, 0.08, 0.4)
-		finished.emit(seg)
+		finished.emit(_target)
 	queue_redraw()
 
 

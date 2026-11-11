@@ -14,6 +14,7 @@ var _speed := 1.25
 var _dir := 1.0
 var _flip_t := 9.0
 var _second_spawned := false
+var _gap_phase := 0.0      # Phase des wandernden Abstands zwischen unterem und oberem Balken
 
 
 func _init() -> void:
@@ -166,11 +167,21 @@ func on_tick(delta: float) -> void:
 	if not _second_spawned and prog > 0.45:
 		_second_spawned = true
 		_add_arm(float(arms[0].angle) + PI, true)
+		_gap_phase = rng.randf() * TAU
 		CutsceneManager.big_word("Achtung, oben!", Color("#8fb0ff"), 0.6)
+	# Unterer Balken kreist mit dem Grundtempo. Der obere ist NICHT starr gegenüber: Sein Abstand zum unteren
+	# wandert ständig (eigene Phase), sodass er immer wieder näher heranrückt. Fair bleibt es trotzdem: Zwischen
+	# beiden liegt immer mindestens ~1 s – genug, um nach dem Sprung über den unteren wieder unten zu sein.
+	_gap_phase += delta * 0.55
 	for a in arms:
-		var spd := _speed   # gleiche Geschwindigkeit: Abstand tief/hoch bleibt immer fair (halbe Runde)
 		a.prev = a.angle
-		a.angle = float(a.angle) + _dir * spd * delta
+		if not bool(a.high):
+			a.angle = float(a.angle) + _dir * _speed * delta
+	for a in arms:
+		if bool(a.high):
+			var min_gap := clampf(1.05 * _speed, 1.3, PI - 0.05)
+			var gap := PI + (PI - min_gap) * sin(_gap_phase)
+			a.angle = float(arms[0].angle) + gap
 		(a.pivot as Node3D).rotation.y = float(a.angle)
 		_check_hits(a)
 

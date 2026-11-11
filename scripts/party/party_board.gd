@@ -77,6 +77,10 @@ func _ready() -> void:
 	_build_hud()
 	Audio.music(def.music)
 	_set_touch("board" if not _online() else "spectate")
+	# Roulette-Schrift vorbereiten, solange der Ladebildschirm noch liegt (kein Ruckeln beim ersten Drehen)
+	RouletteReel.prewarm(_hud, Game.MINIGAMES.map(func(m: Dictionary) -> String: return String(m.name)))
+	Audio.warm(["tick", "drumroll", "bell", "ui_confirm", "ui_move", "wheel_tick", "dice_spin", "dice_hit", "coin", "coin_single", "star", "jump", "land"])
+	FX.prewarm(cam)
 	Net.message.connect(_on_net_msg)
 	_apply_routes(false)
 	_place_star_node()
@@ -1180,12 +1184,14 @@ func _lucky_chest(p: int) -> void:
 	var t := 0.0
 	var stop_at := randf_range(1.2, 2.2)
 	var n := _next_decision()
+	var decided := -1   # Ergebnis-Segment: vom Entscheider festgelegt und an alle verteilt
 	while not wheel.stopping:
 		t += get_process_delta_time()
 		var stop_now := false
 		if not _decides_here(p):
 			if Net.decisions.has(n):
-				wheel.stop_on(int(Net.decisions[n]))
+				decided = clampi(int(Net.decisions[n]), 0, segs.size() - 1)
+				wheel.stop_on(decided)
 			_wait_hint(p, t)
 		elif Game.players[p].cpu and t > stop_at:
 			stop_now = true
@@ -1193,11 +1199,14 @@ func _lucky_chest(p: int) -> void:
 			stop_now = true
 		if stop_now:
 			var land := wheel.predict_stop()
+			decided = land
 			_publish(p, n, land)
 			wheel.stop_on(land)
 		await get_tree().process_frame
 	_set_prompt("")
-	var idx: int = await wheel.finished
+	var shown: int = await wheel.finished
+	# Angewendet wird immer die verteilte Entscheidung (das Rad zeigt sie exakt an – auf jedem Gerät gleich)
+	var idx: int = decided if decided >= 0 else shown
 	var seg: Dictionary = segs[idx]
 	await _show_banner(seg.text, seg.color, 0.9)
 	await _wait(0.3)
@@ -1750,10 +1759,14 @@ func _roulette(pool: Array, cat: String) -> Dictionary:
 	panel.position = (root.size - panel.size) / 2.0
 	Juice.pop_in(panel, 0.35)
 	Audio.sfx("drumroll")
+	if "--perf-log" in OS.get_cmdline_user_args():
+		print("[PERF] Roulette Start t=%d" % Time.get_ticks_msec())
 	var target := Game.prng.randi() % pool.size()
 	await reel.spin_to(target, 3, 3.2)
-	# Anzeige und geladenes Spiel sind identisch: wir laden exakt den Eintrag unter dem Zeiger
-	var pick: Dictionary = pool[reel.current_index()]
+	if "--perf-log" in OS.get_cmdline_user_args():
+		print("[PERF] Roulette Ende t=%d" % Time.get_ticks_msec())
+	# Geladen wird der per gemeinsamem Brett-Zufall festgelegte Eintrag – die Walze stoppt exakt darauf
+	var pick: Dictionary = pool[target]
 	desc.text = pick.desc
 	await get_tree().process_frame
 	panel.create_tween().tween_property(panel, "position", (root.size - panel.size) / 2.0, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)

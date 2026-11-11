@@ -832,6 +832,7 @@ func spawn(key: String, parent: Node = null, pos := Vector3.ZERO, rot_y_deg := 0
 			un.rotation_degrees.y = rot_y_deg
 			if scl != 1.0:
 				un.scale = Vector3.ONE * scl
+			un.set_meta("asset", key)
 			return un
 	var n: Node3D = _instantiate(_res(key))
 	if n == null:
@@ -843,6 +844,7 @@ func spawn(key: String, parent: Node = null, pos := Vector3.ZERO, rot_y_deg := 0
 	n.rotation_degrees.y = rot_y_deg
 	if scl != 1.0:
 		n.scale = Vector3.ONE * scl
+	n.set_meta("asset", key)   # Herkunft (für Prüfwerkzeuge wie tools/dev/deco_audit.gd)
 	return n
 
 

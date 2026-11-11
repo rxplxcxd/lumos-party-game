@@ -305,5 +305,4 @@ func _refresh() -> void:
 
 func _process(_delta: float) -> void:
 	if Net.online and is_instance_valid(_net_label):
-		var ping := ("%d ms" % int(Net.rtt_ms)) if Net.rtt_ms >= 0.0 else ("Host" if Net.is_host else "…")
-		_net_label.text = "Verbindung: %s · %s · %d/%d Spieler" % [Net.transport, ping, Net.players.size(), Net.capacity()]
+		_net_label.text = "Verbindung: %s · Ping %s · %d/%d Spieler" % [Net.transport, Net.ping_text(), Net.players.size(), Net.capacity()]

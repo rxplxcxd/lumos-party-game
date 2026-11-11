@@ -20,6 +20,7 @@ var _known: Dictionary = {}            # "r:d" -> true (richtig) / false (Geist)
 
 func _init() -> void:
 	game_id = "ghost_manor"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "mansion"
 	backdrop_style = "night"
 	time_limit = 60.0

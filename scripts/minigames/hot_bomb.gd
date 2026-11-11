@@ -18,6 +18,7 @@ var _round_pause := false
 
 func _init() -> void:
 	game_id = "hot_bomb"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "day"
 	time_limit = 999.0
 	show_timer = false

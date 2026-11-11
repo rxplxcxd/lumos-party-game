@@ -298,7 +298,10 @@ func _fetch_music(path: String, urgent := false) -> void:
 			break
 		var r: Array = await req.request_completed
 		if int(r[0]) == HTTPRequest.RESULT_SUCCESS and int(r[1]) == 200:
+			var t0 := Time.get_ticks_usec()
 			var st := AudioStreamOggVorbis.load_from_buffer(r[3])
+			if "--perf-log" in OS.get_cmdline_user_args():
+				print("[PERF] Musik %s: %d KB, Dekodieren %.1f ms, t=%d" % [path.get_file(), (r[3] as PackedByteArray).size() / 1024, (Time.get_ticks_usec() - t0) / 1000.0, Time.get_ticks_msec()])
 			if st:
 				_cache[path] = st
 				ok = true
@@ -355,6 +358,16 @@ func _pick(id: String) -> AudioStream:
 	if list.is_empty():
 		return null
 	return _stream(list[randi() % list.size()])
+
+
+## Vorwärmen: Effekte laden und (Web) als Sample registrieren, bevor sie das erste Mal gebraucht werden. Im Browser
+## dekodiert die Engine einen Effekt sonst beim ersten Abspielen – das kostet mitten im Spiel einen Ruck.
+func warm(ids: Array) -> void:
+	for id in ids:
+		for path in (SFX.get(id, []) as Array):
+			var st := _stream(String(path))
+			if st and OS.has_feature("web") and st.can_be_sampled() and not AudioServer.is_stream_registered_as_sample(st):
+				AudioServer.register_stream_as_sample(st)
 
 
 ## Münz-Zählkaskade wie auf der Konsole: pro Münze ein Plink mit steigender Tonhöhe, bei Verlust Seufzer.
@@ -488,6 +501,7 @@ func minigame_music(track := -1, fade := 0.35, sect := "normal", from_pos := 0.0
 	_play_path(String(sec.file), fade, sect != "outro", maxf(0.0, from_pos))
 	_set_section(sect, float(sec.bpm))
 	_beat = maxf(0.0, from_pos) * float(sec.bpm) / 60.0 - _latency_beats(float(sec.bpm))
+	_beat_us = Time.get_ticks_usec()
 
 
 ## BPM eines Abschnitts (ohne ihn abzuspielen) – z. B. um ein Notenblatt vorab zu bauen.
@@ -584,6 +598,7 @@ func _set_section(sec: String, new_bpm: float) -> void:
 	section = sec
 	bpm = new_bpm
 	_beat = 0.0
+	_beat_us = Time.get_ticks_usec()
 	_last_beat_i = -1
 	section_changed.emit(sec, new_bpm)
 
@@ -638,7 +653,13 @@ func _process(delta: float) -> void:
 	if _sched.has("section") and _sched.section == "hurry" and _beat >= _ramp_start and _ramp_beats > 0.0:
 		var k := clampf((_beat - _ramp_start) / _ramp_beats, 0.0, 1.0)
 		pl.pitch_scale = lerpf(_ramp_from, _ramp_to, k * k)
-	_beat += delta * bpm / 60.0 * pl.pitch_scale
+	# Beat-Uhr nach echter Zeit (Wanduhr), nicht nach Spielzeit: Die Musik läuft im Audiotreiber in Echtzeit weiter,
+	# während die Spielzeit bei Hitstops, Zeitlupe oder sehr niedriger Bildrate (< 15 FPS bremst die Engine die
+	# Spielzeit) langsamer vergeht. So bleiben Takt-Ereignisse und Abschnittswechsel exakt auf der Musik.
+	var now_us := Time.get_ticks_usec()
+	var real := clampf((now_us - _beat_us) / 1000000.0, 0.0, 0.5) if _beat_us > 0 else delta
+	_beat_us = now_us
+	_beat += real * bpm / 60.0 * pl.pitch_scale
 	var bi := int(floor(_beat))
 	if bi != _last_beat_i:
 		_last_beat_i = bi
@@ -655,6 +676,10 @@ func _process(delta: float) -> void:
 		_play_path(String(data.file), fade, nsec != "outro", clampf(late, 0.0, 0.25))
 		_set_section(nsec, float(data.bpm))
 		_beat = late * float(data.bpm) / 60.0 - _latency_beats(float(data.bpm))
+		_beat_us = Time.get_ticks_usec()
+
+
+var _beat_us := 0   # Wanduhr-Zeitpunkt der letzten Beat-Fortschreibung
 
 
 func set_music_pitch(p: float) -> void:

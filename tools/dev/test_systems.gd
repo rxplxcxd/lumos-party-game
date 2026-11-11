@@ -173,6 +173,57 @@ func run() -> void:
 		"Host-Schnappschuss: abweichender Client übernimmt Münzen, Fallen und Zufall vom Host")
 	_ok(not bool(pb2.call("_state_apply", host_state)), "Host-Schnappschuss: gleicher Stand → keine Korrektur")
 	pb2.free()
+	# --- Glücksrad: gleiches Ergebnis bei jeder Bildrate ----------------------------------------------------------
+	var wsegs := [{"text": "a", "weight": 2.0}, {"text": "b", "weight": 1.6}, {"text": "c", "weight": 1.4}, {"text": "d", "weight": 1.0},
+		{"text": "e", "weight": 1.4}, {"text": "f", "weight": 0.45}, {"text": "g", "weight": 1.8}, {"text": "h", "weight": 0.9}]
+	var wheel_ok := true
+	for fps in [15.0, 60.0, 144.0]:
+		for want in wsegs.size():
+			var wh := FortuneWheel.new().setup(wsegs)
+			wh.spin()
+			wh.angle = randf() * TAU
+			for k in int(fps * 0.5):
+				wh._process(1.0 / fps)
+			wh.stop_on(want)
+			var got := [-1]
+			wh.finished.connect(func(i: int) -> void: got[0] = i)
+			var guard := 0
+			while got[0] < 0 and guard < 4000:
+				wh._process((1.0 / fps) * randf_range(0.6, 1.6))   # schwankende Bildrate
+				guard += 1
+			if got[0] != want or wh._segment_at_pointer() != want:
+				wheel_ok = false
+			wh.free()
+	_ok(wheel_ok, "Glücksrad: landet bei 15, 60 und 144 FPS (mit Schwankungen) exakt auf dem festgelegten Feld")
+	# --- Deko-Absicherung (PropSettler) ------------------------------------------------------------------------
+	var w := Node3D.new()
+	w.name = "World"
+	add_child(w)
+	WorldKit.box(w, Vector3(10, 1, 10), Vector3(0, -0.5, 0), Color.GREEN, false)        # Arena: Oberkante y = 0
+	var far := MeshInstance3D.new()
+	var fpm := PlaneMesh.new()
+	fpm.size = Vector2(400, 400)
+	far.mesh = fpm
+	far.position.y = -7.0
+	w.add_child(far)                                                                     # Fernboden 7 m tiefer
+	var bush := Assets.spawn("nat/bush", w, Vector3(20, 0, 0), 0.0, 1.0)                # schwebt neben der Arena
+	var fence := Assets.spawn("plat/fence", w, Vector3(5.6, 0, 0), 0.0, 1.0)            # knapp über der Kante
+	var held := Assets.spawn("plat/flowers", w, Vector3(0, 1.2, 0), 0.0, 1.0)           # vom Spiel gehalten (z. B. Seil-Markierung)
+	var keep := {held: true}
+	await get_tree().process_frame
+	PropSettler.settle(w, keep)
+	_ok(bush.position.y < -6.0, "Deko-Absicherung: schwebender Busch steht danach auf dem Boden darunter (y %.1f)" % bush.position.y)
+	_ok(fence.position.x <= 5.05 and absf(fence.position.y) < 0.1, "Deko-Absicherung: Zaun rückt von der Kante auf die Fläche (x %.2f)" % fence.position.x)
+	_ok(is_equal_approx(held.position.y, 1.2) and held.visible, "Deko-Absicherung: Spielelemente bleiben unangetastet")
+	_ok(PropSettler.check(w, keep).is_empty(), "Deko-Absicherung: danach keine schwebenden Modelle mehr")
+	w.free()
+	# --- Bildrate ------------------------------------------------------------------------------------------------
+	var fm_old := String(Game.settings.get("fps_mode", "60"))
+	Game.settings.fps_mode = "120"
+	_ok(Gfx.fps_cap() == 120, "Bildrate: 120-FPS-Modus")
+	Game.settings.fps_mode = "60"
+	_ok(Gfx.fps_cap() == 60, "Bildrate: Standard 60 FPS")
+	Game.settings.fps_mode = fm_old
 	# --- Touch-Wischen ----------------------------------------------------------------------------------------
 	var layer := CanvasLayer.new()
 	add_child(layer)

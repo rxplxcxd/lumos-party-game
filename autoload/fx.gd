@@ -201,6 +201,21 @@ func burst(pos: Vector3, cfg: Dictionary, parent: Node = null) -> CPUParticles3D
 
 # --- Presets -----------------------------------------------------------------------------------
 
+## Vorwärmen: jede Effektart einmal sichtbar vor der Kamera auslösen, solange der Ladebildschirm darüberliegt.
+## So kompiliert der Browser (WebGL) die Partikel-Shader schon beim Laden – nicht erst mitten im Spiel
+## (z. B. beim ersten Konfetti nach dem Minispiel-Roulette), wo das Kompilieren ein spürbares Ruckeln wäre.
+func prewarm(cam: Camera3D) -> void:
+	if cam == null:
+		return
+	var p := cam.global_position + (-cam.global_basis.z) * 6.0
+	confetti(p, 4)
+	stars(p, Color(1, 0.9, 0.3), 3)
+	sparks(p, Color(1, 0.8, 0.3), 3)
+	dust(p, Color(0.8, 0.75, 0.7), 3)
+	smoke(p, Color(0.4, 0.4, 0.4), 2)
+	ring(p, Color(1, 1, 1, 0.5), 0.5, 0.2)
+
+
 func dust(pos: Vector3, color := Color(0.8, 0.75, 0.7), amount := 12, size := 1.0) -> void:
 	burst(pos + Vector3.UP * 0.1, {"amount": amount, "life": 0.7, "dir": Vector3.UP, "spread": 85.0,
 		"vel_min": 1.0, "vel_max": 2.6, "gravity": Vector3(0, 0.6, 0), "damping": 3.0, "size": 0.9 * size,

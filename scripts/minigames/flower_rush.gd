@@ -23,6 +23,7 @@ var _fake := -1
 
 func _init() -> void:
 	game_id = "flower_rush"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "day"
 	time_limit = 60.0
 	survival = true

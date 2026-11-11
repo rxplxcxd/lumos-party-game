@@ -175,9 +175,21 @@ func on_tick(delta: float) -> void:
 		_finish(1 if rope_x > 0.0 else 0)
 
 
+## Seil-Enden genau an den Händen der äußersten Figur jeder Seite (Hände ~0,3 m vor dem Körper, zur Mitte hin)
+const HAND_REACH := 0.3
+
+
+func _rope_reach(side: int) -> float:
+	var far := 0.0
+	for i in active_slots():
+		if _side[i] == side:
+			far = maxf(far, _slot_pos[i])
+	return maxf(1.0, (far if far > 0.0 else 2.2) - HAND_REACH)
+
+
 func _apply_visuals(delta: float) -> void:
-	var left_end := -10.0 + rope_x
-	var right_end := 10.0 + rope_x
+	var left_end := -_rope_reach(0) + rope_x
+	var right_end := _rope_reach(1) + rope_x
 	_rope.position.x = (left_end + right_end) * 0.5
 	_rope.scale.y = right_end - left_end
 	_knot.position.x = rope_x

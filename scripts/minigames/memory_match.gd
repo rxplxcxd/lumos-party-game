@@ -282,7 +282,7 @@ func net_unpack(d: Dictionary) -> void:
 
 # --- CPU --------------------------------------------------------------------------------------------------------
 
-func cpu_think(slot: int, _delta: float) -> void:
+func cpu_think(slot: int, delta: float) -> void:
 	if slot != _active or _reveal_t > 0.0:
 		InputHub.set_virtual(slot, Vector2.ZERO)
 		return
@@ -302,7 +302,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		mem["target"] = _choose(seen)
 		mem["wait"] = randf_range(0.3, 0.9) * (3 - level) * 0.5
 	var target := int(mem.target)
-	mem.wait = float(mem.wait) - 1.0 / 60.0
+	mem.wait = float(mem.wait) - delta
 	var tc := Vector2i(target % COLS, target / COLS)
 	var mv := Vector2.ZERO
 	var held := {}

@@ -21,6 +21,7 @@ var _flame_t := 0.0
 
 func _init() -> void:
 	game_id = "jetpack_rally"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "sky"
 	backdrop_style = "sky_day"
 	time_limit = 40.0

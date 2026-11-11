@@ -25,6 +25,7 @@ var _lid: MeshInstance3D
 
 func _init() -> void:
 	game_id = "sandwich_storm"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "day"
 	time_limit = 45.0
 	survival = true

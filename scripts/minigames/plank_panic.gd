@@ -15,6 +15,7 @@ var _shark_t := 0.0
 
 func _init() -> void:
 	game_id = "plank_panic"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "pirates"
 	time_limit = 45.0
 	survival = true

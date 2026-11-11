@@ -26,6 +26,7 @@ var _hit_this: Array[bool] = [false, false, false, false]   # ein Treffer je Spi
 
 func _init() -> void:
 	game_id = "mega_bee"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "day"
 	backdrop_style = "meadow"
 	time_limit = 60.0

@@ -83,3 +83,16 @@ und Streuung sinken auf höchstens 35 % des Profi-Werts, Trefferquoten nähern s
 Reaktionszeiten laufen über `Game.lv_react()` und bleiben ≥ 0,15 s. Insane gewinnt also durch Präzision und
 Taktik (auf dem Brett: Item-Planung, Wegwahl, Shop), nie durch Mogeln. Vergleich der Stufen:
 `SWEEP_ARGS="--levels=0,1,2,3" bash tools/dev/minigame_sweep.sh <out.jsonl> <ids…>`.
+
+## Fairness & Klarheit (seit 1.2.6)
+
+* **Ziel-Zeile:** Jede Erklärkarte nennt die Siegbedingung in einem Satz, aus `goal` im Katalog oder passend
+  zur Spielart (Überleben, Rennen, Punkte) und Kategorie (2 gegen 2, Duell, 1 gegen 3).
+* **Faire Startplätze:** `fair_spawns = true` lost die Startplätze in Jeder-gegen-jeden-Spielen jede Runde neu aus
+  (gemeinsamer Zufall, online gleich). Nur für Spiele, die Plätze an nichts anderes binden (Bahnen, Stationen).
+* **Deko-Absicherung:** `PropSettler.settle()` setzt nach dem Arena-Aufbau jedes Deko-Modell sauber auf:
+  Kante → auf die Fläche, Luft → auf den Boden darunter, Nichts → ausblenden. Kollision und vom Skript gehaltene
+  Knoten bleiben unberührt. Prüfen: `godot --headless --path . res://tools/dev/Run.tscn --
+  --dev-script=res://tools/dev/deco_audit.gd`.
+* **Steuerung = Anleitung:** Jede im Skript abgefragte Taste steht im `controls`-Text (Prüfung im 1.2.6-Audit;
+  Schienen-Express ergänzt).

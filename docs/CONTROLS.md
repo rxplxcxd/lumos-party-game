@@ -35,6 +35,12 @@ Standard-Emojis); Stick wählen, loslassen sendet. Alternativ per Klick/Tipp auf
 Knopf aus. In der Spieler-/CPU-Auswahl springt der Fokus mit links/rechts zwischen Figur, Typ und Stufe einer
 Zeile und mit hoch/runter zwischen den Zeilen; A auf einem Pfeil ändert den Wert.
 
+**Anleitung vor Minispielen:** Lokal bleibt sie stehen, bis jemand bestätigt (A, Leertaste, Klick oder Tippen).
+Online bestätigt jeder selbst („Bereit!“), spätestens nach 15 s geht es los.
+
+**Bildrate (Einstellungen → Grafik):** 60 FPS (Standard), 120 FPS (High-Hz) oder Maximal (Bildschirmtakt). Die Physik
+läuft im gleichen Takt mit.
+
 ## Umsetzung im Code
 
 * Eingaben immer über `InputHub` abfragen: `move(slot)`, `pressed(slot, "a")`, `held(slot, "b")`.

@@ -73,6 +73,21 @@ Anzeige. Der Lockstep hält alle Geräte zwischen zwei Zügen synchron; der Schn
 spätestens beim nächsten Zug. Die Kodierung (`NetCodec`) erhält Ganzzahl-Schlüssel, Ganzzahlen und Vektoren über
 JSON und erzeugt nie Objekte aus Netzdaten.
 
+### Wartezeiten, Ping und Relay (seit 1.2.6)
+* **Wartezeiten:**
+  * Pong-Wächter (Gast) 60 s; Zeit, in der das eigene Gerät eine Szene lädt, zählt nicht.
+  * Synchronisationspunkte 60 s, Szenen-Laden 120 s, Anmeldung 60 s, HTTP-Anfragen 30 s.
+* **Ping:** Er läuft einmal pro Sekunde, über den Direktkanal unzuverlässig (`u: 1`, kein Warten hinter
+  Spielereignissen), sonst über Relay. Angezeigt wird ein geglätteter Wert mit Übertragungsweg („direkt“ bzw.
+  „über Server“). Werte um 300–400 ms bedeuten Relay; Direktverbindungen liegen typischerweise deutlich
+  darunter.
+* **Relay bündelt:** Alle Nachrichten eines Bilds an denselben Empfänger gehen als ein Datenbank-Eintrag raus
+  (JSON-Liste, höchstens ~60 KB je Eintrag). Empfänger verstehen Einzel- und Sammel-Einträge.
+* **Bereit-Abfrage vor Minispielen:** `{"k": "mgr", "e": <Szene>, "s": [Plätze]}`. Start, sobald alle Menschen
+  bereit sind, spätestens nach 15 s; danach das bekannte `mg_go`-Gate.
+* **Glücksrad:** Das Ergebnisfeld ist eine `bd`-Entscheidung. Die Animation endet bei jeder Bildrate exakt auf
+  diesem Feld.
+
 ### Synchronisationspunkte (seit 1.2.2)
 `Net.sync_point(tag, timeout)` ist eine gemeinsame Schranke: Clients melden `sp` (alle 1,5 s wiederholt), der Host
 gibt mit `sp_go` frei, sobald alle Teilnehmer der Partie da sind. Nach 0,6 s Wartezeit erscheint „Warte auf

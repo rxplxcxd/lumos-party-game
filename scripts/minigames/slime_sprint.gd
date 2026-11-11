@@ -14,6 +14,7 @@ var _t := 0.0
 
 func _init() -> void:
 	game_id = "slime_sprint"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "day"
 	time_limit = 45.0
 	race = true

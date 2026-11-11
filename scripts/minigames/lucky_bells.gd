@@ -92,8 +92,8 @@ func on_start() -> void:
 		av.can_shove = false
 		av.set_physics_process(false)
 		av.rig.face_now(Vector3(0, 0, -1))
-		if active[i] and Net.owns_slot(i):
-			_start_spin(i)
+		if active[i]:
+			_start_spin(i)   # fremde Automaten drehen sichtbar mit; anhalten darf nur das Gerät des Spielers
 
 
 func _start_spin(i: int) -> void:
@@ -157,6 +157,7 @@ func _payout(i: int) -> void:
 		win = 3
 	scores[i] += win
 	_spun[i] += 1
+	machines[i]["last_win"] = win
 	_show_win(i, win)
 	report_score(i)
 	if _spun[i] < SPINS:
@@ -186,19 +187,26 @@ func _show_win(i: int, win: int) -> void:
 
 
 func score_extra(slot: int) -> Dictionary:
-	return {"st": machines[slot].stop, "n": _spun[slot]}
+	return {"st": machines[slot].stop, "n": _spun[slot], "w": int(machines[slot].get("last_win", 0))}
 
 
 func on_remote_score(slot: int, extra: Dictionary) -> void:
 	var st: Array = extra.get("st", [])
-	if st.size() == 3:
+	if st.size() == 3 and not st.has(-1):
+		# Ergebnis des Besitzers exakt übernehmen (Symbole und Gewinn) – alle sehen denselben Ausgang
 		var m: Dictionary = machines[slot]
+		m.spinning = false
+		m.stop = st.duplicate()
 		for r in 3:
 			var sym := int(st[r])
-			if sym >= 0:
-				(m.reels[r] as Sprite3D).texture = UI.icon_tex(SYMBOLS[sym], 96, SYM_COL[sym])
+			(m.reels[r] as Sprite3D).texture = UI.icon_tex(SYMBOLS[sym], 96, SYM_COL[sym])
+			(m.reels[r] as Sprite3D).offset.y = 0.0
 		_spun[slot] = int(extra.get("n", _spun[slot]))
-		_show_win(slot, 0 if st.has(-1) else 1)
+		_show_win(slot, int(extra.get("w", 1)))
+		if _spun[slot] < SPINS:
+			get_tree().create_timer(1.3, false).timeout.connect(func() -> void:
+				if state == "play" and not machines[slot].spinning:
+					_start_spin(slot))
 
 
 func check_end() -> bool:

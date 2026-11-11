@@ -94,7 +94,14 @@ func _ready() -> void:
 			spawn_points.append(arena_center + Vector3(-4.5 + i * 3.0, 0.5, 0))
 	_apply_setup()
 	build_arena()
+	_shuffle_spawns()
 	_build_backdrop()
+	# Deko sauber aufsetzen: nichts schwebt neben der Arena oder ragt über Kanten. Was das Spielskript selbst hält
+	# (Seil-Markierung, Automaten, Balken …), ist ein Spielelement und bleibt unangetastet.
+	var _st := Time.get_ticks_usec()
+	var _moved := PropSettler.settle(world, PropSettler.script_refs(self))
+	if "--perf-log" in OS.get_cmdline_user_args():
+		print("[PERF] Deko-Ausrichtung %s: %d Modelle angepasst in %.1f ms" % [game_id, _moved, (Time.get_ticks_usec() - _st) / 1000.0])
 	spawn_players()
 	_bench_inactive()
 	_setup_camera()
@@ -110,6 +117,22 @@ func _ready() -> void:
 
 func build_arena() -> void:
 	pass
+
+
+## Fairness (Jeder gegen jeden): Startplätze werden jede Runde aus dem gemeinsamen Spiel-Zufall neu verteilt –
+## online auf allen Geräten gleich. Bei fester Aufstellung in einer Reihe gewannen die Außenplätze sonst
+## messbar öfter (die Mitte wird von zwei Seiten bedrängt). Nur für Spiele, die Plätze an nichts anderes binden.
+var fair_spawns := false
+
+
+func _shuffle_spawns() -> void:
+	if not fair_spawns or category != "ffa" or spawn_points.size() < 4:
+		return
+	for k in range(3, 0, -1):
+		var j := rng.randi() % (k + 1)
+		var tmp: Vector3 = spawn_points[k]
+		spawn_points[k] = spawn_points[j]
+		spawn_points[j] = tmp
 
 
 func spawn_players() -> void:
@@ -187,6 +210,7 @@ func _setup_camera() -> void:
 	add_child(cam)
 	cam.make_current()
 	cam.snap()
+	FX.prewarm(cam)   # Partikel-Shader schon hinter dem Ladebildschirm kompilieren (kein Ruck beim ersten Effekt)
 
 
 func _freeze_all(on: bool) -> void:
@@ -203,6 +227,8 @@ func _flow() -> void:
 	await Net.loading_gate()
 	await CutsceneManager.play("MinigameTeaser", {"game": self})
 	await _instructions()
+	if not is_inside_tree():
+		return   # Szene während der Anleitung verlassen
 	if Net.in_game():
 		Net.message.connect(_on_score_msg)
 		if net_model == "owner":
@@ -305,7 +331,7 @@ func _cpu_full_jump(i: int, delta: float) -> void:
 ## Online: alle Geräte starten gleichzeitig (Host gibt "go").
 ## Zweites Gate direkt vor dem Countdown (Anleitungen können auf Geräten unterschiedlich lang stehen).
 func _net_barrier() -> void:
-	await Net.sync_point("mg_go:%d" % Net.scene_epoch, 40.0)
+	await Net.sync_point("mg_go:%d" % Net.scene_epoch, Net.GATE_TIMEOUT)
 
 
 func alive_count() -> int:
@@ -832,28 +858,60 @@ func _instructions() -> void:
 	d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	d.custom_minimum_size.x = 700
 	v.add_child(d)
+	# Klar und immer gleich formuliert: Woran wird gewonnen?
+	var goal_row := UI.hbox(10)
+	goal_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	goal_row.add_child(UI.icon_rect("trophy", 30, UI.GOLD))
+	var gl := UI.label("Ziel: " + goal_text(), 26, UI.GOLD, true)
+	gl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	gl.custom_minimum_size.x = 640
+	goal_row.add_child(gl)
+	v.add_child(goal_row)
 	var c := UI.label(info.get("controls", ""), 24, UI.ACCENT2)
 	c.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	c.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(c)
-	var go := UI.prompt("a", "Los geht's!", 30)
-	v.add_child(go)
-	await get_tree().process_frame
-	panel.position = (root.size - panel.size) / 2.0
-	Juice.pop_in(panel, 0.4)
 	var has_human := false
 	for i in 4:
 		if not Game.players[i].cpu:
 			has_human = true
-	var wait := 0.0
-	var limit := 8.0 if has_human else 2.0
-	while wait < limit:
-		await get_tree().process_frame
-		wait += get_process_delta_time()
-		if wait > 0.4 and (InputHub.any_human_pressed("a") or _touch_tap):
-			break
-		go.modulate.a = 0.6 + 0.4 * sin(wait * 5.0)
+	var online := Net.in_game()
+	var go := UI.prompt("a", "Bereit!" if online else "Los geht's!", 30)
+	v.add_child(go)
+	var how := UI.label("A · Leertaste · Klick · Tippen", 18, Color(1, 1, 1, 0.55))
+	how.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	how.visible = has_human
+	v.add_child(how)
+	var status := UI.label("", 22, Color(1, 1, 1, 0.8), true)
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.visible = online
+	v.add_child(status)
+	await get_tree().process_frame
+	panel.position = (root.size - panel.size) / 2.0
+	Juice.pop_in(panel, 0.4)
 	_touch_tap = false
+	if online:
+		var local_human := false   # nur Menschen an DIESEM Gerät (Mitspieler bestätigen auf ihrem eigenen)
+		for i in 4:
+			if not Game.players[i].cpu and Net.owns_slot(i):
+				local_human = true
+		await _ready_gate(go, status, local_human)
+	else:
+		# Lokal: Die Erklärung bleibt stehen, bis jemand bestätigt (Sicherheitsgrenze 10 Minuten).
+		# Nur CPUs (Demo, Tests): kurz zeigen und weiter.
+		var wait := 0.0
+		var limit := INTRO_LOCAL_TIMEOUT if has_human else 2.0
+		while wait < limit:
+			if not is_inside_tree():
+				return   # Szene wurde verlassen (z. B. über die Pause zurück ins Menü)
+			await get_tree().process_frame
+			wait += get_process_delta_time()
+			if wait > 0.4 and (InputHub.any_human_pressed("a") or _touch_tap):
+				break
+			go.modulate.a = 0.6 + 0.4 * sin(wait * 5.0)
+	_touch_tap = false
+	if not is_inside_tree():
+		return
 	Audio.sfx("ui_confirm")
 	var tw := create_tween()
 	tw.tween_property(panel, "scale", Vector2(0.01, 0.01), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
@@ -863,6 +921,90 @@ func _instructions() -> void:
 
 
 var _touch_tap := false
+
+const INTRO_LOCAL_TIMEOUT := 600.0   # lokal: Anleitung wartet bis zu 10 Minuten auf eine Bestätigung
+const INTRO_ONLINE_MAX := 15.0       # online: spätestens nach 15 s geht es los, früher wenn alle bereit sind
+var _ready_slots := {}               # online: Plätze, die „Bereit“ gemeldet haben
+
+
+## Siegbedingung in einem Satz – aus dem Katalog ("goal") oder passend zu Spielart und Kategorie.
+func goal_text() -> String:
+	if String(info.get("goal", "")) != "":
+		return String(info.goal)
+	var team := category == "2v2"
+	var duel := category == "duel"
+	if survival:
+		if team:
+			return "Euer Team muss länger durchhalten als das andere."
+		if duel:
+			return "Länger durchhalten als dein Gegenüber."
+		if category == "1v3":
+			return "Solo: alle drei erwischen · Trio: bis zum Schluss durchhalten."
+		return "Bleib am längsten im Spiel – wer zuerst rausfliegt, landet hinten."
+	if race:
+		return "Als erstes Team ins Ziel." if team else ("Vor deinem Gegenüber ins Ziel." if duel else "Zuerst ins Ziel kommen.")
+	if team:
+		return "Am Ende mehr Punkte als das andere Team."
+	if duel:
+		return "Am Ende mehr Punkte als dein Gegenüber."
+	return "Am Ende die meisten Punkte."
+
+
+## Online: Jeder Mensch bestätigt mit A/Tippen, alle sehen, wer schon bereit ist. Start, sobald alle Menschen
+## bereit sind – spätestens nach INTRO_ONLINE_MAX Sekunden (dabei fangen wir auch Nachzügler beim Laden ab).
+func _ready_gate(go: Control, status: Label, has_local_human: bool) -> void:
+	_ready_slots.clear()
+	var epoch := Net.scene_epoch
+	var on_msg := func(_from: String, msg: Dictionary) -> void:
+		if String(msg.get("k", "")) == "mgr" and int(msg.get("e", -1)) == epoch:
+			for sl in (msg.get("s", []) as Array):
+				_ready_slots[int(sl)] = true
+	Net.message.connect(on_msg)
+	var humans: Array[int] = []
+	for i in active_slots():
+		if Net.slot_is_human(i):
+			humans.append(i)
+	var wait := 0.0
+	var me_ready := false
+	while wait < INTRO_ONLINE_MAX:
+		if not is_inside_tree():
+			Net.message.disconnect(on_msg)
+			return
+		await get_tree().process_frame
+		wait += get_process_delta_time()
+		var autopress := wait > 2.0 and "--net-autopress" in OS.get_cmdline_user_args()   # Test-„Mensch“
+		var confirm := has_local_human and wait > 0.4 and (InputHub.any_human_pressed("a") or _touch_tap or autopress)
+		if not me_ready and (confirm or (not has_local_human and wait > 1.5)):
+			me_ready = true
+			var mine: Array = []
+			for i in humans:
+				if Net.owns_slot(i):
+					mine.append(i)
+					_ready_slots[i] = true
+			Net.send({"k": "mgr", "e": epoch, "s": mine}, true)
+			Audio.sfx("ui_confirm")
+			if go is ButtonPrompt:
+				(go as ButtonPrompt).set_text("Warte auf die anderen …")
+		var n_ready := 0
+		var names: Array = []
+		for i in humans:
+			if _ready_slots.has(i):
+				n_ready += 1
+			else:
+				names.append(Game.players[i].name)
+		status.text = "Bereit: %d / %d · Start spätestens in %d s%s" % [n_ready, humans.size(), ceili(INTRO_ONLINE_MAX - wait),
+			("\nWarte auf: " + ", ".join(names)) if not names.is_empty() and names.size() <= 3 else ""]
+		if not me_ready:
+			go.modulate.a = 0.6 + 0.4 * sin(wait * 5.0)
+		if n_ready >= humans.size() and me_ready and wait > 1.0:
+			break
+	Net.message.disconnect(on_msg)
+	if "--net-test" in str(OS.get_cmdline_user_args()):
+		var got: Array = []
+		for i in humans:
+			if _ready_slots.has(i):
+				got.append(i)
+		print("[NET] Bereit-Abfrage: %s von %s nach %.1f s" % [str(got), str(humans), wait])
 
 
 ## "Rot & Grün  VS  Blau & Gelb" mit Spielerfarben.

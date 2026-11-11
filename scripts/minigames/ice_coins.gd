@@ -17,6 +17,7 @@ var _next_id := 0
 
 func _init() -> void:
 	game_id = "ice_coins"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "snow"
 	backdrop_style = "sky_day"
 	time_limit = 40.0

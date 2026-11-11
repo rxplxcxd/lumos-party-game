@@ -19,6 +19,7 @@ var _hit_cd: Array[float] = [0, 0, 0, 0]
 
 func _init() -> void:
 	game_id = "spark_carousel"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "night"
 	backdrop_style = "night"
 	time_limit = 45.0

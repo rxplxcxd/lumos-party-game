@@ -14,6 +14,7 @@ var _random_drop_t := 0.0
 
 func _init() -> void:
 	game_id = "dungeon_drop"
+	fair_spawns = true   # Startplätze jede Runde neu auslosen (kein fester Platzvorteil)
 	env_preset = "dungeon"
 	time_limit = 60.0
 	survival = true
