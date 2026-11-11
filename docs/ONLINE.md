@@ -36,6 +36,43 @@ gebündelt, verarbeitete Einträge werden in einem Request gelöscht).
 
 Start: Alle Geräte melden „bereit“, der Host gibt „go“ → gleichzeitiger Countdown.
 
+### Spielerliste und Rollen (seit 1.2.5)
+Der Host ist die einzige Quelle dafür, wer auf welchem Platz sitzt:
+* **Plätze:** In der Lobby vergibt der Host die Plätze lückenlos und eindeutig: 0 = Host, dann nach
+  Beitrittszeit. Treten zwei Gäste gleichzeitig bei, landen sie nicht mehr auf demselben Platz.
+* **Spielerliste (`cfg.roster`):** Beim Start legt der Host für alle vier Plätze fest: Figur, Name, Mensch oder
+  CPU, CPU-Stufe und Konto. Jedes Gerät übernimmt genau diese Liste (`Net.apply_roster`), auch für die CPUs.
+  Vorher nahm jedes Gerät für CPUs seine eigenen lokalen Einstellungen.
+* **Figuren sind eindeutig:** Wählen zwei Spieler dieselbe Figur, behält sie der niedrigere Platz, der andere
+  bekommt eine freie. Eigene 3D-Avatare gibt es nur auf dem eigenen Gerät; online werden sie durch eine freie
+  Standardfigur ersetzt, damit alle dasselbe sehen. Die Lobby weist darauf hin („wird beim Start getauscht“).
+* **Ein Konto pro Gerät:** Ist ein Konto schon von einem anderen Gerät im Raum (`dev` im Spielereintrag), wird
+  der Beitritt mit einer Erklärung abgelehnt. Sonst würden beide Geräte denselben Platz steuern.
+* **Anzeige:** Neben jedem Namen steht „DU“ (dieses Gerät), „ONLINE“ (Mitspieler) oder „CPU · Stufe“. Dazu
+  kommt „AM ZUG“ beim aktiven Spieler.
+
+### Wer bedient? (seit 1.2.5)
+* **Bedienelemente** bekommt nur der Mensch, der am Gerät für den aktiven Platz spielt: Würfel, Item- und
+  Wegwahl, Ja/Nein, Spielerwahl, Shop, Glücksrad.
+* **Zuschauer:** Alle anderen sehen eine reine Anzeige ohne Knöpfe („X entscheidet …“) und den Hinweis
+  „Zuschauen: X ist am Zug“. Was der aktive Spieler gerade markiert, wird live mitgezeigt (`hv`, unzuverlässig).
+  Das gilt auch für CPU-Entscheidungen auf dem Host und offline: Niemand kann mehr für eine CPU klicken.
+* **Touch:** Auf Touch-Geräten sind die Spielknöpfe ausgeblendet, solange ein anderer am Zug ist
+  (Touch-Profil `spectate`).
+* **Tempo:** Online gibt es keinen Schnellvorlauf; alle sehen den Ablauf im selben Tempo.
+* **Gleichzeitige Eingaben** gibt es nur, wo das Spiel sie vorsieht: Minispiel-Abstimmung und Minispiele.
+
+### Host-Schnappschuss (seit 1.2.5)
+Zu Beginn jedes Zuges und vor der Minispiel-Wahl schickt der Host den vollständigen Brettzustand (`bs`):
+* **Spieler:** Felder, Münzen, Sterne, Items und Statistik.
+* **Brett:** Sternfeld, Fallen, Geheimgänge, Partner und Shop.
+* **Abläufe:** Entscheidungszähler und Zufallsgenerator.
+
+Clients warten darauf und übernehmen bei jeder Abweichung den Host-Stand, inklusive Figurenpositionen und
+Anzeige. Der Lockstep hält alle Geräte zwischen zwei Zügen synchron; der Schnappschuss korrigiert jede Abweichung
+spätestens beim nächsten Zug. Die Kodierung (`NetCodec`) erhält Ganzzahl-Schlüssel, Ganzzahlen und Vektoren über
+JSON und erzeugt nie Objekte aus Netzdaten.
+
 ### Synchronisationspunkte (seit 1.2.2)
 `Net.sync_point(tag, timeout)` ist eine gemeinsame Schranke: Clients melden `sp` (alle 1,5 s wiederholt), der Host
 gibt mit `sp_go` frei, sobald alle Teilnehmer der Partie da sind. Nach 0,6 s Wartezeit erscheint „Warte auf
@@ -75,7 +112,9 @@ Alle Geräte führen den Brettablauf identisch aus (`Game.prng`, gleicher Startw
 Würfel, Wegwahl, Ja/Nein, Glücksrad, Gegnerwahl, Abstimmung – bekommt eine fortlaufende Nummer (`Game.party.dseq`).
 Das Gerät des Spielers (CPUs: Host) entscheidet und sendet `{"k": "bd", "n", "v"}`; die anderen zeigen dieselbe
 Animation und übernehmen genau diesen Wert. Test: `tools/dev/net_test.sh <ordner> party` vergleicht den
-Brettzustand von Host und Client nach jedem Zug; `tools/dev/net_test.sh <ordner> <minispiel-id>` prüft ein
+Brettzustand von Host und Gästen nach jedem Zug; mit `CLIENTS=2 HUMAN=1 HEROES="knight ranger mage"` laufen drei
+Geräte mit verschiedenen Figuren, der erste Gast bedient als Mensch. Das Skript prüft zusätzlich: gleiche
+Spielerliste auf allen Geräten, eindeutige Plätze und Bedienelemente nur für den eigenen Platz; `tools/dev/net_test.sh <ordner> <minispiel-id>` prüft ein
 einzelnes Minispiel (beide Geräte melden „Minispiel-Ende“ mit Platzierungen – Owner- und Host-Modell).
 `EXTRA=--log-scenes` protokolliert zusätzlich jeden Szenenwechsel.
 

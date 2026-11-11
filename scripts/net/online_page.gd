@@ -264,15 +264,22 @@ func _refresh() -> void:
 	ids.sort_custom(func(a: String, b: String) -> bool: return int(Net.players[a].get("slot", 0)) < int(Net.players[b].get("slot", 0)))
 	var all_ready := true
 	var big := Net.capacity() > Net.MAX_PLAYERS
+	var hero_seen := {}
+	var taken_slots := {}
 	for id in ids:
 		var p: Dictionary = Net.players[id]
 		var slot := int(p.get("slot", 0))
+		taken_slots[slot] = true
 		var row := UI.hbox(12)
 		row.add_child(UI.label("P%d" % (slot + 1), 22 if big else 28, Game.player_color(slot % 4) if slot < 4 else Athlon.runner_color(slot), true))
 		var nm := UI.label("%s%s" % [String(p.get("name", "Spieler")), "  (du)" if id == Net.me else ""], 18 if big else 24, Color.WHITE, true)
 		nm.custom_minimum_size.x = 300
 		row.add_child(nm)
-		row.add_child(UI.label(Game.hero(String(p.get("hero", "knight"))).name, 20, Color(1, 1, 1, 0.7)))
+		var hid := String(p.get("hero", "knight"))
+		var dup := hero_seen.has(hid) or hid.begins_with("custom:")
+		hero_seen[hid] = true
+		# Doppelte Figur (oder eigener Avatar, den die anderen Geräte nicht haben): beim Start wird getauscht
+		row.add_child(UI.label(Game.hero(hid).name + ("  · wird beim Start getauscht" if dup else ""), 20, Color("#ffb070") if dup else Color(1, 1, 1, 0.7)))
 		if id == Net.host_id:
 			row.add_child(UI.icon_rect("trophy", 26, UI.GOLD))
 		var rd := bool(p.get("ready", false))
@@ -283,8 +290,9 @@ func _refresh() -> void:
 	if big:
 		_players_box.add_child(UI.label("%d / %d Läufer · freie Plätze bis 8 füllen CPUs auf" % [ids.size(), Net.capacity()], 18, Color(1, 1, 1, 0.5)))
 	else:
-		for k in range(ids.size(), Net.MAX_PLAYERS):
-			_players_box.add_child(UI.label("P%d – frei (CPU)" % (k + 1), 20, Color(1, 1, 1, 0.4)))
+		for k in Net.MAX_PLAYERS:
+			if not taken_slots.has(k):
+				_players_box.add_child(UI.label("P%d – frei (CPU)" % (k + 1), 20, Color(1, 1, 1, 0.4)))
 	if is_instance_valid(_game_stepper):
 		_game_stepper.get_parent().visible = not big
 		for r in _party_rows:

@@ -25,6 +25,10 @@ var _ff_hint: ButtonPrompt
 var _current := -1
 var _busy_ui := false
 var partners: PartnerSystem
+var _hover := {}          # Online: Entscheidungsnummer -> Index, den der aktive Spieler gerade markiert
+var _host_states := {}    # Online: Host-Schnappschüsse je Zug-Tag
+var _touch_prof := ""
+var _vote_local := false  # läuft eine Abstimmung, an der ein lokaler Mensch teilnimmt?
 
 
 func _ready() -> void:
@@ -72,7 +76,8 @@ func _ready() -> void:
 	cam.snap_overview()
 	_build_hud()
 	Audio.music(def.music)
-	InputHub.set_touch_profile("board")
+	_set_touch("board" if not _online() else "spectate")
+	Net.message.connect(_on_net_msg)
 	_apply_routes(false)
 	_place_star_node()
 	partners.restore_visuals()
@@ -165,11 +170,13 @@ func _main() -> void:
 			# Rundenbasiert und synchron: Der nächste Zug beginnt erst, wenn ALLE Geräte den vorigen fertig
 			# gezeigt haben – so sieht jeder live, wie der Spieler am Zug würfelt und zieht.
 			await Net.sync_point("turn:%d:%d" % [int(party.round), t])
+			await _host_sync("turn:%d:%d" % [int(party.round), t])
 			await _turn(t)
 			if String(party.phase) != "turns":
 				return   # Zug für ein Partner-/Duell-Minispiel unterbrochen
 		party.turn = 0
 		await Net.sync_point("mgsel:%d" % int(party.round))
+		await _host_sync("mgsel:%d" % int(party.round))
 		await _choose_minigame()
 		return
 
@@ -244,8 +251,13 @@ func _turn(p: int) -> void:
 	cam.target = rig
 	cam.overview = false
 	cam.zoom = 1.0
-	_ff_hint.visible = Game.players[p].cpu and _any_human()
-	await _show_banner("%s ist dran!" % _pname(p), Game.player_color(p), 0.9)
+	_ff_hint.visible = Game.players[p].cpu and _any_human() and not _online()
+	for i in 4:
+		_badges[i].set_turn(i == p)
+	var mine := _online() and _local_human(p)
+	await _show_banner(("Du bist dran, %s!" % _pname(p)) if mine else ("%s ist dran!" % _pname(p)), Game.player_color(p), 0.9)
+	if _online() and not _local_human(p):
+		_spectate(p)
 	rig.turn_to(cam.global_position - rig.global_position, 0.3)
 	rig.react("determined")
 	await _wait(0.6)
@@ -276,6 +288,7 @@ func _turn(p: int) -> void:
 	if String(Game.party.phase) != "turns":
 		return
 	partners.turn_end(p)
+	_set_prompt("")
 	_debug_digest("Zug %d" % p)
 	_ff_hint.visible = false
 	Juice.base_time_scale = 1.0
@@ -285,8 +298,13 @@ func _turn(p: int) -> void:
 
 
 func _process(_delta: float) -> void:
+	# Touch-Knöpfe nur, wenn dieses Gerät gerade wirklich bedienen darf (online: eigener Zug oder Abstimmung)
+	if _online():
+		_set_touch("board" if (_current >= 0 and _local_human(_current)) or _vote_local else "spectate")
 	if CutsceneManager.active:
 		return
+	if _online():
+		return   # online kein Schnellvorlauf: alle Geräte sehen denselben Ablauf im selben Tempo
 	if _current >= 0 and Game.players[_current].cpu and _any_human():
 		var ff := false
 		for i in 4:
@@ -317,7 +335,8 @@ func _roll_dice(p: int, k: int, count: int, max_v := DICE_MAX) -> int:
 	num.position = Vector3(0, 0, 0)
 	holder.add_child(num)
 	Juice.pop_in(holder, 0.35)
-	_set_prompt("Würfeln!" if _local_human(p) else "")
+	_prompt_for(p, "Würfeln!")
+	_log_ui(p, "Würfel")
 	var value := 1
 	var t := 0.0
 	var wait_cpu := randf_range(0.7, 1.4)
@@ -342,7 +361,7 @@ func _roll_dice(p: int, k: int, count: int, max_v := DICE_MAX) -> int:
 		elif Game.players[p].cpu:
 			if t > wait_cpu:
 				break
-		elif t > 0.25 and (InputHub.ui_pressed(p, "a") or _tap_consume()):
+		elif t > 0.25 and (InputHub.ui_pressed(p, "a") or _tap_consume() or _autopress(t)):
 			break
 		await get_tree().process_frame
 	_publish(p, n, value)
@@ -696,7 +715,8 @@ func _choose_path(p: int, cur: int, options: Array) -> int:
 	var t := 0.0
 	var prev_x := 0.0
 	var cpu_pick := _cpu_path(p, options)
-	_set_prompt("Weg wählen (Stick links/rechts)" if _local_human(p) else "")
+	_prompt_for(p, "Weg wählen (Stick links/rechts)")
+	_log_ui(p, "Weg")
 	var n := _next_decision()
 	while chosen < 0:
 		var dt := get_process_delta_time()
@@ -705,6 +725,8 @@ func _choose_path(p: int, cur: int, options: Array) -> int:
 			var s := 1.0 + (0.25 + sin(t * 8.0) * 0.12 if i == sel else 0.0)
 			arrows[i].scale = arrows[i].scale.lerp(Vector3.ONE * s, clampf(dt * 12.0, 0, 1))
 		if not _decides_here(p):
+			if _hover.has(n):
+				sel = clampi(int(_hover[n]), 0, options.size() - 1)
 			if Net.decisions.has(n):
 				sel = clampi(int(Net.decisions[n]), 0, options.size() - 1)
 				chosen = options[sel]
@@ -720,8 +742,9 @@ func _choose_path(p: int, cur: int, options: Array) -> int:
 			if absf(x) > 0.6 and absf(prev_x) <= 0.6:
 				sel = wrapi(sel + (1 if x > 0 else -1), 0, options.size())
 				Audio.sfx("ui_move")
+				_send_hover(n, sel)
 			prev_x = x
-			if t > 0.25 and (InputHub.ui_pressed(p, "a") or _tap_consume()):
+			if t > 0.25 and (InputHub.ui_pressed(p, "a") or _tap_consume() or _autopress(t)):
 				chosen = options[sel]
 		await get_tree().process_frame
 	_publish(p, n, sel)
@@ -935,55 +958,13 @@ func _duel_space(p: int) -> void:
 
 
 func _pick_player(p: int, question: String, options: Array[int], cpu_choice: int) -> int:
-	var layer := CanvasLayer.new()
-	layer.layer = 30
-	add_child(layer)
-	var root := UI.center_root(layer)
-	var panel := UI.panel()
-	root.add_child(panel)
-	var v := UI.vbox(16)
-	panel.add_child(v)
-	var q := UI.label(question, 34, Color.WHITE, true)
-	q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(q)
-	var h := UI.hbox(16)
-	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.add_child(h)
-	var answer := [-1]
-	var btns: Array[Button] = []
+	var labels: Array = []
+	var cols: Array = []
 	for o in options:
-		var b := UI.button("%s\n%d Münzen" % [_pname(o), int(Game.players[o].coins)], Game.player_color(o), 26, 200)
-		b.custom_minimum_size.y = 96
-		h.add_child(b)
-		btns.append(b)
-		var oo: int = o
-		b.pressed.connect(func() -> void: answer[0] = oo)
-	await get_tree().process_frame
-	panel.position = Vector2((root.size.x - panel.size.x) / 2.0, root.size.y * 0.58)
-	Juice.pop_in(panel, 0.3)
-	if _local_human(p):
-		btns[options.find(cpu_choice)].grab_focus()
-	else:
-		for b in btns:
-			b.disabled = not _decides_here(p)
-	var t := 0.0
-	var n := _next_decision()
-	while answer[0] < 0:
-		t += get_process_delta_time()
-		if not _decides_here(p):
-			if Net.decisions.has(n):
-				answer[0] = int(Net.decisions[n])
-			_wait_hint(p, t)
-		elif Game.players[p].cpu and t > 1.0:
-			answer[0] = cpu_choice
-			btns[options.find(cpu_choice)].emit_signal("pressed")
-		await get_tree().process_frame
-	_publish(p, n, answer[0])
-	_set_prompt("")
-	_tap = false
-	await _wait(0.2)
-	layer.queue_free()
-	return answer[0]
+		labels.append("%s\n%d Münzen" % [_pname(o), int(Game.players[o].coins)])
+		cols.append(Game.player_color(o))
+	var k := await _decision_panel(p, question, labels, cols, maxi(0, options.find(cpu_choice)), [], 0, options.size(), 26, 200.0, 1.0, 0.58)
+	return options[clampi(k, 0, options.size() - 1)]
 
 
 func _torch_trap(p: int) -> void:
@@ -1195,7 +1176,7 @@ func _lucky_chest(p: int) -> void:
 	wheel.size = wheel.custom_minimum_size
 	Juice.pop_in(wheel, 0.4)
 	wheel.spin()
-	_set_prompt("Stopp!" if _local_human(p) else "")
+	_prompt_for(p, "Stopp!")
 	var t := 0.0
 	var stop_at := randf_range(1.2, 2.2)
 	var n := _next_decision()
@@ -1208,7 +1189,7 @@ func _lucky_chest(p: int) -> void:
 			_wait_hint(p, t)
 		elif Game.players[p].cpu and t > stop_at:
 			stop_now = true
-		elif not Game.players[p].cpu and t > 0.4 and (InputHub.ui_pressed(p, "a") or _tap_consume()):
+		elif not Game.players[p].cpu and t > 0.4 and (InputHub.ui_pressed(p, "a") or _tap_consume() or _autopress(t)):
 			stop_now = true
 		if stop_now:
 			var land := wheel.predict_stop()
@@ -1813,7 +1794,11 @@ func _vote_minigame(pool: Array, cat: String) -> Dictionary:
 		row.add_child(votes)
 		v.add_child(row)
 		rows.append([row, votes, 0])
-	var hint := UI.prompt("a", "Stick: wählen · A: abstimmen", 22)
+	_vote_local = false
+	for i in 4:
+		if _local_human(i):
+			_vote_local = true
+	var hint: Control = UI.prompt("a", "Stick: wählen · A: abstimmen", 22) if _vote_local else UI.label("Die Mitspieler stimmen ab …", 22, Color(1, 1, 1, 0.7))
 	v.add_child(hint)
 	await get_tree().process_frame
 	panel.position = (root.size - panel.size) / 2.0
@@ -1851,7 +1836,7 @@ func _vote_minigame(pool: Array, cat: String) -> Dictionary:
 			var mv := InputHub.move(i)
 			if absf(mv.y) > 0.6 and InputHub.ui_pressed(i, "a") == false and Engine.get_process_frames() % 8 == 0:
 				choice[i] = clampi(choice[i] + (1 if mv.y > 0 else -1), 0, opts.size() - 1)
-			if InputHub.ui_pressed(i, "a") or (i == _touch_slot() and _tap_consume()):
+			if InputHub.ui_pressed(i, "a") or (i == _touch_slot() and _tap_consume()) or _autopress(t_wait):
 				done[i] = true
 				_publish(i, n0 + i, choice[i])
 				Audio.sfx("ui_confirm")
@@ -1873,6 +1858,7 @@ func _vote_minigame(pool: Array, cat: String) -> Dictionary:
 	for k in rows.size():
 		if int(rows[k][2]) > int(rows[best][2]) or (int(rows[k][2]) == int(rows[best][2]) and Game.prng.randf() < 0.5 and k != best):
 			best = k
+	_vote_local = false
 	Juice.ui_punch(rows[best][0], 0.2, 0.5)
 	Audio.sfx("bell")
 	await _wait(1.2)
@@ -2073,14 +2059,140 @@ func _publish(p: int, n: int, v: Variant) -> void:
 		Net.decide_send(n, v)
 
 
+# --- Rollen & Live-Synchronisation ---------------------------------------------------------------------------
+
+## Zuschauer-Hinweis: Wer ist am Zug? (online, solange dieses Gerät nicht selbst bedient)
+func _spectate(p: int) -> void:
+	var what := "CPU" if Game.players[p].cpu else "Mitspieler"
+	_set_prompt("Zuschauen: %s ist am Zug (%s)" % [_pname(p), what], "")
+
+
+## Online: dem Host/allen mitteilen, welche Option der aktive Spieler gerade markiert (nur Anzeige).
+func _send_hover(n: int, idx: int) -> void:
+	if _online():
+		Net.send({"k": "hv", "n": n, "i": idx}, false)
+
+
+func _on_net_msg(_from: String, msg: Dictionary) -> void:
+	match String(msg.get("k", "")):
+		"hv":
+			_hover[int(msg.get("n", -1))] = int(msg.get("i", -1))
+		"bs":
+			_host_states[String(msg.get("tag", ""))] = msg.get("st", {})
+
+
+func _set_touch(prof: String) -> void:
+	if prof != _touch_prof:
+		_touch_prof = prof
+		InputHub.set_touch_profile(prof)
+
+
+## Test-Hilfe (--net-autopress): ein „Mensch“ drückt nach kurzer Bedenkzeit selbst – so laufen im
+## Mehrgeräte-Test echte Mensch-Eingaben (nicht die CPU) über das Netz.
+func _autopress(t: float) -> bool:
+	return t > 0.7 and "--net-autopress" in OS.get_cmdline_user_args()
+
+
+## Test-Protokoll: Dieses Gerät zeigt Bedienelemente für Platz p (darf nur der eigene Platz sein).
+func _log_ui(p: int, what: String) -> void:
+	if _local_human(p) and _online() and "--net-test" in str(OS.get_cmdline_user_args()):
+		print("[NET] Bedienung Platz %d (eigener Platz %d): %s" % [p, Net.my_slot, what])
+
+
+# --- Host-Schnappschuss ----------------------------------------------------------------------------------------
+# Zu Beginn jedes Zuges (und vor der Minispiel-Wahl) verteilt der Host den vollständigen Brettzustand. Clients
+# vergleichen ihn mit ihrem eigenen und übernehmen bei jeder Abweichung den Host-Stand (inklusive Zufalls-
+# generator und Entscheidungszähler). So bleibt jedes Gerät zu jeder Zeit auf dem Stand des Hosts.
+
+const SYNC_PLAYER_KEYS := ["space", "coins", "stars", "items", "coins_max", "minigame_wins", "swaps", "last_roll",
+	"dice_total", "events_landed", "last_color"]
+const SYNC_PARTY_KEYS := ["star_space", "traps", "revealed", "dseq", "route_states", "partners", "free_partner",
+	"free_space", "partner_trigger", "shop_stock", "endspurt_event", "endspurt_done", "boss_done", "minigames_played"]
+
+
+func _state_pack() -> Dictionary:
+	var pl: Array = []
+	for i in 4:
+		var e := {}
+		for k in SYNC_PLAYER_KEYS:
+			if Game.players[i].has(k):
+				e[k] = Game.players[i][k]
+		pl.append(e)
+	var party := {}
+	for k in SYNC_PARTY_KEYS:
+		if Game.party.has(k):
+			party[k] = Game.party[k]
+	return {"pl": pl, "party": party, "rng": str(Game.prng.state)}
+
+
+## Übernimmt den Host-Stand. Rückgabe: true, wenn etwas abwich (und korrigiert wurde).
+func _state_apply(st: Dictionary) -> bool:
+	var mine: Dictionary = NetCodec.roundtrip(_state_pack())
+	var changed := false
+	var pl: Array = st.get("pl", [])
+	for i in mini(4, pl.size()):
+		for k in (pl[i] as Dictionary):
+			if k in SYNC_PLAYER_KEYS and str(Game.players[i].get(k)) != str(pl[i][k]):
+				Game.players[i][k] = pl[i][k]
+				changed = true
+	var party: Dictionary = st.get("party", {})
+	for k in party:
+		if k in SYNC_PARTY_KEYS and str(Game.party.get(k)) != str(party[k]):
+			Game.party[k] = party[k]
+			changed = true
+	var rng := String(st.get("rng", ""))
+	if rng.is_valid_int() and str(Game.prng.state) != rng:
+		Game.prng.state = int(rng)
+		changed = true
+	if changed:
+		push_warning("Online: Brettzustand vom Host übernommen (%s)" % str(mine).left(120))
+		if "--net-test" in str(OS.get_cmdline_user_args()):
+			print("[NET] Resync vom Host")
+		if not is_inside_tree() or rigs.size() < 4:
+			return true   # ohne aufgebaute Szene (Prüfskript) nur die Daten übernehmen
+		_formation_all(true)
+		for i in 4:
+			_badges[i].refresh()
+		_place_star_node()
+		var traps: Dictionary = Game.party.get("traps", {})
+		for sp in traps:
+			builder.set_trap_visual(int(sp), true, Game.player_color(int(traps[sp])))
+	return changed
+
+
+func _host_sync(tag: String) -> void:
+	if not _online():
+		return
+	if Net.is_host:
+		var st: Dictionary = NetCodec.enc(_state_pack())
+		Net.send({"k": "bs", "tag": tag, "st": st}, true)
+		return
+	var t0 := Time.get_ticks_msec()
+	while not _host_states.has(tag) and Net.in_game() and Time.get_ticks_msec() - t0 < 8000:
+		await get_tree().process_frame
+	if _host_states.has(tag):
+		_state_apply(NetCodec.dec(_host_states[tag]))
+		_host_states.erase(tag)
+
+
 ## Touch-Eingabe (Tippen) gehört offline Spieler 1, online dem eigenen Slot.
 func _touch_slot() -> int:
 	return Net.my_slot if _online() else 0
 
 
 func _wait_hint(p: int, t: float) -> void:
-	if t > 2.0 and not _prompt.visible and not Game.players[p].cpu:
-		_set_prompt("Warte auf %s …" % _pname(p), "")
+	if t > 0.3 and not _prompt.visible and _online():
+		_spectate(p)
+
+
+## Aufforderung nur für den, der bedient; Zuschauer sehen online, wer gerade am Zug ist.
+func _prompt_for(p: int, text: String) -> void:
+	if _local_human(p):
+		_set_prompt(text)
+	elif _online():
+		_spectate(p)
+	else:
+		_set_prompt("")
 
 
 ## Schatzkammer: Item (falls Platz) oder 10 Münzen
@@ -2236,6 +2348,27 @@ func _check_coin_trap(p: int) -> void:
 
 ## Allgemeine Auswahl (Liste von Knöpfen, online im Lockstep). Ergebnis: Index.
 func _choose_option(p: int, question: String, labels: Array, cpu_idx: int, enabled: Array = []) -> int:
+	var many := labels.size() > 6
+	var cols: Array = []
+	for k in labels.size():
+		cols.append(Color("#43b8c9") if k < labels.size() - 1 or many else Color("#8a5a3c"))
+	return await _decision_panel(p, question, labels, cols, clampi(cpu_idx, 0, labels.size() - 1), enabled,
+		labels.size() - 1, 5 if many else 1, 28 if many else 22, 120.0 if many else 460.0, 0.9, 0.5)
+
+
+func _ask(p: int, question: String, cpu_answer: bool) -> bool:
+	var k := await _decision_panel(p, question, ["Ja", "Nein"], [Color("#2ecc71"), Color("#ff5c7a")], 0 if cpu_answer else 1,
+		[], 1, 2, 32, 180.0, 0.8, 0.62)
+	return k == 0
+
+
+## Gemeinsamer Entscheidungs-Dialog (Optionen, Ja/Nein, Spielerwahl).
+## Bedienbar NUR für den Menschen, der an diesem Gerät für Platz p spielt. Alle anderen (Mitspieler online und
+## wer gerade einer CPU zusieht) bekommen eine reine Anzeige ohne Knöpfe: „X entscheidet …“ – mit Live-Markierung
+## dessen, was der aktive Spieler gerade auswählt. Rückgabe: Index der gewählten Option.
+func _decision_panel(p: int, question: String, labels: Array, colors: Array, cpu_idx: int, enabled: Array,
+		cancel_idx: int, columns: int, font: int, width: float, cpu_delay: float, y_frac: float) -> int:
+	var interactive := _local_human(p)
 	var layer := CanvasLayer.new()
 	layer.layer = 30
 	add_child(layer)
@@ -2244,110 +2377,123 @@ func _choose_option(p: int, question: String, labels: Array, cpu_idx: int, enabl
 	root.add_child(panel)
 	var v := UI.vbox(10)
 	panel.add_child(v)
+	if not interactive:
+		var who := UI.label("%s entscheidet …" % _pname(p), 24, Game.player_color(p).lightened(0.35), true)
+		who.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(who)
 	var q := UI.label(question, 32, Color.WHITE, true)
 	q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(q)
-	var many := labels.size() > 6
 	var grid := GridContainer.new()
-	grid.columns = 5 if many else 1
+	grid.columns = maxi(1, columns)
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 8)
 	v.add_child(grid)
 	var answer := [-1]
-	var btns: Array[Button] = []
+	var nodes: Array[Control] = []
 	for k in labels.size():
-		var b := UI.button(String(labels[k]), Color("#43b8c9") if k < labels.size() - 1 or many else Color("#8a5a3c"), 22 if not many else 28, 120.0 if many else 460.0)
-		if k < enabled.size() and not bool(enabled[k]):
-			b.disabled = true
-		grid.add_child(b)
-		btns.append(b)
-		var kk := k
-		b.pressed.connect(func() -> void: answer[0] = kk)
+		var col: Color = colors[k] if k < colors.size() else Color("#43b8c9")
+		var off := k < enabled.size() and not bool(enabled[k])
+		var node: Control
+		if interactive:
+			var b := UI.button(String(labels[k]), col, font, width)
+			b.disabled = off
+			var kk := k
+			b.pressed.connect(func() -> void: answer[0] = kk)
+			node = b
+		else:
+			node = _option_chip(String(labels[k]), col, font, width, off)
+		grid.add_child(node)
+		nodes.append(node)
 	await get_tree().process_frame
-	panel.position = Vector2((root.size.x - panel.size.x) / 2.0, clampf(root.size.y * 0.5 - panel.size.y * 0.5, 10.0, root.size.y))
+	panel.position = Vector2((root.size.x - panel.size.x) / 2.0, clampf(root.size.y * y_frac - panel.size.y * 0.5, 10.0, root.size.y))
 	Juice.pop_in(panel, 0.3)
-	var ci := clampi(cpu_idx, 0, labels.size() - 1)
-	if _local_human(p):
-		btns[ci if not btns[ci].disabled else labels.size() - 1].grab_focus()
-	elif not _decides_here(p):
-		for b in btns:
-			b.disabled = true
+	var ci := cpu_idx
+	if ci < nodes.size() and k_disabled(nodes, ci):
+		ci = cancel_idx
+	if interactive:
+		(nodes[ci] as Button).grab_focus()
+		_log_ui(p, question.get_slice("\n", 0))
 	var t := 0.0
 	var n := _next_decision()
+	var last_hover := -1
 	while answer[0] < 0:
 		t += get_process_delta_time()
 		if not _decides_here(p):
+			# Mitspieler online: live zeigen, was markiert ist; Ergebnis kommt als Entscheidung
+			_mark_chip(nodes, int(_hover.get(n, -1)))
 			if Net.decisions.has(n):
-				answer[0] = int(Net.decisions[n])
+				answer[0] = clampi(int(Net.decisions[n]), 0, labels.size() - 1)
 			_wait_hint(p, t)
-		elif Game.players[p].cpu and t > 0.9:
-			answer[0] = ci
-			Juice.ui_punch(btns[ci], 0.2, 0.3)
-		elif not Game.players[p].cpu and t > 0.2 and InputHub.ui_pressed(p, "b"):
-			answer[0] = labels.size() - 1
+		elif Game.players[p].cpu:
+			if t > cpu_delay * 0.55:
+				_mark_chip(nodes, ci)
+			if t > cpu_delay:
+				answer[0] = ci
+		else:
+			var f := nodes.find(get_viewport().gui_get_focus_owner())
+			if f >= 0 and f != last_hover:
+				last_hover = f
+				_send_hover(n, f)
+			if t > 0.2 and InputHub.ui_pressed(p, "b"):
+				answer[0] = cancel_idx
+			elif _autopress(t):
+				# Test-„Mensch“: erste wählbare Option, damit auch Folgedialoge (Wunschzahl, Spielerwahl) laufen
+				var first := 0
+				while first < nodes.size() - 1 and k_disabled(nodes, first):
+					first += 1
+				answer[0] = first
 		await get_tree().process_frame
 	_publish(p, n, answer[0])
+	_mark_chip(nodes, answer[0])
+	Juice.ui_punch(nodes[answer[0]], 0.2, 0.3)
 	_set_prompt("")
 	_tap = false
-	await _wait(0.15)
+	await _wait(0.15 if interactive else 0.45)
 	layer.queue_free()
+	if _online() and not _local_human(p) and _current == p:
+		_spectate(p)
 	return answer[0]
 
 
-func _ask(p: int, question: String, cpu_answer: bool) -> bool:
-	var layer := CanvasLayer.new()
-	layer.layer = 30
-	add_child(layer)
-	var root := UI.center_root(layer)
-	var panel := UI.panel()
-	root.add_child(panel)
-	var v := UI.vbox(16)
-	panel.add_child(v)
-	var q := UI.label(question, 34, Color.WHITE, true)
-	q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(q)
-	var h := UI.hbox(20)
-	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.add_child(h)
-	var yes := UI.button("Ja", Color("#2ecc71"), 32, 180)
-	var no := UI.button("Nein", Color("#ff5c7a"), 32, 180)
-	h.add_child(yes)
-	h.add_child(no)
-	var answer := [-1]
-	yes.pressed.connect(func() -> void: answer[0] = 1)
-	no.pressed.connect(func() -> void: answer[0] = 0)
-	await get_tree().process_frame
-	panel.position = Vector2((root.size.x - panel.size.x) / 2.0, root.size.y * 0.62)
-	Juice.pop_in(panel, 0.3)
-	var t := 0.0
-	var n := _next_decision()
-	var here := _decides_here(p)
-	if not here:
-		yes.disabled = true
-		no.disabled = true
-	if _local_human(p):
-		yes.grab_focus()
-	while answer[0] < 0:
-		t += get_process_delta_time()
-		if not _decides_here(p):
-			if Net.decisions.has(n):
-				answer[0] = int(Net.decisions[n])
-				Juice.ui_punch(yes if answer[0] == 1 else no, 0.2, 0.3)
-			_wait_hint(p, t)
-		elif Game.players[p].cpu:
-			if t > 0.8:
-				answer[0] = 1 if cpu_answer else 0
-				(yes if cpu_answer else no).emit_signal("pressed")
-		elif t > 0.2:
-			if InputHub.ui_pressed(p, "b"):
-				answer[0] = 0
-		await get_tree().process_frame
-	_publish(p, n, answer[0])
-	_set_prompt("")
-	_tap = false
-	await _wait(0.15)
-	layer.queue_free()
-	return answer[0] == 1
+static func k_disabled(nodes: Array[Control], i: int) -> bool:
+	return nodes[i] is Button and (nodes[i] as Button).disabled or nodes[i].has_meta("off")
+
+
+## Nicht bedienbare Options-Anzeige für Zuschauer (sieht aus wie eine Karte, nimmt weder Fokus noch Klicks an).
+func _option_chip(text: String, col: Color, font: int, width: float, off: bool) -> Control:
+	var pc := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = col.darkened(0.45 if not off else 0.7)
+	sb.set_corner_radius_all(14)
+	sb.set_content_margin_all(10)
+	sb.border_color = Color(1, 1, 1, 0.0)
+	sb.set_border_width_all(4)
+	pc.add_theme_stylebox_override("panel", sb)
+	pc.custom_minimum_size.x = width
+	pc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pc.focus_mode = Control.FOCUS_NONE
+	if off:
+		pc.set_meta("off", true)
+	var l := UI.label(text, font, Color(1, 1, 1, 0.55 if off else 0.95), true)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pc.add_child(l)
+	return pc
+
+
+func _mark_chip(nodes: Array[Control], idx: int) -> void:
+	for k in nodes.size():
+		var c := nodes[k]
+		if c is Button:
+			continue
+		var sb := c.get_theme_stylebox("panel") as StyleBoxFlat
+		if sb:
+			var on := k == idx
+			if on and sb.border_color.a < 0.5:
+				Juice.ui_punch(c, 0.08, 0.2)
+			sb.border_color = Color(1.0, 0.86, 0.35, 1.0) if on else Color(1, 1, 1, 0.0)
+		c.modulate = Color.WHITE if (k == idx or idx < 0) else Color(0.72, 0.72, 0.78)
 
 
 func _show_banner(text: String, color := Color.WHITE, hold := 1.0) -> void:

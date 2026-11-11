@@ -1,6 +1,7 @@
 extends Node
 ## Prüfskript für die Systeme aus 1.2.4: CPU-Stufen (Game.lv), Inventar-Schutz, Item-Taktik je Stufe,
-## Emote-Grafiken und -Abklingzeit, Stepper-Navigation, Touch-Wischen, Menü-Figuren. Gibt je Prüfung PASS/FAIL aus, Exit-Code 1 bei Fehler.
+## Emote-Grafiken und -Abklingzeit, Stepper-Navigation, Touch-Wischen, Menü-Figuren,
+## Online-Codec, Spielerliste (Roster) und Host-Schnappschuss. Gibt je Prüfung PASS/FAIL aus, Exit-Code 1 bei Fehler.
 ##   godot --headless --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/test_systems.gd [--emote-sheet=/pfad.png]
 
 var _fails := 0
@@ -126,6 +127,52 @@ func run() -> void:
 	right.emit_signal("pressed")
 	_ok(st.index == 1, "Stepper: A auf dem Pfeil wechselt den Wert")
 	st.queue_free()
+	# --- Online: Codec, Spielerliste, Host-Schnappschuss -------------------------------------------------------
+	var raw := {"traps": {12: 1, 30: 3}, "coins": 23, "f": 0.5, "v": Vector3(1, 2, 3), "items": ["key", "trap"], "nest": [{"a": 7}]}
+	var back: Dictionary = NetCodec.roundtrip(raw)
+	_ok(back.traps.has(12) and typeof(back.coins) == TYPE_INT and is_equal_approx(float(back.f), 0.5) and back.v == Vector3(1, 2, 3) and back.items == ["key", "trap"] and int(back.nest[0].a) == 7,
+		"NetCodec: Ganzzahl-Schlüssel, Ganzzahlen, Kommazahlen und Vektoren überstehen JSON")
+	_ok(NetCodec.enc(Node) == null, "NetCodec: Objekte werden nie übertragen")
+	var saved_players := Net.players.duplicate(true)
+	Net.players = {
+		"gast2": {"name": "B", "hero": "knight", "slot": 1, "t": 30},   # gleicher Platz und gleiche Figur wie Gast 1
+		"host": {"name": "H", "hero": "knight", "slot": 0, "t": 50},
+		"gast1": {"name": "A", "hero": "ranger", "slot": 1, "t": 20},
+	}
+	Net.host_id = "host"
+	Net.me = "gast1"
+	var order := Net.lobby_order()
+	_ok(order == ["host", "gast1", "gast2"], "Spielerliste: Host zuerst, dann Beitrittsreihenfolge (%s)" % str(order))
+	Game.players[3].hero = "custom:me"
+	var roster := Net.build_roster(order)
+	var heroes_used := {}
+	var uniq := true
+	for e in roster:
+		if heroes_used.has(e.hero) or String(e.hero).begins_with("custom:"):
+			uniq = false
+		heroes_used[e.hero] = true
+	_ok(uniq and roster.size() == 4, "Spielerliste: jede Figur genau einmal, keine geräte-eigenen Avatare")
+	_ok(roster[0].hero == "knight" and roster[1].hero == "ranger" and roster[2].hero != "knight", "Spielerliste: Host behält seine Figur, doppelte Wahl wird getauscht")
+	_ok(not bool(roster[2].cpu) and bool(roster[3].cpu) and String(roster[3].uid) == "", "Spielerliste: drei Menschen, freier Platz ist CPU")
+	Net.apply_roster(roster)
+	_ok(Net.my_slot == 1 and Game.players[1].hero == "ranger" and bool(Game.players[3].cpu) and not bool(Game.players[2].cpu) and bool(Game.players[2].remote),
+		"Spielerliste: Gerät übernimmt eigenen Platz, Figuren und Rollen")
+	Net.players = saved_players
+	Net.me = ""
+	Net.host_id = ""
+	for i in 4:
+		Game.players[i].net_uid = ""
+	var pb2: Node = load("res://scripts/party/party_board.gd").new()
+	Game.players[0].coins = 31
+	Game.party.traps = {7: 2}
+	var host_state: Dictionary = NetCodec.roundtrip(pb2.call("_state_pack"))
+	Game.players[0].coins = 5                    # simulierte Abweichung auf einem Client
+	Game.party.traps = {}
+	Game.prng.randi()
+	_ok(bool(pb2.call("_state_apply", host_state)) and int(Game.players[0].coins) == 31 and (Game.party.traps as Dictionary).has(7),
+		"Host-Schnappschuss: abweichender Client übernimmt Münzen, Fallen und Zufall vom Host")
+	_ok(not bool(pb2.call("_state_apply", host_state)), "Host-Schnappschuss: gleicher Stand → keine Korrektur")
+	pb2.free()
 	# --- Touch-Wischen ----------------------------------------------------------------------------------------
 	var layer := CanvasLayer.new()
 	add_child(layer)

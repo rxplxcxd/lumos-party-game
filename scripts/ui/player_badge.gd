@@ -19,6 +19,7 @@ var _crown: UIIcon
 var _status_icon: TextureRect
 var _status := ""
 var _cpu_tag: Label
+var _turn_tag: Label
 
 
 func setup(p: int, compact := false, scores := false) -> PlayerBadge:
@@ -38,8 +39,11 @@ func setup(p: int, compact := false, scores := false) -> PlayerBadge:
 	v.add_child(name_row)
 	_name = UI.label(Game.hero(Game.players[p].hero).name.split(" ")[0] if compact else Game.hero(Game.players[p].hero).name, 22 if compact else 24, col.lightened(0.45))
 	name_row.add_child(_name)
-	_cpu_tag = UI.label("CPU" if Game.players[p].cpu else "P%d" % (p + 1), 16, Color(1, 1, 1, 0.65))
+	_cpu_tag = UI.label(role_tag(p), 16, Color(1, 1, 1, 0.65))
 	name_row.add_child(_cpu_tag)
+	_turn_tag = UI.label("AM ZUG", 15, UI.GOLD, true)
+	_turn_tag.visible = false
+	name_row.add_child(_turn_tag)
 	_crown = UIIcon.new("crown", 26)
 	_crown.visible = false
 	name_row.add_child(_crown)
@@ -67,6 +71,33 @@ func setup(p: int, compact := false, scores := false) -> PlayerBadge:
 		EventBus.coins_changed.connect(_on_coins)
 		EventBus.stars_changed.connect(_on_stars)
 	return self
+
+
+## Rollen-Kennzeichnung neben dem Namen – online auf allen Geräten aus derselben Spielerliste des Hosts:
+## „DU“ (dieses Gerät), „ONLINE“ (Mitspieler auf einem anderen Gerät), „CPU · Stufe“; offline „P1“ … bzw. „CPU“.
+static func role_tag(p: int) -> String:
+	if Net.in_game():
+		if String(Game.players[p].get("net_uid", "")) == "":
+			return "CPU · %s" % String(Game.CPU_LEVELS[clampi(int(Game.players[p].cpu_level), 0, Game.CPU_LEVELS.size() - 1)])
+		return "DU" if p == Net.my_slot else "ONLINE"
+	return "CPU" if Game.players[p].cpu else "P%d" % (p + 1)
+
+
+## Markiert, wer gerade am Zug ist.
+func set_turn(on: bool) -> void:
+	if _turn_tag:
+		_turn_tag.visible = on
+
+
+## Nach einer Korrektur vom Host: Name, Rolle und Zahlen neu anzeigen (ohne Zähl-Animation).
+func refresh() -> void:
+	if _cpu_tag:
+		_cpu_tag.text = role_tag(player)
+	if _coins:
+		_shown_coins = int(Game.players[player].coins)
+	if _stars:
+		_shown_stars = int(Game.players[player].stars)
+	_refresh_numbers()
 
 
 func _refresh_numbers() -> void:

@@ -21,6 +21,7 @@ const PROFILES := {
 	"none": {"stick": false, "buttons": {}},
 	"menu": {"stick": false, "buttons": {}},
 	"board": {"stick": true, "buttons": {"a": "OK", "b": "Nein", "start": "II"}},
+	"spectate": {"stick": false, "buttons": {"start": "II"}},   # online: ein anderer ist am Zug – nur zuschauen
 	"minigame": {"stick": true, "buttons": {"a": "Sprung", "b": "Aktion", "start": "II"}},
 	"action_only": {"stick": false, "buttons": {"a": "Los!", "start": "II"}},
 	"battle": {"stick": true, "buttons": {"a": "Gas", "b": "Turbo", "x": "Item", "start": "II"}},

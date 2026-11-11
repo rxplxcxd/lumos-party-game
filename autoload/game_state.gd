@@ -368,7 +368,7 @@ func new_player(idx: int, hero_id: String, cpu: bool, cpu_level: int) -> Diction
 		"idx": idx, "hero": hero_id, "name": hero(hero_id).name, "color": SLOT_COLORS[idx],
 		"cpu": cpu, "cpu_level": cpu_level, "device": idx, "remote": false, "last_color": "blue",
 		"coins": 10, "stars": 0, "space": -1, "items": [], "minigame_wins": 0, "coins_max": 10,
-		"swaps": 0, "last_roll": 0,
+		"swaps": 0, "last_roll": 0, "net_uid": "",
 	}
 
 

@@ -55,6 +55,7 @@ var _sp_arrived: Dictionary = {}
 var _sp_go: Dictionary = {}
 var scene_epoch := 0               # zählt Szenenwechsel in einer Sitzung (gleich auf allen Geräten)
 var _last_pong := 0.0
+var _dev_id := ""
 var _notice_layer: CanvasLayer
 var _wait_label: Label
 
@@ -111,7 +112,30 @@ func _ensure_identity() -> bool:
 
 func _player_info(slot: int) -> Dictionary:
 	return {"name": Account.display_name() if Account.signed_in() else Game.hero(Game.players[0].hero).name,
-		"hero": Game.players[0].hero, "slot": slot, "ready": false, "t": int(Time.get_unix_time_from_system())}
+		"hero": Game.players[0].hero, "slot": slot, "ready": false, "t": int(Time.get_unix_time_from_system()),
+		"dev": device_id()}
+
+
+## Zufällige, dauerhaft gespeicherte Kennung dieses Geräts (bzw. dieser Installation). Damit erkennt der
+## Raum, ob ein Konto schon von einem ANDEREN Gerät aus mitspielt.
+func device_id() -> String:
+	if _dev_id != "":
+		return _dev_id
+	var env := OS.get_environment("LUMOS_NET_TEST_DEV")
+	if env != "":
+		_dev_id = env
+		return _dev_id
+	var path := "user://device_id.txt"
+	if FileAccess.file_exists(path):
+		_dev_id = FileAccess.get_file_as_string(path).strip_edges()
+	if _dev_id.length() < 8:
+		var r := RandomNumberGenerator.new()
+		r.randomize()
+		_dev_id = "%08x%08x" % [r.randi(), r.randi()]
+		var f := FileAccess.open(path, FileAccess.WRITE)
+		if f:
+			f.store_string(_dev_id)
+	return _dev_id
 
 
 # --- Raum anlegen / beitreten / verlassen -------------------------------------------------------------------
@@ -235,6 +259,12 @@ func _on_value(tag: String, val: Variant) -> void:
 		code = ""
 		status.emit("Das Spiel in diesem Raum läuft bereits.")
 		return
+	if ps.has(me) and String((ps[me] as Dictionary).get("dev", "")) not in ["", device_id()]:
+		# Dasselbe Konto spielt schon von einem anderen Gerät aus mit – beide würden denselben Platz steuern.
+		_joining = false
+		code = ""
+		status.emit("Dieses Konto ist in diesem Raum schon auf einem anderen Gerät angemeldet. Bitte für jedes Gerät ein eigenes Konto nutzen oder ohne Anmeldung als Gast beitreten.")
+		return
 	var cap := int(m.get("max", MAX_PLAYERS))
 	if ps.size() >= cap and not ps.has(me):
 		_joining = false
@@ -286,9 +316,13 @@ func _on_child(tag: String, ev: String, key: String, val: Variant) -> void:
 				_relay_peers.erase(key)
 				_takeover_slot(key)
 				message.emit(key, {"k": "left"})
+				if is_host and not session:
+					_normalize_slots()
 			elif val is Dictionary:
 				var isnew := not players.has(key)
 				players[key] = val
+				if key == me and not session:
+					my_slot = int((val as Dictionary).get("slot", my_slot))
 				if isnew and key != me:
 					Audio.sfx("pop", null, -4.0)
 					if is_host and not _pcs.has(key):
@@ -297,6 +331,8 @@ func _on_child(tag: String, ev: String, key: String, val: Variant) -> void:
 						else:
 							_relay_peers[key] = true
 							transport = "Relay (RTDB)"
+			if is_host and not session:
+				_normalize_slots()
 			room_changed.emit()
 		"meta":
 			if ev == "removed":
@@ -511,17 +547,21 @@ func _receive(from: String, msg: Dictionary) -> void:
 func start_game(cfg: Dictionary) -> void:
 	if not is_host:
 		return
+	var order := lobby_order()
 	var slots := {}
 	var heroes := {}
 	var names := {}
-	for id in players:
-		var p: Dictionary = players[id]
-		slots[id] = int(p.get("slot", 0))
-		heroes[str(int(p.get("slot", 0)))] = String(p.get("hero", "knight"))
-		names[str(int(p.get("slot", 0)))] = String(p.get("name", "Spieler"))
+	for i in order.size():
+		var id: String = order[i]
+		var p: Dictionary = players.get(id, {}) if id != me or players.has(me) else _player_info(0)
+		slots[id] = i
+		heroes[str(i)] = String(p.get("hero", "knight"))
+		names[str(i)] = String(p.get("name", "Spieler"))
 	cfg["slots"] = slots
 	cfg["heroes"] = heroes
 	cfg["names"] = names
+	if String(cfg.get("mode", "")) != "athlon":
+		cfg["roster"] = build_roster(order)
 	cfg["seed"] = randi()
 	_db.update("rooms/%s/meta" % code, {"state": "playing", "cfg": cfg})
 	_start_local(cfg)
@@ -549,6 +589,7 @@ func _takeover_slot(id: String) -> void:
 	slots.erase(id)
 	Game.players[sl].cpu = true
 	Game.players[sl].remote = false
+	Game.players[sl].net_uid = ""
 	InputHub.net_driven.erase(sl)
 	Account.toast("%s hat das Spiel verlassen – die CPU übernimmt." % String(Game.players[sl].name), Color("#ffb070"))
 
@@ -584,14 +625,17 @@ func _start_local(cfg: Dictionary) -> void:
 	scene_epoch = 0
 	_last_pong = Time.get_ticks_msec() / 1000.0
 	var heroes: Dictionary = cfg.get("heroes", {})
-	for i in 4:
-		var key := str(i)
-		var taken := heroes.has(key)
-		Game.players[i].cpu = not taken
-		Game.players[i].remote = taken and i != my_slot
-		if taken:
-			Game.players[i].hero = String(heroes[key])
-			Game.players[i].name = Game.hero(Game.players[i].hero).name
+	if cfg.has("roster"):
+		apply_roster(cfg.roster as Array)
+	else:
+		for i in 4:
+			var key := str(i)
+			var taken := heroes.has(key)
+			Game.players[i].cpu = not taken
+			Game.players[i].remote = taken and i != my_slot
+			if taken:
+				Game.players[i].hero = String(heroes[key])
+				Game.players[i].name = Game.hero(Game.players[i].hero).name
 	if "--net-autodrive" in OS.get_cmdline_user_args():
 		Game.players[my_slot].cpu = true   # Dev-Test: lokale Figur/Kart fährt per KI
 		Game.players[my_slot].cpu_level = 2
@@ -626,6 +670,110 @@ func _start_local(cfg: Dictionary) -> void:
 			Router.goto("res://scenes/racer/NitroDash.tscn")
 		"minigame":
 			Router.goto(Game.minigame_info(String(cfg.get("id", "sumo_shove"))).scene)
+
+
+# --- Spielerliste (Roster) – einzige Quelle für Plätze, Figuren und Rollen -------------------------------------
+# Der Host legt beim Start fest, wer auf welchem Platz sitzt, welche Figur, welchen Namen und welche Rolle
+# (Mensch/CPU, CPU-Stufe) jeder Platz hat – auch für die CPUs. Alle Geräte übernehmen exakt diese Liste, statt
+# eigene lokale Einstellungen zu verwenden. Figuren sind eindeutig: Doppelte oder eigene 3D-Avatare (die nur auf
+# dem eigenen Gerät existieren) werden durch freie Standardfiguren ersetzt.
+
+## Reihenfolge der Spieler im Raum: Host zuerst, dann nach Beitrittszeit (bei Gleichstand nach ID).
+func lobby_order() -> Array:
+	var ids: Array = players.keys()
+	if is_host and not ids.has(me):
+		ids.append(me)
+	ids.sort_custom(func(a: String, b: String) -> bool:
+		if a == host_id or b == host_id:
+			return a == host_id
+		var ta := int((players.get(a, {}) as Dictionary).get("t", 0))
+		var tb := int((players.get(b, {}) as Dictionary).get("t", 0))
+		return ta < tb if ta != tb else a < b)
+	return ids
+
+
+## Host (Lobby): Plätze lückenlos und eindeutig vergeben (0 = Host, dann Beitrittsreihenfolge). Verhindert, dass
+## zwei gleichzeitig Beitretende denselben Platz wählen.
+func _normalize_slots() -> void:
+	var order := lobby_order()
+	for i in order.size():
+		var id: String = order[i]
+		if players.has(id) and int((players[id] as Dictionary).get("slot", -1)) != i:
+			(players[id] as Dictionary)["slot"] = i
+			_db.update("rooms/%s/players/%s" % [code, id], {"slot": i})
+	my_slot = order.find(me) if order.has(me) else my_slot
+
+
+## Host: vollständige Spielerliste für 4 Plätze bauen.
+func build_roster(order: Array) -> Array:
+	var used := {}
+	var roster: Array = []
+	var std: Array = Game.HEROES.map(func(h: Dictionary) -> String: return String(h.id))
+	var free_hero := func(pref: String) -> String:
+		if pref in std and not used.has(pref):
+			return pref
+		for h in std:
+			if not used.has(h):
+				return h
+		return pref
+	for i in 4:
+		var e := {"slot": i, "uid": "", "cpu": true, "level": int(Game.players[i].cpu_level), "hero": ""}
+		if i < order.size():
+			var id: String = order[i]
+			var p: Dictionary = players.get(id, {}) if players.has(id) else _player_info(0)
+			e.uid = id
+			e.cpu = false
+			e.hero = String(p.get("hero", "knight"))
+		roster.append(e)
+	# Menschen zuerst (sie behalten ihre Wahl, Reihenfolge = Platz), dann die CPUs mit den freien Figuren
+	for e in roster:
+		if not bool(e.cpu):
+			e.hero = free_hero.call(String(e.hero))
+			used[e.hero] = true
+	for e in roster:
+		if bool(e.cpu):
+			e.hero = free_hero.call(String(Game.players[int(e.slot)].hero))
+			used[e.hero] = true
+	for e in roster:
+		e["name"] = Game.hero(String(e.hero)).name
+	return roster
+
+
+## Alle Geräte: Spielerliste übernehmen (Figur, Name, Rolle, CPU-Stufe, eigener Platz).
+func apply_roster(roster: Array) -> void:
+	for e in roster:
+		var i := int(e.get("slot", -1))
+		if i < 0 or i >= Game.players.size():
+			continue
+		var uid := String(e.get("uid", ""))
+		Game.players[i].hero = String(e.get("hero", "knight"))
+		Game.players[i].name = String(e.get("name", Game.hero(Game.players[i].hero).name))
+		Game.players[i].cpu = bool(e.get("cpu", true))
+		Game.players[i].cpu_level = int(e.get("level", 1))
+		Game.players[i].remote = not bool(e.cpu) and uid != me
+		Game.players[i].net_uid = uid
+		if uid == me:
+			my_slot = i
+	if "--net-test" in str(OS.get_cmdline_user_args()):
+		print("[NET] Roster %s" % roster_digest())
+		print("[NET] Ich bin Platz %d" % my_slot)
+
+
+## Kurzfassung der Spielerliste (für Tests: muss auf allen Geräten gleich sein).
+func roster_digest() -> String:
+	var parts: Array = []
+	for i in 4:
+		var pl: Dictionary = Game.players[i]
+		var human := not bool(pl.cpu) or String(pl.get("net_uid", "")) != ""
+		parts.append("%d:%s:%s:%s" % [i, String(pl.hero), "Mensch" if human else "CPU", String(pl.get("net_uid", "")) if human else str(int(pl.cpu_level))])
+	return " | ".join(parts)
+
+
+## Spielt dieser Platz online ein Mensch (egal auf welchem Gerät)?
+func slot_is_human(slot: int) -> bool:
+	if slot < 0 or slot >= Game.players.size():
+		return false
+	return String(Game.players[slot].get("net_uid", "")) != "" if in_game() else not bool(Game.players[slot].cpu)
 
 
 # --- Synchronisations-Gate ---------------------------------------------------------------------------------------

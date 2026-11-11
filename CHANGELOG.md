@@ -3,6 +3,45 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.2.5 – Generalüberholung des Online-Multiplayers
+Grundlage sind Praxistests mit mehreren Spielern. Gilt für alle online spielbaren Modi (Brett, Minispiele,
+Rennen); Lumos-Athlon profitiert von der neuen Platzvergabe.
+
+* **Gleiche Figuren und Rollen auf allen Geräten:**
+  * Der Host verteilt beim Start eine vollständige Spielerliste: Platz, Figur, Name, Mensch oder CPU, CPU-Stufe
+    und Konto. Alle Geräte übernehmen sie, auch für die CPUs. Vorher nahm jedes Gerät für CPUs seine eigenen
+    lokalen Einstellungen, deshalb sahen CPUs je Gerät anders aus oder fehlten.
+  * Plätze vergibt der Host in der Lobby lückenlos (Host zuerst, dann Beitrittsreihenfolge). Zwei gleichzeitig
+    Beitretende landen nicht mehr auf demselben Platz.
+  * Figuren sind eindeutig: Doppelte Wahl und eigene 3D-Avatare, die nur auf dem eigenen Gerät existieren,
+    werden durch freie Standardfiguren ersetzt. Die Lobby zeigt das vorher an und listet freie Plätze nach
+    Platznummer.
+  * Ist ein Konto schon von einem anderen Gerät im Raum, wird der Beitritt mit einer Erklärung abgelehnt.
+    Vorher überschrieb das zweite Gerät den Eintrag, und beide steuerten denselben Platz.
+  * Neben den Namen steht „DU“, „ONLINE“ oder „CPU · Stufe“ – auf allen Geräten aus derselben Liste – dazu
+    „AM ZUG“ beim aktiven Spieler.
+* **Nur der aktive Spieler bedient:**
+  * Würfel, Item- und Wegwahl, Ja/Nein, Spielerwahl, Shop und Glücksrad gibt es nur auf dem Gerät des aktiven
+    Menschen.
+  * Alle anderen sehen eine Anzeige ohne Knöpfe („X entscheidet …“, „Zuschauen: X ist am Zug“) und live, was
+    der aktive Spieler gerade markiert.
+  * Behoben: Bei CPU-Entscheidungen waren die Knöpfe auf dem Host anklickbar, man konnte also für die CPU
+    entscheiden.
+  * Touch-Knöpfe verschwinden, solange ein anderer am Zug ist.
+  * Online gibt es keinen Schnellvorlauf mehr.
+* **Host-autoritativer Brettzustand:**
+  * Zu Beginn jedes Zuges und vor der Minispiel-Wahl verteilt der Host den vollständigen Stand: Felder,
+    Münzen, Sterne, Items, Fallen, Partner, Sternfeld, Entscheidungszähler und Zufallsgenerator.
+  * Weicht ein Gerät ab, übernimmt es den Host-Stand sofort.
+  * Der neue `NetCodec` überträgt Ganzzahl-Schlüssel, Ganzzahlen und Vektoren verlustfrei über JSON und erzeugt
+    nie Objekte aus Netzdaten.
+* **Tests:**
+  * `net_test.sh` kann jetzt mehrere Gäste testen (`CLIENTS=2`), mit einem bedienenden Mensch-Gast (`HUMAN=1`)
+    und eigener Figur je Gerät (`HEROES=…`).
+  * Das Skript prüft: identische Spielerliste auf allen Geräten, eindeutige Plätze, Bedienelemente nur für den
+    eigenen Platz und identischen Brettzustand.
+  * `test_systems.gd` prüft zusätzlich Codec, Spielerliste und Host-Korrektur.
+
 ## 1.2.4 – System-Update: Items, CPU-Stufen, Routen, Emotes, Touch & Controller
 * **Item-Persistenz (Bugfix):** Items gingen verloren, wenn ein Zug durch ein Partner-Feld, ein Minispiel oder
   eine Cutscene unterbrochen wurde. Dabei verfielen Restschritte und Würfeleffekt.

@@ -86,6 +86,8 @@ func _net_test() -> void:
 			await get_tree().create_timer(5.0, true).timeout
 			print("[NET] empfangen: %s rtt=%d" % [Net.debug_counts, int(Net.rtt_ms)])
 	tick.call()
+	if _args.has("net-hero"):
+		Game.players[0].hero = String(_args["net-hero"])   # Test: unterschiedliche Figuren je Gerät
 	if mode == "host":
 		Net.create_room(Net.MAX_BIG if String(_args.get("net-game", "race")) == "athlon" else Net.MAX_PLAYERS)
 		while not Net.online:
