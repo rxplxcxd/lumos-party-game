@@ -244,14 +244,14 @@ func cpu_think(slot: int, _delta: float) -> void:
 		# Wunschtempo: genug Schwung fürs Plateau, aber nicht zu viel
 		if not mem.has("want"):
 			mem["want"] = randf_range(4.5, 7.5)
-		if bool(mem.tap) and float(s.v) < float(mem.want) and randf() < [0.35, 0.5, 0.6][level]:
+		if bool(mem.tap) and float(s.v) < float(mem.want) and randf() < Game.lv([0.35, 0.5, 0.6], level):
 			held["a"] = true
 		mem.erase("plan")
 	elif String(s.state) == "go" and float(s.z) <= RAMP_END + 0.5:
 		# Bremspunkt schätzen: Bremsweg v²/(2·a) plus Fehler je nach Stufe (einmal pro Runde festgelegt)
 		mem.erase("want")
 		if not mem.has("plan"):
-			mem["plan"] = randf_range(-1.0, 1.0) * [2.6, 1.5, 0.6][level] + [0.4, 0.5, 0.6][level]
+			mem["plan"] = randf_range(-1.0, 1.0) * Game.lv([2.6, 1.5, 0.6], level, true) + Game.lv([0.4, 0.5, 0.6], level)
 		var v := float(s.v)
 		var dec := 5.5
 		var stop_d := v * v / (2.0 * dec)

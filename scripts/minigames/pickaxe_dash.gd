@@ -374,16 +374,16 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var held := {}
 	var mv := Vector2.ZERO
 	# Route: günstigster Weg ein paar Reihen tief (Dijkstra über Gitter; Felsen sind praktisch unendlich teuer)
-	var first := _plan(slot, p, [3, 5, 7][level])
+	var first := _plan(slot, p, Game.lv([3, 5, 7], level))
 	if first != 0:
 		mv.x = float(first)
 	# Abwechselnd hacken, Tempo je Stufe
-	var rate: float = [5.0, 6.5, 8.0][level]
+	var rate: float = Game.lv([5.0, 6.5, 8.0], level)
 	mem["acc"] = float(mem.get("acc", 0.0)) + rate / 60.0
 	if float(mem.acc) >= 1.0:
 		mem.acc = float(mem.acc) - 1.0
 		var nxt := "b" if String(mem.get("last", "b")) == "a" else "a"
-		if randf() < [0.1, 0.05, 0.0][level]:
+		if randf() < Game.lv([0.1, 0.05, 0.0], level, true):
 			nxt = String(mem.get("last", "a"))   # vertippt
 		mem["last"] = nxt
 		held[nxt] = true

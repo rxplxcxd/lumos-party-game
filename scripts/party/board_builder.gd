@@ -6,11 +6,11 @@ extends RefCounted
 
 const TILE_KEYS := {"B": "bg/tile_blue", "R": "bg/tile_red", "L": "bg/tile_yellow", "P": "bg/tile_green", "C": "bg/tile_purple",
 	"T": "bg/tile_purple", "K": "bg/tile_green", "N": "bg/tile_yellow", "S": "bg/tile_green", "G": "bg/tile_purple",
-	"E": "bg/tile_blue", "W": "bg/tile_green", "D": "bg/tile_yellow", "U": "bg/tile_green", "Z": "bg/tile_yellow"}
-const SYMBOLS := {"B": "+", "R": "-", "L": "?", "P": "!", "C": "?!", "T": "!", "K": "!", "N": "$", "S": "GO", "G": "~", "E": "»", "W": "@", "D": "VS", "U": "^", "Z": "TOP"}
+	"E": "bg/tile_blue", "W": "bg/tile_green", "D": "bg/tile_yellow", "U": "bg/tile_green", "Z": "bg/tile_yellow", "X": "bg/tile_yellow"}
+const SYMBOLS := {"B": "+", "R": "-", "L": "?", "P": "!", "C": "?!", "T": "!", "K": "!", "N": "$", "S": "GO", "G": "~", "E": "»", "W": "@", "D": "VS", "U": "^", "Z": "TOP", "X": "X"}
 const SYMBOL_COLORS := {"B": Color("#dff2ff"), "R": Color("#ffe0e0"), "L": Color("#7a4a00"), "P": Color("#eaffea"),
 	"C": Color("#f2e0ff"), "T": Color("#ffd0a0"), "K": Color("#eaffea"), "N": Color("#7a4a00"), "S": Color("#ffffff"),
-	"G": Color("#d8ffe8"), "E": Color("#e8fbff"), "W": Color("#eaffea"), "D": Color("#7a2a00"), "U": Color("#eaffea"), "Z": Color("#7a4a00")}
+	"G": Color("#d8ffe8"), "E": Color("#e8fbff"), "W": Color("#eaffea"), "D": Color("#7a2a00"), "U": Color("#eaffea"), "Z": Color("#7a4a00"), "X": Color("#a8001e")}
 const TILE_SCALE := 2.3
 
 var root: Node3D
@@ -21,6 +21,9 @@ var space_nodes: Array[Node3D] = []
 var toggle_visuals := {}      # branch index -> Array[Node3D] (bewegliche Teile)
 var gate_npc: CharacterRig
 var merchant: CharacterRig
+var trap_nodes := {}            # Feld → Münzfallen-Modell
+var secret_paths := {}          # Abzweig → MultiMesh der Wegpunkte (unsichtbar bis entdeckt)
+var gate_nodes := {}            # Abzweig → Schlüsseltor
 var sleepers: Array[Node3D] = []
 var traps: Array[Node3D] = []
 var star_node: Node3D
@@ -99,9 +102,95 @@ func _build_spaces() -> void:
 		space_nodes.append(holder)
 
 
+## Schlüsseltore, Geheimgänge (versteckt bis entdeckt) und Schatzkammer-Schild
+func _build_route_features() -> void:
+	var revealed: Dictionary = Game.party.get("revealed", {})
+	for bi in def.branches.size():
+		var br: Dictionary = def.branches[bi]
+		var first := -1
+		for sp in spaces:
+			if int(sp.branch) == bi:
+				first = int(sp.id)
+				break
+		if first < 0:
+			continue
+		if bool(br.get("lock", false)):
+			var a: Vector3 = spaces[br.from].pos
+			var b: Vector3 = spaces[first].pos
+			var gate := Node3D.new()
+			root.add_child(gate)
+			gate.position = a.lerp(b, 0.5)
+			gate.look_at(gate.position + (b - a).normalized(), Vector3.UP)
+			var door := Assets.spawn("qp/door", gate, Vector3.ZERO, 0.0, 0.42)
+			door.name = "Door"
+			var lock := Label3D.new()
+			lock.text = "Schlüssel"
+			lock.font = UI.title_font()
+			lock.font_size = 72
+			lock.outline_size = 16
+			lock.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			lock.pixel_size = 0.006
+			lock.position = Vector3.UP * 2.3
+			lock.modulate = Color("#ffd166")
+			gate.add_child(lock)
+			gate_nodes[bi] = gate
+		if bool(br.get("secret", false)) and not bool(revealed.get(bi, revealed.get(str(bi), false))):
+			reveal_branch(bi, false, false)
+		if bool(br.get("detour", false)):
+			var sign := Assets.spawn("plat/sign", root, (spaces[br.from].pos as Vector3) + _outward(spaces[br.from]) * 2.2, 0.0, 1.0)
+			sign.look_at(Vector3(0, sign.position.y, 0), Vector3.UP)
+
+
+## Geheimgang zeigen/verbergen (Felder + Wegpunkte), mit kleinem Auftauch-Effekt
+func reveal_branch(bi: int, show: bool, animate := true) -> void:
+	if secret_paths.has(bi):
+		(secret_paths[bi] as Node3D).visible = show
+	for sp in spaces:
+		if int(sp.branch) != bi:
+			continue
+		var node: Node3D = space_nodes[int(sp.id)] if int(sp.id) < space_nodes.size() else null
+		if node == null:
+			continue
+		node.visible = show
+		if show and animate:
+			node.scale = Vector3.ONE * 0.05
+			node.create_tween().tween_property(node, "scale", Vector3.ONE, 0.45).set_trans(Tween.TRANS_BACK)
+			FX.sparks(node.global_position + Vector3.UP, Color(0.8, 0.7, 1.0), 10)
+
+
+## Tor kurz öffnen (Schlüssel benutzt)
+func open_gate(bi: int) -> void:
+	var g: Node3D = gate_nodes.get(bi)
+	if g == null:
+		return
+	var door := g.get_node_or_null("Door") as Node3D
+	if door:
+		var tw := door.create_tween()
+		tw.tween_property(door, "rotation:y", 1.6, 0.35).set_trans(Tween.TRANS_BACK)
+		tw.tween_interval(1.6)
+		tw.tween_property(door, "rotation:y", 0.0, 0.4)
+	Audio.sfx("chest_open", g.global_position)
+	FX.sparks(g.global_position + Vector3.UP * 1.5, Color(1, 0.9, 0.4), 12)
+
+
+## Münzfallen-Modell auf einem Feld (in Spielerfarbe)
+func set_trap_visual(sp: int, on: bool, col := Color.WHITE) -> void:
+	if trap_nodes.has(sp):
+		(trap_nodes[sp] as Node3D).queue_free()
+		trap_nodes.erase(sp)
+	if not on or sp < 0 or sp >= space_nodes.size():
+		return
+	var t := Assets.spawn("qp/spike_trap", space_nodes[sp], Vector3(0, 0.45, 0), 0.0, 0.55)
+	Assets.tint(t, col.lerp(Color.WHITE, 0.3))
+	trap_nodes[sp] = t
+
+
 func _space_prop(holder: Node3D, t: String, sp: Dictionary) -> void:
 	var side := _outward(sp) * 1.9
 	match t:
+		"X":
+			var tr := Assets.spawn("mt/treasure", holder, side * 1.35, 0.0, 1.5)   # frei neben der Feldkante
+			tr.look_at(holder.global_position + Vector3(0, tr.global_position.y - holder.global_position.y, 0), Vector3.UP)
 		"L":
 			var key: String = {"dungeon": "dun/chest", "sky": "plat/chest", "graveyard": "dun/chest", "frost": "hol/present_red", "station": "plat/chest", "glowforest": "plat/chest", "meadow": "plat/chest", "cake": "hol/present_red"}.get(board_id, "pirate/chest")
 			var chest := Assets.spawn(key, holder, side, 0.0, 0.9 if board_id == "dungeon" else 1.2)
@@ -236,10 +325,19 @@ func _outward(sp: Dictionary) -> Vector3:
 	return flat.normalized()
 
 
+func _secret_of(sp: Dictionary, nb: Dictionary) -> int:
+	for bi in [int(sp.branch), int(nb.branch)]:
+		if bi >= 0 and bool(def.branches[bi].get("secret", false)):
+			return bi
+	return -1
+
+
 func _build_paths() -> void:
 	var xfs: Array = []
+	var secret_xfs := {}
 	for sp in spaces:
 		for nid in sp.next:
+			var sb := _secret_of(sp, spaces[nid])
 			var a: Vector3 = sp.pos
 			var b: Vector3 = spaces[nid].pos
 			var d := a.distance_to(b)
@@ -249,7 +347,13 @@ func _build_paths() -> void:
 				if t * d < 1.3 or (1.0 - t) * d < 1.3:
 					continue
 				var p := a.lerp(b, t) + Vector3.UP * 0.06
-				xfs.append(Transform3D(Basis().scaled(Vector3(0.28, 0.12, 0.28)), p))
+				var xf := Transform3D(Basis().scaled(Vector3(0.28, 0.12, 0.28)), p)
+				if sb >= 0:
+					if not secret_xfs.has(sb):
+						secret_xfs[sb] = []
+					(secret_xfs[sb] as Array).append(xf)
+				else:
+					xfs.append(xf)
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	var sm := SphereMesh.new()
@@ -266,6 +370,20 @@ func _build_paths() -> void:
 	mmi.multimesh = mm
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(mmi)
+	for sb in secret_xfs:
+		var smm := MultiMesh.new()
+		smm.transform_format = MultiMesh.TRANSFORM_3D
+		smm.mesh = sm
+		var arr: Array = secret_xfs[sb]
+		smm.instance_count = arr.size()
+		for i in arr.size():
+			smm.set_instance_transform(i, arr[i])
+		var smi := MultiMeshInstance3D.new()
+		smi.multimesh = smm
+		smi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(smi)
+		secret_paths[sb] = smi
+	_build_route_features()
 
 
 func _build_star() -> void:

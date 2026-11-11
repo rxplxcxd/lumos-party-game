@@ -86,6 +86,12 @@ jobs:
           timeout 300 $GODOT_BIN --headless --path . res://tools/dev/Check.tscn 2>&1 | tee check.log
           ! grep -q "SCRIPT ERROR" check.log
 
+      - name: System-Tests (CPU-Stufen, Inventar, Items, Emotes, Steuerung, Touch)
+        run: |
+          timeout 300 $GODOT_BIN --headless --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/test_systems.gd 2>&1 | tee systems.log
+          grep -q "TESTS OK" systems.log
+          ! grep -q "SCRIPT ERROR" systems.log
+
       - name: Export-Liste erzeugen
         run: timeout 300 $GODOT_BIN --headless --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/export_list.gd
 

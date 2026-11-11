@@ -247,7 +247,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		if tgt != Vector3.INF:
 			var to := Vector2(tgt.x - _ret_pos.x, tgt.z - _ret_pos.z)
 			mv2 = to.normalized() * clampf(to.length() / 2.0, 0.0, 1.0)
-			if to.length() < [2.2, 1.6, 1.1][Game.players[slot].cpu_level]:
+			if to.length() < Game.lv([2.2, 1.6, 1.1], int(Game.players[slot].cpu_level)):
 				held["a"] = true
 		InputHub.set_virtual(slot, mv2, held)
 		return
@@ -262,7 +262,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var d := Vector2(pos.x - to.x, pos.z - to.z)
 		var danger := 3.4 - d.length()
 		var urgency: float = float(m.t) / float(m.dur)
-		if danger > 0.0 and urgency > [0.55, 0.35, 0.15][level]:
+		if danger > 0.0 and urgency > Game.lv([0.55, 0.35, 0.15], level):
 			flee += d.normalized() * danger
 	var center_pull := -Vector2(pos.x, pos.z) / RADIUS * 0.6
 	var mv := (flee + center_pull)

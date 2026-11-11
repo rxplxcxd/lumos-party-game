@@ -341,7 +341,76 @@ func _first_button(n: Node) -> Button:
 	return null
 
 
+# --- Natives Wisch-Scrollen ---------------------------------------------------------------------------------
+# Auf Touch-Geräten scrollt man in jeder ScrollContainer-Liste direkt per Wischen (wie in jeder App) – die
+# dünne Scrollleiste muss niemand mehr treffen. Erst ab einer kleinen Schwelle wird aus dem Tippen ein Wischen;
+# dann löst der Finger beim Loslassen keinen Knopf mehr aus. Mit Schwung (Trägheit) und sanftem Ausrollen.
+var _drag_sc: ScrollContainer
+var _drag_start := Vector2.ZERO
+var _drag_on := false
+var _drag_vel := 0.0
+var _fling_sc: ScrollContainer
+var _fling_v := 0.0
+
+
+func _scroll_under(pos: Vector2) -> ScrollContainer:
+	var best: ScrollContainer = null
+	for n in get_tree().root.find_children("*", "ScrollContainer", true, false):
+		var sc := n as ScrollContainer
+		if sc.is_visible_in_tree() and sc.get_global_rect().has_point(pos) and sc.vertical_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED:
+			var bar := sc.get_v_scroll_bar()
+			if bar and bar.max_value > sc.size.y + 1.0:
+				best = sc   # später im Baum = weiter vorn (z. B. Overlay über Menü)
+	return best
+
+
+func _touch_scroll(event: InputEvent) -> bool:
+	if event is InputEventScreenTouch:
+		var st := event as InputEventScreenTouch
+		if st.pressed:
+			_drag_sc = _scroll_under(st.position)
+			_drag_start = st.position
+			_drag_on = false
+			_drag_vel = 0.0
+			_fling_sc = null
+		else:
+			var was := _drag_on
+			if was and _drag_sc and absf(_drag_vel) > 120.0:
+				_fling_sc = _drag_sc
+				_fling_v = _drag_vel
+			_drag_sc = null
+			_drag_on = false
+			if was:
+				get_viewport().set_input_as_handled()
+				return true
+	elif event is InputEventScreenDrag and _drag_sc and is_instance_valid(_drag_sc):
+		var sd := event as InputEventScreenDrag
+		var d := sd.position - _drag_start
+		if not _drag_on and absf(d.y) > 14.0 and absf(d.y) > absf(d.x) * 1.2:
+			_drag_on = true
+			# Gedrückte Knöpfe loslassen, damit sie nicht beim Loslassen auslösen
+			var f := get_viewport().gui_get_focus_owner()
+			if f is BaseButton:
+				(f as BaseButton).button_pressed = false
+		if _drag_on:
+			_drag_sc.scroll_vertical -= int(sd.relative.y)
+			_drag_vel = lerpf(_drag_vel, -sd.relative.y / maxf(get_process_delta_time(), 0.001), 0.35)
+			get_viewport().set_input_as_handled()
+			return true
+	return false
+
+
+func _process(delta: float) -> void:
+	if _fling_sc and is_instance_valid(_fling_sc) and absf(_fling_v) > 20.0:
+		_fling_sc.scroll_vertical += int(_fling_v * delta)
+		_fling_v = move_toward(_fling_v, 0.0, 2200.0 * delta)
+	else:
+		_fling_sc = null
+
+
 func _input(event: InputEvent) -> void:
+	if _touch_scroll(event):
+		return
 	_ensure_ui_focus(event)
 	if event is InputEventKey and event.pressed and not event.echo:
 		_set_device("keyboard")

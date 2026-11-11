@@ -389,7 +389,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	if _lift[slot] > 0.0:
 		# Zappeln mit menschlichem Tempo (Tipps pro Sekunde je Stufe)
 		var mem: Dictionary = cpu_mem[slot]
-		mem["acc"] = float(mem.get("acc", 0.0)) + [5.0, 7.0, 9.0][level] / 60.0
+		mem["acc"] = float(mem.get("acc", 0.0)) + Game.lv([5.0, 7.0, 9.0], level) / 60.0
 		if float(mem.acc) >= 1.0:
 			mem.acc = float(mem.acc) - 1.0
 			held["a"] = true
@@ -414,7 +414,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 				best = jp
 	var to := Vector2(best.x - p.x, best.z - p.z)
 	var mv := to.normalized() * clampf(to.length(), 0.0, 1.0)
-	if off.length() < [2.0, 2.8, 3.4][level]:
+	if off.length() < Game.lv([2.0, 2.8, 3.4], level):
 		mv = (mv * 0.3 + off.normalized() * 1.2)
 	InputHub.set_virtual(slot, mv.limit_length(1.0), held)
 
@@ -435,13 +435,13 @@ func _cpu_ufo(slot: int, level: int) -> void:
 	if target != Vector3.INF:
 		var to := Vector2(target.x - _ufo.position.x, target.z - _ufo.position.z)
 		mv = to.normalized() * clampf(to.length() * 0.7, 0.0, 1.0)
-		if to.length() < BEAM_R * [0.8, 1.0, 1.15][level]:
+		if to.length() < BEAM_R * Game.lv([0.8, 1.0, 1.15], level):
 			held["a"] = true
 	# Raketen ausweichen (seitlich)
 	for r in _rockets:
 		var rv: Vector3 = r.vel
 		var rel: Vector3 = _ufo.position - (r.pos as Vector3)
-		if rel.length() < 6.0 and rel.dot(rv) > 0.0 and randf() < [0.2, 0.6, 0.9][level]:
+		if rel.length() < 6.0 and rel.dot(rv) > 0.0 and randf() < Game.lv([0.2, 0.6, 0.9], level):
 			var side := Vector2(-rv.z, rv.x).normalized()
 			mv = side
 			held.erase("a")

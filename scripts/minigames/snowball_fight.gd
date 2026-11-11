@@ -221,7 +221,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var rel := Vector2(pos.x - bp.x, pos.z - bp.z)
 		var dir := Vector2(bv.x, bv.z).normalized()
 		var along := rel.dot(dir)
-		if along > 0.0 and along < [3.0, 5.0, 7.0][level]:
+		if along > 0.0 and along < Game.lv([3.0, 5.0, 7.0], level):
 			var perp := rel - dir * along
 			if perp.length() < 1.2:
 				mv += Vector2(-dir.y, dir.x) * (1.0 if perp.cross(dir) < 0.0 else -1.0)
@@ -250,6 +250,6 @@ func cpu_think(slot: int, _delta: float) -> void:
 				mv = Vector2(-to.y, to.x).normalized() * 0.5 * (1.0 if slot % 2 == 0 else -1.0) + to.normalized() * 0.25
 			var fwd := -av.rig.global_basis.z
 			var facing := Vector2(fwd.x, fwd.z).normalized().dot(to.normalized())
-			if facing > 0.8 and dist < 14.0 and _cd[slot] <= 0.0 and randf() < [0.07, 0.13, 0.22][level]:
+			if facing > 0.8 and dist < 14.0 and _cd[slot] <= 0.0 and randf() < Game.lv([0.07, 0.13, 0.22], level):
 				held["b"] = true
 	InputHub.set_virtual(slot, mv.limit_length(1.0), held)

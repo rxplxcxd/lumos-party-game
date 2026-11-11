@@ -229,7 +229,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 			mv = Vector2(to.x, to.z).normalized()
 			var mem: Dictionary = cpu_mem[slot]
 			mem["hold_t"] = mem.get("hold_t", 0.0) + _delta
-			var wait: float = [1.6, 0.9, 0.35][level]
+			var wait: float = Game.lv_react([1.6, 0.9, 0.35], level)
 			if bd < 7.0 and mem["hold_t"] > wait:
 				held["b"] = true
 				mem["hold_t"] = 0.0

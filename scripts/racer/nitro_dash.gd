@@ -596,7 +596,7 @@ func _rubber_band(r: Racer) -> void:
 	if not r.is_cpu or r.remote:
 		r.speed_mult = 1.0
 		return
-	var base: float = [0.9, 0.97, 1.02][r.cpu_level]
+	var base: float = Game.lv([0.9, 0.97, 1.02], r.cpu_level, false)   # Insane: kein Tempo-Bonus (wäre Mogeln)
 	var gap := focus.progress - r.progress
 	var band := 1.0
 	if gap > 40.0:

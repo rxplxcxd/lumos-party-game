@@ -337,6 +337,6 @@ func cpu_think(slot: int, _delta: float) -> void:
 	if n.position.z > 3.0:
 		to.y = -3.0
 	for j in 4:
-		if j != slot and (rafts[j].node as Node3D).visible and n.position.distance_to((rafts[j].node as Node3D).position) < 2.8 and randf() < 0.03 * (level + 1):
+		if j != slot and (rafts[j].node as Node3D).visible and n.position.distance_to((rafts[j].node as Node3D).position) < 2.8 and randf() < 0.03 * mini(level + 1, 3):
 			held["b"] = true
 	InputHub.set_virtual(slot, to.normalized() * clampf(to.length() / 2.0, 0.3, 1.0) if to.length() > 0.2 else Vector2.ZERO, held)

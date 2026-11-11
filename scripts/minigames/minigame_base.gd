@@ -809,6 +809,7 @@ func _instructions() -> void:
 	v.add_child(cat_l)
 	var t := UI.label(info.get("name", game_id), 64, UI.GOLD, true, 12)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	UI.fit_label(t, 64, 1100.0, 34)   # lange Namen (Bosse mit Titel) passen auf den Bildschirm
 	v.add_child(t)
 	if is_team_game() or category == "duel":
 		v.add_child(_team_lineup())

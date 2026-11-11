@@ -793,9 +793,20 @@ func _instantiate(res: Resource) -> Node3D:
 	if res is PackedScene:
 		return (res as PackedScene).instantiate() as Node3D
 	if res is Mesh:
+		var mesh := res as Mesh
+		if not mesh.has_meta("lumos_fixed"):
+			# Die MTL-Dateien des Modular-Terrain-Packs setzen „Ks 1“ – Godots OBJ-Import macht daraus
+			# metallic = 1, die Modelle wirken dann fast schwarz. Einmal pro Mesh auf matt-diffus stellen.
+			mesh.set_meta("lumos_fixed", true)
+			for si in mesh.get_surface_count():
+				var m := mesh.surface_get_material(si) as StandardMaterial3D
+				if m:
+					m.metallic = 0.0
+					m.metallic_specular = 0.3
+					m.roughness = 0.9
 		var root := Node3D.new()
 		var mi := MeshInstance3D.new()
-		mi.mesh = res as Mesh
+		mi.mesh = mesh
 		root.add_child(mi)
 		return root
 	return null

@@ -1,6 +1,7 @@
 #!/bin/bash
 # Spielt alle Minispiele (je erste Kategorie) mit 4 CPUs im Schnellvorlauf und fasst die Ergebnisse zusammen.
 #   bash tools/dev/minigame_sweep.sh [ausgabe.jsonl] [id1 id2 …]
+#   SWEEP_ARGS="--levels=0,1,2,3" setzt die CPU-Stufen je Slot (0 Leicht … 3 Insane)
 G=${GODOT:-./godot}
 OUT=${1:-/tmp/minigame_sweep.jsonl}
 shift
@@ -10,7 +11,7 @@ if [ -z "$IDS" ]; then
 fi
 : > "$OUT"
 for ID in $IDS; do
-  LOG=$(timeout 240 $G --headless --fixed-fps 60 --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/minigame_sweep.gd --only=$ID 2>&1)
+  LOG=$(timeout 240 $G --headless --fixed-fps 60 --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/minigame_sweep.gd --only=$ID $SWEEP_ARGS 2>&1)
   LINE=$(echo "$LOG" | grep '^SWEEP ' | tail -1 | sed 's/^SWEEP //')
   ERR=$(echo "$LOG" | grep -c 'SCRIPT ERROR')
   [ -z "$LINE" ] && LINE="{\"id\": \"$ID\", \"end\": \"absturz\"}"

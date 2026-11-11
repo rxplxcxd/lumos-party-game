@@ -163,11 +163,11 @@ func cpu_think(slot: int, _delta: float) -> void:
 		if int(w.owner) == slot:
 			continue
 		if not (mem.miss as Dictionary).has(w.id):
-			mem.miss[w.id] = randf() < [0.35, 0.18, 0.07][level]
+			mem.miss[w.id] = randf() < Game.lv([0.35, 0.18, 0.07], level, true)
 		if bool(mem.miss[w.id]):
 			continue
 		var gap := Vector2(p.x - (w.c as Vector3).x, p.z - (w.c as Vector3).z).length() - float(w.r)
-		if gap > 0.0 and gap / WAVE_V < [0.16, 0.12, 0.09][level] + 0.05 and av.is_on_floor():
+		if gap > 0.0 and gap / WAVE_V < Game.lv([0.16, 0.12, 0.09], level) + 0.05 and av.is_on_floor():
 			held["a"] = true
 	# Gegner in Stampf-Reichweite suchen, aber nicht zu nah an den Rand
 	var best: PartyAvatar = null
@@ -182,7 +182,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	if best:
 		var to := best.global_position - p
 		mv = Vector2(to.x, to.z).normalized() * (1.0 if bd > 3.5 else -0.3)
-		if bd < 4.0 and _cd[slot] <= 0.0 and randf() < [0.01, 0.025, 0.04][level]:
+		if bd < 4.0 and _cd[slot] <= 0.0 and randf() < Game.lv([0.01, 0.025, 0.04], level):
 			held["b"] = true
 	var r := Vector2(p.x, p.z).length()
 	if r > R * 0.6:

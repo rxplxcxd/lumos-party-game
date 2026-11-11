@@ -240,12 +240,12 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var to := best - p
 	var mv := Vector2(to.x, to.z)
 	mv = mv.normalized() * clampf(mv.length() * 0.6, 0.0, 1.0)
-	if _gust_state == 2 or (_gust_state == 1 and _gust_t < [0.2, 0.5, 0.9][level]):
-		mv += -Vector2(_gust_dir.x, _gust_dir.z) * [0.5, 0.8, 1.0][level]
+	if _gust_state == 2 or (_gust_state == 1 and _gust_t < Game.lv([0.2, 0.5, 0.9], level)):
+		mv += -Vector2(_gust_dir.x, _gust_dir.z) * Game.lv([0.5, 0.8, 1.0], level)
 	var held := {}
 	for o in avatars:
 		var oa := o as PartyAvatar
-		if oa != av and oa.alive and oa.global_position.distance_to(p) < 1.7 and randf() < [0.02, 0.04, 0.07][level]:
+		if oa != av and oa.alive and oa.global_position.distance_to(p) < 1.7 and randf() < Game.lv([0.02, 0.04, 0.07], level):
 			held["b"] = true
 			mv = Vector2(oa.global_position.x - p.x, oa.global_position.z - p.z).normalized()
 	InputHub.set_virtual(slot, mv.limit_length(1.0), held)

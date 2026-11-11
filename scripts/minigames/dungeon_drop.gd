@@ -228,7 +228,7 @@ func cpu_think(slot: int, delta: float) -> void:
 	var here := _tile_at(av.global_position)
 	var here_state: String = tiles[here].state if tiles.has(here) else "gone"
 	mem["t"] = mem.get("t", 0.0) - delta
-	var react_delay: float = [0.55, 0.3, 0.12][level]
+	var react_delay: float = Game.lv_react([0.55, 0.3, 0.12], level)
 	var here_t: float = tiles[here].t if tiles.has(here) else 99.0
 	var must_move := here_state == "gone" or (here_state == "shaking" and here_t > react_delay)
 	if not mem.has("target") or must_move and mem.get("target") == here or mem["t"] <= 0.0 and must_move:
@@ -258,7 +258,7 @@ func cpu_think(slot: int, delta: float) -> void:
 	# Gegner schubsen, wenn nah und Gelegenheit
 	for o in avatars:
 		var oa := o as PartyAvatar
-		if oa != av and oa.alive and oa.global_position.distance_to(av.global_position) < 1.6 and randf() < 0.006 * (level + 1):
+		if oa != av and oa.alive and oa.global_position.distance_to(av.global_position) < 1.6 and randf() < 0.006 * mini(level + 1, 3):
 			held["b"] = true
 	InputHub.set_virtual(slot, mv, held)
 
@@ -296,7 +296,7 @@ func _best_tile(from: Vector3, level: int) -> Vector2i:
 		s -= (t.base as Vector3).distance_to(from) * (0.35 if level > 0 else 0.15)
 		s += randf() * (3.0 - level)
 		# Weg dorthin muss begehbar sein: Löcher (bzw. gleich wegbrechende Platten) auf der Linie meiden
-		s -= _gaps_on_path(from, t.base) * [3.0, 6.0, 9.0][level]
+		s -= _gaps_on_path(from, t.base) * Game.lv([3.0, 6.0, 9.0], level)
 		if s > best_s:
 			best_s = s
 			best = k

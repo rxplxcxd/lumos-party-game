@@ -79,6 +79,14 @@ Brettzustand von Host und Client nach jedem Zug; `tools/dev/net_test.sh <ordner>
 einzelnes Minispiel (beide Geräte melden „Minispiel-Ende“ mit Platzierungen – Owner- und Host-Modell).
 `EXTRA=--log-scenes` protokolliert zusätzlich jeden Szenenwechsel.
 
+Seit 1.2.4 laufen auch Item-Einsatz, Wunschzahl, Kartenziel, Shop-Kauf, Fallen und Wegwahl an Schlüsseltor,
+Geheimgang und Schatz-Umweg über dieselben `bd`-Entscheidungen (`_choose_option`). Das Shop-Angebot einer Runde
+wird aus Brett, Runde und Partie-Startwert berechnet und ist damit auf allen Geräten gleich. Entdeckte Geheimgänge
+und gelegte Fallen liegen im Partie-Zustand (`Game.party`).
+
+**Emotes:** `{"k": "emo", "s": <slot>, "e": <id>}` – jedes Gerät zeigt das Emote über der Figur des Spielers;
+unbekannte IDs werden ignoriert, die Abklingzeit gilt auch für empfangene Emotes.
+
 ### Lumos-Athlon (bis 20 Geräte)
 Athlon-Räume (`max = 20`) laufen host-gesteuert: `ath_round` (Herausforderung), `ath_sc` (Münzen der Clients),
 `ath_res` (Rundenergebnis inkl. CPUs). Alle Geräte bewegen die Läufer daraus identisch.

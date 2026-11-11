@@ -1749,7 +1749,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 			tgt = tomb.p
 		if boss_id == "noxumbra" and night and not _on_kind(pos, "mush"):
 			goal = _nearest_pad(pos, "mush")
-		elif Vector2(tgt.x - pos.x, tgt.z - pos.z).length() < [8.0, 10.0, 12.0][level]:
+		elif Vector2(tgt.x - pos.x, tgt.z - pos.z).length() < Game.lv([8.0, 10.0, 12.0], level):
 			if randf() < 0.12:
 				held["b"] = true
 		else:
@@ -1784,7 +1784,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var d := Vector2(pos.x - hp3.x, pos.z - hp3.z)
 		match kind:
 			"zone", "bomb":
-				if d.length() < float(h.r) + 0.8 and float(h.t) > float(h.warn) - [0.5, 0.9, 1.2][level]:
+				if d.length() < float(h.r) + 0.8 and float(h.t) > float(h.warn) - Game.lv([0.5, 0.9, 1.2], level):
 					mv = d.normalized()
 			"sweep", "ring":
 				var near := false

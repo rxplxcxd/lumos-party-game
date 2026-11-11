@@ -204,7 +204,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var held := {}
 	if tw.held != null:
 		var level: int = Game.players[slot].cpu_level
-		var tol: float = [0.55, 0.3, 0.12][level]
+		var tol: float = Game.lv([0.55, 0.3, 0.12], level)
 		var hx := (tw.hook as Node3D).global_position.x
 		var target_x: float = BASE_X[slot]
 		for b in tw.blocks:

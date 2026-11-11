@@ -445,7 +445,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 					break
 			dir = (best - pos).normalized()
 			dist = pos.distance_to(best)
-		var noise: float = [0.22, 0.12, 0.05][level]
+		var noise: float = Game.lv([0.22, 0.12, 0.05], level, true)
 		dir = dir.rotated(randf_range(-noise, noise))
 		# benötigte Startgeschwindigkeit grob aus der Reibung: v ≈ sqrt(2·a·d) + Reserve
 		var need := sqrt(2.0 * 2.6 * dist) + 1.0

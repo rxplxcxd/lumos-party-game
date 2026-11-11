@@ -288,10 +288,10 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var mv := Vector2.ZERO
 	if best.x >= 0.0:
 		var to := (best - _ret[slot]) * Vector2(1.0, 1.0 / 1.6)
-		mv = (to / maxf(RET_SPEED / 60.0 * 6.0, 0.001)).limit_length(1.0) * [0.6, 0.8, 1.0][level]
+		mv = (to / maxf(RET_SPEED / 60.0 * 6.0, 0.001)).limit_length(1.0) * Game.lv([0.6, 0.8, 1.0], level)
 		mem["aim_t"] = float(mem.get("aim_t", 0.0)) + 1.0 / 60.0
 		var px := (best - _ret[slot]).length() * ss.x
-		if px < br * 0.8 and float(mem.aim_t) > [0.35, 0.2, 0.1][level]:
+		if px < br * 0.8 and float(mem.aim_t) > Game.lv([0.35, 0.2, 0.1], level):
 			held["a"] = true
 			mem.aim_t = 0.0
 	InputHub.set_virtual(slot, mv, held)

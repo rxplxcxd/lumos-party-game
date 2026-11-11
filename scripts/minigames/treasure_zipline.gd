@@ -250,6 +250,7 @@ func compute_placements() -> Array[int]:
 func cpu_think(slot: int, _delta: float) -> void:
 	var r: Dictionary = riders[slot]
 	var level: int = Game.players[slot].cpu_level
+	var mem: Dictionary = cpu_mem[slot]
 	var hx := (r.holder as Node3D).position.x
 	var held := {}
 	var mv := Vector2.ZERO
@@ -265,17 +266,29 @@ func cpu_think(slot: int, _delta: float) -> void:
 		if p.kind != "bomb" and val > best_val:
 			best_val = val
 			best_lane = p.lane
-	if best_lane != r.lane and level > 0 and randf() < 0.05 * level:
+	# Ab Profi: nicht wechseln, wenn auf der eigenen Spur gleich etwas Gutes kommt oder der Gewinn gering ist
+	var stay := false
+	if level >= 2:
+		var here := -INF
+		for p in pillars:
+			if not p.taken and p.lane == r.lane and p.kind != "bomb" and float(p.x) - hx > 0.4 and float(p.x) - hx < 9.0:
+				here = maxf(here, {"gold": 3.0, "chest": 1.0}[p.kind] - (float(p.x) - hx) * 0.15)
+		stay = here > best_val - 0.9
+	if best_lane != r.lane and level > 0 and not stay and randf() < 0.05 * mini(level, 2):
 		mv.y = 1.0 if best_lane > r.lane else -1.0
 	for p in pillars:
 		if p.taken or p.lane != r.lane or p.kind == "bomb":
 			continue
 		var item_y: float = (p.item as Node3D).global_position.y
 		var dx2 := float(p.x) - hx
-		var lead := float(r.speed) * 0.2
-		var tol: float = [0.9, 0.5, 0.25][level]
-		if absf(dx2 - lead) < tol and item_y > REACH_Y - [1.4, 0.9, 0.5][level]:
+		# Greif-Fenster liegt 0,21–0,39 s nach dem Drücken → Mitte 0,3 s Vorlauf. Die Stufe bestimmt nur den
+		# Timing-Fehler (wie ein Mensch, der mal zu früh, mal zu spät drückt), nicht welche Ziele infrage kommen.
+		if not mem.has("lead_err"):
+			mem["lead_err"] = randf_range(-1.0, 1.0) * float(Game.lv([1.1, 0.55, 0.25], level, true))
+		var lead := float(r.speed) * 0.3 + float(mem.lead_err)
+		if absf(dx2 - lead) < 0.3 and item_y > REACH_Y - 0.9:
 			held["a"] = true
+			mem.erase("lead_err")
 	for p in pillars:
 		if not p.taken and p.lane == r.lane and p.kind == "bomb" and absf(float(p.x) - hx) < 1.0:
 			held.erase("a")

@@ -256,7 +256,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		return
 	if not mem.has("aim"):
 		# Mitte (10er-Fach) mit Streuung; Anfänger zielen manchmal einfach irgendwohin
-		mem["aim"] = randf_range(-W + 0.5, W - 0.5) if randf() < [0.35, 0.15, 0.05][level] else randf_range(-1, 1) * [0.9, 0.5, 0.25][level]
+		mem["aim"] = randf_range(-W + 0.5, W - 0.5) if randf() < Game.lv([0.35, 0.15, 0.05], level, true) else randf_range(-1, 1) * Game.lv([0.9, 0.5, 0.25], level, true)
 		mem["wait"] = randf_range(0.3, 1.4)
 	var to := float(mem.aim) - _drop_x[slot]
 	var held := {}

@@ -243,12 +243,12 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var held := {}
 	if bool(s.bent):
 		mem["tap"] = not bool(mem.get("tap", false))
-		if bool(mem.tap) and randf() < [0.35, 0.55, 0.8][level]:
+		if bool(mem.tap) and randf() < Game.lv([0.35, 0.55, 0.8], level):
 			held["b"] = true
 	elif float(s.swing) <= 0.0:
 		if not mem.has("aim"):
 			# Zielwert: Profis treffen die Mitte, Anfänger streuen (auch mal drüber)
-			mem["aim"] = clampf((SWEET_LO + SWEET_HI) * 0.5 + randf_range(-1.0, 1.0) * [0.17, 0.11, 0.05][level], 0.3, 1.0)
+			mem["aim"] = clampf((SWEET_LO + SWEET_HI) * 0.5 + randf_range(-1.0, 1.0) * Game.lv([0.17, 0.11, 0.05], level, true), 0.3, 1.0)
 		var aim := float(mem.aim)
 		if not bool(s.charging) or (float(s.power) < aim and float(s.dir) > 0.0):
 			held["a"] = true

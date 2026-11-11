@@ -293,7 +293,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var seen: Dictionary = mem.seen
 	# Alle gerade offenen Karten merken (mit Vergesslichkeit je Stufe)
 	for i in _up.size():
-		if _up[i] and not _done[i] and randf() < [0.5, 0.75, 0.95][level]:
+		if _up[i] and not _done[i] and randf() < Game.lv([0.5, 0.75, 0.95], level):
 			seen[i] = _kind[i]
 	for i in seen.keys():
 		if _done[i]:

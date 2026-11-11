@@ -266,7 +266,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		for dd in 3:
 			var kn = _known.get("%d:%d" % [r, dd])
 			# Eigene Fehlversuche merkt man sich immer, fremde je nach Aufmerksamkeit
-			var noticed: bool = dd in tried or randf() < float([0.4, 0.7, 0.95][level])
+			var noticed: bool = dd in tried or randf() < float(Game.lv([0.4, 0.7, 0.95], level))
 			if (kn == true or float(_doors[r][dd].open_t) > 0.0) and noticed:
 				sure = dd
 			elif kn == false and noticed:
@@ -283,7 +283,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	# Geister meiden
 	for g in _ghosts:
 		var off := Vector2(p.x - (g.pos as Vector3).x, p.z - (g.pos as Vector3).z)
-		if off.length() < [1.4, 1.9, 2.4][level]:
+		if off.length() < Game.lv([1.4, 1.9, 2.4], level):
 			mv = (mv + off.normalized() * 1.2).normalized()
 	if to.length() < 0.5 and float(_doors[r][door].open_t) <= 0.0 and randf() < 0.3:
 		held["a"] = true

@@ -311,7 +311,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 			continue
 		var perp := rel - dir * along
 		var t: float = along / maxf(bv.length(), 0.1) + b.delay
-		if perp.length() < BOULDER_R + KART_R + 1.2 and t < [0.7, 1.2, 1.8][level]:
+		if perp.length() < BOULDER_R + KART_R + 1.2 and t < Game.lv([0.7, 1.2, 1.8], level):
 			flee += perp.normalized() * (1.0 if perp.length() > 0.1 else 1.0) * 2.0
 	var held := {}
 	var mv := Vector2.ZERO
@@ -332,7 +332,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 			var to: Vector2 = (karts[best].pos as Vector2) - pos
 			mv = to.normalized() * 0.8
 			var fwd := Vector2(-sin(float(k.heading)), -cos(float(k.heading)))
-			if bd < 7.0 and fwd.dot(to.normalized()) > 0.9 and randf() < 0.04 * (level + 1):
+			if bd < 7.0 and fwd.dot(to.normalized()) > 0.9 and randf() < 0.04 * mini(level + 1, 3):
 				held["b"] = true
 		mv += -pos / HALF * 0.6
 	InputHub.set_virtual(slot, mv.limit_length(1.0), held)

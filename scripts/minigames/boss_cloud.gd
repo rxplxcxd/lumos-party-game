@@ -450,7 +450,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var held := {}
 	if carry[slot]:
 		var to := Vector2(boss.position.x - pos.x, boss.position.z - pos.z)
-		if to.length() < [9.0, 11.0, 13.0][level] and randf() < 0.08:
+		if to.length() < Game.lv([9.0, 11.0, 13.0], level) and randf() < 0.08:
 			held["b"] = true
 		else:
 			mv = to.normalized() * 0.6
@@ -466,7 +466,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	for c in clouds:
 		var p2: Vector3 = c.p
 		var d := Vector2(pos.x - p2.x, pos.z - p2.z)
-		if d.length() < 2.0 and float(c.t) < [0.5, 0.8, 1.1][level]:
+		if d.length() < 2.0 and float(c.t) < Game.lv([0.5, 0.8, 1.1], level):
 			mv = d.normalized()
 	if _attack == "dash" and level > 0:
 		var d2 := Vector2(pos.x - _boss_pos.x, pos.z - _boss_pos.z)

@@ -212,7 +212,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	for l in logs:
 		var dz := pos.z - float(l.z)
 		if dz > 0.4 and dz < 1.9 and av.is_on_floor():
-			if randf() < [0.6, 0.85, 1.0][level]:
+			if randf() < Game.lv([0.6, 0.85, 1.0], level):
 				held["a"] = true
 	# Pendel abwarten
 	for p in pendulums:
@@ -222,7 +222,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 			var ball_x := (piv.global_position + piv.global_basis.y * -7.0).x
 			var swing_v := cos(_t * float(p.speed) + float(p.phase))
 			var coming := signf(swing_v) == signf(pos.x - ball_x) or absf(ball_x - pos.x) < 2.5
-			if coming and absf(ball_x - pos.x) < [1.5, 3.0, 4.0][level]:
+			if coming and absf(ball_x - pos.x) < Game.lv([1.5, 3.0, 4.0], level):
 				mv.y = 0.3
 	mv.x += -pos.x * 0.05
-	InputHub.set_virtual(slot, mv.limit_length(1.0) * [0.8, 0.92, 1.0][level], held)
+	InputHub.set_virtual(slot, mv.limit_length(1.0) * Game.lv([0.8, 0.92, 1.0], level), held)

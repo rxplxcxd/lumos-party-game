@@ -245,7 +245,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var hoop: Vector3 = _hoops[1 - t]
 		var to := Vector2(hoop.x - pos.x, hoop.z - pos.z)
 		mv = to.normalized()
-		if to.length() < [4.0, 5.5, 7.5][level] and randf() < 0.1:
+		if to.length() < Game.lv([4.0, 5.5, 7.5], level) and randf() < 0.1:
 			held["b"] = true
 	else:
 		var best := Vector3.INF
@@ -263,4 +263,4 @@ func cpu_think(slot: int, _delta: float) -> void:
 						held["b"] = true
 		if best != Vector3.INF:
 			mv = Vector2(best.x - pos.x, best.z - pos.z).normalized()
-	InputHub.set_virtual(slot, mv * [0.8, 0.92, 1.0][level], held)
+	InputHub.set_virtual(slot, mv * Game.lv([0.8, 0.92, 1.0], level), held)

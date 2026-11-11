@@ -187,7 +187,7 @@ func cpu_think(slot: int, delta: float) -> void:
 	var mem: Dictionary = cpu_mem[slot]
 	mem["t"] = mem.get("t", 0.0) - delta
 	if mem["t"] <= 0.0:
-		mem["t"] = [0.7, 0.4, 0.2][level]
+		mem["t"] = Game.lv([0.7, 0.4, 0.2], level)
 		var best_x := 0.0
 		var best_s := -INF
 		for i in segs.size():
@@ -199,7 +199,7 @@ func cpu_think(slot: int, delta: float) -> void:
 				if j >= 0 and j < segs.size() and segs[j].state == "ok":
 					s += 1.0
 			s -= absf(float(segs[i].x) - av.global_position.x) * 0.25
-			s += randf() * (2.5 - level)
+			s += randf() * maxf(0.0, 2.5 - level)
 			if s > best_s:
 				best_s = s
 				best_x = segs[i].x
@@ -217,6 +217,6 @@ func cpu_think(slot: int, delta: float) -> void:
 		held["a"] = true
 	for o in avatars:
 		var oa := o as PartyAvatar
-		if oa != av and oa.alive and oa.global_position.distance_to(av.global_position) < 1.7 and randf() < 0.03 * (level + 1):
+		if oa != av and oa.alive and oa.global_position.distance_to(av.global_position) < 1.7 and randf() < 0.03 * mini(level + 1, 3):
 			held["b"] = true
 	InputHub.set_virtual(slot, mv, held)

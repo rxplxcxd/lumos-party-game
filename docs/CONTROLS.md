@@ -21,12 +21,19 @@ Minispiel, auch für künftige:
 | A (Springen/Bestätigen) | A | Leertaste, Enter, J, Z | Linksklick | A-Knopf |
 | B (Aktion/Werfen) | B | K, X, Rücktaste | Rechtsklick | B-Knopf |
 | X | X / L-Schulter / L-Trigger | E, L, C, Strg | – | X-Knopf (falls angezeigt) |
-| Y | Y | Q, I, V | – | – |
+| Y (halten: Emote-Rad) | Y | Q, I, V | Emote-Knopf oben rechts | Emote-Knopf oben rechts |
 | R | R-Schulter / R-Trigger | Umschalt | – | – |
 | Start/Pause | Start, Back | Esc, P | – | Pause-Knopf |
 
 Die Maus zählt nur während eines laufenden Minispiels als A/B (`InputHub.mouse_play`). In Menüs bleiben Klicks
 normale Klicks. Auf Touch-Geräten ist die Maus-Belegung aus, weil Antippen auch Maus-Ereignisse erzeugt.
+
+**Emotes:** Y halten öffnet auf Brett und in Minispielen das Emote-Rad (acht selbst gezeichnete Grafiken, keine
+Standard-Emojis); Stick wählen, loslassen sendet. Alternativ per Klick/Tipp auf den Emote-Knopf. Abklingzeit 1,1 s.
+
+**Menüs:** Listen scrollen auf Touch-Geräten per Wischen mit Schwung; ein Wischen löst beim Loslassen keinen
+Knopf aus. In der Spieler-/CPU-Auswahl springt der Fokus mit links/rechts zwischen Figur, Typ und Stufe einer
+Zeile und mit hoch/runter zwischen den Zeilen; A auf einem Pfeil ändert den Wert.
 
 ## Umsetzung im Code
 

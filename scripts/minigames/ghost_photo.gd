@@ -552,7 +552,7 @@ func cpu_think(slot: int, delta: float) -> void:
 			mv = Vector2(to.x, to.z).normalized() * 0.15   # nur ausrichten
 		var ang := rad_to_deg(acos(clampf(Vector3(to.x, 0, to.z).normalized().dot(_forward(slot)), -1.0, 1.0)))
 		mem["wait"] = float(mem.get("wait", 0.0)) - delta
-		if _charge[slot] >= 1.0 and ang < [20.0, 14.0, 9.0][level] and float(mem.wait) <= 0.0 and float(best.vel) < [6.0, 3.0, 1.8][level]:
+		if _charge[slot] >= 1.0 and ang < Game.lv([20.0, 14.0, 9.0], level) and float(mem.wait) <= 0.0 and float(best.vel) < Game.lv([6.0, 3.0, 1.8], level):
 			held["a"] = true
 			mem["wait"] = randf_range(0.2, 0.6)
 	InputHub.set_virtual(slot, mv, held)

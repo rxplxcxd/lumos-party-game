@@ -146,7 +146,30 @@ const BOARDS := {
 
 
 static func get_def(id: String) -> Dictionary:
-	return BOARDS.get(id, BOARDS.dungeon)
+	var d: Dictionary = (BOARDS.get(id, BOARDS.dungeon) as Dictionary).duplicate(true)
+	if not d.has("helix"):
+		(d.branches as Array).append_array(_extra_branches(id, d))
+	return d
+
+
+## Zusätzliche Routen (seit 1.2.4) – echte Entscheidungen statt nur Kreis + Abkürzung:
+## * Mittel-Express quer übers Brett: spart den halben Ring. Mit Schlüsseltor (Item „Schlüssel“) bzw. auf
+##   Friedhof und Zauberwald als Geheimgang, der erst sichtbar wird, wenn jemand genau auf dem Abzweig landet.
+## * Schatz-Umweg außen am Rand: zwei Felder länger, mit zwei roten Risikofeldern und einer Schatzkammer (X).
+static func _extra_branches(id: String, d: Dictionary) -> Array:
+	var n: int = d.main_count
+	var out: Array = []
+	if id != "dungeon":
+		var center := {"from": 1, "to": n / 2 - 1, "points": [Vector3(-10, 0, -0.3), Vector3(0, 0, 0.4), Vector3(10, 0, -0.3)],
+			"pattern": "BLNB" if id != "station" else "BLB", "kind": "express"}
+		if id in ["graveyard", "glowforest"]:
+			center["secret"] = true
+		else:
+			center["lock"] = true
+		out.append(center)
+	var b := int(n * 0.7)
+	out.append({"from": b, "to": b + 2, "auto": "outward", "pattern": "RXR", "kind": "treasure_detour", "detour": true})
+	return out
 
 
 ## Erzeugt den Feld-Graphen: Array von Dictionaries {id, pos, type, next[], prev[], branch}
@@ -200,6 +223,10 @@ static func helix_pos(def: Dictionary, i: float) -> Vector3:
 ## Zwischenpunkte einer Abzweigung: feste Punkte, Ranke (außen am Turm hoch) oder Wolkenlift (senkrecht).
 static func _branch_points(def: Dictionary, br: Dictionary, a: Vector3, b: Vector3) -> Array:
 	match String(br.get("auto", "")):
+		"outward":
+			var mid2 := (a + b) * 0.5
+			var o2 := Vector3(mid2.x, 0, mid2.z).normalized()
+			return [a + o2 * 4.0, mid2 + o2 * 5.5, b + o2 * 4.0]
 		"vine":
 			var mid := (a + b) * 0.5
 			var out := Vector3(mid.x, 0, mid.z).normalized() * 2.6

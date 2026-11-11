@@ -184,7 +184,7 @@ func _stomps() -> void:
 				_state = "down"
 				_play("Death")
 				CutsceneManager.big_word("Summser besiegt!", Color("#ffd166"), 0.9)
-				Audio.sfx("fanfare", _pos, -2.0)
+				Audio.jingle("fanfare", false)
 				return
 
 
@@ -249,7 +249,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 			var to := Vector2(_pos.x - p.x, _pos.z - p.z)
 			mv = to.normalized() * clampf(to.length(), 0.0, 1.0)
 			# Absprung kurz vor der Biene, damit man von oben auf ihr landet
-			if to.length() < [2.2, 2.6, 2.9][level] and to.length() > 1.0 and av.is_on_floor() and randf() < [0.2, 0.5, 0.9][level]:
+			if to.length() < Game.lv([2.2, 2.6, 2.9], level) and to.length() > 1.0 and av.is_on_floor() and randf() < Game.lv([0.2, 0.5, 0.9], level):
 				held["a"] = true
 			if not av.is_on_floor() and to.length() < 0.8:
 				mv *= 0.2

@@ -233,7 +233,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var mv := Vector2.ZERO
 	# Glühenden Streifen verlassen (quer zum Streifen ausweichen)
 	for st in _strips:
-		if not bool(st.fired) and float(st.t) > [0.55, 0.35, 0.2][level]:
+		if not bool(st.fired) and float(st.t) > Game.lv([0.55, 0.35, 0.2], level):
 			var local := Vector2(p.x, p.z).rotated(_spin).rotated(float(st.a))
 			if local.x > 0.0 and absf(local.y) < 1.4:
 				var side := Vector2(0, 1.0 if local.y >= 0.0 else -1.0).rotated(-float(st.a)).rotated(-_spin)
@@ -248,7 +248,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var prev := float(mem.get(key, gap))
 		mem[key] = gap
 		var rate := (prev - gap) / maxf(_delta, 0.001)
-		if rate > 0.5 and gap / rate < [0.24, 0.19, 0.16][level] and gap < 3.0 and av.is_on_floor():
+		if rate > 0.5 and gap / rate < Game.lv([0.24, 0.19, 0.16], level) and gap < 3.0 and av.is_on_floor():
 			held["a"] = true
 	# Mittlerer Ring ist am sichersten
 	var r := Vector2(p.x, p.z).length()

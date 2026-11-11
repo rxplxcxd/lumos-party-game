@@ -257,11 +257,11 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var tp: Vector2 = balls[best].pos
 		# Von der Plattformmitte aus auf den Gegner zielen: so schiebt man ihn nach außen
 		mv = (tp - p).normalized() + tp.normalized() * 0.35
-		if bd < 3.6 and float(b.cd) <= 0.0 and randf() < [0.01, 0.025, 0.045][level]:
+		if bd < 3.6 and float(b.cd) <= 0.0 and randf() < Game.lv([0.01, 0.025, 0.045], level):
 			held["b"] = true
 		var incoming := (balls[best].vel as Vector2).dot((p - tp).normalized())
 		if level >= 1 and incoming > 6.0 and bd < 3.5 and randf() < 0.3:
 			held["a"] = true
 	if p.length() > _radius * 0.55:
 		mv = mv * 0.25 - p.normalized() * (p.length() / _radius) * 1.8
-	InputHub.set_virtual(slot, mv.limit_length(1.0) * [0.7, 0.85, 1.0][level], held)
+	InputHub.set_virtual(slot, mv.limit_length(1.0) * Game.lv([0.7, 0.85, 1.0], level), held)

@@ -25,8 +25,12 @@ func run() -> void:
 		return
 	var cats: Array = m.get("cats", ["ffa"])
 	var cat := String(args.get("cat", cats[0] if not cats.is_empty() else "ffa"))
-	for p in Game.players:
-		p.cpu = true
+	# --levels=0,1,2,3 setzt die CPU-Stufe je Slot (Standard: wie gespeichert)
+	var lv_arg := String(args.get("levels", "")).split(",", false)
+	for i in Game.players.size():
+		Game.players[i].cpu = true
+		if i < lv_arg.size():
+			Game.players[i].cpu_level = int(lv_arg[i])
 	Game.mode = "free_play"
 	var cs := {"cat": cat}
 	if cat == "2v2":

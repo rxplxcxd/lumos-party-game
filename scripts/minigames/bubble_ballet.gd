@@ -339,8 +339,8 @@ func cpu_think(slot: int, _delta: float) -> void:
 		# Nicht zu nah ran (sonst schiebt der Rückstoß einen selbst weg), ideal ~5 m
 		if to.length() < 4.0:
 			mv *= 0.25
-		var safe: float = [0.55, 0.72, 0.82][level]
-		if float(b.heat) < safe and bd < 8.0 and randf() < [0.05, 0.09, 0.13][level]:
+		var safe: float = Game.lv([0.55, 0.72, 0.82], level)
+		if float(b.heat) < safe and bd < 8.0 and randf() < Game.lv([0.05, 0.09, 0.13], level):
 			held["b" if String(b.last) == "a" else "a"] = true
 		# Ausweichen: zielt ein naher Gegner auf mich, seitlich aus seinem Windkegel steuern
 		var from_best := p - (bubbles[best].pos as Vector2)

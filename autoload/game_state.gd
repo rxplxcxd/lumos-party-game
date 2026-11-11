@@ -12,7 +12,7 @@ const HEROES := [
 ]
 const SLOT_COLORS := [Color("#ff4d6d"), Color("#3fa7ff"), Color("#4cd964"), Color("#ffcc00")]
 const SLOT_NAMES := ["Rot", "Blau", "Grün", "Gelb"]
-const CPU_LEVELS := ["Leicht", "Normal", "Profi"]
+const CPU_LEVELS := ["Leicht", "Mittel", "Profi", "Insane"]
 
 const BOARDS := [
 	{"id": "dungeon", "name": "Dungeon Deep", "desc": "Fackeln, Fallen und ein Lavasee mit fahrender Plattform. Skelette bewachen das Tor.", "music": "board_dungeon"},
@@ -309,6 +309,53 @@ func detect_mobile() -> bool:
 	return false
 
 
+## Wert je CPU-Stufe aus einer Liste [leicht, mittel, profi]. Für „Insane“ (Stufe 3) gilt standardmäßig der
+## Profi-Wert: Die meisten Listen sind fein abgestimmte Größen (Regler-Verstärkung, Sprung-Zeitpunkt, Toleranz),
+## die über das Optimum hinaus schlechter würden. Nur echte Fehlerquellen werden mit extrapolate = true
+## fortgeschrieben – aber nie bis zur Perfektion: Patzer-Quoten und Streuung fallen höchstens auf 35 % des
+## Profi-Werts, Trefferquoten (0…1) steigen höchstens auf 65 % des Restwegs zu 1. Reaktionszeiten über
+## lv_react() bleiben menschlich (≥ 0,15 s). Insane gewinnt so durch Präzision und Taktik, nie durch Mogeln.
+static func lv(arr: Array, level: int, extrapolate := false) -> Variant:
+	if arr.is_empty():
+		return 0
+	if level < arr.size():
+		return arr[maxi(level, 0)]
+	var c = arr[arr.size() - 1]
+	if not extrapolate or arr.size() < 2 or not (c is float or c is int):
+		return c
+	var b = arr[arr.size() - 2]
+	var cf := float(c)
+	var bf := float(b)
+	var v := cf + (cf - bf) * 0.75
+	var unit := true
+	for e in arr:
+		if not (e is float or e is int) or float(e) < 0.0 or float(e) > 1.0:
+			unit = false
+	if cf < bf:
+		v = maxf(v, cf * 0.35)
+	elif cf > bf and unit:
+		v = minf(v, 1.0 - (1.0 - cf) * 0.35)
+	if unit:
+		v = clampf(v, 0.0, 1.0)
+	if c is int and b is int:
+		return roundi(v)
+	return v
+
+
+## Reaktionszeit je Stufe: Insane reagiert schneller als Profi, aber nie unter menschlichen 0,15 s
+## (bzw. nie schneller als der Profi-Wert, wenn der schon darunter liegt).
+static func lv_react(arr: Array, level: int) -> float:
+	var c := float(arr[arr.size() - 1])
+	return maxf(float(lv(arr, level, true)), minf(c, 0.15))
+
+
+static func _start_items_arg() -> String:
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--start-items="):
+			return String(a).substr(14)
+	return ""
+
+
 func reset_players(human_count := 1) -> void:
 	players.clear()
 	var hero_order := ["knight", "mage", "barbarian", "rogue"]
@@ -463,6 +510,8 @@ func start_party(board_id: String, rounds: int, party_mode := "classic") -> void
 		p.stars = 1 if party_mode == "blitz" else 0
 		p.space = -1
 		p.items = ["double_dice"] if party_mode == "blitz" else []
+		if OS.is_debug_build() and _start_items_arg() != "":
+			p.items = Array(_start_items_arg().split(",", false))   # Test-Hilfe: --start-items=a,b,c
 		p.dice_total = 0
 		p.events_landed = 0
 		p.last_color = "blue"

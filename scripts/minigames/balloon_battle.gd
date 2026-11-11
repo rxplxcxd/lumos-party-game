@@ -381,7 +381,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	if goal == Vector2.INF and best >= 0:
 		var tp: Vector2 = karts[best].pos
 		var tv: Vector2 = karts[best].vel
-		goal = tp + tv * (0.25 + level * 0.15)
+		goal = tp + tv * (0.25 + mini(level, 2) * 0.15)
 	if goal != Vector2.INF:
 		mv = (goal - pos).normalized()
 	# Pfeiler umfahren
@@ -392,9 +392,9 @@ func cpu_think(slot: int, _delta: float) -> void:
 	if best >= 0:
 		var to: Vector2 = (karts[best].pos as Vector2) - pos
 		var facing := fwd.dot(to.normalized())
-		if best_d < 7.0 and facing > 0.9 and float(k.turbo_cd) <= 0.0 and randf() < 0.05 * (level + 1):
+		if best_d < 7.0 and facing > 0.9 and float(k.turbo_cd) <= 0.0 and randf() < 0.05 * mini(level + 1, 3):
 			held["b"] = true
-		if k.item == "pie" and best_d < 14.0 and facing > 0.96 and randf() < 0.04 * (level + 1):
+		if k.item == "pie" and best_d < 14.0 and facing > 0.96 and randf() < 0.04 * mini(level + 1, 3):
 			held["x"] = true
 	# Wenn selbst verwundbar und ein Gegner mit Turbo heranrast: ausweichen
 	if level > 0:

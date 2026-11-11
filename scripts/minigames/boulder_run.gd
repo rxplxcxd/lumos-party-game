@@ -278,7 +278,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var n: Node3D = o.node
 		# Pro Hindernis einmal entscheiden, ob die CPU patzt (zu spät springt / zu spät lenkt)
 		if not miss.has(n.get_instance_id()):
-			miss[n.get_instance_id()] = randf() < [0.3, 0.14, 0.05][level]
+			miss[n.get_instance_id()] = randf() < Game.lv([0.3, 0.14, 0.05], level, true)
 		var late: float = 0.35 if bool(miss[n.get_instance_id()]) else 0.0
 		var dz := n.position.z - p.z - float(o.depth) * 0.5
 		if dz < -0.6 or dz > 4.5:
@@ -288,7 +288,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 				if dz < 4.5 - late * 8.0:
 					lane = float(o.gap_x)
 			"log":
-				if dz < closing * ([0.26, 0.2, 0.16][level] - late) + 0.25 and av.is_on_floor():
+				if dz < closing * (Game.lv([0.26, 0.2, 0.16], level) - late) + 0.25 and av.is_on_floor():
 					held["a"] = true
 			"crate":
 				# Kiste in der eigenen Spur? Ausweichen, wenn noch Zeit ist, sonst springen
@@ -296,9 +296,9 @@ func cpu_think(slot: int, _delta: float) -> void:
 					if ch is CollisionShape3D and absf((ch as Node3D).position.x - p.x) < 1.25:
 						if dz > 2.2 and level > 0:
 							lane = (ch as Node3D).position.x + (1.6 if (ch as Node3D).position.x < 0.0 else -1.6)
-						elif dz < closing * ([0.26, 0.2, 0.16][level] - late) + 0.3 and av.is_on_floor():
+						elif dz < closing * (Game.lv([0.26, 0.2, 0.16], level) - late) + 0.3 and av.is_on_floor():
 							held["a"] = true
-	if randf() < [0.012, 0.006, 0.002][level]:
+	if randf() < Game.lv([0.012, 0.006, 0.002], level, true):
 		held["a"] = true
 	var mv := Vector2(clampf((lane - p.x) * 1.2, -1.0, 1.0), clampf(_belt / av.max_speed + (float(mem.home) - p.z) * 0.45, -1.0, 1.0))
 	InputHub.set_virtual(slot, mv, held)

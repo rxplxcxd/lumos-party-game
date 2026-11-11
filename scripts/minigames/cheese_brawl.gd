@@ -387,7 +387,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var rel := p - cp
 		if rel.length() < 5.0 and rel.dot(v) > 0.0:
 			var side := Vector2(-v.y, v.x).normalized()
-			mv += side * (1.0 if rel.dot(side) > 0.0 else -1.0) * [0.6, 1.0, 1.4][level]
+			mv += side * (1.0 if rel.dot(side) > 0.0 else -1.0) * Game.lv([0.6, 1.0, 1.4], level)
 	var held := {}
 	if _holding[slot] >= 0:
 		mv = p.normalized()   # zum Rand tragen
@@ -398,7 +398,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 			if j == slot or not alive[j]:
 				continue
 			var op := Vector2((avatars[j] as PartyAvatar).global_position.x, (avatars[j] as PartyAvatar).global_position.z)
-			if op.distance_to(p) < 3.5 and randf() < [0.01, 0.025, 0.05][level]:
+			if op.distance_to(p) < 3.5 and randf() < Game.lv([0.01, 0.025, 0.05], level):
 				mv = (op - p).normalized()
 				if op.distance_to(p) < GRAB_RANGE:
 					held["b"] = true

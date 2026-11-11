@@ -261,13 +261,13 @@ func cpu_think(slot: int, _delta: float) -> void:
 		return
 	if _phase == "bite":
 		if not mem.has("react"):
-			mem["react"] = [0.42, 0.3, 0.21][level] + randf_range(-0.04, 0.08)
+			mem["react"] = Game.lv_react([0.42, 0.3, 0.21], level) + randf_range(-0.04, 0.08)
 		if _t >= float(mem.react):
 			held["a"] = true
 	else:
 		mem.erase("react")
 		# Täuschung: Anfänger fallen öfter darauf herein
 		for f in _fakes:
-			if _phase == "wait" and _t > f + 0.15 and _t < f + 0.2 and randf() < [0.35, 0.12, 0.03][level]:
+			if _phase == "wait" and _t > f + 0.15 and _t < f + 0.2 and randf() < Game.lv([0.35, 0.12, 0.03], level, true):
 				held["a"] = true
 	InputHub.set_virtual(slot, Vector2.ZERO, held)

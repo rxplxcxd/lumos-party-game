@@ -214,10 +214,10 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var level: int = Game.players[slot].cpu_level
 	var threats: Array = []
 	for d in _drops:
-		if not bool(d.landed) and float(d.t) < [0.45, 0.6, 0.8][level]:
+		if not bool(d.landed) and float(d.t) < Game.lv([0.45, 0.6, 0.8], level):
 			threats.append([d.pos, float(d.foot) + 0.4])
 	var mv := MgKit.flee(av.global_position, threats, Vector3.ZERO, PLATE_R - 0.5, 0.75)
-	if _lid_state == 1 and _lid_t < [2.2, 2.9, 3.3][level]:
+	if _lid_state == 1 and _lid_t < Game.lv([2.2, 2.9, 3.3], level):
 		var best := Vector3.ZERO
 		var bd := INF
 		for c in _safe:

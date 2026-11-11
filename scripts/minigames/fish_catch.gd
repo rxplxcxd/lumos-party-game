@@ -321,7 +321,7 @@ func cpu_think(slot: int, delta: float) -> void:
 	if b.state == "bite":
 		var react: float = float(mem.get("react", -1.0))
 		if react < 0.0:
-			react = randf_range([0.28, 0.2, 0.14][level], [0.7, 0.45, 0.32][level])
+			react = randf_range(Game.lv_react([0.28, 0.2, 0.14], level), Game.lv_react([0.7, 0.45, 0.32], level))
 			mem["react"] = react
 		if float(b.t) >= react:
 			held["a"] = true
@@ -346,7 +346,7 @@ func cpu_think(slot: int, delta: float) -> void:
 		if best != Vector3.INF:
 			var to := Vector2(best.x - bp.x, best.z - bp.z)
 			if to.length() > 0.5:
-				mv = to.normalized() * clampf(to.length() / 2.0, 0.25, 1.0) * [0.6, 0.8, 1.0][level]
+				mv = to.normalized() * clampf(to.length() / 2.0, 0.25, 1.0) * Game.lv([0.6, 0.8, 1.0], level)
 		# ungeduldige CPUs drücken manchmal zu früh
 		if level == 0 and randf() < delta * 0.25:
 			held["a"] = true

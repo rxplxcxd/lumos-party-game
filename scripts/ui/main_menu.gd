@@ -11,6 +11,10 @@ var _cam: Camera3D
 var _cam_t := 0.0
 var _logo: Control
 var _wheel: Node3D
+var _star: Node3D
+var _box: Node3D
+var _pokes := {}     # Rig-ID → {n, t, busy}
+var _poked := {}     # Rig-ID → Zeitpunkt des letzten Antippens (für die Gruppen-Überraschung)
 
 var _party_board := 0
 var _party_rounds := 0
@@ -66,10 +70,11 @@ func _build_diorama() -> void:
 	var kart := WorldKit.place(self, "kart/oopi", Vector3(-2.8, 0.25, -1.6), 40.0, 2.0)
 	_kart = kart
 	WorldKit.place(self, "pirate/chest", Vector3(-0.6, 0.2, 3.4), 30.0, 0.9)
-	WorldKit.place(self, "toy/item_box", Vector3(6.2, 2.6, -1.0), 15.0, 2.4)
+	_box = WorldKit.place(self, "toy/item_box", Vector3(6.2, 2.6, -1.0), 15.0, 2.4)
 	var star := WorldKit.place(self, "plat/star", Vector3(0, 4.6, -5.0), 0.0, 3.6)
 	var st := star.create_tween().set_loops()
 	st.tween_property(star, "rotation:y", TAU, 6.0).as_relative()
+	_star = star
 	_cam = Camera3D.new()
 	_cam.fov = 45.0
 	add_child(_cam)
@@ -449,6 +454,10 @@ func _first_focus(n: Node) -> Control:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	var mb := event as InputEventMouseButton
+	if mb and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and _poke_at(mb.position):
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("ui_cancel") and _page and _page.name != "main":
 		Audio.sfx("ui_back")
 		if _page.name == "touch_edit":
@@ -457,6 +466,120 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			show_page("main")
 		get_viewport().set_input_as_handled()
+
+
+# --- Kleine Überraschungen auf der Insel ------------------------------------------------------------------------
+# Wer auf eine Figur tippt, bekommt eine Reaktion. Mehrfaches Antippen macht schwindelig, dann wird's wütend;
+# wer alle Helden kurz nacheinander anstupst, löst eine Gruppenjubel-Szene aus. Bewusst ohne Hinweis im Menü.
+const POKE_HERO := ["wave", "shocked", "laugh", "scared", "confused", "cheer", "sleepy", "flex", "taunt"]
+const POKE_PET := ["wave", "cheer", "shocked", "confused"]
+const POKE_SFX := {"wave": "hop_marimba", "shocked": "alert", "laugh": "marimba", "scared": "woop", "confused": "plop",
+	"cheer": "sparkle_up", "sleepy": "sigh", "flex": "powerup", "taunt": "hop_glock", "dizzy": "wheel_tick", "victory": "star"}
+
+
+## Trifft der Klick/Tipp eine Figur (oder ein besonderes Objekt)? Strahl aus der Kamera, nächster Treffer gewinnt.
+func _poke_at(screen: Vector2) -> bool:
+	if _cam == null or not is_inside_tree():
+		return false
+	var o := _cam.project_ray_origin(screen)
+	var d := _cam.project_ray_normal(screen)
+	var best: CharacterRig = null
+	var bd := INF
+	for r in _heroes:
+		if not is_instance_valid(r) or not r.is_visible_in_tree():
+			continue
+		var c := r.global_position + Vector3.UP * 0.8 * r.base_scale.y
+		var t := (c - o).dot(d)
+		if t > 0.0 and (o + d * t).distance_to(c) < 0.8 * maxf(r.base_scale.y, 0.65) and t < bd:
+			bd = t
+			best = r
+	if best:
+		_poke(best)
+		return true
+	for prop: Node3D in [_star, _kart, _box]:
+		if prop and (o + d * maxf(0.0, (prop.global_position - o).dot(d))).distance_to(prop.global_position + Vector3.UP * 0.5) < 1.6:
+			_poke_prop(prop)
+			return true
+	return false
+
+
+func _poke(r: CharacterRig) -> void:
+	var now := Time.get_ticks_msec()
+	var k := r.get_instance_id()
+	var s: Dictionary = _pokes.get(k, {"n": 0, "t": 0, "busy": 0})
+	if now < int(s.busy):
+		return
+	s.n = int(s.n) + 1 if now - int(s.t) < 2600 else 1
+	s.t = now
+	_poked[k] = now
+	var pet := r.model_key.begins_with("pet/")
+	var id: String = (POKE_PET if pet else POKE_HERO).pick_random()
+	if int(s.n) >= 5:
+		id = "tantrum"
+		s.n = 0
+	elif int(s.n) >= 3:
+		id = "dizzy"
+	elif _all_heroes_poked(now):
+		_group_cheer()
+		return
+	var rc := r.reaction(id)
+	s.busy = now + int((rc.hold if rc else 1.0) * 1000.0)
+	_pokes[k] = s
+	# Kurz zur Kamera drehen, danach zurück zur eigenen Beschäftigung
+	var yaw := r.rotation.y
+	var to := _cam.global_position - r.global_position
+	to.y = 0.0
+	r.turn_to(to, 0.18)
+	r.react(id)
+	if POKE_SFX.has(id):
+		Audio.sfx(POKE_SFX[id], r.global_position, -3.0, 1.45 if pet else 1.0)
+	await get_tree().create_timer((rc.hold if rc else 1.0) + 0.1, false).timeout
+	if is_instance_valid(r) and is_inside_tree() and absf(angle_difference(r.rotation.y, atan2(to.x, to.z))) < 0.2:
+		r.create_tween().tween_property(r, "rotation:y", r.rotation.y + angle_difference(r.rotation.y, yaw), 0.3)
+
+
+func _all_heroes_poked(now: int) -> bool:
+	for r in _heroes:
+		if is_instance_valid(r) and not r.model_key.begins_with("pet/") and now - int(_poked.get(r.get_instance_id(), -99999)) > 15000:
+			return false
+	return true
+
+
+func _group_cheer() -> void:
+	_poked.clear()
+	Audio.sfx("star", null, -2.0)
+	for r in _heroes:
+		if is_instance_valid(r):
+			_pokes[r.get_instance_id()] = {"n": 0, "t": 0, "busy": Time.get_ticks_msec() + 2600}
+			r.react("victory" if not r.model_key.begins_with("pet/") else "cheer")
+	FX.confetti(Vector3(1.5, 1.0, 1.5), 120)
+	if _star:
+		_poke_prop(_star)
+
+
+func _poke_prop(prop: Node3D) -> void:
+	if prop.has_meta("poke_busy") and Time.get_ticks_msec() < int(prop.get_meta("poke_busy")):
+		return
+	prop.set_meta("poke_busy", Time.get_ticks_msec() + 900)
+	var base := prop.scale
+	var tw := prop.create_tween()
+	tw.tween_property(prop, "scale", base * Vector3(1.25, 0.75, 1.25), 0.08)
+	tw.tween_property(prop, "scale", base * Vector3(0.85, 1.25, 0.85), 0.12)
+	tw.tween_property(prop, "scale", base, 0.35).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	if prop == _star:
+		prop.create_tween().tween_property(prop, "rotation:y", TAU * 3.0, 0.9).as_relative().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		FX.stars(prop.global_position, Color(1, 0.9, 0.3), 16)
+		Audio.sfx("chime", prop.global_position, -2.0)
+	elif prop == _kart:
+		var y := prop.position.y
+		var hop := prop.create_tween()
+		hop.tween_property(prop, "position:y", y + 0.6, 0.18).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		hop.tween_property(prop, "position:y", y, 0.22).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+		FX.dust(prop.global_position, Color(0.85, 0.8, 0.65), 14, 1.0)
+		Audio.sfx("boost", prop.global_position, -4.0, 1.2)
+	else:
+		FX.stars(prop.global_position + Vector3.UP * 0.6, Color(0.6, 0.9, 1.0), 12)
+		Audio.sfx("item_get", prop.global_position, -3.0)
 
 
 func _side_panel(title: String, width := 640.0) -> Array:
@@ -921,11 +1044,32 @@ func _players_editor(v: VBoxContainer) -> void:
 		if i == 0:
 			start_idx = 0 if not p.cpu else 1 + int(p.cpu_level)
 		else:
-			start_idx = int(p.cpu_level) if p.cpu else (3 if pads > i else 1)
+			start_idx = int(p.cpu_level) if p.cpu else (Game.CPU_LEVELS.size() if pads > i else 1)
 		var cs := Stepper.new().setup(opts, start_idx, 170, Color("#8a5a3c"))
 		row.add_child(cs)
 		_cpu_steppers.append(cs)
 		v.add_child(row)
+		hs.nav_mode = "focus"
+		cs.nav_mode = "focus"
+	_wire_player_rows()
+
+
+## Controller-Navigation der Spielerzeilen: links/rechts durch Charakter-Pfeile → Mensch/CPU-Pfeile,
+## hoch/runter in derselben Spalte zur nächsten Zeile. Werte ändert A auf dem jeweiligen Pfeil.
+func _wire_player_rows() -> void:
+	var grid: Array = []
+	for i in mini(_hero_steppers.size(), _cpu_steppers.size()):
+		grid.append(_hero_steppers[i].arrows() + _cpu_steppers[i].arrows())
+	for r in grid.size():
+		var row: Array = grid[r]
+		for c in row.size():
+			var b: Button = row[c]
+			b.focus_neighbor_left = b.get_path_to(row[c - 1]) if c > 0 else NodePath("")
+			b.focus_neighbor_right = b.get_path_to(row[c + 1]) if c < row.size() - 1 else NodePath("")
+			if r > 0:
+				b.focus_neighbor_top = b.get_path_to(grid[r - 1][c])
+			if r < grid.size() - 1:
+				b.focus_neighbor_bottom = b.get_path_to(grid[r + 1][c])
 
 
 func _hero_index(id: String) -> int:

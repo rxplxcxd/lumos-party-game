@@ -219,12 +219,12 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var tt := float(mem.get("t", 0.0)) - get_physics_process_delta_time()
 		if tt <= 0.0:
 			held["a"] = true
-			tt = 1.0 / [4.5, 6.0, 7.5][level]
+			tt = 1.0 / Game.lv([4.5, 6.0, 7.5], level)
 		mem["t"] = tt
 	if int(c.jump) == slot:
 		for bx in barriers:
 			var dx := bx - (float(c.x) + 1.1)
 			var tti := dx / maxf(float(c.v), 0.5)
-			if dx > 0.0 and tti < [0.32, 0.26, 0.2][level] and tti > 0.05 and randf() < [0.75, 0.88, 0.97][level]:
+			if dx > 0.0 and tti < Game.lv([0.32, 0.26, 0.2], level) and tti > 0.05 and randf() < Game.lv([0.75, 0.88, 0.97], level):
 				held["a" if int(c.pump) != slot else "b"] = true
 	InputHub.set_virtual(slot, Vector2.ZERO, held)

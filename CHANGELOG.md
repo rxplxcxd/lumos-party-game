@@ -3,6 +3,75 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.2.4 – System-Update: Items, CPU-Stufen, Routen, Emotes, Touch & Controller
+* **Item-Persistenz (Bugfix):** Items gingen verloren, wenn ein Zug durch ein Partner-Feld, ein Minispiel oder
+  eine Cutscene unterbrochen wurde. Dabei verfielen Restschritte und Würfeleffekt.
+  * Der Zug läuft nach der Unterbrechung mit den Restschritten weiter (`resume_move`).
+  * Vor jedem Szenenwechsel wird das Inventar gesichert und bei der Rückkehr abgeglichen (`inv_guard`).
+  * Items verschwinden nur noch durch Einsatz oder gewollte Mechaniken (Tausch- und Mopser-Karten).
+* **Vier CPU-Stufen:** Leicht, Mittel, Profi, **Insane**.
+  * Insane macht weniger Patzer, streut weniger und reagiert schneller, aber nie unter menschlichen 0,15 s.
+  * Fein abgestimmte Größen (Regler, Sprung-Zeitpunkte, Toleranzen, Rempelraten) bleiben auf Profi-Niveau.
+    Ein erster Stufenvergleich hatte gezeigt, dass blindes Hochskalieren Insane schlechter machte.
+  * Auf dem Brett plant Insane Items und Wege voraus: Wunschwürfel auf exakten Sternabstand, Dreifachwürfel bei
+    weitem Stern, Schlüssel vor dem Tor kaufen, Münz-Mopser für den Sternkauf aufsparen.
+  * Kein Mogeln: Würfel und Zufall sind für alle gleich. Insane bleibt schlagbar.
+* **Dynamischere Bretter:**
+  * Mittel-Express quer übers Brett, auf den meisten Brettern hinter einem Schlüsseltor.
+  * Auf Friedhof und Leuchtwald ist der Express ein Geheimgang, der erst nach dem Entdecken auftaucht.
+  * Schatz-Umweg mit Risiko (rote Felder) und Belohnung (Schatzfeld „X“ mit Truhe).
+  * Die Wegwahl zeigt an, was hinter jeder Abzweigung liegt.
+* **Shop-Erweiterung** (bis zu 3 Items):
+  * Dreifachwürfel, Wunschwürfel (1–10) und Schneckenwürfel (1–3).
+  * Platztausch-Karte, Münz-Mopser und Item-Tausch-Karte.
+  * Münzfalle, die man auf das eigene Feld legt.
+  * Schlüssel für Abkürzungstore.
+  * Das Angebot wechselt jede Runde und ist online auf allen Geräten gleich.
+* **Emotes:**
+  * Acht selbst gezeichnete Vektor-Emotes, keine Standard-Emojis.
+  * Bedienung: Y bzw. Q halten (Emote-Rad) oder Klick/Tipp auf den Emote-Knopf.
+  * Sie erscheinen als Sprechblase über der Figur und werden online übertragen. Spam-Bremse beim Senden und
+    Empfangen.
+* **Hauptmenü:** Die Insel hat ein paar kleine Geheimnisse.
+* **Touch:** Listen scrollen per Wischen mit Schwung, ein Wischen löst keinen Knopf aus.
+* **Controller in der Spieler-/CPU-Auswahl:**
+  * links/rechts springt zwischen Figur, Typ und Stufe, hoch/runter zwischen den Zeilen;
+  * A auf einem Pfeil ändert den Wert;
+  * „Mensch (Pad)“ kollidiert nicht mehr mit der neuen Stufe Insane.
+* **Fehlerbehebungen nebenbei:**
+  * Modular-Terrain-Modelle (OBJ) wirkten fast schwarz: Godots OBJ-Import machte aus „Ks 1“ metallic = 1. Sie
+    werden jetzt matt dargestellt.
+  * Lange Boss-Namen passen ins Minispiel-Intro.
+  * Fanfaren-Jingles in Mega-Summser, Schalter-Schikane, Steinkopf-Kegeln, Lumos-Athlon und Reise-Modus waren
+    stumm (falscher Sound-Kanal).
+* **Prüfungen:**
+  * `tools/dev/test_systems.gd` (in der CI) prüft CPU-Stufen, Inventar-Schutz, Item-Taktik, Emotes, Stepper-
+    Navigation, Touch-Wischen und Menü-Figuren.
+  * `SWEEP_ARGS="--levels=…"` vergleicht CPU-Stufen im Sweep.
+  * `tools/dev/board_route_shot.gd` erzeugt Kontrollbilder von Schlüsseltor, Geheimgang und Schatz-Umweg.
+
+## 1.2.3 – Neue Low-Poly-Welt, Cozy-UI & 15 neue Minispiele (Etappe 3)
+Hinweis: Die Anfrage nannte „Version 1.9.3“. Gemäß der Reihe 1.2.x (Etappe 3 nach 1.2.2) ist dieser Build **1.2.3**.
+
+* **Asset-Packs integriert** (Quaternius Nature & Platformer, LowPoly Environment, Modular Terrain, Cozy UI):
+  * Prozedurale Platzhalter und ältere Modelle laufen über Upgrade-Pools mit Jahreszeit-Varianten: Schnee,
+    Herbst, Moos, Totholz.
+  * Berg- und Wolkenhorizont aus Modellen mit gemeinsamem Material.
+  * Themen-Deko je Brett: Stege, Muscheln, Loren, Lagerfeuer, Ruinen.
+  * Alle Modelle werden auf einheitliche Höhe bzw. Breite normiert und geteilt geladen.
+  * Die Archive wurden nach dem Entpacken aus dem Repository entfernt.
+* **Cozy-UI-Overhaul:**
+  * Holz- und Creme-Buttons, Panels, Karten, Checkboxen, Slider, Pfeile, Herzen und ein eigener Mauszeiger.
+  * Warme Palette in HUDs, Menüs, Anzeigen und Ergebnisbildschirmen. Die Schrift bleibt.
+* **15 neue, hoch-interaktive Minispiele** (eigene Namen, Figuren und Orte; Stick + A/B, Maus, Tastatur,
+  Controller und Touch; online-fähig):
+  * 2 gegen 2: Bomben-Entschärfung, Taxi-Koordinaten, Karten-Match, Strand-Volley, Tretboot-Rennen,
+    Gemüse-Ernte.
+  * Duelle: Schnell-Angler, Klatsch-Karussell, Murmel-Labyrinth, Steinkopf-Kegeln.
+  * Jeder gegen jeden: Mega-Summser, Achterbahn-Schießbude, Flitzestein-Wurf, Spukvilla-Sprint.
+  * Glück und Münzen: Kullerkasten.
+* **CPUs springen voll aus:** Bei variabler Sprunghöhe halten CPUs A jetzt lange genug.
+
 ## 1.2.2 – Online-Überarbeitung & 15 neue Minispiele (Etappe 2)
 Hinweis: Die Anfrage nannte im Text „Version 1.9.2“, in der Überschrift „1.2.2“. Gemäß der Reihe 1.2.x
 (Etappe 2 nach 1.2.1) ist dieser Build **1.2.2**.

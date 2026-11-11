@@ -175,7 +175,7 @@ func _swap(a: int, b: int, dur: float) -> void:
 	# CPU-Verfolgung (fehlbar)
 	for i in 4:
 		if Game.players[i].cpu:
-			var acc: float = [0.7, 0.85, 0.96][int(Game.players[i].cpu_level)]
+			var acc: float = Game.lv([0.7, 0.85, 0.96], int(Game.players[i].cpu_level), true)
 			if _beliefs[i] == a:
 				_beliefs[i] = b if randf() < acc else a
 			elif _beliefs[i] == b:

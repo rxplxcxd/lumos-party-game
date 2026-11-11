@@ -277,9 +277,9 @@ func cpu_think(slot: int, _delta: float) -> void:
 	if not mem.has("pick"):
 		mem["pick"] = _best_pad(slot, level, false)
 	# Kurz vor Schluss: Profis schwenken um, wenn das Ziel überfüllt ist
-	if t > T_CHOOSE - [0.5, 0.9, 1.2][level] and not mem.has("switched"):
+	if t > T_CHOOSE - Game.lv([0.5, 0.9, 1.2], level) and not mem.has("switched"):
 		mem["switched"] = true
-		if randf() < [0.2, 0.5, 0.8][level]:
+		if randf() < Game.lv([0.2, 0.5, 0.8], level):
 			mem["pick"] = _best_pad(slot, level, true)
 	var tx := float(PAD_X[int(mem.pick)])
 	var to := Vector2(tx - av.global_position.x, 0.0 - av.global_position.z)
@@ -290,7 +290,7 @@ func _best_pad(slot: int, level: int, crowd_aware: bool) -> int:
 	var best := 0
 	var bs := -INF
 	for k in 4:
-		var sc := float(_vals[k]) + randf_range(0.0, [3.0, 1.6, 0.8][level])
+		var sc := float(_vals[k]) + randf_range(0.0, Game.lv([3.0, 1.6, 0.8], level))
 		for o in active_slots():
 			if o == slot:
 				continue

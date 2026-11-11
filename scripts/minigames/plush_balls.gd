@@ -169,8 +169,8 @@ func cpu_think(slot: int, _delta: float) -> void:
 			continue
 		var perp := rel - dir * along
 		var t := along / maxf(vel.length(), 0.1)
-		if perp.length() < float(b.r) + 0.9 and t < [0.55, 0.8, 1.1][level]:
-			if float(b.r) < 1.0 and t < 0.32 and randf() < [0.7, 0.85, 0.97][level]:
+		if perp.length() < float(b.r) + 0.9 and t < Game.lv([0.55, 0.8, 1.1], level):
+			if float(b.r) < 1.0 and t < 0.32 and randf() < Game.lv([0.7, 0.85, 0.97], level):
 				held["a"] = true
 			elif float(b.r) >= 1.0:
 				flee += Vector2(-dir.y, dir.x) * (1.0 if perp.cross(dir) < 0.0 else -1.0)

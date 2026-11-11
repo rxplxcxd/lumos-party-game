@@ -273,11 +273,11 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var bp2: Vector3 = best.pos
 		var to := Vector2(bp2.x - p.x, bp2.z - p.z)
 		var f := float(best.fuse)
-		if f < [0.4, 0.6, 0.8][level] and to.length() < 2.6:
+		if f < Game.lv([0.4, 0.6, 0.8], level) and to.length() < 2.6:
 			mv = -to.normalized()   # zu spät – weg da!
 		else:
 			mv = to.normalized() * clampf(to.length(), 0.0, 1.0)
-			if to.length() < STOMP_R * 0.8 and bool(best.ground) and randf() < [0.25, 0.5, 0.8][level]:
+			if to.length() < STOMP_R * 0.8 and bool(best.ground) and randf() < Game.lv([0.25, 0.5, 0.8], level):
 				# Nah an der Hecke und noch viel Zeit? Profis kicken rüber, sonst austreten
 				if level >= 1 and absf(bp2.x) < 2.8 and f > 2.0 and randf() < 0.5:
 					held["a"] = true

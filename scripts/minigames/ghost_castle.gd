@@ -262,7 +262,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var gp: Vector3 = (g.rig as Node3D).global_position
 		if absf(gp.z - target.z) < 1.0 and absf(gp.x - a.global_position.x) < 2.2:
 			mv = Vector2.ZERO
-	InputHub.set_virtual(slot, mv.limit_length(1.0) * [0.7, 0.85, 1.0][level])
+	InputHub.set_virtual(slot, mv.limit_length(1.0) * Game.lv([0.7, 0.85, 1.0], level))
 
 
 func _cpu_mem_for(slot: int) -> Dictionary:
@@ -270,7 +270,7 @@ func _cpu_mem_for(slot: int) -> Dictionary:
 	if known.get("refresh", false) or not known.has("cols"):
 		known["refresh"] = false
 		var cols := {}
-		var err: float = [0.22, 0.1, 0.03][int(Game.players[slot].cpu_level)]
+		var err: float = Game.lv([0.22, 0.1, 0.03], int(Game.players[slot].cpu_level), true)
 		for r in ROWS:
 			var col := path[r]
 			if randf() < err:

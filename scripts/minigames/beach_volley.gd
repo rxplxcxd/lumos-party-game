@@ -249,8 +249,8 @@ func cpu_think(slot: int, _delta: float) -> void:
 	# Reaktionszeit: Ziel wird nur alle paar Zehntel neu geschätzt (mit Schätzfehler je Stufe)
 	mem["rt"] = float(mem.get("rt", 0.0)) - 1.0 / 60.0
 	if float(mem.rt) <= 0.0 or not mem.has("land"):
-		mem["rt"] = [0.55, 0.35, 0.2][level]
-		var e: Vector2 = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * float([2.0, 1.2, 0.55][level])
+		mem["rt"] = Game.lv_react([0.55, 0.35, 0.2], level)
+		var e: Vector2 = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * float(Game.lv([2.0, 1.2, 0.55], level))
 		mem["land"] = Vector3(land.x + e.x, 0, land.z + e.y)
 	var target: Vector3 = mem.land
 	# Zwei Spieler teilen sich das Feld: vorne/hinten nach Slot-Reihenfolge, wenn der Ball nicht kommt
@@ -272,6 +272,6 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var horiz := Vector2(_bpos.x - p.x, _bpos.z - p.z).length()
 	if coming and horiz < 1.3 and _bpos.y > 1.6 and _bpos.y < 3.4 and av.is_on_floor() and _bvel.y < 0.0:
 		held["a"] = true
-	if not av.is_on_floor() and horiz < 1.4 and level >= 1 and absf(p.x) < 4.0 and randf() < [0.0, 0.4, 0.8][level]:
+	if not av.is_on_floor() and horiz < 1.4 and level >= 1 and absf(p.x) < 4.0 and randf() < Game.lv([0.0, 0.4, 0.8], level):
 		held["b"] = true
 	InputHub.set_virtual(slot, mv, held)

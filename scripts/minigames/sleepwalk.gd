@@ -260,8 +260,8 @@ func _read(i: int) -> String:
 		var mem := cpu_mem[i]
 		if not mem.has("at"):
 			var level: int = Game.players[i].cpu_level
-			mem["at"] = randf_range([0.5, 0.35, 0.22][level], [1.1, 0.8, 0.55][level])
-			mem["ok"] = randf() < [0.72, 0.86, 0.95][level]
+			mem["at"] = randf_range(Game.lv_react([0.5, 0.35, 0.22], level), Game.lv_react([1.1, 0.8, 0.55], level))
+			mem["ok"] = randf() < Game.lv([0.72, 0.86, 0.95], level)
 		if _window - _prompt_t[i] >= float(mem.at):
 			var want := course[progress[i]]
 			var res: String = want if bool(mem.ok) else ACTIONS[(ACTIONS.find(want) + 1 + randi() % 3) % 4]

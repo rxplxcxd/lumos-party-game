@@ -482,7 +482,7 @@ func _ai_input(delta: float) -> Dictionary:
 	var drift := false
 	var sharp := absf(k_ahead) > 0.022 and v > 18.0 and cpu_level > 0
 	if drift_dir != 0:
-		drift = absf(k_ahead) > 0.012 and drift_t < [1.0, 1.6, 2.4][cpu_level]
+		drift = absf(k_ahead) > 0.012 and drift_t < Game.lv([1.0, 1.6, 2.4], cpu_level)
 	elif sharp:
 		drift = true
 		steer = signf(k_ahead) * maxf(absf(steer), 0.6)

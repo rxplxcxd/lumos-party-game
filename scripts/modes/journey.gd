@@ -431,7 +431,7 @@ func _start_quest(qi: int) -> void:
 		k += 1
 	Game.minigame_setup = (q.setup as Dictionary).duplicate(true)
 	Game.mode = "journey"
-	Audio.sfx("minigame_start")
+	Audio.jingle("minigame_start")
 	Router.goto(Game.minigame_info(String(q.game)).scene)
 
 

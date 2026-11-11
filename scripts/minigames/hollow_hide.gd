@@ -267,7 +267,7 @@ func cpu_think(slot: int, delta: float) -> void:
 		_cpu_t[slot] -= delta
 		if float(cpu_mem[slot].get("g", -1)) < 0.0:
 			# Gutes Auge: mit Wahrscheinlichkeit richtig mitverfolgt, sonst geraten
-			var track_ok := randf() < clampf([0.35, 0.5, 0.7][level] - _swaps * 0.012, 0.15, 0.8)
+			var track_ok := randf() < clampf(Game.lv([0.35, 0.5, 0.7], level) - _swaps * 0.012, 0.15, 0.8)
 			cpu_mem[slot]["g"] = order.find(hidden_id) if track_ok else randi() % N
 		var g := int(cpu_mem[slot].g)
 		if _cursor[slot] != g:

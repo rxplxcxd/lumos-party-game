@@ -643,7 +643,7 @@ func _cpu_input(i: int) -> String:
 		if dt > 0.3:
 			break
 		if not plan.has(k):
-			var skill: float = [0.72, 0.86, 0.96][level]
+			var skill: float = Game.lv([0.72, 0.86, 0.96], level, true)
 			plan[k] = randf_range(-0.05, 0.05) if randf() < skill else 9.0
 		if float(plan[k]) < 9.0 and dt <= float(plan[k]):
 			return String(nt.kind)

@@ -215,11 +215,11 @@ func cpu_think(slot: int, _delta: float) -> void:
 		return
 	var level: int = Game.players[slot].cpu_level
 	var held := {}
-	var t := Time.get_ticks_msec() / 1000.0 * (7.0 + level * 2.0) + slot
+	var t := Time.get_ticks_msec() / 1000.0 * (7.0 + mini(level, 2) * 2.0) + slot
 	var mv := Vector2(cos(t), sin(t))
-	if _spin[slot] >= MAX_SPIN * _cpu_target[slot] * [0.75, 0.88, 1.0][level]:
+	if _spin[slot] >= MAX_SPIN * _cpu_target[slot] * Game.lv([0.75, 0.88, 1.0], level):
 		mv = Vector2.ZERO
 		var dirv := Vector3(-sin(_ang[slot]), 0, -cos(_ang[slot]))
-		if dirv.dot(Vector3(0, 0, -1)) > [0.8, 0.9, 0.97][level]:
+		if dirv.dot(Vector3(0, 0, -1)) > Game.lv([0.8, 0.9, 0.97], level):
 			held["a"] = true
 	InputHub.set_virtual(slot, mv, held)

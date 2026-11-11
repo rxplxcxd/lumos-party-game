@@ -276,7 +276,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var react := float(mem.get("react", 0.0)) + get_physics_process_delta_time()
 		mem["react"] = react
 		# Reaktionszeit + gelegentlich auf die "falsche" Ansage reinfallen
-		if react > [0.7, 0.45, 0.25][level]:
+		if react > Game.lv_react([0.7, 0.45, 0.25], level):
 			var best := INF
 			for k in _called:
 				var am := TAU * (k + 0.5) / 6.0
@@ -291,4 +291,4 @@ func cpu_think(slot: int, _delta: float) -> void:
 		mem["react"] = 0.0
 		target = mem.get("tgt", Vector3(pos.x, 0, pos.z) * 0.6)
 	var mv := Vector2(target.x - pos.x, target.z - pos.z)
-	InputHub.set_virtual(slot, mv.normalized() * clampf(mv.length() / 1.5, 0.0, 1.0) * [0.85, 0.95, 1.0][level])
+	InputHub.set_virtual(slot, mv.normalized() * clampf(mv.length() / 1.5, 0.0, 1.0) * Game.lv([0.85, 0.95, 1.0], level))

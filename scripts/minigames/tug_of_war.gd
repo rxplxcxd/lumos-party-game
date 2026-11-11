@@ -247,9 +247,9 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var held := {}
 	if t <= 0.0:
 		var phase := _pull_phase()
-		var aim_beat: bool = randf() < [0.25, 0.5, 0.8][level]
+		var aim_beat: bool = randf() < Game.lv([0.25, 0.5, 0.8], level)
 		if not aim_beat or phase > 0.86 or phase < 0.1:
 			held["a"] = true
-			t = 1.0 / [5.0, 7.0, 9.0][level]
+			t = 1.0 / Game.lv([5.0, 7.0, 9.0], level)
 	mem["t"] = t
 	InputHub.set_virtual(slot, Vector2.ZERO, held)

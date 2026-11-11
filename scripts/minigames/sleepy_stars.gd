@@ -172,7 +172,7 @@ func _read(i: int, delta: float) -> int:
 		if _cpu_next[i] <= 0.0:
 			_cpu_next[i] = randf_range(0.25, 0.42)
 			var level: int = Game.players[i].cpu_level
-			var ok: bool = randf() < [0.9, 0.95, 0.985][level] - _round * 0.008
+			var ok: bool = randf() < Game.lv([0.9, 0.95, 0.985], level) - _round * 0.008
 			var want: int = seq[_progress[i]]
 			return want if ok else (want + 1 + randi() % 3) % 4
 		return -1

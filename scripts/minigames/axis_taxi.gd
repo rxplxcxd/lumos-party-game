@@ -299,12 +299,12 @@ func cpu_think(slot: int, _delta: float) -> void:
 			way = target
 	var to := way - p
 	var mv := Vector2.ZERO
-	var gain: float = [0.6, 0.9, 1.3][level]
+	var gain: float = Game.lv([0.6, 0.9, 1.3], level)
 	if slot == int(tx.x_slot):
 		mv.x = clampf(to.x * gain, -1.0, 1.0)
 	if slot == int(tx.z_slot):
 		mv.y = clampf(to.z * gain, -1.0, 1.0)
-	if randf() < [0.08, 0.03, 0.0][level]:
+	if randf() < Game.lv([0.08, 0.03, 0.0], level, true):
 		mv = -mv
 	InputHub.set_virtual(slot, mv)
 

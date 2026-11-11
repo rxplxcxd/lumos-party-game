@@ -349,13 +349,13 @@ func cpu_think(slot: int, _delta: float) -> void:
 				bd = d
 				target = v.pos
 		if bd < 0.9:
-			mem["acc"] = float(mem.get("acc", 0.0)) + [4.0, 6.0, 8.0][level] / 60.0
+			mem["acc"] = float(mem.get("acc", 0.0)) + Game.lv([4.0, 6.0, 8.0], level) / 60.0
 			if float(mem.acc) >= 1.0:
 				mem.acc = float(mem.acc) - 1.0
 				held["b"] = true
 		# Gegnerischer Träger in Reichweite? Rempeln (Profis öfter)
 		for j in active_slots():
-			if teams[j] != teams[slot] and _carry[j] >= 0 and (avatars[j] as PartyAvatar).global_position.distance_to(p) < 1.4 and randf() < [0.02, 0.06, 0.12][level]:
+			if teams[j] != teams[slot] and _carry[j] >= 0 and (avatars[j] as PartyAvatar).global_position.distance_to(p) < 1.4 and randf() < Game.lv([0.02, 0.06, 0.12], level):
 				held["a"] = true
 	var to := Vector2(target.x - p.x, target.z - p.z)
 	InputHub.set_virtual(slot, to.normalized() * clampf(to.length() * 1.5, 0.0, 1.0), held)

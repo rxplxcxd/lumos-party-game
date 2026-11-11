@@ -270,8 +270,8 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var mm2: Dictionary = b.marbles[best]
 	var target: Vector2 = WAY[best_wp]
 	var to: Vector2 = target - (mm2.pos as Vector2)
-	var kp: float = [0.8, 1.0, 1.2][level]
-	var kd: float = [0.35, 0.55, 0.75][level]
+	var kp: float = Game.lv([0.8, 1.0, 1.2], level)
+	var kd: float = Game.lv([0.35, 0.55, 0.75], level)
 	var tilt := to * kp - (mm2.vel as Vector2) * kd
 	# Alle Murmeln von den Fallen weghalten (Kippen wirkt auf alle gleichzeitig)
 	for m in 3:
@@ -281,8 +281,8 @@ func cpu_think(slot: int, _delta: float) -> void:
 		for t in TRAPS:
 			var away: Vector2 = (om.pos as Vector2) - (t as Vector2)
 			if away.length() < 0.9:
-				tilt += away.normalized() * (0.9 - away.length()) * [0.6, 1.0, 1.4][level]
-	tilt = tilt.limit_length([0.55, 0.7, 0.85][level])
-	if randf() < [0.05, 0.02, 0.0][level]:
+				tilt += away.normalized() * (0.9 - away.length()) * Game.lv([0.6, 1.0, 1.4], level)
+	tilt = tilt.limit_length(Game.lv([0.55, 0.7, 0.85], level))
+	if randf() < Game.lv([0.05, 0.02, 0.0], level, true):
 		tilt += Vector2(randf_range(-1, 1), randf_range(-1, 1))
 	InputHub.set_virtual(slot, tilt.limit_length(1.0))

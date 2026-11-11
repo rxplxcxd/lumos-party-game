@@ -309,8 +309,8 @@ func cpu_think(slot: int, _delta: float) -> void:
 			if not _judged[slot].has(n.t) and float(n.t) > song_t - 0.05:
 				var r := randf()
 				var off := 0.0
-				var perfect_p: float = [0.3, 0.55, 0.78][level]
-				var good_p: float = [0.45, 0.33, 0.18][level]
+				var perfect_p: float = Game.lv([0.3, 0.55, 0.78], level, true)
+				var good_p: float = Game.lv([0.45, 0.33, 0.18], level)
 				if r < perfect_p:
 					off = randf_range(-0.04, 0.04)
 				elif r < perfect_p + good_p:

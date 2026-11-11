@@ -280,7 +280,7 @@ func cpu_think(slot: int, delta: float) -> void:
 	var ang := _ang(pos)
 	var must_jump := false
 	var must_stay := false
-	var react: float = [0.2, 0.27, 0.32][level] + float(mem.get("jitter", 0.0))
+	var react: float = Game.lv([0.2, 0.27, 0.32], level) + float(mem.get("jitter", 0.0))
 	for a in arms:
 		var spd := _speed
 		var gap := wrapf((ang - float(a.angle)) * _dir, 0.0, TAU)
@@ -293,7 +293,7 @@ func cpu_think(slot: int, delta: float) -> void:
 	if must_jump and not must_stay and av.is_on_floor():
 		hold_t = 0.32
 		mem["jitter"] = randf_range(-0.06, 0.06) * (3 - level)
-		if randf() < [0.12, 0.05, 0.015][level]:
+		if randf() < Game.lv([0.12, 0.05, 0.015], level, true):
 			hold_t = 0.0   # verpatzt – auch CPUs sind nur Menschen
 	if hold_t > 0.0:
 		held["a"] = true

@@ -4,6 +4,9 @@ extends HBoxContainer
 
 signal changed(index: int)
 
+## "value": links/rechts ändert den Wert (einzelne Auswahl). "focus": links/rechts wandert zwischen den
+## Spalten (z. B. Lobby: Charakter → Mensch/CPU), A auf einem Pfeil ändert den Wert – kein „Gefangensein“.
+var nav_mode := "value"
 var options: Array = []
 var index := 0
 var _label: Label
@@ -39,6 +42,8 @@ func setup(opts: Array, start := 0, width := 260.0, accent := Color("#7b3cff")) 
 
 
 func _on_btn_input(ev: InputEvent) -> void:
+	if nav_mode != "value":
+		return
 	if ev.is_action_pressed("ui_left"):
 		step(-1)
 		accept_event()
@@ -69,6 +74,10 @@ func value() -> Variant:
 func _refresh() -> void:
 	if _label and not options.is_empty():
 		_label.text = str(options[index])
+
+
+func arrows() -> Array[Button]:
+	return [_left, _right]
 
 
 func focus_first() -> void:

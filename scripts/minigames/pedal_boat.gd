@@ -240,14 +240,14 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var to := g - p
 	var want := atan2(to.x, to.z)
 	var diff := wrapf(want - float(bt.head), -PI, PI)
-	var mv := Vector2(clampf(-diff * [1.2, 1.8, 2.4][level], -1.0, 1.0), 0)
+	var mv := Vector2(clampf(-diff * Game.lv([1.2, 1.8, 2.4], level), -1.0, 1.0), 0)
 	# Treten im Wechsel mit menschlichem Tempo
-	mem["acc"] = float(mem.get("acc", 0.0)) + [4.5, 6.0, 7.5][level] / 60.0
+	mem["acc"] = float(mem.get("acc", 0.0)) + Game.lv([4.5, 6.0, 7.5], level) / 60.0
 	var held := {}
 	if float(mem.acc) >= 1.0:
 		mem.acc = float(mem.acc) - 1.0
 		var nxt := "b" if String(mem.get("last", "b")) == "a" else "a"
-		if randf() < [0.12, 0.05, 0.01][level]:
+		if randf() < Game.lv([0.12, 0.05, 0.01], level, true):
 			nxt = String(mem.get("last", "a"))
 		mem["last"] = nxt
 		held[nxt] = true

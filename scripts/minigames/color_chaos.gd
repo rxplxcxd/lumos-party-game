@@ -178,6 +178,6 @@ func cpu_think(slot: int, _delta: float) -> void:
 	mv = mv.normalized() if mv.length() > 0.3 else Vector2.ZERO
 	for o in avatars:
 		var oa := o as PartyAvatar
-		if oa != av and oa.global_position.distance_to(pos) < 1.7 and randf() < 0.02 * (level + 1):
+		if oa != av and oa.global_position.distance_to(pos) < 1.7 and randf() < 0.02 * mini(level + 1, 3):
 			held["b"] = true
-	InputHub.set_virtual(slot, mv * [0.8, 0.92, 1.0][level], held)
+	InputHub.set_virtual(slot, mv * Game.lv([0.8, 0.92, 1.0], level), held)

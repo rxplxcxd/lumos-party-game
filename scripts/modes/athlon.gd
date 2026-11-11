@@ -592,7 +592,10 @@ func _runner_finished(i: int) -> void:
 	var rig: CharacterRig = runners[i].rig
 	rig.react("victory")
 	FX.confetti(rig.global_position + Vector3.UP * 2.0, 40)
-	Audio.sfx("fanfare" if _finish.size() == 1 else "star", null, -4.0)
+	if _finish.size() == 1:
+		Audio.jingle("fanfare", false)
+	else:
+		Audio.sfx("star", null, -4.0)
 	Juice.float_text(self, rig.global_position + Vector3.UP * 2.8, "%d. Platz!" % _finish.size(), UI.GOLD, 70)
 
 

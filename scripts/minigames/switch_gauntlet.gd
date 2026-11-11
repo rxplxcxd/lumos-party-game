@@ -186,7 +186,7 @@ func on_tick(delta: float) -> void:
 			if _legs[i] >= LEGS:
 				_finished[i] = true
 				av.rig.react("victory")
-				Audio.sfx("fanfare", av.global_position, -6.0)
+				Audio.jingle("fanfare", false)
 			else:
 				_dir[i] = -_dir[i]
 				av.rig.react("determined")
@@ -459,7 +459,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	# Stampfer: im Warnschatten → raus (vor oder zurück, was näher ist); davor warten
 	var t0 := 2.2 - _trap_t[0]
 	if _trap_t[0] > 0.0 and t0 < 1.3:
-		if absf(p.z - 3.9) < 1.8 + [0.0, 0.3, 0.5][level]:
+		if absf(p.z - 3.9) < 1.8 + Game.lv([0.0, 0.3, 0.5], level):
 			fwd = -1.0 if p.z < 3.9 else 1.0
 		elif (dir < 0.0 and p.z > 3.9 and p.z < 6.5) or (dir > 0.0 and p.z < 3.9 and p.z > 1.3):
 			fwd = 0.0
@@ -474,12 +474,12 @@ func cpu_think(slot: int, _delta: float) -> void:
 	# Wind: dagegenhalten
 	var side := (lane - p.x) * 1.2
 	if _trap_t[2] > 0.0 and p.z < -3.6 and p.z > -8.4:
-		side = -[0.5, 0.8, 1.0][level]
+		side = -Game.lv([0.5, 0.8, 1.0], level)
 	# Fässer: springen, wenn eins in der eigenen Spur naht
 	for b in _barrels:
 		if float(b.delay) <= 0.0 and absf(p.x - float(b.x)) < 1.1:
 			var dz := (p.z - float(b.z)) * (1.0 if dir < 0.0 else -1.0)
-			if absf(p.z - float(b.z)) < [0.9, 1.2, 1.4][level] + (0.0 if dir < 0.0 else 0.3) and av.is_on_floor() and (dz > 0.0 or dir > 0.0):
+			if absf(p.z - float(b.z)) < Game.lv([0.9, 1.2, 1.4], level) + (0.0 if dir < 0.0 else 0.3) and av.is_on_floor() and (dz > 0.0 or dir > 0.0):
 				held["a"] = true
 	InputHub.set_virtual(slot, Vector2(clampf(side, -1.0, 1.0), fwd).limit_length(1.0), held)
 
@@ -495,7 +495,7 @@ func _cpu_solo(slot: int, level: int) -> void:
 			if i == slot or _finished[i]:
 				continue
 			var z := (avatars[i] as PartyAvatar).global_position.z
-			if z < float(zr[0]) + [0.2, 0.8, 1.4][level] and z > float(zr[1]):
+			if z < float(zr[0]) + Game.lv([0.2, 0.8, 1.4], level) and z > float(zr[1]):
 				n += 1
 		if n > bn and _cd[k] <= 0.0:
 			bn = n
@@ -505,6 +505,6 @@ func _cpu_solo(slot: int, level: int) -> void:
 	if best >= 0:
 		if best != _sel:
 			mv.y = -1.0 if best > _sel else 1.0
-		elif randf() < [0.05, 0.12, 0.25][level]:
+		elif randf() < Game.lv([0.05, 0.12, 0.25], level):
 			held["a"] = true
 	InputHub.set_virtual(slot, mv, held)

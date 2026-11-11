@@ -302,9 +302,9 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var held := {}
 	var mv := Vector2.ZERO
 	var refuel := bool(mem.get("refuel", false))
-	if _fuel[slot] < [0.25, 0.15, 0.1][level]:
+	if _fuel[slot] < Game.lv([0.25, 0.15, 0.1], level):
 		refuel = true
-	elif _fuel[slot] > [0.7, 0.85, 0.95][level]:
+	elif _fuel[slot] > Game.lv([0.7, 0.85, 0.95], level):
 		refuel = false
 	mem["refuel"] = refuel
 	var best: Dictionary = {}
@@ -325,6 +325,6 @@ func cpu_think(slot: int, _delta: float) -> void:
 	for c in _clouds:
 		var cp := (c.node as Node3D).position
 		var off := Vector2(p.x - cp.x, p.z - cp.z)
-		if bool(c.warn) and off.length() < 2.6 and randf() < [0.4, 0.75, 0.95][level]:
+		if bool(c.warn) and off.length() < 2.6 and randf() < Game.lv([0.4, 0.75, 0.95], level):
 			mv = off.normalized()
 	InputHub.set_virtual(slot, mv.limit_length(1.0), held)

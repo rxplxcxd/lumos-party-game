@@ -109,8 +109,8 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var to := best.global_position - pos
 		mv = Vector2(to.x, to.z).normalized()
 		# Mit Anlauf vom Rand weg in Richtung Gegner + Plattformmitte schieben
-		if bd < 2.2 and randf() < 0.05 * (level + 1):
+		if bd < 2.2 and randf() < 0.05 * mini(level + 1, 3):
 			held["b"] = true
 	if level > 0 and best and bd < 1.6 and randf() < 0.02:
 		held["a"] = true
-	InputHub.set_virtual(slot, mv * [0.75, 0.9, 1.0][level], held)
+	InputHub.set_virtual(slot, mv * Game.lv([0.75, 0.9, 1.0], level), held)

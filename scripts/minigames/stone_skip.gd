@@ -248,8 +248,14 @@ func cpu_think(slot: int, _delta: float) -> void:
 			InputHub.set_virtual(slot, Vector2.ZERO)
 			return
 	if not mem.has("ang"):
-		mem["ang"] = clampf(9.0 + randf_range(-1, 1) * [9.0, 5.0, 2.0][level], 3.0, 30.0)
-		mem["pw"] = clampf(0.88 + randf_range(-1, 1) * [0.3, 0.15, 0.06][level], 0.3, 1.0)
+		# Taktik: Am weitesten fliegt der Stein knapp unter ~20,5° mit voller Kraft – darüber versinkt er sofort.
+		# Jede Stufe hält so viel Sicherheitsabstand zu dieser Kante, wie ihre eigene Streuung verlangt.
+		var spread: float = Game.lv([9.0, 5.0, 2.0], level, true)
+		var aim := clampf(20.2 - spread * 0.95, 8.0, 19.6)
+		# Streuung wie bei Menschen: meist nah am Ziel, selten weit daneben (Dreiecksverteilung)
+		mem["ang"] = clampf(aim + (randf_range(-1, 1) + randf_range(-1, 1)) * 0.5 * spread, 3.0, 30.0)
+		var pn: float = Game.lv([0.3, 0.15, 0.06], level, true)
+		mem["pw"] = clampf(1.0 - pn * 0.8 + (randf_range(-1, 1) + randf_range(-1, 1)) * 0.5 * pn, 0.3, 1.0)
 	var mv := Vector2(0, clampf((_angle[slot] - float(mem.ang)) * 0.3, -1.0, 1.0))
 	var held := {}
 	if absf(_angle[slot] - float(mem.ang)) < 1.0:

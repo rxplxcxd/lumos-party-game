@@ -172,15 +172,15 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var pass_id := int((_ang + gap) / TAU)
 	if int(mem.get("pass", -1)) != pass_id:
 		mem["pass"] = pass_id
-		mem["miss"] = randf() < [0.28, 0.12, 0.04][level]
-		mem["wrong"] = randf() < [0.15, 0.06, 0.02][level]
+		mem["miss"] = randf() < Game.lv([0.28, 0.12, 0.04], level, true)
+		mem["wrong"] = randf() < Game.lv([0.15, 0.06, 0.02], level, true)
 	var high := _high if t_hit < 0.6 else _next_high
 	if bool(mem.wrong):
 		high = not high
 	if not bool(mem.miss):
 		if high and (t_hit < 0.5 or gap > -0.45):
 			held["b"] = true
-		elif not high and t_hit < [0.3, 0.27, 0.24][level] and av.is_on_floor():
+		elif not high and t_hit < Game.lv([0.3, 0.27, 0.24], level) and av.is_on_floor():
 			held["a"] = true
 	# Nicht zu nah an den Rand
 	var mv := Vector2.ZERO

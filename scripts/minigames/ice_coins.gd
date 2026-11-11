@@ -238,7 +238,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	if best != Vector3.INF:
 		var to := Vector2(best.x - p.x, best.z - p.z)
 		# Auf Eis vorausschauend lenken: eigenes Tempo herausrechnen
-		to -= Vector2(av.velocity.x, av.velocity.z) * [0.1, 0.25, 0.35][level]
+		to -= Vector2(av.velocity.x, av.velocity.z) * Game.lv([0.1, 0.25, 0.35], level)
 		mv = to.normalized()
 	# Dem Eisbären ausweichen
 	var off := Vector2(p.x - _bear.position.x, p.z - _bear.position.z)
@@ -247,7 +247,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 	var held := {}
 	for o in avatars:
 		var oa := o as PartyAvatar
-		if oa != av and oa.global_position.distance_to(p) < 1.7 and int(scores[oa.slot]) > 0 and randf() < [0.02, 0.05, 0.08][level]:
+		if oa != av and oa.global_position.distance_to(p) < 1.7 and int(scores[oa.slot]) > 0 and randf() < Game.lv([0.02, 0.05, 0.08], level):
 			held["b"] = true
 			mv = Vector2(oa.global_position.x - p.x, oa.global_position.z - p.z).normalized()
 	InputHub.set_virtual(slot, mv, held)

@@ -240,7 +240,7 @@ func _score_throw() -> void:
 		add_score(s, float(n + (3 if n == 6 else 0)), av.global_position + Vector3.UP * 2.4)
 	if n == 6:
 		CutsceneManager.big_word("Abräumer!", Color("#ffd166"), 0.8)
-		Audio.sfx("fanfare", null, -4.0)
+		Audio.jingle("fanfare", false)
 		av.rig.react("victory")
 	elif n >= 3:
 		av.rig.react("cheer")
@@ -317,14 +317,14 @@ func cpu_think(slot: int, _delta: float) -> void:
 				# Ziel: Mitte der Köpfe zum Ankunftszeitpunkt (Drehung vorhersagen), mit Fehler je Stufe
 				var t_arr := (LANE_Z - PIN_C.z) / 13.0
 				var c := Vector2(0, 0.35).rotated(_spin + t_arr * 0.9)
-				var tx: float = c.x + randf_range(-1.0, 1.0) * float([0.9, 0.45, 0.15][level])
+				var tx: float = c.x + randf_range(-1.0, 1.0) * float(Game.lv([0.9, 0.45, 0.15], level, true))
 				mem["want"] = atan2(tx, LANE_Z - PIN_C.z)
 			if absf(_aim - float(mem.want)) < 0.03 and _t > 0.3:
 				held["a"] = true
 				mem.erase("want")
 		"power":
 			if not mem.has("pw"):
-				mem["pw"] = clampf(0.75 + randf_range(-1, 1) * [0.3, 0.15, 0.05][level], 0.2, 1.0)
+				mem["pw"] = clampf(0.75 + randf_range(-1, 1) * Game.lv([0.3, 0.15, 0.05], level, true), 0.2, 1.0)
 			if absf(_power - float(mem.pw)) < 0.04 and _pow_dir > 0.0 and _t > 0.15:
 				held["a"] = true
 				mem.erase("pw")

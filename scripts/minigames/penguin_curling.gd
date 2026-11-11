@@ -729,6 +729,6 @@ func cpu_think(slot: int, _delta: float) -> void:
 		elif phase == "slide":
 			var pen: Node3D = _current.node
 			var to_house := Vector2(_house.x - pen.position.x, _house.z - pen.position.z).length()
-			if to_house > 5.0 and (_current.vel as Vector3).length() < 6.0 and randf() < 0.3 * (level + 1):
+			if to_house > 5.0 and (_current.vel as Vector3).length() < 6.0 and randf() < 0.3 * mini(level + 1, 3):
 				held["a"] = true
 	InputHub.set_virtual(slot, mv, held)

@@ -316,14 +316,14 @@ func cpu_think(slot: int, _delta: float) -> void:
 	if slot == solo_slot:
 		for lg in logs:
 			var da := wrapf(float(lg.a) - cart_a, -PI, PI)
-			if da > 0.0 and da < [0.12, 0.16, 0.2][level] and absf(cart_lane - float(lg.lane)) < 0.5:
-				if randf() < [0.4, 0.6, 0.85][level]:
+			if da > 0.0 and da < Game.lv([0.12, 0.16, 0.2], level) and absf(cart_lane - float(lg.lane)) < 0.5:
+				if randf() < Game.lv([0.4, 0.6, 0.85], level):
 					held["a"] = true
 				else:
 					mv.x = 1.0 if cart_lane_t < 2 else -1.0
 		var gap := wrapf(cart_a - bee_a, -PI, PI)
 		if gap < 0.35 and absf(cart_lane - bee_lane) < 0.6:
-			if randf() < 0.05 * (level + 1):
+			if randf() < 0.05 * mini(level + 1, 3):
 				held["b"] = true
 			elif randf() < 0.04:
 				mv.x = 1.0 if randf() < 0.5 else -1.0
@@ -332,7 +332,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var t := float(mem.get("t", 0.0)) - get_physics_process_delta_time()
 		if t <= 0.0:
 			held["a"] = true
-			t = 1.0 / [4.5, 6.0, 8.0][level]
+			t = 1.0 / Game.lv([4.5, 6.0, 8.0], level)
 		mem["t"] = t
 		var want := cart_lane - bee_lane
 		if absf(want) > 0.4:

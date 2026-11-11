@@ -176,7 +176,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		var dz := p.z - float(L.z)
 		var t_hit := dz / maxf(float(L.v), 0.1)
 		# Absprung, bevor der Stamm das Trefferfenster erreicht (Fenster = r + 0,2 m)
-		var lead: float = (float(L.r) + 0.2) / maxf(float(L.v), 0.1) + [0.22, 0.16, 0.12][level]
+		var lead: float = (float(L.r) + 0.2) / maxf(float(L.v), 0.1) + Game.lv([0.22, 0.16, 0.12], level)
 		if t_hit > 0.0 and t_hit < lead + randf_range(-0.06, 0.06) * (3 - level) and av.is_on_floor():
 			held["a"] = true
 	InputHub.set_virtual(slot, mv, held)

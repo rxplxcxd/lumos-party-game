@@ -38,6 +38,9 @@ func _ready() -> void:
 		WorldKit.god_rays(self, Vector3.ZERO, 22.0, we.get_meta("sun"), 9)
 	builder = BoardBuilder.new()
 	builder.build(self, Game.party.board, spaces)
+	var traps: Dictionary = Game.party.get("traps", {})
+	for sp in traps:
+		builder.set_trap_visual(int(sp), true, Game.player_color(int(traps[sp])))
 	var bd: Array = {"dungeon": ["dungeon", Color("#1a0d1a")], "pirates": ["beach", Color("#e8d6a0")], "sky": ["sky", Color.WHITE],
 		"graveyard": ["night", Color("#2d3a35")], "frost": ["snow", Color("#eef4fb")], "station": ["sky_dusk", Color.WHITE],
 		"glowforest": ["meadow", Color("#4f9a46")], "meadow": ["meadow", Color("#86d06a")], "cake": ["cake", Color("#f6c9d8")],
@@ -129,6 +132,7 @@ func _main() -> void:
 	# Online: erst los, wenn alle Geräte das Brett fertig geladen haben
 	await Net.loading_gate()
 	var party: Dictionary = Game.party
+	_verify_inventory()
 	match String(party.phase):
 		"minigame":
 			await _apply_minigame_results()
@@ -139,7 +143,8 @@ func _main() -> void:
 				await _finale()
 				return
 		"partner_game":
-			await _after_partner_game()
+			if await _after_partner_game():
+				return   # beim Weiterlaufen gleich das nächste Partner-/Duell-Minispiel
 		"duel_game":
 			await _after_duel()
 		"boss_game":
@@ -245,16 +250,16 @@ func _turn(p: int) -> void:
 	rig.react("determined")
 	await _wait(0.6)
 	var dice := 2 if Game.party_mode() == "blitz" else 1
-	var items: Array = Game.players[p].items
-	if "double_dice" in items:
-		var use := await _ask(p, "Doppelwürfel benutzen?", true)
-		if use:
-			items.erase("double_dice")
-			dice += 1
+	var plan := await _item_phase(p)
+	dice += int(plan.get("extra", 0))
 	await partners.turn_start(p)
 	var total := 0
-	for k in dice:
-		total += await _roll_dice(p, k, dice)
+	if int(plan.get("fixed", 0)) > 0:
+		total = int(plan.fixed)
+		await _show_banner("Wunschwürfel: %d!" % total, Color("#ffd23f"), 0.8)
+	else:
+		for k in dice:
+			total += await _roll_dice(p, k, dice, int(plan.get("max", DICE_MAX)))
 	var mod := partners.modify_roll(p, total)
 	if mod != total:
 		await _show_banner("%s: %d → %d Felder!" % [PartnerSystem.PARTNERS[partners.partner_of(p)].name, total, mod], Color("#ffd23f"), 0.8)
@@ -292,7 +297,7 @@ func _process(_delta: float) -> void:
 
 # --- Würfel ---------------------------------------------------------------------------------------------
 
-func _roll_dice(p: int, k: int, count: int) -> int:
+func _roll_dice(p: int, k: int, count: int, max_v := DICE_MAX) -> int:
 	var rig := rigs[p]
 	var holder := Node3D.new()
 	add_child(holder)
@@ -326,7 +331,7 @@ func _roll_dice(p: int, k: int, count: int) -> int:
 		holder.position.y = rig.global_position.y + 3.6 + sin(t * 5.0) * 0.12
 		if tick > 0.06:
 			tick = 0.0
-			value = randi_range(1, DICE_MAX)
+			value = randi_range(1, max_v)
 			num.text = str(value)
 			num.modulate = Color.from_hsv(randf(), 0.4, 1.0)
 		if not _decides_here(p):
@@ -407,12 +412,20 @@ func _route_open(bi: int) -> bool:
 	return even if tog == "even" else not even
 
 
-func _available_next(cur: int) -> Array:
+func _available_next(cur: int, p := -1) -> Array:
 	var out := []
+	var revealed: Dictionary = Game.party.get("revealed", {})
 	for n in spaces[cur].next:
 		var b: int = spaces[n].branch
-		if b >= 0 and spaces[cur].branch != b and not _route_open(b):
-			continue
+		if b >= 0 and spaces[cur].branch != b:
+			if not _route_open(b):
+				continue
+			var br: Dictionary = def.branches[b]
+			# Geheimgang erst nach dem Entdecken, Schlüsseltor nur mit Schlüssel
+			if bool(br.get("secret", false)) and not bool(revealed.get(b, false)):
+				continue
+			if bool(br.get("lock", false)) and (p < 0 or not "key" in (Game.players[p].items as Array)):
+				continue
 		out.append(n)
 	if out.is_empty():
 		out.append(spaces[cur].next[0])
@@ -555,10 +568,18 @@ func _move(p: int, steps: int) -> void:
 	var remaining := steps
 	while remaining > 0:
 		counter.text = str(remaining)
-		var options := _available_next(cur)
+		var options := _available_next(cur, p)
 		var nxt: int = options[0]
 		if options.size() > 1:
 			nxt = await _choose_path(p, cur, options)
+		# Schlüsseltor: Schlüssel wird beim Durchgehen verbraucht
+		var lb: int = spaces[nxt].branch
+		if lb >= 0 and spaces[cur].branch != lb and bool(def.branches[lb].get("lock", false)):
+			(Game.players[p].items as Array).erase("key")
+			if OS.is_debug_build():
+				print("[ITEM] %s öffnet Schlüsseltor" % _pname(p))
+			builder.open_gate(lb)
+			await _show_banner("%s schließt das Tor auf!" % _pname(p), Color("#ffd166"), 0.8)
 		# Skelett-Wächter-Wegzoll
 		var nb: int = spaces[nxt].branch
 		if nb >= 0 and spaces[cur].branch != nb and def.branches[nb].has("gate"):
@@ -586,6 +607,9 @@ func _move(p: int, steps: int) -> void:
 		# Durchgangs-Events
 		if partners.on_pass(p, cur):
 			counter.queue_free()
+			# Restschritte merken: nach dem Partner-Minispiel läuft der Spieler zu Ende (inkl. Landung) –
+			# ein eingesetzter Würfel (z. B. Doppelwürfel) verfällt so nicht mehr
+			Game.party.resume_move = {"p": p, "steps": remaining}
 			await _start_partner_game(p)
 			return
 		if cur == int(Game.party.star_space):
@@ -648,6 +672,14 @@ func _choose_path(p: int, cur: int, options: Array) -> int:
 		var tag := ""
 		if b >= 0 and spaces[cur].branch != b:
 			tag = "Wegzoll %d" % def.branches[b].gate if def.branches[b].has("gate") else "Abkürzung?"
+		if b >= 0 and spaces[cur].branch != b:
+			var brd: Dictionary = def.branches[b]
+			if bool(brd.get("lock", false)):
+				tag = "Schlüsseltor"
+			elif bool(brd.get("secret", false)):
+				tag = "Geheimgang"
+			elif bool(brd.get("detour", false)):
+				tag = "Schatzkammer"
 		if tag != "":
 			var l := Label3D.new()
 			l.text = tag
@@ -710,7 +742,10 @@ func _cpu_path(p: int, options: Array) -> int:
 		var b: int = spaces[options[i]].branch
 		if b >= 0 and def.branches[b].has("gate") and Game.players[p].coins < int(def.branches[b].gate) + _star_cost():
 			d += 6.0
-		d += randf() * [6.0, 3.0, 0.5][int(Game.players[p].cpu_level)]
+		# Schatz-Umweg: Profis nehmen ihn, wenn der Stern ohnehin weit weg ist (Item statt Tempo)
+		if b >= 0 and bool(def.branches[b].get("detour", false)) and int(Game.players[p].cpu_level) >= 2 and d > 14.0 and (Game.players[p].items as Array).size() < BoardItems.MAX:
+			d -= 4.0
+		d += randf() * Game.lv([6.0, 3.0, 0.5], int(Game.players[p].cpu_level), true)
 		if d < best_d:
 			best_d = d
 			best = i
@@ -744,6 +779,7 @@ func _land(p: int) -> void:
 	if _space_color(t) == "green":
 		Game.players[p].events_landed = int(Game.players[p].get("events_landed", 0)) + 1
 	EventBus.space_landed.emit(p, t)
+	await _check_coin_trap(p)
 	rig.turn_to(cam.global_position - rig.global_position, 0.3)
 	var node := builder.space_nodes[s]
 	Juice.squash(node, 1.15, 0.7, 0.4, node.scale)
@@ -786,6 +822,9 @@ func _land(p: int) -> void:
 			await _duel_space(p)
 		"U":
 			await _updraft(p)
+		"X":
+			await _treasure(p)
+	await _maybe_reveal(p, s)
 	_formation_all()
 
 
@@ -1196,8 +1235,10 @@ func _lucky_chest(p: int) -> void:
 			_coins(p, -10)
 			rig.react("tantrum")
 		"dice":
-			if not ("double_dice" in Game.players[p].items):
-				Game.players[p].items.append("double_dice")
+			var gift: String = ["double_dice", "triple_dice", "custom_dice", "coin_card", "trap", "key"][Game.prng.randi() % 6]
+			if (Game.players[p].items as Array).size() < BoardItems.MAX:
+				Game.players[p].items.append(gift)
+				await _show_banner("%s erhält: %s!" % [_pname(p), BoardItems.label(gift)], Color("#7fd6ff"), 0.9)
 			FX.stars(rig.global_position + Vector3.UP * 2.0)
 			rig.react("cheer")
 		"swap":
@@ -1222,25 +1263,47 @@ func _lucky_chest(p: int) -> void:
 
 
 func _shop(p: int) -> void:
-	var price := DOUBLE_DICE_COST / (2 if partners.has_ability(p, "shop_half") else 1)
 	if Game.party_mode() == "pro" and int(Game.party.get("shop_stock", 2)) <= 0:
 		return
-	if "double_dice" in Game.players[p].items or Game.players[p].coins < price:
+	if (Game.players[p].items as Array).size() >= BoardItems.MAX:
+		return
+	var stock := BoardItems.shop_stock(int(Game.party.round), board_id())
+	var prices: Array = []
+	for id in stock:
+		prices.append(int(BoardItems.ITEMS[id].price) / (2 if partners.has_ability(p, "shop_half") else 1))
+	var coins := int(Game.players[p].coins)
+	var affordable := false
+	for pr in prices:
+		if int(pr) <= coins:
+			affordable = true
+	if not affordable:
 		return
 	if builder.merchant:
 		builder.merchant.react("wave")
-	var cpu_buy: bool = Game.players[p].coins >= price + 12
-	var buy := await _ask(p, "Händler: Doppelwürfel für %d Münzen?" % price, cpu_buy)
-	if buy:
-		_coins(p, -price)
-		if Game.party_mode() == "pro":
-			Game.party.shop_stock = int(Game.party.get("shop_stock", 2)) - 1
-		Game.players[p].items.append("double_dice")
-		Audio.sfx("item_get")
-		rigs[p].react("cheer")
+	var labels: Array = []
+	var enabled: Array = []
+	for k in stock.size():
+		labels.append("%s – %d Münzen\n%s" % [BoardItems.label(stock[k]), int(prices[k]), String(BoardItems.ITEMS[stock[k]].desc)])
+		enabled.append(int(prices[k]) <= coins)
+	labels.append("Nichts kaufen")
+	enabled.append(true)
+	var cpu_k := BoardItems.cpu_buy(self, p, stock, prices) if Game.players[p].cpu else -1
+	var pick := await _choose_option(p, "Händler: Was darf es sein?", labels, cpu_k if cpu_k >= 0 else stock.size(), enabled)
+	if pick < 0 or pick >= stock.size():
 		if builder.merchant:
-			builder.merchant.react("cheer")
-		await _wait(0.8)
+			builder.merchant.react("sad")
+		return
+	_coins(p, -int(prices[pick]))
+	if Game.party_mode() == "pro":
+		Game.party.shop_stock = int(Game.party.get("shop_stock", 2)) - 1
+	Game.players[p].items.append(stock[pick])
+	if OS.is_debug_build():
+		print("[ITEM] R%d %s kauft %s" % [int(Game.party.round), _pname(p), stock[pick]])
+	Audio.sfx("item_get")
+	rigs[p].react("cheer")
+	if builder.merchant:
+		builder.merchant.react("cheer")
+	await _show_banner("%s kauft: %s" % [_pname(p), BoardItems.label(stock[pick])], Color("#7fd6ff"), 0.8)
 
 
 func _star_event(p: int) -> void:
@@ -1344,8 +1407,31 @@ func _is_endspurt() -> bool:
 
 
 ## Minispiel starten und danach zum Brett zurück (Phase bestimmt die Auswertung).
+func _inventory_copy() -> Array:
+	var out: Array = []
+	for i in 4:
+		out.append((Game.players[i].get("items", []) as Array).duplicate())
+	return out
+
+
+## Nach jeder Rückkehr aufs Brett: Weicht ein Inventar vom Stand vor dem Szenenwechsel ab, wird es
+## wiederhergestellt. Gewollte Verluste (Boss-Diebstahl, Tausch, Benutzung) passieren erst danach im Brett.
+func _verify_inventory() -> void:
+	var guard: Array = Game.party.get("inv_guard", [])
+	Game.party.erase("inv_guard")
+	if guard.size() != 4:
+		return
+	for i in 4:
+		var now: Array = Game.players[i].get("items", [])
+		if now != (guard[i] as Array):
+			push_warning("Inventar von Spieler %d wiederhergestellt: %s -> %s" % [i, str(now), str(guard[i])])
+			Game.players[i].items = (guard[i] as Array).duplicate()
+
+
 func _launch(game_id: String, setup: Dictionary, phase: String) -> void:
 	var info := Game.minigame_info(game_id)
+	# Inventar sichern: Minispiele, Zwischensequenzen und Szenenwechsel dürfen keine Items verlieren
+	Game.party.inv_guard = _inventory_copy()
 	setup["game"] = game_id
 	Game.minigame_setup = setup
 	Game.party.last_setup = setup
@@ -1456,7 +1542,7 @@ func _start_partner_game(p: int) -> void:
 	await _launch(String(pick.id), {"cat": "ffa", "handicap": p}, "partner_game")
 
 
-func _after_partner_game() -> void:
+func _after_partner_game() -> bool:
 	var res: Dictionary = Game.last_results
 	var winner := -1
 	if not res.is_empty():
@@ -1467,7 +1553,28 @@ func _after_partner_game() -> void:
 		Game.last_results = {}
 	_formation_all(true)
 	await partners.award(winner)
+	# Unterbrochenen Zug zu Ende laufen
+	var rm: Dictionary = Game.party.get("resume_move", {})
+	Game.party.erase("resume_move")
+	if not rm.is_empty() and int(rm.get("steps", 0)) > 0:
+		var p := int(rm.p)
+		Game.party.phase = "turns"
+		_current = p
+		cam.overview = false
+		cam.target = rigs[p]
+		await _show_banner("%s läuft weiter: noch %d Felder" % [_pname(p), int(rm.steps)], Game.player_color(p), 0.8)
+		await _move(p, int(rm.steps))
+		if String(Game.party.phase) != "turns":
+			return true
+		await _land(p)
+		await partners.check_trap(p)
+		await _maybe_duel(p)
+		if String(Game.party.phase) != "turns":
+			return true
+		partners.turn_end(p)
+		_formation_all()
 	Game.party.turn = int(Game.party.turn) + 1
+	return false
 
 
 ## Endspurt: Landet man auf einem besetzten Feld, gibt es ein Duell um 10 Münzen (Profi-Regeln: Stern möglich).
@@ -1936,11 +2043,13 @@ func _debug_digest(tag: String) -> void:
 	var sp := []
 	var co := []
 	var st := []
+	var it := []
 	for i in 4:
 		sp.append(int(Game.players[i].space))
 		co.append(int(Game.players[i].coins))
 		st.append(int(Game.players[i].stars))
-	print("[NET] Brett R%d %s · Felder %s · Münzen %s · Sterne %s · Stern@%d · Entscheidungen %d" % [int(Game.party.round), tag, sp, co, st, int(Game.party.star_space), int(Game.party.get("dseq", 0))])
+		it.append(",".join(Game.players[i].items))
+	print("[NET] Brett R%d %s · Felder %s · Münzen %s · Sterne %s · Items %s · Fallen %s · Stern@%d · Entscheidungen %d" % [int(Game.party.round), tag, sp, co, st, it, str(Game.party.get("traps", {}).keys()), int(Game.party.star_space), int(Game.party.get("dseq", 0))])
 
 
 func _next_decision() -> int:
@@ -1972,6 +2081,217 @@ func _touch_slot() -> int:
 func _wait_hint(p: int, t: float) -> void:
 	if t > 2.0 and not _prompt.visible and not Game.players[p].cpu:
 		_set_prompt("Warte auf %s …" % _pname(p), "")
+
+
+## Schatzkammer: Item (falls Platz) oder 10 Münzen
+func _treasure(p: int) -> void:
+	if OS.is_debug_build():
+		print("[ROUTE] %s erreicht Schatzkammer" % _pname(p))
+	await _show_banner("Schatzkammer!", Color("#ffd166"), 0.7)
+	var rig := rigs[p]
+	FX.stars(rig.global_position + Vector3.UP * 1.5, Color(1, 0.9, 0.4), 16)
+	Audio.sfx("chest_open", rig.global_position)
+	if (Game.players[p].items as Array).size() < BoardItems.MAX:
+		var pool := ["triple_dice", "custom_dice", "warp_card", "key", "coin_card"]
+		var it: String = pool[Game.prng.randi() % pool.size()]
+		Game.players[p].items.append(it)
+		rig.react("star_get")
+		await _show_banner("%s findet: %s!" % [_pname(p), BoardItems.label(it)], Color("#7fd6ff"), 1.0)
+	else:
+		_coins(p, 10)
+		rig.react("coin_gain")
+		await _wait(0.8)
+
+
+## Geheimgang entdecken: wer genau auf dem Abzweig landet, findet ihn (bleibt für alle offen)
+func _maybe_reveal(p: int, s: int) -> void:
+	var revealed: Dictionary = Game.party.get("revealed", {})
+	for bi in def.branches.size():
+		var br: Dictionary = def.branches[bi]
+		if bool(br.get("secret", false)) and int(br.from) == s and not bool(revealed.get(bi, false)):
+			revealed[bi] = true
+			Game.party.revealed = revealed
+			if OS.is_debug_build():
+				print("[ROUTE] %s entdeckt Geheimgang %d" % [_pname(p), bi])
+			builder.reveal_branch(bi, true)
+			Audio.sfx("sparkle_up", rigs[p].global_position)
+			rigs[p].react("shocked")
+			await _show_banner("%s entdeckt einen Geheimgang!" % _pname(p), Color("#c79bff"), 1.2)
+
+
+## Liegt ein Schlüsseltor in Reichweite (CPU: lohnt sich ein Schlüssel)?
+func _lock_ahead(p: int) -> bool:
+	for bi in def.branches.size():
+		if bool(def.branches[bi].get("lock", false)) and _dist(int(Game.players[p].space), int(def.branches[bi].from)) <= 12:
+			return true
+	return false
+
+
+func board_id() -> String:
+	return String(Game.party.get("board", "meadow"))
+
+
+## Vor dem Wurf: Item wählen und anwenden. Ergebnis: {extra: Zusatzwürfel, fixed: feste Zahl, max: Würfelgröße}
+func _item_phase(p: int) -> Dictionary:
+	var items: Array = Game.players[p].items
+	var u := BoardItems.usable(items)
+	if u.is_empty():
+		return {}
+	var labels: Array = []
+	for it in u:
+		labels.append("%s\n%s" % [BoardItems.label(it), String(BoardItems.ITEMS[it].desc)])
+	labels.append("Kein Item")
+	var cpu_it := BoardItems.cpu_pick(self, p, items) if Game.players[p].cpu else ""
+	var k := await _choose_option(p, "Item benutzen?", labels, u.find(cpu_it) if cpu_it != "" else u.size())
+	if k < 0 or k >= u.size():
+		return {}
+	var it: String = u[k]
+	items.erase(it)
+	if OS.is_debug_build():
+		print("[ITEM] R%d %s benutzt %s (Rest %s)" % [int(Game.party.round), _pname(p), it, str(items)])
+	Audio.sfx("item_get", rigs[p].global_position)
+	FX.sparks(rigs[p].global_position + Vector3.UP * 2.0, Color(0.6, 0.9, 1.0), 12)
+	match it:
+		"double_dice":
+			return {"extra": 1}
+		"triple_dice":
+			return {"extra": 2}
+		"slow_dice":
+			return {"max": 3}
+		"custom_dice":
+			var nums: Array = []
+			for n in range(1, DICE_MAX + 1):
+				nums.append(str(n))
+			var c := await _choose_option(p, "Wunschwürfel: Wie viele Felder?", nums, BoardItems.cpu_custom_number(self, p) - 1)
+			return {"fixed": clampi(c + 1, 1, DICE_MAX)}
+		"warp_card", "coin_card", "item_swap":
+			var others: Array[int] = []
+			for o in 4:
+				if o != p:
+					others.append(o)
+			var tgt := await _pick_player(p, BoardItems.label(it) + ": Mit wem?", others, BoardItems.cpu_target(self, p, it))
+			await _apply_card(p, it, tgt)
+		"trap":
+			var sp := int(Game.players[p].space)
+			var traps: Dictionary = Game.party.get("traps", {})
+			traps[sp] = p
+			Game.party.traps = traps
+			builder.set_trap_visual(sp, true, Game.player_color(p))
+			Audio.sfx("metal_hit", rigs[p].global_position)
+			await _show_banner("%s legt eine Münzfalle aus!" % _pname(p), Color("#ff9f43"), 0.8)
+	return {}
+
+
+func _apply_card(p: int, it: String, tgt: int) -> void:
+	if tgt < 0:
+		return
+	match it:
+		"warp_card":
+			var a := int(Game.players[p].space)
+			var b := int(Game.players[tgt].space)
+			FX.smoke(rigs[p].global_position + Vector3.UP, Color(0.8, 0.7, 1.0), 14, 1.2)
+			FX.smoke(rigs[tgt].global_position + Vector3.UP, Color(0.8, 0.7, 1.0), 14, 1.2)
+			Audio.sfx("swap")
+			Game.players[p].space = b
+			Game.players[tgt].space = a
+			rigs[p].global_position = _space_pos(b)
+			rigs[tgt].global_position = _space_pos(a)
+			rigs[tgt].react("shocked")
+			_formation_all(true)
+			await _show_banner("Platztausch mit %s!" % _pname(tgt), Color("#c79bff"), 0.9)
+		"coin_card":
+			var n: int = mini(8, int(Game.players[tgt].coins))
+			_coins(tgt, -n)
+			_coins(p, n)
+			rigs[tgt].react("coin_loss")
+			rigs[p].react("laugh")
+			await _show_banner("%s mopst %d Münzen von %s!" % [_pname(p), n, _pname(tgt)], Color("#ffd23f"), 0.9)
+		"item_swap":
+			var mine: Array = (Game.players[p].items as Array).duplicate()
+			Game.players[p].items = (Game.players[tgt].items as Array).duplicate()
+			Game.players[tgt].items = mine
+			Audio.sfx("swap")
+			rigs[tgt].react("confused")
+			await _show_banner("Item-Tausch mit %s!" % _pname(tgt), Color("#7fd6ff"), 0.9)
+
+
+## Münzfalle beim Landen auslösen (nicht für den Besitzer)
+func _check_coin_trap(p: int) -> void:
+	var traps: Dictionary = Game.party.get("traps", {})
+	var sp := int(Game.players[p].space)
+	if not traps.has(sp) or int(traps[sp]) == p:
+		return
+	var owner := int(traps[sp])
+	traps.erase(sp)
+	Game.party.traps = traps
+	builder.set_trap_visual(sp, false)
+	var n: int = mini(10, int(Game.players[p].coins))
+	FX.explosion(rigs[p].global_position, 0.5)
+	Audio.sfx("metal_hit", rigs[p].global_position)
+	rigs[p].react("shocked")
+	_coins(p, -n)
+	_coins(owner, n)
+	await _show_banner("Münzfalle von %s! −%d" % [_pname(owner), n], Color("#ff9f43"), 1.0)
+
+
+## Allgemeine Auswahl (Liste von Knöpfen, online im Lockstep). Ergebnis: Index.
+func _choose_option(p: int, question: String, labels: Array, cpu_idx: int, enabled: Array = []) -> int:
+	var layer := CanvasLayer.new()
+	layer.layer = 30
+	add_child(layer)
+	var root := UI.center_root(layer)
+	var panel := UI.panel()
+	root.add_child(panel)
+	var v := UI.vbox(10)
+	panel.add_child(v)
+	var q := UI.label(question, 32, Color.WHITE, true)
+	q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(q)
+	var many := labels.size() > 6
+	var grid := GridContainer.new()
+	grid.columns = 5 if many else 1
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 8)
+	v.add_child(grid)
+	var answer := [-1]
+	var btns: Array[Button] = []
+	for k in labels.size():
+		var b := UI.button(String(labels[k]), Color("#43b8c9") if k < labels.size() - 1 or many else Color("#8a5a3c"), 22 if not many else 28, 120.0 if many else 460.0)
+		if k < enabled.size() and not bool(enabled[k]):
+			b.disabled = true
+		grid.add_child(b)
+		btns.append(b)
+		var kk := k
+		b.pressed.connect(func() -> void: answer[0] = kk)
+	await get_tree().process_frame
+	panel.position = Vector2((root.size.x - panel.size.x) / 2.0, clampf(root.size.y * 0.5 - panel.size.y * 0.5, 10.0, root.size.y))
+	Juice.pop_in(panel, 0.3)
+	var ci := clampi(cpu_idx, 0, labels.size() - 1)
+	if _local_human(p):
+		btns[ci if not btns[ci].disabled else labels.size() - 1].grab_focus()
+	elif not _decides_here(p):
+		for b in btns:
+			b.disabled = true
+	var t := 0.0
+	var n := _next_decision()
+	while answer[0] < 0:
+		t += get_process_delta_time()
+		if not _decides_here(p):
+			if Net.decisions.has(n):
+				answer[0] = int(Net.decisions[n])
+			_wait_hint(p, t)
+		elif Game.players[p].cpu and t > 0.9:
+			answer[0] = ci
+			Juice.ui_punch(btns[ci], 0.2, 0.3)
+		elif not Game.players[p].cpu and t > 0.2 and InputHub.ui_pressed(p, "b"):
+			answer[0] = labels.size() - 1
+		await get_tree().process_frame
+	_publish(p, n, answer[0])
+	_set_prompt("")
+	_tap = false
+	await _wait(0.15)
+	layer.queue_free()
+	return answer[0]
 
 
 func _ask(p: int, question: String, cpu_answer: bool) -> bool:

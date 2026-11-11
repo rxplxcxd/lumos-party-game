@@ -54,6 +54,32 @@ Grüne (Ereignis-)Felder werden vor dem Minispiel per Farbrad Blau oder Rot zuge
 | Schieben zum Ziel, Rammen (Curling) | *Pinguin-Curling* | FFA |
 | Balancieren über dem Abgrund, Wind durch Tastenwechsel | *Seifenblasen-Ballett* | FFA |
 | Blind-Parcours mit Schnellwahl-Menü | *Schlafwandler-Parcours* | FFA |
+| Gemeinsam entschärfen (einer sieht den Plan, einer schneidet) | Bomben-Entschärfung ¹ | 2v2 |
+| Koordinaten ansagen & fahren | Taxi-Koordinaten ¹ | 2v2 |
+| Paare aufdecken | Karten-Match ¹ | 2v2 |
+| Ball übers Netz | Strand-Volley ¹ | 2v2 |
+| Gemeinsames Tretboot, Takt halten | Tretboot-Rennen ¹ | 2v2 |
+| Ernten & abliefern | Gemüse-Ernte ¹ | 2v2 |
+| Reaktions-Duell (Biss abwarten) | Schnell-Angler ¹ | Duell |
+| Ducken oder Springen auf dem Karussell | Klatsch-Karussell ¹ | Duell |
+| Kippbrett-Labyrinth | Murmel-Labyrinth ¹ | Duell |
+| Kegeln mit Steinkopf | Steinkopf-Kegeln ¹ | Duell |
+| Gemeinsam gegen eine Riesenbiene | Mega-Summser ¹ | FFA |
+| Zielschießen auf fahrender Bahn | Achterbahn-Schießbude ¹ | FFA |
+| Steine flitschen (Winkel + Kraft) | Flitzestein-Wurf ¹ | FFA |
+| Spukhaus-Türen raten & rennen | Spukvilla-Sprint ¹ | FFA |
+| Kugeln in Preisfächer kullern | Kullerkasten ¹ | Glück, Münzen, FFA |
 
-Fett = in v1.1 neu gebaut, kursiv = in v1.2 neu. Alle Spiele unterstützen CPU-Gegner (3 Stufen), Touch, Gamepads und Online-Spiel
+Fett = in v1.1 neu gebaut, kursiv = in v1.2 neu, ¹ = in 1.2.3 neu. Alle Spiele unterstützen CPU-Gegner (4 Stufen:
+Leicht, Mittel, Profi, Insane – siehe unten), Touch, Gamepads und Online-Spiel
 (Figuren-Spiele: Besitzer-Autorität mit Interpolation; Zustands-Spiele: Host-Autorität mit Eingabe-Weiterleitung).
+
+## CPU-Stufen
+
+Jede Liste `Game.lv([leicht, mittel, profi], level)` liefert den Wert der Stufe. **Insane** nutzt bei fein
+abgestimmten Größen (Regler-Verstärkung, Sprung-Zeitpunkt, Toleranz, Rempelrate) den Profi-Wert – mehr wäre dort
+schlechter, nicht besser. Nur echte Fehlerquellen werden fortgeschrieben (`Game.lv(..., true)`): Patzer-Quoten
+und Streuung sinken auf höchstens 35 % des Profi-Werts, Trefferquoten nähern sich 1, erreichen sie aber nie.
+Reaktionszeiten laufen über `Game.lv_react()` und bleiben ≥ 0,15 s. Insane gewinnt also durch Präzision und
+Taktik (auf dem Brett: Item-Planung, Wegwahl, Shop), nie durch Mogeln. Vergleich der Stufen:
+`SWEEP_ARGS="--levels=0,1,2,3" bash tools/dev/minigame_sweep.sh <out.jsonl> <ids…>`.
