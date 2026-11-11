@@ -120,7 +120,7 @@ func run() -> void:
 		inside_s.append(snappedf(inside[i] * dt, 0.1))
 	print("SWEEP " + JSON.stringify({"id": id, "cat": cat, "end": ended, "play": snappedf(play_t, 0.1), "limit": limit,
 		"intro": snappedf(intro_t, 0.1), "alive_start": alive_start, "alive_end": mg.alive, "durchgefallen": fell, "in_geometrie_s": inside_s, "survival": mg.survival,
-		"race": mg.race, "ueberlauf": _overflow}))
+		"race": mg.race, "scores": mg.scores, "ueberlauf": _overflow}))
 	tree.quit()
 
 

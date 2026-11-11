@@ -378,6 +378,8 @@ func _portal_entrance(d: Node, g: MinigameBase, targets: Array[Vector3]) -> void
 		up.tween_property(actor, "global_position", targets[i], 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		await up.finished
 		_land(g, i, targets[i], reactions)
-		rt.tween_property(ring, "scale", Vector3.ZERO, 0.3)
-		rt.tween_callback(ring.queue_free)
+		# Der Aufpopp-Tween ist längst fertig – fürs Einklappen einen neuen anlegen (sonst bleibt der Ring liegen)
+		var rt2 := ring.create_tween()
+		rt2.tween_property(ring, "scale", Vector3.ZERO, 0.3)
+		rt2.tween_callback(ring.queue_free)
 		await d.wait(0.1)

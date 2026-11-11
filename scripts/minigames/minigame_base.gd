@@ -384,7 +384,7 @@ func end_game() -> void:
 			await get_tree().process_frame
 			w += get_process_delta_time()
 	var placements := forced_placements if forced_placements.size() == 4 else compute_placements()
-	if net_sync and "--net-test" in str(OS.get_cmdline_user_args()):
+	if (net_sync or _host_model_online()) and "--net-test" in str(OS.get_cmdline_user_args()):
 		print("[NET] Minispiel-Ende · Platzierungen %s · alive %s · empfangen %s" % [placements, alive, Net.debug_counts])
 	if (net_sync or _host_model_online()) and Net.is_host:
 		Net.send({"k": "end", "pl": placements, "sc": scores}, true)

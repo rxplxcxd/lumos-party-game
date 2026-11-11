@@ -36,13 +36,38 @@ gebündelt, verarbeitete Einträge werden in einem Request gelöscht).
 
 Start: Alle Geräte melden „bereit“, der Host gibt „go“ → gleichzeitiger Countdown.
 
+### Synchronisationspunkte (seit 1.2.2)
+`Net.sync_point(tag, timeout)` ist eine gemeinsame Schranke: Clients melden `sp` (alle 1,5 s wiederholt), der Host
+gibt mit `sp_go` frei, sobald alle Teilnehmer der Partie da sind. Nach 0,6 s Wartezeit erscheint „Warte auf
+Mitspieler …“; nach dem Timeout geht es trotzdem weiter (ein hängendes Gerät blockiert nie alle).
+* **Lade-Gate** – `Net.loading_gate()` (Tag `load:<epoch>`, `scene_epoch` zählt je Szene hoch): Brett, Minispiel und
+  Rennen starten erst, wenn jedes Gerät die Szene fertig geladen hat. Der Host wartet automatisch.
+* **Zug-Gate** – `turn:<Runde>:<Zug>`: Ein Brettzug beginnt erst, wenn alle den vorigen komplett gesehen haben.
+  Würfeln und Laufen laufen dadurch auf allen Geräten gleichzeitig.
+* **Minispiel-Auswahl** – `mgsel:<Runde>` vor dem Minispiel-Roulette, `mg_go:<epoch>` direkt vor dem Countdown.
+
+### Verbindungsabbrüche
+* Host verlässt das Spiel (Pause-Menü, Fenster zu) → sendet `bye`. Clients zeigen „Online-Spiel beendet – Der Host
+  hat das Spiel beendet.“ (in der Lobby: „… hat den Raum geschlossen.“), OK führt zur Online-Seite.
+* Kein `pong` vom Host seit 12 s → „Die Verbindung zum Host wurde getrennt.“
+* Host-Eintrag oder Raum-Meta verschwindet aus der Datenbank → ebenfalls Hinweis statt stillem Hängen.
+* Späte Beitritte in eine laufende Partie starten nicht mit, sondern bekommen eine Statusmeldung.
+
+### Minispiel-Auswahl in der Lobby
+Der Host öffnet über „Auswahl: X von Y aktiv“ den `MinigamePicker`: Kategorie-Chips (Alle, Jeder gegen jeden,
+1 gegen 3, 2 gegen 2, Duell, Glück, Münzen …), „Alle an/aus“, Liste mit Häkchen und ▶ (sofort dieses Spiel). Die
+Auswahl wird gespeichert (`settings.online_pool_off`) und als `pool_off` in der Raum-Konfiguration verteilt; Brett
+und Zufallsmodus ziehen nur aus aktiven Spielen (mit Rückfall auf alle Online-Spiele, falls die Auswahl leer ist).
+
 ### Minispiel-Modelle
 * **Owner-Modell** (Standard): Jede Figur wird auf ihrem Gerät simuliert. Gefahren entstehen aus dem gemeinsamen
   Spiel-Zufall (`rng`, Startwert aus der Raum-Konfiguration), Ausscheiden und Punkte entscheidet nur der Besitzer
   (`eliminate`/`add_score` → Meldung `sc`). 1-gegen-3-Solo-Steuerungen (Hammer-Hüpfen, Sternschnuppen-Regen)
   werden zusätzlich vom Solo-Gerät gesendet.
 * **Host-Modell** (`net_model = "host"`): Der Host simuliert alles, Clients schicken nur Eingaben (`in`) und
-  zeigen den Zustand (`gs`) – für Spiele mit gemeinsamen Objekten (Seilziehen, Korbschlacht, Schatzkisten …).
+  zeigen den Zustand (`gs`) – für Spiele mit gemeinsamen Objekten (Seilziehen, Korbschlacht, Schatzkisten,
+  Kugel-Karambolage, Stampf-Wellen, Nagel-Profi, Raketen-Rucksack, Eislauf-Münzjagd, Blockpfad-Poker,
+  UFO-Kaperung, Schalter-Schikane …). Hilfsfunktionen `net_pack`/`net_unpack` übertragen den Spielzustand.
 * **Endergebnis** kommt immer vom Host (`end` mit Platzierungen und Punkten) – alle Geräte verbuchen dasselbe.
 
 ### Online-Party (Brett)
@@ -50,7 +75,9 @@ Alle Geräte führen den Brettablauf identisch aus (`Game.prng`, gleicher Startw
 Würfel, Wegwahl, Ja/Nein, Glücksrad, Gegnerwahl, Abstimmung – bekommt eine fortlaufende Nummer (`Game.party.dseq`).
 Das Gerät des Spielers (CPUs: Host) entscheidet und sendet `{"k": "bd", "n", "v"}`; die anderen zeigen dieselbe
 Animation und übernehmen genau diesen Wert. Test: `tools/dev/net_test.sh <ordner> party` vergleicht den
-Brettzustand von Host und Client nach jedem Zug.
+Brettzustand von Host und Client nach jedem Zug; `tools/dev/net_test.sh <ordner> <minispiel-id>` prüft ein
+einzelnes Minispiel (beide Geräte melden „Minispiel-Ende“ mit Platzierungen – Owner- und Host-Modell).
+`EXTRA=--log-scenes` protokolliert zusätzlich jeden Szenenwechsel.
 
 ### Lumos-Athlon (bis 20 Geräte)
 Athlon-Räume (`max = 20`) laufen host-gesteuert: `ath_round` (Herausforderung), `ath_sc` (Münzen der Clients),

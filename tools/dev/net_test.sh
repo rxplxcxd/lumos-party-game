@@ -31,9 +31,9 @@ else
   SHOTS_H="--shots=${SHOTS:-40,60} --shotdir=$OUT/host"
   SHOTS_C="--shots=${SHOTS:-40,60} --shotdir=$OUT/client"
 fi
-LUMOS_NET_TEST_UID=hostA timeout $((DUR + 20)) bash -c "$RUN -- --net-test=host --net-autodrive --net-game=$GAME --track=$TRACK --net-board=$TRACK --net-rounds=5 --laps=1 --net-code-file=$CODE_FILE $SHOTS_H --quit=$DUR" > "$OUT/host.log" 2>&1 &
+LUMOS_NET_TEST_UID=hostA timeout $((DUR + 20)) bash -c "$RUN -- --net-test=host --net-autodrive --net-game=$GAME --track=$TRACK --net-board=$TRACK --net-rounds=5 --laps=1 --net-code-file=$CODE_FILE $SHOTS_H ${EXTRA:-} --quit=$DUR" > "$OUT/host.log" 2>&1 &
 H=$!
-LUMOS_NET_TEST_UID=clientB timeout $((DUR + 20)) bash -c "$RUN -- --net-test=join --net-autodrive --net-code-file=$CODE_FILE $SHOTS_C --quit=$DUR" > "$OUT/client.log" 2>&1 &
+LUMOS_NET_TEST_UID=clientB timeout $((DUR + 20)) bash -c "$RUN -- --net-test=join --net-autodrive --net-code-file=$CODE_FILE $SHOTS_C ${EXTRA:-} --quit=$DUR" > "$OUT/client.log" 2>&1 &
 C=$!
 wait $H $C
 kill $MOCK 2>/dev/null

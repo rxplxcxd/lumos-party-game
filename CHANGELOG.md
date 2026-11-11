@@ -3,6 +3,51 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.2.2 – Online-Überarbeitung & 15 neue Minispiele (Etappe 2)
+Hinweis: Die Anfrage nannte im Text „Version 1.9.2“, in der Überschrift „1.2.2“. Gemäß der Reihe 1.2.x
+(Etappe 2 nach 1.2.1) ist dieser Build **1.2.2**.
+
+* **Online – streng synchron:**
+  * Lade-Gate für Brett, Minispiele und Rennen: Start erst, wenn alle Geräte geladen haben; der Host wartet
+    automatisch („Warte auf Mitspieler …“).
+  * Zug-Gates auf dem Brett: Jeder Zug beginnt erst, wenn alle den vorigen fertig gesehen haben. Würfeln und
+    Laufen laufen live und gleichzeitig.
+  * Gemeinsame Schranke vor dem Minispiel-Roulette und direkt vor dem Countdown.
+  * Startfelder korrekt: Feld-IDs außerhalb des Bretts landen auf dem Start statt auf dem letzten Feld;
+    doppelte Startsignale (zwei Datenbank-Ereignisse) setzen die Partie nicht mehr zurück.
+  * Klare Abbruch-Hinweise statt stillem Hängen: „Der Host hat das Spiel beendet.“, „Der Host hat den Raum
+    geschlossen.“, „Die Verbindung zum Host wurde getrennt.“ (12 s ohne Antwort). Späte Beitritte bekommen
+    eine Statusmeldung.
+* **Lobby – Minispiel-Auswahl:** Kategorie-Chips, „Alle an/aus“, Häkchen-Liste und ▶ zum direkten Start.
+  Die Auswahl wird gespeichert und an alle verteilt; Brett und Zufallsmodus ziehen nur aus aktiven Spielen.
+* **15 neue, hoch-interaktive Minispiele** (eigene Figuren, Orte und Namen; alles mit Stick + A/B spielbar,
+  Maus/Tastatur/Controller/Touch, keine Bewegungs- oder Mikrofon-Pflicht; alle online-fähig):
+  * *Kugel-Karambolage* – Kugelphysik-Rempeln auf schrumpfender Bühne, B = Sprint-Stoß (Host-Modell).
+  * *Wackelsteg-Wirbel* – über heranrollende Baumstämme springen, der Steg kippt mit.
+  * *Funken-Karussell* – drehende Scheibe, Funkenarme und Blitzstreifen, drei Leben.
+  * *Sandwich-Sturm* – fallenden Zutaten ausweichen, auf dem Stapel klettern, Deckel-Finale.
+  * *Stampf-Wellen* – B stampft Wellenringe los, A springt über fremde Wellen (Host-Modell).
+  * *Kullerfels-Flucht* – vor dem rollenden Felsbrocken fliehen, Kisten, Stämme und Zaunlücken, Münzen.
+  * *Eisschollen-Sturm* – knackende Sechseck-Schollen, angekündigte Windböen, Schubsen auf Glatteis.
+  * *Nagel-Profi* – A halten und im grünen Bereich loslassen, krumme Nägel mit B geradebiegen (Host-Modell).
+  * *Raketen-Rucksack-Rallye* – Schub mit Tankanzeige, Sternenringe, Gewitterwolken mit Blitzen (Host-Modell).
+  * *Schlitten an der Kante* – drei Abfahrten: anschieben, bremsen, möglichst knapp vor der Klippe halten.
+  * *Eislauf-Münzjagd* – Münzmuster auf dem Teich, Schubser lassen Münzen kullern, Eisbär mit Pflug (Host-Modell).
+  * *Spitzhacken-Spurt* – A/B im Wechsel hacken, Felsbrocken seitlich umgraben, Edelsteine.
+  * *Blockpfad-Poker* – Bluff-Spiel: allein auf einem Brückenfeld punktet, geteilte Felder brechen ein (Host-Modell).
+  * *UFO-Kaperung* (1 gegen 3) – Traktorstrahl gegen Zappeln, Festhalten und Konfetti-Raketen (Host-Modell).
+  * *Schalter-Schikane* (1 gegen 3) – Solo löst vier Fallen aus, das Trio muss den Pendellauf schaffen
+    (Host-Modell).
+* **Fehlerbehebungen nebenbei:**
+  * Intro: Die Portal-Ringe des Auftritts verschwinden wieder (ein abgelaufener Tween wurde weiterbenutzt).
+  * Spielwichtige Objekte (Felsbrocken, UFO, Stampfer, Gewitterwolken) werden vom Intro nicht mehr als
+    Sichthindernis ausgeblendet (`keep_visible`).
+  * Physik-Körper werden nie skaliert (Jolt-Warnungen); es wird nur die Optik plattgedrückt.
+* **Werkzeuge:**
+  * `tools/dev/minigame_shot.gd` erstellt Kontrollbilder eines Minispiels.
+  * Der Sweep meldet jetzt Punktestände.
+  * `net_test.sh` erkennt auch das Ende von Host-Modell-Spielen; `EXTRA=` reicht zusätzliche Argumente durch.
+
 ## 1.2.1 – Animationen, Bugs & Steuerungs-Framework (Etappe 1)
 * **Weiche Animationen überall** (`CharacterRig`):
   * Überblendzeiten nach Übergangsart: Gesten wie Winken und Jubeln ≥ 0,28 s, Fortbewegung ≥ 0,2 s, Aktionen

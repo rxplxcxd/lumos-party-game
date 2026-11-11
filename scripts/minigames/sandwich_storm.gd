@@ -176,7 +176,7 @@ func _land(d: Dictionary) -> void:
 	(d.cs as CollisionShape3D).set_deferred("disabled", false)
 	var node: Node3D = d.node
 	var p: Vector3 = d.pos
-	Juice.squash(node, 1.15, 0.7, 0.3, Vector3.ONE)
+	Juice.squash(node.get_child(0) as Node3D, 1.15, 0.7, 0.3, Vector3.ONE)   # nur die Optik, nie den Körper
 	Audio.sfx("plop", node.global_position, 0.0, 0.8)
 	Audio.sfx("slime", node.global_position, -8.0)
 	FX.dust(Vector3(p.x, float(d.top), p.z), Color(1, 0.95, 0.85), 10, 1.2)
