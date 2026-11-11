@@ -2,8 +2,8 @@
 
 Automatisch erzeugt von `tools/asset_pipeline.py`. Nicht von Hand bearbeiten.
 
-* Pakete gesamt: **45**, davon im Spiel verwendet: **45**
-* Runtime-Modelle (glTF/GLB): **3028**
+* Pakete gesamt: **49**, davon im Spiel verwendet: **49**
+* Runtime-Modelle (glTF/GLB): **3116**
 * Audio-Dateien: **698**
 * Defekte/unvollständige Modelle: **0**
 
@@ -35,6 +35,10 @@ die Dateien, die der Code tatsächlich lädt (`tools/gen_export_list.py`).
 | `3d/minigames-and-others/kenney_platformer-kit` | ✅ | Sky-Kingdom-Inseln, Sterne, Truhen, Flaggen, Sprungfedern | 4.28 MB | 153 | 0 |
 | `3d/minigames-and-others/kenney_survival-kit` | ✅ | Fische (als Haie skaliert), Amboss, Kisten | 1.75 MB | 80 | 0 |
 | `3d/minigames-and-others/kenney_tower-defense-kit` | ✅ | Felsbrocken (Kart-Bowling), Kanonenkugeln (Homing-Item) | 6.43 MB | 160 | 0 |
+| `3d/nature/lowpoly_env` | ✅ | Berg-Horizont, Bäume, Büsche, Steine, Pflanzen, Gelände-Kulissen | 1.53 MB | 0 | 0 |
+| `3d/nature/modular_terrain` | ✅ | Themen-Deko: Stege, Muscheln, Schatztruhe, Loren, Lagerfeuer, Ruinen, Zäune (OBJ, matt gestellt) | 5.7 MB | 0 | 0 |
+| `3d/quaternius/nature` | ✅ | Upgrade-Pools: Bäume (Eiche, Birke, Weide, Kiefer, tot, verschneit, Herbst), Büsche, Steine, Pflanzen, Mais | 6.27 MB | 0 | 0 |
+| `3d/quaternius/platformer` | ✅ | Wolken, Felsplattformen, Tür/Schlüsseltor, Truhen, Fallen, Münzen, Edelsteine, Gegner, Würfel | 6.4 MB | 88 | 0 |
 | `3d/tracks-enviroment/kenney_city-kit-commercial_2.1` | ✅ | Stadt-Rallye-Strecke (Hochhäuser, Markisen) | 5.24 MB | 41 | 0 |
 | `3d/tracks-enviroment/kenney_city-kit-suburban_20` | ✅ | Stadt-Rallye-Strecke (Vorstadthäuser, Zäune, Bäume) | 3.48 MB | 40 | 0 |
 | `3d/tracks-enviroment/kenney_fantasy-town-kit_2.0` | ✅ | Häuser & Mauern im Sky Kingdom | 3.59 MB | 167 | 0 |
@@ -134,6 +138,16 @@ die Dateien, die der Code tatsächlich lädt (`tools/gen_export_list.py`).
 * `assets/3d/minigames-and-others/kenney_platformer-kit/Models/GLB format/button-round.glb`: toggle-on, toggle-off, toggle
 * `assets/3d/minigames-and-others/kenney_platformer-kit/Models/GLB format/button-square.glb`: toggle-on, toggle-off, toggle
 * `assets/3d/minigames-and-others/kenney_survival-kit/Models/GLB format/chest.glb`: open, close, open-close
+* `assets/3d/quaternius/platformer/level_and_mechanics/Hazard_SpikeTrap.gltf`: SpikeTrap_Activate
+* `assets/3d/quaternius/platformer/level_and_mechanics/Bouncer.gltf`: Bouncer_Bounce, Bouncer_Idle
+* `assets/3d/quaternius/platformer/level_and_mechanics/Chest.gltf`: Chest_Close, Chest_Open
+* `assets/3d/quaternius/platformer/level_and_mechanics/Lever.gltf`: Lever_Off, Lever_On
+* `assets/3d/quaternius/platformer/enemies/Crab.gltf`: Bite_Front, Bite_InPlace, Dance, Death, HitRecieve, Idle, Jump, No, Walk, Yes
+* `assets/3d/quaternius/platformer/enemies/Skull.gltf`: Bite_Front, Bite_InPlace, Dance, Death, HitRecieve, Idle, Jump, No, Walk, Yes
+* `assets/3d/quaternius/platformer/enemies/Enemy.gltf`: Bite_Front, Bite_InPlace, Dance, Death, HitRecieve, Idle, Jump, No, Walk, Yes
+* `assets/3d/quaternius/platformer/enemies/Bee.gltf`: Bite_Front, Death, Flying, HitRecieve
+* `assets/3d/quaternius/platformer/character/Character_Gun.gltf`: Death, Duck, HitReact, Idle, Idle_Gun, Idle_Shoot, Jump, Jump_Idle, Jump_Land, No, Punch, Run, Run_Gun, Run_Shoot, Walk, Walk_Gun, Wave, Yes
+* `assets/3d/quaternius/platformer/character/Character.gltf`: Death, Duck, HitReact, Idle, Idle_Gun, Idle_Shoot, Jump, Jump_Idle, Jump_Land, No, Punch, Run, Run_Gun, Run_Shoot, Walk, Walk_Gun, Wave, Yes
 * `assets/3d/tracks-enviroment/kenney_holiday-kit/Models/GLB format/cabin-overhang-door-rotate.glb`: open, close, open-and-close
 * `assets/3d/tracks-enviroment/kenney_holiday-kit/Models/GLB format/cabin-door-rotate.glb`: open, close, open-and-close
 * `assets/3d/tracks-enviroment/kenney_mini-arcade/Models/GLB format/prize-wheel.glb`: animation
@@ -147,14 +161,17 @@ die Dateien, die der Code tatsächlich lädt (`tools/gen_export_list.py`).
 
 ## Dateiformate gesamt
 
-* `.import`: 4896
+* `.import`: 5481
 * `.glb`: 2343
 * `.png`: 1170
+* `.gltf`: 773
 * `.ogg`: 698
-* `.gltf`: 685
 * `.bin`: 682
+* `.obj`: 305
+* `.fbx`: 192
 * `.url`: 119
-* `.txt`: 46
+* `.txt`: 48
 * `.html`: 21
 * `.xml`: 10
 * `.ini`: 2
+* `.mtl`: 1

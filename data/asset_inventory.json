@@ -1828,6 +1828,164 @@
    "animated_models": {}
   },
   {
+   "pack": "3d/nature/lowpoly_env",
+   "used": true,
+   "role": "Berg-Horizont, Bäume, Büsche, Steine, Pflanzen, Gelände-Kulissen",
+   "size_mb": 1.53,
+   "formats": {
+    ".fbx": 31,
+    ".import": 31
+   },
+   "runtime_models": 0,
+   "audio_files": 0,
+   "images": 0,
+   "animated_models": {}
+  },
+  {
+   "pack": "3d/nature/modular_terrain",
+   "used": true,
+   "role": "Themen-Deko: Stege, Muscheln, Schatztruhe, Loren, Lagerfeuer, Ruinen, Zäune (OBJ, matt gestellt)",
+   "size_mb": 5.7,
+   "formats": {
+    ".import": 305,
+    ".obj": 305,
+    ".mtl": 1
+   },
+   "runtime_models": 0,
+   "audio_files": 0,
+   "images": 0,
+   "animated_models": {}
+  },
+  {
+   "pack": "3d/quaternius/nature",
+   "used": true,
+   "role": "Upgrade-Pools: Bäume (Eiche, Birke, Weide, Kiefer, tot, verschneit, Herbst), Büsche, Steine, Pflanzen, Mais",
+   "size_mb": 6.27,
+   "formats": {
+    ".import": 150,
+    ".fbx": 150,
+    ".txt": 1
+   },
+   "runtime_models": 0,
+   "audio_files": 0,
+   "images": 0,
+   "animated_models": {}
+  },
+  {
+   "pack": "3d/quaternius/platformer",
+   "used": true,
+   "role": "Wolken, Felsplattformen, Tür/Schlüsseltor, Truhen, Fallen, Münzen, Edelsteine, Gegner, Würfel",
+   "size_mb": 6.4,
+   "formats": {
+    ".import": 99,
+    ".gltf": 88,
+    ".fbx": 11,
+    ".txt": 1
+   },
+   "runtime_models": 88,
+   "audio_files": 0,
+   "images": 0,
+   "animated_models": {
+    "assets/3d/quaternius/platformer/level_and_mechanics/Hazard_SpikeTrap.gltf": [
+     "SpikeTrap_Activate"
+    ],
+    "assets/3d/quaternius/platformer/level_and_mechanics/Bouncer.gltf": [
+     "Bouncer_Bounce",
+     "Bouncer_Idle"
+    ],
+    "assets/3d/quaternius/platformer/level_and_mechanics/Chest.gltf": [
+     "Chest_Close",
+     "Chest_Open"
+    ],
+    "assets/3d/quaternius/platformer/level_and_mechanics/Lever.gltf": [
+     "Lever_Off",
+     "Lever_On"
+    ],
+    "assets/3d/quaternius/platformer/enemies/Crab.gltf": [
+     "Bite_Front",
+     "Bite_InPlace",
+     "Dance",
+     "Death",
+     "HitRecieve",
+     "Idle",
+     "Jump",
+     "No",
+     "Walk",
+     "Yes"
+    ],
+    "assets/3d/quaternius/platformer/enemies/Skull.gltf": [
+     "Bite_Front",
+     "Bite_InPlace",
+     "Dance",
+     "Death",
+     "HitRecieve",
+     "Idle",
+     "Jump",
+     "No",
+     "Walk",
+     "Yes"
+    ],
+    "assets/3d/quaternius/platformer/enemies/Enemy.gltf": [
+     "Bite_Front",
+     "Bite_InPlace",
+     "Dance",
+     "Death",
+     "HitRecieve",
+     "Idle",
+     "Jump",
+     "No",
+     "Walk",
+     "Yes"
+    ],
+    "assets/3d/quaternius/platformer/enemies/Bee.gltf": [
+     "Bite_Front",
+     "Death",
+     "Flying",
+     "HitRecieve"
+    ],
+    "assets/3d/quaternius/platformer/character/Character_Gun.gltf": [
+     "Death",
+     "Duck",
+     "HitReact",
+     "Idle",
+     "Idle_Gun",
+     "Idle_Shoot",
+     "Jump",
+     "Jump_Idle",
+     "Jump_Land",
+     "No",
+     "Punch",
+     "Run",
+     "Run_Gun",
+     "Run_Shoot",
+     "Walk",
+     "Walk_Gun",
+     "Wave",
+     "Yes"
+    ],
+    "assets/3d/quaternius/platformer/character/Character.gltf": [
+     "Death",
+     "Duck",
+     "HitReact",
+     "Idle",
+     "Idle_Gun",
+     "Idle_Shoot",
+     "Jump",
+     "Jump_Idle",
+     "Jump_Land",
+     "No",
+     "Punch",
+     "Run",
+     "Run_Gun",
+     "Run_Shoot",
+     "Walk",
+     "Walk_Gun",
+     "Wave",
+     "Yes"
+    ]
+   }
+  },
+  {
    "pack": "3d/tracks-enviroment/kenney_city-kit-commercial_2.1",
    "used": true,
    "role": "Stadt-Rallye-Strecke (Hochhäuser, Markisen)",
@@ -2351,17 +2509,20 @@
   }
  ],
  "totals": {
-  ".import": 4896,
+  ".import": 5481,
   ".glb": 2343,
   ".png": 1170,
+  ".gltf": 773,
   ".ogg": 698,
-  ".gltf": 685,
   ".bin": 682,
+  ".obj": 305,
+  ".fbx": 192,
   ".url": 119,
-  ".txt": 46,
+  ".txt": 48,
   ".html": 21,
   ".xml": 10,
-  ".ini": 2
+  ".ini": 2,
+  ".mtl": 1
  },
  "broken": []
 }

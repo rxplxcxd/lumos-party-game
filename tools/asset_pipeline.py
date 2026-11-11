@@ -69,6 +69,11 @@ PACK_ROLES: dict[str, str] = {
     "3d/minigames-and-others/KayKit_Space_Base_Bits_1.0_FREE": "Raumstation-Brett & Orbit-Strecke (Module, Landeplätze, Windräder)",
     "3d/tracks-enviroment/kenney_city-kit-commercial_2.1": "Stadt-Rallye-Strecke (Hochhäuser, Markisen)",
     "3d/tracks-enviroment/kenney_city-kit-suburban_20": "Stadt-Rallye-Strecke (Vorstadthäuser, Zäune, Bäume)",
+    # Natur & Plattformer (1.2.3) – FBX/OBJ liegen direkt im Paket und werden von Godot nativ importiert
+    "3d/quaternius/nature": "Upgrade-Pools: Bäume (Eiche, Birke, Weide, Kiefer, tot, verschneit, Herbst), Büsche, Steine, Pflanzen, Mais",
+    "3d/quaternius/platformer": "Wolken, Felsplattformen, Tür/Schlüsseltor, Truhen, Fallen, Münzen, Edelsteine, Gegner, Würfel",
+    "3d/nature/lowpoly_env": "Berg-Horizont, Bäume, Büsche, Steine, Pflanzen, Gelände-Kulissen",
+    "3d/nature/modular_terrain": "Themen-Deko: Stege, Muscheln, Schatztruhe, Loren, Lagerfeuer, Ruinen, Zäune (OBJ, matt gestellt)",
     # Fahrzeuge
     "3d/vehicles/kenney_car-kit": "Karts (kart-oobi … kart-oozi) für Nitro Dash und Kart-Bowling",
     "3d/vehicles/kenney_toy-car-kit": "Item-Boxen, Rampen",
