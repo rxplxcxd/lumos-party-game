@@ -66,6 +66,7 @@ jobs:
         run: |
           python3 tools/asset_pipeline.py --check
           python3 tools/validate_catalog.py
+          python3 tools/validate_controls.py
 
       - name: Import-Cache
         uses: actions/cache@v4

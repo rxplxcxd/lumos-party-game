@@ -49,7 +49,7 @@ func run(d: Node, ctx: Dictionary) -> void:
 	var front := rig.global_position + Vector3(0, 1.7, 4.2)
 	d.cut(rig.global_position + Vector3(0, 6, 12), rig.global_position + Vector3.UP * 1.2, 50.0)
 	await d.move(front, rig.global_position + Vector3.UP * 1.45, 0.9, 38.0, Tween.TRANS_CUBIC, Tween.EASE_OUT)
-	rig.face_now(front - rig.global_position)
+	rig.turn_to(front - rig.global_position, 0.3)
 	rig.look_at_point(front, 1.0)
 	rig.react("determined")
 	d.punch(-8.0, 0.35)

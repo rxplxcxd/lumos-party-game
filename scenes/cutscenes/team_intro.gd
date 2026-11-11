@@ -30,7 +30,7 @@ func run(d: Node, ctx: Dictionary) -> void:
 		d.cut(center + Vector3(0, 3.2, 7.5) + side * 2.0, center + Vector3.UP * 1.2, 46.0)
 		for i in groups[g]:
 			var r: CharacterRig = rigs[i]
-			r.face_now(d.cam.global_position - r.global_position)
+			r.turn_to(d.cam.global_position - r.global_position, 0.3)
 			if (cat == "1v3" and g == 0) or cat == "duel":
 				r.react("flex")
 			else:

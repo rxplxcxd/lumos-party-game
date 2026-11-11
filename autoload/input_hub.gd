@@ -26,6 +26,7 @@ const PAD := {
 signal device_changed(kind: String)
 
 var last_device := "keyboard"   # keyboard | gamepad | touch
+var mouse_play := false   # während Minispielen: Maustasten als A/B (siehe docs/CONTROLS.md)
 var touch_controls: CanvasLayer
 
 var _held_phys: Array = []
@@ -174,6 +175,9 @@ func _raw_held(slot: int, action: String) -> bool:
 				return true
 		if _touch.held.get(action, false):
 			return true
+		# Maus (Laptop ohne Gamepad): Linksklick = A, Rechtsklick = B
+		if mouse_play and not Game.is_touch_device and ((action == "a" and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)) or (action == "b" and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT))):
+			return true
 	return false
 
 
@@ -273,6 +277,7 @@ func safe_insets() -> Vector2:
 
 
 func set_touch_profile(profile: String) -> void:
+	mouse_play = profile != "none"   # Maus-Tasten zählen nur im laufenden Spiel als A/B (Menüs: normale Klicks)
 	if touch_controls:
 		touch_controls.call("set_profile", profile)
 
@@ -342,6 +347,13 @@ func _input(event: InputEvent) -> void:
 				if (event as InputEventJoypadButton).button_index in PAD[a]:
 					_latch_phys[slot][a] = true
 					_latch_proc[slot][a] = true
+	elif mouse_play and event is InputEventMouseButton and event.pressed and not Game.is_touch_device:
+		var mb := (event as InputEventMouseButton).button_index
+		var act := "a" if mb == MOUSE_BUTTON_LEFT else ("b" if mb == MOUSE_BUTTON_RIGHT else "")
+		if act != "":
+			_set_device("keyboard")
+			_latch_phys[0][act] = true   # auch sehr kurze Klicks zwischen zwei Frames zählen
+			_latch_proc[0][act] = true
 	elif event is InputEventJoypadMotion and absf(event.axis_value) > 0.5:
 		_set_device("gamepad")
 	elif event is InputEventScreenTouch and Game.is_touch_device:

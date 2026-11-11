@@ -38,6 +38,12 @@ const MAP_PET := {
 	"hit": "gesture-negative", "taunt": "gesture-negative", "jump_start": "run", "jump_air": "idle", "land": "idle",
 	"eat": "eat", "dance": "dance", "death": "gesture-negative",
 }
+## Übergangs-Klassen für weiches Blending (Mindest-Überblendzeiten, siehe _blend_for)
+const GESTURES := ["wave", "cheer", "taunt", "taunt_long", "dance", "sit", "sit_chair", "lie", "pushups", "eat"]
+const LOCO := ["idle", "idle_b", "walk", "run", "sprint", "strafe_l", "strafe_r", "sneak", "crouch"]
+const SNAPPY := ["throw", "punch", "kick", "slice", "hit", "hit_b", "dodge", "dodge_back", "jump_start", "cast",
+	"interact", "use", "pickup", "spin", "hammer", "chop", "block"]
+
 const LOOPING := ["idle", "idle_b", "walk", "run", "sprint", "jump_air", "cheer", "wave", "sit", "sit_chair", "lie",
 	"crouch", "sneak", "hammer", "dig", "spin", "hold", "hold_b", "pushups", "chop", "fish", "drive", "skel_idle",
 	"skel_walk", "taunt_long", "crawl", "dance", "eat", "block", "strafe_l", "strafe_r"]
@@ -60,6 +66,11 @@ var _step_acc := 0.0
 var _soot_mat: StandardMaterial3D
 var _reaction_cache := {}
 var _map: Dictionary = MAP_KAYKIT
+var _air := false               # war im letzten locomote-Aufruf in der Luft (für die Lande-Animation)
+var _speed_target := 1.0
+var _turn_tw: Tween
+var _idle_t := 0.0
+var _idle_next := randf_range(6.0, 11.0)
 
 
 ## model_key: "hero/knight", "mini/robot", "pet/cat", "npc/skeleton" …
@@ -90,6 +101,8 @@ func setup(key: String, player_idx := -1, scl := 1.0) -> CharacterRig:
 	pivot.scale = base_scale
 	anim = _find_anim(model)
 	skel = _find_skel(model)
+	if anim:
+		anim.playback_default_blend_time = 0.15   # Sicherheitsnetz, falls irgendwo direkt abgespielt wird
 	if kind == "kaykit":
 		if anim == null:
 			anim = AnimationPlayer.new()
@@ -182,7 +195,23 @@ func clip_length(logical: String) -> float:
 	return anim.get_animation(_map[logical]).length
 
 
-## Spielt eine logische Animation (mit Überblendung).
+## Mindest-Überblendzeit je nach Übergang: Gesten (Winken, Jubeln …) gleiten weich ein und aus,
+## Fortbewegung blendet ruhig, Aktionen (Werfen, Schlagen, Absprung) bleiben knackig – aber nie hart.
+func _blend_for(from: String, to: String, requested: float) -> float:
+	if to in SNAPPY:
+		return maxf(requested, 0.08)
+	if from == "jump_air" and to == "land":
+		return maxf(requested, 0.06)
+	if to in GESTURES or from in GESTURES:
+		return maxf(requested, 0.28)
+	if from == "land" or from in SNAPPY:
+		return maxf(requested, 0.22)
+	if to in LOCO and from in LOCO:
+		return maxf(requested, 0.2)
+	return maxf(requested, 0.12)
+
+
+## Spielt eine logische Animation (mit weicher Überblendung, siehe _blend_for).
 func play(logical: String, blend := 0.15, speed := 1.0, force := false) -> void:
 	if anim == null:
 		return
@@ -192,11 +221,32 @@ func play(logical: String, blend := 0.15, speed := 1.0, force := false) -> void:
 		if not anim.has_animation(real):
 			return
 	if current == logical and anim.is_playing() and not force:
-		anim.speed_scale = speed
+		_speed_target = speed   # Tempo gleitet in _process an (kein Ruck beim Wechsel Gehen ↔ Laufen)
 		return
+	var from := current
 	current = logical
-	anim.play(real, blend, 1.0)
+	anim.play(real, _blend_for(from, logical, blend), 1.0)
 	anim.speed_scale = speed
+	_speed_target = speed
+
+
+func _process(delta: float) -> void:
+	if anim and not is_equal_approx(anim.speed_scale, _speed_target):
+		anim.speed_scale = move_toward(anim.speed_scale, _speed_target, delta * 2.5)
+	# Lebendiges Warten: wer länger steht, verlagert ab und zu das Gewicht / schaut sich um (Idle-Variante)
+	if current == "idle" and not is_locked():
+		_idle_t += delta
+		if _idle_t >= _idle_next:
+			_idle_t = 0.0
+			_idle_next = randf_range(7.0, 13.0)
+			if has_clip("idle_b") and is_visible_in_tree():
+				# Ohne Sperre: Bewegung (locomote) übernimmt jederzeit sofort, danach zurück ins normale Idle
+				play("idle_b", 0.35)
+				get_tree().create_timer(clip_length("idle_b"), false).timeout.connect(func() -> void:
+					if is_instance_valid(self) and current == "idle_b":
+						play("idle", 0.35))
+	else:
+		_idle_t = 0.0
 
 
 ## Einmal-Clip, blockiert Fortbewegungs-Animationen. Kehrt danach zu then zurück.
@@ -204,9 +254,10 @@ func play_once(logical: String, then := "idle", speed := 1.0, blend := 0.12) -> 
 	play(logical, blend, speed, true)
 	var len := clip_length(logical) / maxf(speed, 0.01)
 	_lock_until = Time.get_ticks_msec() + int(len * 1000.0 / maxf(Engine.time_scale, 0.05))
-	await get_tree().create_timer(len, false).timeout
-	if current == logical and then != "":
-		play(then, 0.2)
+	# Schon kurz vor Clip-Ende zurückblenden: der Übergang beginnt in der Bewegung statt aus einer Standpose
+	await get_tree().create_timer(maxf(len - 0.12, 0.05), false).timeout
+	if is_instance_valid(self) and current == logical and then != "":
+		play(then, 0.25)
 
 
 func lock(seconds: float) -> void:
@@ -224,18 +275,31 @@ func is_locked() -> bool:
 ## Fortbewegung: wählt idle/walk/run/jump/fall passend zur Geschwindigkeit.
 func locomote(speed: float, max_speed: float, grounded: bool, vy := 0.0, delta := 0.016) -> void:
 	if is_locked():
+		_air = not grounded
 		return
 	var ratio := speed / maxf(max_speed, 0.01)
 	if not grounded:
-		play("jump_air" if vy > -2.0 or kind != "kaykit" else "jump_air", 0.12)
+		_air = true
+		play("jump_air", 0.12)
 		return
-	if ratio < 0.08:
-		play("idle", 0.2)
-	elif ratio < 0.5:
-		play("walk", 0.15, clampf(ratio * 2.2, 0.7, 1.4))
+	if _air:
+		_air = false
+		# Landung: kurzer Lande-Clip (falls vorhanden) statt direkt in Lauf/Idle zu springen
+		if kind == "kaykit" and has_clip("land") and ratio < 0.6:
+			play("land", 0.06, 1.5, true)
+			lock(0.14)
+			return
+	# Hysterese: Schwellen hängen vom aktuellen Zustand ab, damit nichts zwischen zwei Clips flackert
+	var idle_to := 0.06 if current in ["walk", "run"] else 0.11
+	var run_to := 0.44 if current == "run" else 0.56
+	if ratio < idle_to:
+		if current != "idle_b":   # laufende Idle-Variante nicht abwürgen
+			play("idle", 0.22)
+	elif ratio < run_to:
+		play("walk", 0.2, clampf(ratio * 2.2, 0.7, 1.4))
 		_footsteps(delta, 0.42 / clampf(ratio * 2.0, 0.6, 1.4))
 	else:
-		play("run", 0.12, clampf(ratio * 1.1, 0.8, 1.35))
+		play("run", 0.18, clampf(ratio * 1.1, 0.8, 1.35))
 		_footsteps(delta, 0.29 / clampf(ratio, 0.7, 1.3))
 
 
@@ -287,6 +351,21 @@ func face(dir: Vector3, delta: float, turn_speed := 12.0) -> void:
 		return
 	var target := atan2(-flat.x, -flat.z)
 	rotation.y = lerp_angle(rotation.y, target, clampf(delta * turn_speed, 0, 1))
+
+
+## Weich in Richtung dir drehen (kürzester Weg, mit Ausklingen) – statt hart umzuschnappen.
+func turn_to(dir: Vector3, duration := 0.16) -> void:
+	var flat := Vector3(dir.x, 0, dir.z)
+	if flat.length_squared() < 0.0001:
+		return
+	var from := rotation.y
+	var target := from + wrapf(atan2(-flat.x, -flat.z) - from, -PI, PI)
+	if absf(target - from) < 0.02:
+		return
+	if _turn_tw and _turn_tw.is_valid():
+		_turn_tw.kill()
+	_turn_tw = create_tween()
+	_turn_tw.tween_property(self, "rotation:y", target, duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 
 func face_now(dir: Vector3) -> void:
@@ -364,7 +443,7 @@ func react(id: String) -> void:
 		push_warning("Reaktion fehlt: " + id)
 		return
 	var then := r.then_clip if r.then_clip != "" else "idle"
-	play(r.clip, 0.1, r.clip_speed, true)
+	play(r.clip, 0.18, r.clip_speed, true)
 	lock(r.hold)
 	if r.squash != Vector2.ONE:
 		squash(r.squash.x, r.squash.y, 0.45)
@@ -406,4 +485,4 @@ func react(id: String) -> void:
 		EventBus.player_reaction.emit(player, id)
 	await get_tree().create_timer(r.hold, false).timeout
 	if is_instance_valid(self) and current == r.clip:
-		play(then, 0.25)
+		play(then, 0.3)

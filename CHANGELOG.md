@@ -1,7 +1,48 @@
 # Changelog – Lumos Party & Nitro Dash
 
-Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2** = offizieller Release.
+Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
+
+## 1.2.1 – Animationen, Bugs & Steuerungs-Framework (Etappe 1)
+* **Weiche Animationen überall** (`CharacterRig`):
+  * Überblendzeiten nach Übergangsart: Gesten wie Winken und Jubeln ≥ 0,28 s, Fortbewegung ≥ 0,2 s, Aktionen
+    knackig, aber nie unter 0,08 s. Vorher teils 0,03–0,1 s, Arme sprangen in Winken & Co.
+  * Hysterese zwischen Stehen, Gehen und Laufen: kein Flackern an Schwellen.
+  * Tempowechsel gleiten statt zu springen.
+  * Lande-Animation nach Sprüngen.
+  * `turn_to()` dreht weich statt umzuschnappen.
+  * Einmal-Clips blenden schon vor ihrem Ende zurück.
+  * Wer länger steht, verlagert ab und zu das Gewicht (Idle-Variante). Statisten werden bei niedriger Bildrate
+    nicht mehr unter ~25 Animationsschritte/s gedrosselt.
+* **Spielbrett:**
+  * Würfelsprung als echte Abfolge: Ausholen, Absprung, Luftpose, Treffer, Fall, Landung, Stand. Vorher
+    hart von „Absprung“ in „Laufen“.
+  * Laufen mit Anlauf beim ersten und Abbremsen beim letzten Hüpfer; Kurven werden gedreht statt
+    umgeschnappt.
+  * Figuren drehen sich in Zwischensequenzen weich zur Kamera.
+* **Texte passen immer:** `UI.fit_label` verkleinert Titelkarten, Untertitel („Team Rot: A & B & C“),
+  Riesenwörter und Brett-Banner auf 90 % der Bildschirmbreite. Der Aufpopp-Effekt von „LOS!“ ragt nicht mehr
+  über den Rand.
+* **Seifenblasen-Ballett repariert und überarbeitet:**
+  * Die Blasen hatten keine Kollision. Alle fielen schon im Intro aus der Kanone ins Leere, die Spielzeit
+    war 0 s.
+  * Jetzt: echte Standfläche, die eigene Blase ist steuerbar (Ausweichen, Zurückpaddeln), sichtbarer,
+    pulsierender Rand, Hitze-Warnung, klügere CPU.
+  * Bei mehreren Überlebenden entscheiden die Windtreffer.
+* **Global:** Stürze vor dem Spielstart (Intro, Kanone, Countdown) zählen nicht mehr als Ausscheiden. Bei
+  mehreren Überlebenden entscheiden in allen Überlebensspielen die Punkte.
+* **Dungeon Drop:**
+  * Vorher war das Feld nach ≈10 s zerstört.
+  * Jetzt: Platten reißen erst nach kurzem Stehen, kommen glühend zurück (in den letzten 15 s nicht mehr),
+    und die CPU meidet Wege über Löcher.
+  * Gemessen: Spielzeit 36–55 s statt 7–16 s.
+* **Steuerungs-Framework** (`docs/CONTROLS.md`):
+  * Jedes Minispiel ist zu 100 % per Tastatur, Maus, Gamepad oder Touch spielbar. Neu: Maus-Links/Rechtsklick
+    als A/B während Minispielen (aus auf Touch-Geräten).
+  * Sensoren (Gyro, Mikrofon …) sind höchstens optional. Der CI-Check `tools/validate_controls.py` erzwingt
+    das für alle 39 Minispiele.
+* **Qualitäts-Sweep** `tools/dev/minigame_sweep.sh` spielt alle Minispiele mit 4 CPUs durch und prüft Dauer,
+  Ausscheiden vor dem Start, Durchfallen, Clipping in Geometrie, Text-Überläufe und Skriptfehler.
 
 ## 1.1.9
 * **Fix: Neustart ab Runde 3–5 (zurück zu „Tippen zum Starten“).** Das Spiel selbst springt nie zum Startbildschirm,

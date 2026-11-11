@@ -86,6 +86,7 @@ func _mk_bar(root: Control, top: bool) -> ColorRect:
 
 func _mk_label(root: Control, font: Font, size: int, y_anchor: float) -> Label:
 	var l := Label.new()
+	l.set_meta("base_size", size)
 	l.add_theme_font_override("font", font)
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", Color.WHITE)
@@ -350,8 +351,14 @@ func letterbox(on: bool, duration := 0.35) -> void:
 
 
 ## Große Titelkarte mit Pop-Animation. duration <= 0 lässt sie stehen (hide_text()).
+## Overlay-Text auf 90 % der Bildschirmbreite einpassen (lange Minispiel-/Boss-Namen, „Team Rot: A & B & C“).
+func _fit(l: Label) -> void:
+	UI.fit_label(l, int(l.get_meta("base_size", 64)), get_viewport().get_visible_rect().size.x * 0.9, 18)
+
+
 func title(text: String, sub := "", duration := 1.6, color := Color.WHITE) -> void:
 	_title.text = text
+	_fit(_title)
 	_title.add_theme_color_override("font_color", color)
 	_title.visible = true
 	_title.pivot_offset = Vector2(get_viewport().get_visible_rect().size.x / 2.0, _title.size.y / 2.0)
@@ -363,6 +370,7 @@ func title(text: String, sub := "", duration := 1.6, color := Color.WHITE) -> vo
 	tw.tween_property(_title, "rotation", 0.0, 0.5).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 	_subtitle.visible = sub != ""
 	_subtitle.text = sub
+	_fit(_subtitle)
 	_subtitle.modulate.a = 0.0
 	if sub != "":
 		tw.tween_property(_subtitle, "modulate:a", 1.0, 0.3).set_delay(0.25)
@@ -373,6 +381,7 @@ func title(text: String, sub := "", duration := 1.6, color := Color.WHITE) -> vo
 
 func subtitle(text: String, duration := 2.0) -> void:
 	_subtitle.text = text
+	_fit(_subtitle)
 	_subtitle.visible = true
 	_subtitle.modulate.a = 0.0
 	var tw := create_tween()
@@ -414,13 +423,14 @@ func fade(to_black: bool, duration := 0.4) -> void:
 ## Riesige Einzelzahl/-wort mit Squash-Pop (für Countdown, "STERN!", "AUTSCH!").
 func big_word(text: String, color := Color.WHITE, hold := 0.55) -> void:
 	_big.text = text
+	_fit(_big)
 	_big.add_theme_color_override("font_color", color)
 	_big.visible = true
 	_big.modulate.a = 1.0
 	_big.pivot_offset = Vector2(get_viewport().get_visible_rect().size.x / 2.0, _big.size.y / 2.0)
-	_big.scale = Vector2(2.2, 0.3)
+	_big.scale = Vector2(1.5, 0.35)   # Squash-Pop (vorher 2,2-fach breit: ragte kurz weit über den Bildschirm)
 	var tw := create_tween()
-	tw.tween_property(_big, "scale", Vector2(0.85, 1.25), 0.1)
+	tw.tween_property(_big, "scale", Vector2(0.9, 1.2), 0.1)
 	tw.tween_property(_big, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 	tw.tween_interval(maxf(hold - 0.45, 0.05))
 	tw.tween_property(_big, "modulate:a", 0.0, 0.15)

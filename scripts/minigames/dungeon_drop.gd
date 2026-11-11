@@ -5,6 +5,8 @@ extends MinigameBase
 const GRID := 8
 const TILE := 2.0
 const FALL_DELAY := 1.5
+const STEP_DWELL := 0.4       # so lange muss man auf einer Platte stehen, bis sie reißt (zügig drüberlaufen geht)
+const FINAL_PHASE := 15.0     # letzte Sekunden: keine Platten mehr zurück – Finale auf schrumpfendem Feld
 
 var tiles := {}          # Vector2i -> {body, model, state, t}
 var _random_drop_t := 0.0
@@ -89,13 +91,25 @@ func _tile_at(pos: Vector3) -> Vector2i:
 
 
 func on_tick(delta: float) -> void:
-	# Betretene Platten aktivieren
+	# Betretene Platten: erst nach kurzem Stehen (STEP_DWELL) reißen sie. Vorher brach jede berührte Platte,
+	# vier Spieler zerlegten das Feld in ~10 s und die 60-Sekunden-Uhr war nie erreichbar.
+	var stood := {}
 	for i in 4:
 		var av: PartyAvatar = avatars[i]
 		if av.alive and av.is_on_floor():
 			var k := _tile_at(av.global_position)
 			if tiles.has(k) and tiles[k].state == "ok":
+				stood[k] = true
+	for k in tiles:
+		var tl: Dictionary = tiles[k]
+		if tl.state != "ok":
+			continue
+		if stood.has(k):
+			tl.w = float(tl.get("w", 0.0)) + delta
+			if float(tl.w) >= STEP_DWELL:
 				_trigger(k)
+		elif float(tl.get("w", 0.0)) > 0.0:
+			tl.w = maxf(0.0, float(tl.w) - delta * 0.5)
 	# Zufällige Einstürze in der zweiten Hälfte
 	if time_left < time_limit * 0.55:
 		_random_drop_t -= delta
@@ -114,6 +128,11 @@ func on_tick(delta: float) -> void:
 			body.position = t.base + Vector3(randf_range(-amp, amp), randf_range(-amp, amp) * 0.5, randf_range(-amp, amp))
 			if t.t >= FALL_DELAY:
 				_drop(k)
+		elif t.state == "gone" and time_left > FINAL_PHASE:
+			t.t += delta
+			# Früh kommen Platten schnell zurück, später langsamer – das Feld schrumpft spürbar, aber fair
+			if t.t >= lerpf(9.0, 5.0, time_left / time_limit):
+				_rise(k)
 
 
 func _trigger(k: Vector2i) -> void:
@@ -141,6 +160,7 @@ func _warn_mat() -> StandardMaterial3D:
 func _drop(k: Vector2i) -> void:
 	var t: Dictionary = tiles[k]
 	t.state = "gone"
+	t.t = 0.0
 	var body: StaticBody3D = t.body
 	for c in body.get_children():
 		if c is CollisionShape3D:
@@ -153,6 +173,47 @@ func _drop(k: Vector2i) -> void:
 	tw.chain().tween_callback(func() -> void:
 		FX.embers(Vector3(t.base.x, -3.0, t.base.z), 8)
 		body.visible = false)
+
+
+## Platte steigt glühend aus der Lava wieder auf; erst oben wird sie wieder begehbar.
+func _rise(k: Vector2i) -> void:
+	var t: Dictionary = tiles[k]
+	t.state = "rising"
+	t.t = 0.0
+	t.w = 0.0
+	var body: StaticBody3D = t.body
+	body.visible = true
+	body.rotation = Vector3.ZERO
+	body.position = (t.base as Vector3) + Vector3.DOWN * 4.0
+	for mi in Assets.find_meshes(body):
+		mi.material_overlay = _rise_mat()
+	FX.embers(Vector3(t.base.x, -3.0, t.base.z), 10)
+	Audio.sfx("stone_hit", t.base, -10.0, 1.2)
+	var tw := body.create_tween()
+	tw.tween_property(body, "position", t.base, 1.1).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(func() -> void:
+		if t.state != "rising":
+			return
+		t.state = "ok"
+		t.t = 0.0
+		for c in body.get_children():
+			if c is CollisionShape3D:
+				(c as CollisionShape3D).set_deferred("disabled", false)
+		for mi in Assets.find_meshes(body):
+			mi.material_overlay = null
+		FX.dust(t.base + Vector3.UP * 0.1, Color(0.7, 0.6, 0.55), 6, 0.6))
+
+
+var _rise_glow: StandardMaterial3D
+
+
+func _rise_mat() -> StandardMaterial3D:
+	if _rise_glow == null:
+		_rise_glow = StandardMaterial3D.new()
+		_rise_glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_rise_glow.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_rise_glow.albedo_color = Color(1.0, 0.55, 0.15, 0.35)
+	return _rise_glow
 
 
 # --- CPU ----------------------------------------------------------------------------------------
@@ -197,9 +258,26 @@ func cpu_think(slot: int, delta: float) -> void:
 	# Gegner schubsen, wenn nah und Gelegenheit
 	for o in avatars:
 		var oa := o as PartyAvatar
-		if oa != av and oa.alive and oa.global_position.distance_to(av.global_position) < 1.6 and randf() < 0.02 * (level + 1):
+		if oa != av and oa.alive and oa.global_position.distance_to(av.global_position) < 1.6 and randf() < 0.006 * (level + 1):
 			held["b"] = true
 	InputHub.set_virtual(slot, mv, held)
+
+
+## Zahl der nicht begehbaren Platten auf der geraden Linie (alle 0,6 m geprüft).
+func _gaps_on_path(from: Vector3, to: Vector3) -> int:
+	var d := Vector2(to.x - from.x, to.z - from.z)
+	var n := int(d.length() / 0.6)
+	var gaps := 0
+	var last := Vector2i(-99, -99)
+	for i in range(1, n + 1):
+		var p := from + Vector3(d.x, 0, d.y) * (float(i) / maxf(n, 1))
+		var k := _tile_at(p)
+		if k == last:
+			continue
+		last = k
+		if not tiles.has(k) or tiles[k].state == "gone" or tiles[k].state == "rising" or (tiles[k].state == "shaking" and float(tiles[k].t) > FALL_DELAY * 0.5):
+			gaps += 1
+	return gaps
 
 
 func _best_tile(from: Vector3, level: int) -> Vector2i:
@@ -217,6 +295,8 @@ func _best_tile(from: Vector3, level: int) -> Vector2i:
 					s += 1.0
 		s -= (t.base as Vector3).distance_to(from) * (0.35 if level > 0 else 0.15)
 		s += randf() * (3.0 - level)
+		# Weg dorthin muss begehbar sein: Löcher (bzw. gleich wegbrechende Platten) auf der Linie meiden
+		s -= _gaps_on_path(from, t.base) * [3.0, 6.0, 9.0][level]
 		if s > best_s:
 			best_s = s
 			best = k

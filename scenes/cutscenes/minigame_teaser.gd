@@ -124,7 +124,7 @@ func _land(g: MinigameBase, i: int, t: Vector3, reactions: Array) -> void:
 	var rig: CharacterRig = g.rigs[i]
 	if rig:
 		rig.land_impact(1.1)
-		rig.face_now(Vector3(0, 0, 1))
+		rig.turn_to(Vector3(0, 0, 1), 0.28)
 		rig.react(String(reactions[(i + randi()) % reactions.size()]))
 	FX.dust(t, Color(0.9, 0.85, 0.75), 8, 0.8)
 	Audio.sfx("plop", null, -6.0, 0.9 + i * 0.08)

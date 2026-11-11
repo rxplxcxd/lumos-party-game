@@ -161,6 +161,12 @@ func on_fell(slot: int, _hazard: String) -> void:
 
 
 func _on_avatar_fell(av: PartyAvatar, hz: String) -> void:
+	if state != "play":
+		# Vor dem Start (Intro, Kanonen-Einflug, Countdown) zählt kein Absturz: sonst schied z. B. im
+		# Seifenblasen-Ballett jeder schon im Intro aus und das Spiel war nach dem Countdown sofort vorbei.
+		if state != "finish":
+			av.respawn(spawn_points[av.slot] + Vector3.UP * 0.5)
+		return
 	on_fell(av.slot, hz)
 
 
@@ -443,8 +449,12 @@ func compute_placements() -> Array[int]:
 		for i in act:
 			if alive[i]:
 				survivors.append(i)
-		for sv in survivors:
-			places[sv] = 1
+		# Mehrere Überlebende: Punkte entscheiden (z. B. Windtreffer), Gleichstand teilt sich den Platz.
+		# Spiele ohne Punkte (alle 0) bleiben beim gemeinsamen 1. Platz.
+		survivors.sort_custom(func(a: int, b: int) -> bool: return scores[a] > scores[b])
+		for k in survivors.size():
+			var sv := survivors[k]
+			places[sv] = 1 if k == 0 else (places[survivors[k - 1]] if is_equal_approx(scores[sv], scores[survivors[k - 1]]) else k + 1)
 		var place := survivors.size() + 1
 		for k in range(out_order.size() - 1, -1, -1):
 			if active[out_order[k]]:

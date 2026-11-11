@@ -26,7 +26,7 @@ func run(d: Node, ctx: Dictionary) -> void:
 			continue
 		rig.unlock()
 		if places[i] == 1:
-			rig.face_now(Vector3(0, 0, 1))
+			rig.turn_to(Vector3(0, 0, 1), 0.3)
 			rig.react("victory")
 		elif places[i] == 4 or places[i] == 3:
 			rig.react("tantrum" if randf() < 0.6 else "sad")

@@ -1,0 +1,54 @@
+# Steuerung – plattformübergreifender Vertrag für alle Minispiele
+
+Lumos Party läuft auf Smartphones, Tablets, Laptops, PCs und Lumos-Konsolen. Deshalb gilt für **jedes**
+Minispiel, auch für künftige:
+
+1. **Keine exklusive Hardware.** Kein Spiel darf Joy-Con-Gesten, Gyroskop, Beschleunigungssensor,
+   Mikrofon (Pusten) oder andere Gerätesensoren voraussetzen.
+2. **Sensoren sind höchstens ein optionales Extra.** Erkennt das Spiel ein Gerät mit Sensor, darf es ihn
+   *zusätzlich* anbieten. Gewinnen und Spielen muss aber ohne Sensor genauso gut gehen.
+3. **Universeller Standard-Weg:** Jedes Minispiel ist vollständig und gleichwertig über die Standard-Aktionen
+   unten spielbar.
+4. **Design-Übersetzung:** Basiert eine Spielidee auf Schütteln, Pusten oder Gesten, wird sie auf Standard-Eingaben
+   umgedacht. Aus Schütteln/Pumpen wird abwechselndes Hämmern von A/B, aus Pusten ein Windstoß per A/B in
+   Stick-Richtung, aus Neigen/Balancieren die Stick-Steuerung. Beispiel: Seifenblasen-Ballett.
+
+## Standard-Aktionen und ihre Belegung
+
+| Aktion | Gamepad | Tastatur | Maus (im Minispiel) | Touch |
+|---|---|---|---|---|
+| Stick (Bewegen/Zielen) | linker Stick / Steuerkreuz | WASD oder Pfeiltasten | – | virtueller Stick |
+| A (Springen/Bestätigen) | A | Leertaste, Enter, J, Z | Linksklick | A-Knopf |
+| B (Aktion/Werfen) | B | K, X, Rücktaste | Rechtsklick | B-Knopf |
+| X | X / L-Schulter / L-Trigger | E, L, C, Strg | – | X-Knopf (falls angezeigt) |
+| Y | Y | Q, I, V | – | – |
+| R | R-Schulter / R-Trigger | Umschalt | – | – |
+| Start/Pause | Start, Back | Esc, P | – | Pause-Knopf |
+
+Die Maus zählt nur während eines laufenden Minispiels als A/B (`InputHub.mouse_play`). In Menüs bleiben Klicks
+normale Klicks. Auf Touch-Geräten ist die Maus-Belegung aus, weil Antippen auch Maus-Ereignisse erzeugt.
+
+## Umsetzung im Code
+
+* Eingaben immer über `InputHub` abfragen: `move(slot)`, `pressed(slot, "a")`, `held(slot, "b")`.
+  Nie direkt über Geräte-APIs. So funktionieren Tastatur, Maus, Gamepad, Touch, Online und CPU (virtuelle
+  Eingaben) automatisch.
+* Jeder Katalog-Eintrag in `autoload/game_state.gd` braucht einen `"controls"`-Text mit Standard-Aktionen.
+* Optionale Sensor-Extras gehören hinter eine Geräte-Erkennung und eine Einstellung (Standard: aus). Im Skript
+  steht dann ein Kommentar `# FALLBACK:`, der den gleichwertigen Standard-Weg beschreibt.
+* CI-Prüfung: `python3 tools/validate_controls.py`. Sie bricht ab bei fehlendem `controls`-Text, bei
+  Sensor-Mechaniken ohne „optional“ und bei Sensor-APIs ohne `# FALLBACK:`.
+
+## Qualitäts-Sweep
+
+`bash tools/dev/minigame_sweep.sh [ausgabe.jsonl] [ids…]` spielt jedes Minispiel mit 4 CPUs im Schnellvorlauf und
+meldet:
+* die Spieldauer: zu früh endende oder hängende Spiele;
+* wer zu Spielbeginn bzw. am Ende noch im Spiel ist;
+* Figuren, die durch den Boden gefallen sind;
+* Figuren, deren Körpermitte in fester Geometrie steckt (Clipping);
+* Texte, die über den Bildschirmrand hinausragen;
+* Skriptfehler.
+
+So wurden das Seifenblasen-Ballett (alle im Intro ausgeschieden, Spielzeit 0 s) und Dungeon Drop (Feld nach
+≈10 s zerstört) gefunden.

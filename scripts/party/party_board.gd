@@ -231,7 +231,7 @@ func _turn(p: int) -> void:
 	cam.zoom = 1.0
 	_ff_hint.visible = Game.players[p].cpu and _any_human()
 	await _show_banner("%s ist dran!" % _pname(p), Game.player_color(p), 0.9)
-	rig.face_now(cam.global_position - rig.global_position)
+	rig.turn_to(cam.global_position - rig.global_position, 0.3)
 	rig.react("determined")
 	await _wait(0.6)
 	var dice := 2 if Game.party_mode() == "blitz" else 1
@@ -332,11 +332,21 @@ func _roll_dice(p: int, k: int, count: int) -> int:
 		await get_tree().process_frame
 	_publish(p, n, value)
 	_set_prompt("")
-	# Sprung gegen den Block
-	rig.play("jump_start", 0.05, 1.4, true)
+	# Sprung gegen den Block: Ausholen → Absprung → Flug (Luft-Pose) → Treffer → Fall → Landung → Stand
+	rig.play("jump_start", 0.1, 1.4, true)
 	await rig.anticipate(0.35, 0.09).step_finished
 	Audio.sfx("jump", rig.global_position)
 	rig.hop(1.4, 0.42)
+	get_tree().create_timer(0.1, false).timeout.connect(func() -> void:
+		if is_instance_valid(rig):
+			rig.play("jump_air", 0.12))
+	get_tree().create_timer(0.42, false).timeout.connect(func() -> void:
+		if is_instance_valid(rig):
+			rig.play("land", 0.06, 1.4, true)
+			rig.land_impact(0.5)
+			get_tree().create_timer(0.2, false).timeout.connect(func() -> void:
+				if is_instance_valid(rig) and rig.current == "land":
+					rig.play("idle", 0.28)))
 	await _wait(0.17)
 	Audio.sfx("dice_hit", holder.global_position)
 	Audio.sfx("plop", null, -4.0, 1.1, 0.05)
@@ -557,7 +567,7 @@ func _move(p: int, steps: int) -> void:
 					builder.gate_npc.react("laugh")
 				await _show_banner("Kein Durchkommen!", Color("#ff6b6b"), 0.8)
 				nxt = spaces[cur].next[0]
-		await _hop(p, cur, nxt)
+		await _hop(p, cur, nxt, remaining == steps, remaining == 1)
 		cur = nxt
 		Game.players[p].space = cur
 		remaining -= 1
@@ -577,23 +587,35 @@ func _move(p: int, steps: int) -> void:
 	counter.queue_free()
 
 
-func _hop(p: int, from: int, to: int) -> void:
+## Ein Feld weiter hüpfen. first/last: Anlauf beim ersten Hüpfer, Abbremsen + Landen beim letzten –
+## dazwischen gleichmäßiger Lauf-Rhythmus; Richtungswechsel werden weich gedreht statt umgeschnappt.
+func _hop(p: int, from: int, to: int, first := false, last := false) -> void:
 	var rig := rigs[p]
 	if spaces[from].type == "Z" and int(spaces[to].branch) < 0 and to == 0:
 		await _rainbow_slide(p)
 		return
 	var a := rig.position
 	var b := _space_pos(to)
-	rig.face_now(b - a)
-	rig.play("run", 0.1, 1.3)
-	var dur := 0.3
+	rig.turn_to(b - a, 0.14 if not first else 0.2)
+	rig.play("run", 0.22 if first else 0.15, 1.15 if first else 1.3)
+	var dur := 0.36 if first else (0.34 if last else 0.3)
+	var height := 0.5 if first else 0.6
 	var tw := create_tween()
 	tw.tween_method(func(t: float) -> void:
-		rig.position = a.lerp(b, t) + Vector3.UP * sin(t * PI) * 0.6, 0.0, 1.0, dur)
+		rig.position = a.lerp(b, t) + Vector3.UP * sin(t * PI) * height, 0.0, 1.0, dur) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN if first else (Tween.EASE_OUT if last else Tween.EASE_IN_OUT))
 	await tw.finished
-	rig.squash(1.18, 0.85, 0.25)
 	FX.step(rig.global_position, surface, 0.9, true)
 	Audio.sfx("tick", null, -10.0, 1.2)
+	if last:
+		rig.squash(1.22, 0.8, 0.3)
+		rig.play("land", 0.08, 1.4, true)
+		rig.lock(0.18)
+		get_tree().create_timer(0.18, false).timeout.connect(func() -> void:
+			if is_instance_valid(rig) and rig.current == "land":
+				rig.play("idle", 0.28))
+	else:
+		rig.squash(1.12, 0.9, 0.2)
 
 
 func _choose_path(p: int, cur: int, options: Array) -> int:
@@ -712,7 +734,7 @@ func _land(p: int) -> void:
 	if _space_color(t) == "green":
 		Game.players[p].events_landed = int(Game.players[p].get("events_landed", 0)) + 1
 	EventBus.space_landed.emit(p, t)
-	rig.face_now(cam.global_position - rig.global_position)
+	rig.turn_to(cam.global_position - rig.global_position, 0.3)
 	var node := builder.space_nodes[s]
 	Juice.squash(node, 1.15, 0.7, 0.4, node.scale)
 	match t:
@@ -1996,6 +2018,7 @@ func _ask(p: int, question: String, cpu_answer: bool) -> bool:
 
 func _show_banner(text: String, color := Color.WHITE, hold := 1.0) -> void:
 	_banner.text = text
+	UI.fit_label(_banner, 68, minf(_banner.size.x, get_viewport().get_visible_rect().size.x * 0.92), 22)
 	_banner.add_theme_color_override("font_color", color)
 	_banner.visible = true
 	_banner.modulate.a = 1.0

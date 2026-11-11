@@ -16,6 +16,32 @@ static var _body_font: Font
 static var _bold_font: Font
 
 
+## Größte Schriftgröße ≤ base, bei der jede Zeile von text höchstens max_w breit ist (lange Namen,
+## schmale Handy-Bildschirme). outline_k: Anteil der Kontur an der Schriftgröße (sie verbreitert den Text).
+static func fit_font_size(text: String, font: Font, base: int, max_w: float, min_size := 16, outline_k := 0.16) -> int:
+	if font == null or text == "" or max_w <= 0.0:
+		return base
+	var size := base
+	for _i in 8:
+		var w := 0.0
+		for line in text.split("\n"):
+			w = maxf(w, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + size * outline_k * 2.0)
+		if w <= max_w or size <= min_size:
+			break
+		size = maxi(min_size, int(floor(size * max_w / w)))
+	return size
+
+
+## Label auf die verfügbare Breite einpassen (setzt font_size; Kontur/Schatten wachsen proportional mit).
+static func fit_label(l: Label, base: int, max_w: float, min_size := 16) -> void:
+	var fs := fit_font_size(l.text, l.get_theme_font("font"), base, max_w, min_size)
+	l.add_theme_font_size_override("font_size", fs)
+	if l.has_theme_constant_override("outline_size"):
+		l.add_theme_constant_override("outline_size", int(fs * 0.16))
+	if l.has_theme_constant_override("shadow_offset_y"):
+		l.add_theme_constant_override("shadow_offset_y", int(fs * 0.06))
+
+
 static func title_font() -> Font:
 	if _title_font == null:
 		_title_font = load(Assets.FONT_TITLE)

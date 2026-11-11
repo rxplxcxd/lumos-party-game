@@ -282,7 +282,10 @@ func _anim_lod(delta: float) -> void:
 			continue
 		var acc := float(r.get_meta("gfx_acc")) + delta
 		var d := r.global_position.distance_to(cp)
+		# Sichtbare Statisten nie unter ~25 Animationsschritte/s (bei 30 FPS wäre "jedes 2./4. Bild" ruckelig)
+		var fps := maxf(Engine.get_frames_per_second(), 1.0)
 		var step := 1 if d < near else (2 if d < near * 2.1 else 4)
+		step = mini(step, maxi(1, int(fps / 25.0)))
 		if not r.is_visible_in_tree():
 			step = 4
 		if (_lod_frame + int(r.get_meta("gfx_lod"))) % step == 0:
