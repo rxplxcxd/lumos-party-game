@@ -68,7 +68,7 @@ func build(m: Node) -> OnlinePage:
 	_v.add_child(_row("Deine Figur", hs))
 	_build_join()
 	_build_room()
-	var back := UI.button("Zurück", Color("#5a4a80"), 28)
+	var back := UI.button("Zurück", Color("#8a5a3c"), 28)
 	back.pressed.connect(func() -> void:
 		if Net.online:
 			Net.leave()
@@ -138,13 +138,13 @@ func _build_room() -> void:
 	_code_label = UI.label("-----", 64, UI.GOLD, true, 12)
 	code_row.add_child(_code_label)
 	if OS.has_feature("web"):
-		var copy := UI.button("Kopieren", Color("#5a4a80"), 20, 140)
+		var copy := UI.button("Kopieren", Color("#8a5a3c"), 20, 140)
 		copy.pressed.connect(func() -> void:
 			JavaScriptBridge.eval("navigator.clipboard && navigator.clipboard.writeText(%s)" % JSON.stringify(Net.code), true)
 			Account.toast("Raumcode kopiert", Color("#7dff9a")))
 		code_row.add_child(copy)
 	else:
-		var copy2 := UI.button("Kopieren", Color("#5a4a80"), 20, 140)
+		var copy2 := UI.button("Kopieren", Color("#8a5a3c"), 20, 140)
 		copy2.pressed.connect(func() -> void: DisplayServer.clipboard_set(Net.code))
 		code_row.add_child(copy2)
 	_room_box.add_child(code_row)

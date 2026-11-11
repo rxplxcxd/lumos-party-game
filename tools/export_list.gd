@@ -17,6 +17,8 @@ func run() -> void:
 		files[p] = true
 	for p in Audio.all_paths():
 		files[p] = true
+	for t in UI.COZY_TEX:
+		files[UI.COZY + t + ".png"] = true
 	for d in DIRS:
 		_collect(d, files)
 	files[String(ProjectSettings.get_setting("application/config/icon", "res://icon.svg"))] = true

@@ -1,14 +1,28 @@
 class_name UI
 extends RefCounted
 ## Statische UI-Fabrik: Theme, Schriften, Buttons, Panels, Labels im Lumos-Party-Stil.
+## Seit 1.2.3 im „Cozy“-Look: Holz-, Creme- und Rot-Elemente aus dem Cozy UI Pack (9-Slice-Texturen unter
+## assets/ui/cozy/s/), warme Palette, eigener Mauszeiger. Farbige Buttons/Panels entstehen durch Einfärben
+## der hellen Vorlagen – Bedeutungsfarben (Rot = zurück, Grün = los …) bleiben erhalten.
 
-const BG_DARK := Color("#170b33")
-const PANEL := Color(0.11, 0.06, 0.25, 0.93)
-const ACCENT := Color("#ff4fb8")
-const ACCENT2 := Color("#5ab8ff")
+const BG_DARK := Color("#24140e")
+const PANEL := Color(0.29, 0.17, 0.11, 0.95)
+const ACCENT := Color("#f2665c")
+const ACCENT2 := Color("#43b8c9")
 const GOLD := Color("#ffcc33")
-const TEXT := Color("#fff8ff")
-const OUTLINE := Color("#1a0833")
+const TEXT := Color("#fff7e8")
+const OUTLINE := Color("#2e1708")
+const COZY := "res://assets/ui/cozy/s/"
+## Alle Cozy-Texturen (für die Export-Liste)
+const COZY_TEX := ["btn_wood", "btn_white", "btn_red", "pill_wood", "pill_white", "panel_wood", "panel_grey", "panel_blue",
+	"card_wood", "card_red", "bar_wood", "note", "hotbar", "slot", "slot_sel", "check_on", "check_off", "check_x", "knob",
+	"knob_wood", "arrow_l", "arrow_u", "arrow_d", "arrow_r", "arrow_l_cream", "arrow_r_cream", "icon_heart", "icon_heart_dark",
+	"icon_plus", "icon_x", "icon_bolt", "cursor", "cursor_click"]
+## 9-Slice-Ränder je Textur (links, oben, rechts, unten) in Texturpixeln
+const COZY_MARGIN := {
+	"btn": Vector4(20, 14, 20, 22), "pill": Vector4(32, 14, 32, 22), "panel": Vector4(26, 26, 26, 32),
+	"card": Vector4(26, 34, 26, 30), "bar": Vector4(36, 24, 36, 30), "note": Vector4(34, 20, 22, 22),
+	"hotbar": Vector4(36, 24, 36, 26), "slot": Vector4(20, 20, 20, 24)}
 
 static var _theme: Theme
 static var _title_font: Font
@@ -93,18 +107,67 @@ static func box(color: Color, radius := 22, border := 0, border_color := Color.T
 	return sb
 
 
+static var _tex_cache: Dictionary = {}
+
+
+static func cozy(name: String) -> Texture2D:
+	if not _tex_cache.has(name):
+		_tex_cache[name] = load(COZY + name + ".png")
+	return _tex_cache[name]
+
+
+## 9-Slice-Stylebox aus einer Cozy-Textur. tint färbt ein (helle Vorlagen „white/grey“), pad = Innenabstand.
+static func tex_box(name: String, tint := Color.WHITE, pad := Vector4(18, 8, 18, 12)) -> StyleBoxTexture:
+	var sb := StyleBoxTexture.new()
+	sb.texture = cozy(name)
+	var m: Vector4 = COZY_MARGIN.get(name.get_slice("_", 0), Vector4(20, 20, 20, 20))
+	sb.texture_margin_left = m.x
+	sb.texture_margin_top = m.y
+	sb.texture_margin_right = m.z
+	sb.texture_margin_bottom = m.w
+	sb.content_margin_left = pad.x
+	sb.content_margin_top = pad.y
+	sb.content_margin_right = pad.z
+	sb.content_margin_bottom = pad.w
+	sb.modulate_color = tint
+	return sb
+
+
+## Button-Styleboxen (normal/hover/pressed/disabled) für eine Grundfarbe; null = Holz
+static func button_boxes(color: Variant = null) -> Dictionary:
+	var tex := "btn_wood" if color == null else "btn_white"
+	var c: Color = Color.WHITE if color == null else (color as Color).lightened(0.08)
+	var pressed := tex_box(tex, c.darkened(0.14), Vector4(18, 11, 18, 9))
+	return {"normal": tex_box(tex, c), "hover": tex_box(tex, c * Color(1.12, 1.1, 1.06)), "pressed": pressed,
+		"disabled": tex_box("btn_white", Color(0.62, 0.58, 0.55, 0.85))}
+
+
+## Panel im Cozy-Stil: Holz (Standard), Blau (hervorgehoben) oder eingefärbtes Grau (Spielerfarbe & Co.)
+static func cozy_panel(color: Variant = null, pad := 22) -> StyleBoxTexture:
+	if color == null:
+		# Leicht abgedunkeltes Holz: helle und spielerfarbige Schrift bleibt gut lesbar
+		return tex_box("panel_wood", Color(0.74, 0.6, 0.53), Vector4(pad, pad - 4, pad, pad))
+	return tex_box("panel_grey", color as Color, Vector4(pad, pad - 4, pad, pad))
+
+
+## Eigener Mauszeiger (Desktop): Pfeil + Klick-Variante für Buttons
+static func apply_cursor() -> void:
+	if DisplayServer.is_touchscreen_available() and OS.has_feature("mobile"):
+		return
+	Input.set_custom_mouse_cursor(cozy("cursor"), Input.CURSOR_ARROW, Vector2(3, 2))
+	Input.set_custom_mouse_cursor(cozy("cursor_click"), Input.CURSOR_POINTING_HAND, Vector2(3, 2))
+
+
 static func theme() -> Theme:
 	if _theme:
 		return _theme
 	var t := Theme.new()
 	t.default_font = body_font()
 	t.default_font_size = 26
-	# Buttons
-	var base := Color("#7b3cff")
-	t.set_stylebox("normal", "Button", box(base, 24, 0, Color.TRANSPARENT, 8, 6))
-	t.set_stylebox("hover", "Button", box(base.lightened(0.12), 24, 0, Color.TRANSPARENT, 8, 8))
-	t.set_stylebox("pressed", "Button", box(base.darkened(0.1), 24, 0, Color.TRANSPARENT, 2, 2))
-	t.set_stylebox("disabled", "Button", box(Color(0.35, 0.3, 0.45), 24, 0, Color.TRANSPARENT, 6, 0))
+	# Buttons: Holz-Vorlage aus dem Cozy UI Pack
+	var bb := button_boxes()
+	for st in ["normal", "hover", "pressed", "disabled"]:
+		t.set_stylebox(st, "Button", bb[st])
 	var focus := box(Color(1, 1, 1, 0), 26, 5, GOLD)
 	focus.draw_center = false
 	t.set_stylebox("focus", "Button", focus)
@@ -116,9 +179,9 @@ static func theme() -> Theme:
 	t.set_color("font_pressed_color", "Button", GOLD)
 	t.set_color("font_outline_color", "Button", OUTLINE)
 	t.set_constant("outline_size", "Button", 8)
-	# Panels
-	t.set_stylebox("panel", "PanelContainer", box(PANEL, 30, 4, Color(1, 1, 1, 0.14), 0, 14))
-	t.set_stylebox("panel", "Panel", box(PANEL, 30, 4, Color(1, 1, 1, 0.14), 0, 14))
+	# Panels: Holzkasten
+	t.set_stylebox("panel", "PanelContainer", cozy_panel())
+	t.set_stylebox("panel", "Panel", cozy_panel())
 	# Labels
 	t.set_color("font_color", "Label", TEXT)
 	t.set_color("font_outline_color", "Label", OUTLINE)
@@ -127,17 +190,31 @@ static func theme() -> Theme:
 	t.set_stylebox("slider", "HSlider", box(Color(1, 1, 1, 0.18), 10, 0, Color.TRANSPARENT, 0, 0))
 	t.set_stylebox("grabber_area", "HSlider", box(ACCENT, 10, 0, Color.TRANSPARENT, 0, 0))
 	t.set_stylebox("grabber_area_highlight", "HSlider", box(ACCENT.lightened(0.2), 10, 0, Color.TRANSPARENT, 0, 0))
+	t.set_icon("grabber", "HSlider", cozy("knob"))
+	t.set_icon("grabber_highlight", "HSlider", cozy("knob_wood"))
 	t.set_font("font", "CheckButton", bold_font())
 	t.set_color("font_color", "CheckButton", TEXT)
+	# Häkchen-Kästchen aus dem Pack statt Schiebeschalter
+	for cls in ["CheckButton", "CheckBox"]:
+		t.set_icon("checked", cls, cozy("check_on"))
+		t.set_icon("unchecked", cls, cozy("check_off"))
+		t.set_icon("checked_disabled", cls, cozy("check_on"))
+		t.set_icon("unchecked_disabled", cls, cozy("check_off"))
 	t.set_font("font", "OptionButton", title_font())
-	t.set_stylebox("normal", "OptionButton", box(base, 20, 0, Color.TRANSPARENT, 6, 4))
-	t.set_stylebox("hover", "OptionButton", box(base.lightened(0.12), 20, 0, Color.TRANSPARENT, 6, 4))
-	t.set_stylebox("pressed", "OptionButton", box(base.darkened(0.1), 20, 0, Color.TRANSPARENT, 2, 2))
+	t.set_stylebox("normal", "OptionButton", tex_box("pill_wood", Color.WHITE, Vector4(26, 8, 40, 12)))
+	t.set_stylebox("hover", "OptionButton", tex_box("pill_wood", Color(1.12, 1.1, 1.06), Vector4(26, 8, 40, 12)))
+	t.set_stylebox("pressed", "OptionButton", tex_box("pill_wood", Color(0.86, 0.86, 0.86), Vector4(26, 11, 40, 9)))
 	t.set_stylebox("focus", "OptionButton", focus)
 	t.set_font("font", "PopupMenu", bold_font())
 	t.set_font_size("font_size", "PopupMenu", 26)
-	t.set_stylebox("panel", "PopupMenu", box(PANEL, 18, 3, Color(1, 1, 1, 0.2), 0, 8))
-	t.set_stylebox("panel", "TooltipPanel", box(PANEL, 12))
+	t.set_stylebox("panel", "PopupMenu", cozy_panel(null, 14))
+	t.set_stylebox("panel", "TooltipPanel", tex_box("note", Color.WHITE, Vector4(38, 12, 20, 14)))
+	t.set_color("font_color", "TooltipLabel", Color("#4a2c1c"))
+	t.set_color("font_outline_color", "TooltipLabel", Color(0, 0, 0, 0))
+	# Scrollleisten: dünne Holzleiste (Wischen per Touch übernimmt das System-Update)
+	t.set_stylebox("grabber", "VScrollBar", box(Color("#c98b5a"), 8, 0, Color.TRANSPARENT, 0, 0))
+	t.set_stylebox("grabber_highlight", "VScrollBar", box(Color("#e0a676"), 8, 0, Color.TRANSPARENT, 0, 0))
+	t.set_stylebox("scroll", "VScrollBar", box(Color(0, 0, 0, 0.18), 8, 0, Color.TRANSPARENT, 0, 0))
 	_theme = t
 	return t
 
@@ -158,9 +235,10 @@ static func button(text: String, color := Color("#7b3cff"), size := 32, min_w :=
 	b.text = text
 	b.add_theme_font_size_override("font_size", size)
 	if color != Color("#7b3cff"):
-		b.add_theme_stylebox_override("normal", box(color, 24, 0, Color.TRANSPARENT, 8, 6))
-		b.add_theme_stylebox_override("hover", box(color.lightened(0.12), 24, 0, Color.TRANSPARENT, 8, 8))
-		b.add_theme_stylebox_override("pressed", box(color.darkened(0.1), 24, 0, Color.TRANSPARENT, 2, 2))
+		# Farbige Buttons: helle Cozy-Vorlage eingefärbt (Bedeutungsfarbe bleibt, Look bleibt einheitlich)
+		var bx := button_boxes(color)
+		for st in ["normal", "hover", "pressed"]:
+			b.add_theme_stylebox_override(st, bx[st])
 	if min_w > 0:
 		b.custom_minimum_size.x = min_w
 	b.focus_entered.connect(func() -> void:
@@ -179,7 +257,7 @@ static func button(text: String, color := Color("#7b3cff"), size := 32, min_w :=
 static func panel(color := PANEL, radius := 30) -> PanelContainer:
 	var p := PanelContainer.new()
 	if color != PANEL or radius != 30:
-		p.add_theme_stylebox_override("panel", box(color, radius, 4, Color(1, 1, 1, 0.14), 0, 14))
+		p.add_theme_stylebox_override("panel", cozy_panel(color, clampi(radius, 14, 30)))
 	return p
 
 
@@ -216,7 +294,7 @@ static func center_root(parent: Node) -> Control:
 
 
 ## Hintergrund-Gradient (Party-Lila -> Pink) als fullscreen TextureRect.
-static func gradient_bg(parent: Node, top := Color("#2a0f5c"), bottom := Color("#ff4fb8")) -> TextureRect:
+static func gradient_bg(parent: Node, top := Color("#3a2440"), bottom := Color("#f08c64")) -> TextureRect:
 	var g := Gradient.new()
 	g.set_color(0, top)
 	g.set_color(1, bottom)

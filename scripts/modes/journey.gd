@@ -368,7 +368,7 @@ func _dialog(speaker: String, text: String, options: Array[String]) -> int:
 	var answer := [-1]
 	var btns: Array[Button] = []
 	for k in options.size():
-		var b := UI.button(options[k], Color("#2ecc71") if k == 0 else Color("#5a4a80"), 26, 260)
+		var b := UI.button(options[k], Color("#2ecc71") if k == 0 else Color("#8a5a3c"), 26, 260)
 		var kk := k
 		b.pressed.connect(func() -> void: answer[0] = kk)
 		h.add_child(b)

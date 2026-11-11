@@ -485,7 +485,7 @@ func _side_panel(title: String, width := 640.0) -> Array:
 
 
 func _back_button(v: Control, target := "main") -> Button:
-	var b := UI.button("Zurück", Color("#5a4a80"), 28)
+	var b := UI.button("Zurück", Color("#8a5a3c"), 28)
 	b.pressed.connect(func() -> void: show_page(target))
 	v.add_child(b)
 	return b
@@ -533,7 +533,7 @@ func _page_main() -> Control:
 	root.add_child(small)
 	UI.place(small, Control.PRESET_BOTTOM_LEFT, Vector2(48, -92), Vector2(0, 64))
 	for sb in [["gear", "Einstellungen", "settings"], ["heart", "Credits", "credits"], ["user", "Profil", "profile"]]:
-		var rb := UI.button("", Color("#4a3a7a"), 20, 64)
+		var rb := UI.button("", Color("#7a4e34"), 20, 64)
 		rb.icon = UI.icon_tex(String(sb[0]), 30)
 		rb.custom_minimum_size = Vector2(64, 64)
 		rb.tooltip_text = String(sb[1])
@@ -543,7 +543,7 @@ func _page_main() -> Control:
 		rb.focus_entered.connect(func() -> void: desc.text = label)
 		small.add_child(rb)
 	# Konto-Pille oben rechts
-	var acc := UI.button("", Color("#3a2a6a"), 22, 0.0)
+	var acc := UI.button("", Color("#6a4229"), 22, 0.0)
 	acc.icon = UI.icon_tex("user", 28)
 	acc.text = ("  " + Account.display_name()) if Account.signed_in() else "  Anmelden"
 	acc.pressed.connect(func() -> void: show_page("profile"))
@@ -551,11 +551,7 @@ func _page_main() -> Control:
 	UI.place(acc, Control.PRESET_TOP_RIGHT, Vector2(-300, 24), Vector2(276, 56))
 	# Untere Leiste: Beschreibung des gewählten Eintrags + Bedienhilfe
 	var bar := PanelContainer.new()
-	var bs := StyleBoxFlat.new()
-	bs.bg_color = Color(0.12, 0.06, 0.25, 0.72)
-	bs.set_corner_radius_all(22)
-	bs.set_content_margin_all(10)
-	bar.add_theme_stylebox_override("panel", bs)
+	bar.add_theme_stylebox_override("panel", UI.tex_box("bar_wood", Color(1, 1, 1, 0.94), Vector4(30, 8, 30, 12)))
 	root.add_child(bar)
 	UI.place(bar, Control.PRESET_CENTER_BOTTOM, Vector2(-330, -70), Vector2(660, 52))
 	var hb := UI.hbox(18)
@@ -651,7 +647,7 @@ func _login_view(v: VBoxContainer) -> void:
 		one.custom_minimum_size.y = 72
 		one.pressed.connect(func() -> void: Account.resume_lumos())
 		v.add_child(one)
-		var reg := UI.button("Neue Lumos-ID registrieren", Color("#5a4a80"), 24, 520)
+		var reg := UI.button("Neue Lumos-ID registrieren", Color("#8a5a3c"), 24, 520)
 		reg.pressed.connect(func() -> void:
 			_need_credentials = true
 			show_page("profile"))
@@ -708,7 +704,7 @@ func _login_view(v: VBoxContainer) -> void:
 		row.add_child(register)
 		v.add_child(row)
 		if not lumos:
-			var forgot := UI.button("Passwort vergessen?", Color("#5a4a80"), 20, 260)
+			var forgot := UI.button("Passwort vergessen?", Color("#8a5a3c"), 20, 260)
 			forgot.pressed.connect(func() -> void: Account.reset_password(email.text.strip_edges()))
 			v.add_child(forgot)
 		else:
@@ -718,7 +714,7 @@ func _login_view(v: VBoxContainer) -> void:
 			le.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			le.custom_minimum_size.x = 640
 			v.add_child(le)
-	var guest := UI.button("Als Gast spielen", Color("#5a4a80"), 24, 520)
+	var guest := UI.button("Als Gast spielen", Color("#8a5a3c"), 24, 520)
 	guest.pressed.connect(func() -> void:
 		Account.play_as_guest()
 		show_page("main"))
@@ -793,14 +789,7 @@ var _athlon_size := 0
 
 func _mode_card(v: VBoxContainer, title: String, col: Color, icon: String, desc: String) -> VBoxContainer:
 	var card := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = col.darkened(0.55)
-	sb.bg_color.a = 0.85
-	sb.border_color = col
-	sb.set_border_width_all(3)
-	sb.set_corner_radius_all(18)
-	sb.set_content_margin_all(16)
-	card.add_theme_stylebox_override("panel", sb)
+	card.add_theme_stylebox_override("panel", UI.cozy_panel(col.darkened(0.38), 18))
 	v.add_child(card)
 	var inner := UI.vbox(8)
 	card.add_child(inner)
@@ -933,7 +922,7 @@ func _players_editor(v: VBoxContainer) -> void:
 			start_idx = 0 if not p.cpu else 1 + int(p.cpu_level)
 		else:
 			start_idx = int(p.cpu_level) if p.cpu else (3 if pads > i else 1)
-		var cs := Stepper.new().setup(opts, start_idx, 170, Color("#5a4a80"))
+		var cs := Stepper.new().setup(opts, start_idx, 170, Color("#8a5a3c"))
 		row.add_child(cs)
 		_cpu_steppers.append(cs)
 		v.add_child(row)

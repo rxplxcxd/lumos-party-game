@@ -72,7 +72,7 @@ func build(with_play := false) -> MinigamePicker:
 				present[c] = true
 	for c in CAT_NAMES:
 		if present.has(c):
-			var b := UI.button(CAT_NAMES[c], Color("#5a4a80"), 20, 0)
+			var b := UI.button(CAT_NAMES[c], Color("#8a5a3c"), 20, 0)
 			b.set_meta("cat", c)
 			b.pressed.connect(func() -> void:
 				_filter = c

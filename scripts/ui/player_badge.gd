@@ -25,7 +25,8 @@ func setup(p: int, compact := false, scores := false) -> PlayerBadge:
 	player = p
 	score_mode = scores
 	var col: Color = Game.player_color(p)
-	add_theme_stylebox_override("panel", UI.box(Color(col.darkened(0.55), 0.92), 22, 4, col, 0, 8))
+	# Cozy-Platte in Spielerfarbe (eingefärbte helle Vorlage mit Holzrand und Tiefe)
+	add_theme_stylebox_override("panel", UI.cozy_panel(col.darkened(0.3), 14))
 	var h := UI.hbox(10)
 	add_child(h)
 	_place = UI.label("", 34, UI.GOLD, true)
@@ -118,15 +119,15 @@ func set_status(kind: String, value: Variant = null) -> void:
 	_status = key
 	match kind:
 		"hearts":
-			_status_icon.texture = UI.icon_tex("heart", 60, Color("#ff4d6d"))
+			_status_icon.texture = UI.cozy("icon_heart")
 			_status_icon.visible = true
 			_score.text = "x%d" % int(value)
 		"alive":
-			_status_icon.texture = UI.icon_tex("heart", 60, Color("#ff4d6d"))
+			_status_icon.texture = UI.cozy("icon_heart")
 			_status_icon.visible = true
 			_score.text = ""
 		"out":
-			_status_icon.texture = UI.icon_tex("cross", 60, Color("#9aa0b0"))
+			_status_icon.texture = UI.cozy("icon_x")
 			_status_icon.visible = true
 			_score.text = "raus"
 		"done":

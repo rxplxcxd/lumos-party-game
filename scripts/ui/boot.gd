@@ -25,6 +25,7 @@ var _args := {}
 func _ready() -> void:
 	_parse_args()
 	get_tree().root.theme = UI.theme()
+	UI.apply_cursor()
 	if _args.has("log-scenes"):
 		Router.log_scenes = true
 	if _args.has("cpu"):

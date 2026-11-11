@@ -72,7 +72,7 @@ func show_menu() -> void:
 	v.add_child(resume)
 	v.add_child(_slider("Musik", "music"))
 	v.add_child(_slider("Effekte", "sfx"))
-	var hb := UI.button("Steuerung", Color("#5a4a80"), 26, 420)
+	var hb := UI.button("Steuerung", Color("#8a5a3c"), 26, 420)
 	_help = UI.label("Stick/Steuerkreuz: Bewegen · A: Springen/Bestätigen · B: Aktion/Zurück\nX/LB: Item · RB/RT: Drift · Start: Pause\nTastatur: WASD · Leertaste = A · K = B · E = Item · Shift = Drift · Esc = Pause", 18, Color(1, 1, 1, 0.8))
 	_help.visible = false
 	hb.pressed.connect(func() -> void: _help.visible = not _help.visible)

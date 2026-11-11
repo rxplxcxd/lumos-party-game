@@ -13,7 +13,7 @@ const PRESETS := {
 		"sun_energy": 0.95, "sun_rot": Vector3(-46, 30, 0), "ambient": Color("#93b6d8"), "ambient_energy": 0.42, "sky_energy": 0.8,
 		"fog": true, "fog_color": Color("#b8dcf0"), "fog_density": 0.0018, "rays": true},
 	"dungeon": {"sky_top": Color("#0d0718"), "sky_horizon": Color("#2a1430"), "ground": Color("#1a0d1a"), "sun": Color("#ffb070"),
-		"sun_energy": 0.5, "sun_rot": Vector3(-65, 20, 0), "ambient": Color("#5a4a80"), "ambient_energy": 0.5, "sky_energy": 1.0,
+		"sun_energy": 0.5, "sun_rot": Vector3(-65, 20, 0), "ambient": Color("#8a5a3c"), "ambient_energy": 0.5, "sky_energy": 1.0,
 		"fog": true, "fog_color": Color("#2a1030"), "fog_density": 0.011},
 	"sky": {"sky_top": Color("#3c86e6"), "sky_horizon": Color("#d8e6fa"), "ground": Color("#c8d4ea"), "sun": Color("#fff6e0"),
 		"sun_energy": 0.95, "sun_rot": Vector3(-40, 140, 0), "ambient": Color("#a8b8e0"), "ambient_energy": 0.45, "sky_energy": 0.78,
