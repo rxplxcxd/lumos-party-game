@@ -49,7 +49,7 @@ func build_arena() -> void:
 		var r: Rect2 = BLOCKS[k]
 		var c := Vector3(r.get_center().x, 0, r.get_center().y)
 		WorldKit.box(world, Vector3(r.size.x, 0.25, r.size.y), c + Vector3(0, 0.12, 0), Color("#b8c2a8"), false)
-		WorldKit.place(world, bkeys[k], c + Vector3(-1.0, 0.25, 0), 0.0, 1.2)
+		WorldKit.place(world, bkeys[k], c + Vector3(-1.0, 0.25, 0), 0.0, 1.9)
 		WorldKit.place(world, "nat/tree_oak", c + Vector3(1.6, 0.25, -0.8), randf() * 360.0, 1.4)
 		WorldKit.place(world, "nat/bush", c + Vector3(1.8, 0.25, 0.8), 0.0, 2.0)
 		WorldKit.place(world, "town/lantern", c + Vector3(r.size.x * 0.5 - 0.3, 0.25, r.size.y * 0.5 - 0.3), 0.0, 0.9)
@@ -57,7 +57,7 @@ func build_arena() -> void:
 		WorldKit.box(world, Vector3(HALF_X * 2 + 1.4, 0.6, 0.4), Vector3(0, 0.3, side * (HALF_Z + 0.9)), Color("#9aa3b5"))
 		WorldKit.box(world, Vector3(0.4, 0.6, HALF_Z * 2 + 1.4), Vector3(side * (HALF_X + 0.9), 0.3, 0), Color("#9aa3b5"))
 	for k in 2:
-		var n := Assets.spawn("car/taxi", world, Vector3(-8.0 if k == 0 else 8.0, 0, 0), 90.0 if k == 0 else -90.0, 1.5)
+		var n := Assets.spawn("car/taxi", world, Vector3(-8.0 if k == 0 else 8.0, 0, 0), 90.0 if k == 0 else -90.0, 2.6)
 		# Teamfarbe als Dachschild
 		WorldKit.box(n, Vector3(0.6, 0.18, 0.35), Vector3(0, 0.95, 0), Color("#ff4d6d") if k == 0 else Color("#4da6ff"), false)
 		_taxi.append({"node": n, "pos": Vector3(-8.0 if k == 0 else 8.0, 0, 0), "vel": Vector3.ZERO, "x_slot": -1, "z_slot": -1})

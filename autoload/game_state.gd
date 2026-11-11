@@ -220,6 +220,21 @@ const MINIGAMES := [
 	{"id": "stone_bowling", "name": "Steinkopf-Kegeln", "scene": "res://scenes/minigames/StoneBowling.tscn", "kind": "score", "online": true, "cats": ["duel"],
 		"desc": "Sechs grimmige Steinköpfe drehen sich am Ende der Tempelbahn. Leg mit A die Richtung fest, dann die Kraft – und räum möglichst viele ab. Alle sechs bringen einen Bonus!",
 		"controls": "A: Richtung festlegen · A: Kraft festlegen & werfen"},
+	{"id": "mega_bee", "name": "Mega-Summser", "scene": "res://scenes/minigames/MegaBee.tscn", "kind": "score", "online": true, "cats": ["ffa"],
+		"desc": "Eine riesige Wiesenbiene greift an! Weich ihrem Stachel-Sturzflug aus – und wenn der Stachel im Boden feststeckt, spring ihr auf den Rücken. Wer die meisten Treffer landet, gewinnt.",
+		"controls": "Stick: Laufen · A: Springen (auf die Biene!)"},
+	{"id": "prize_drop", "name": "Kullerkasten", "scene": "res://scenes/minigames/PrizeDrop.tscn", "kind": "score", "online": true, "cats": ["luck", "coin", "ffa"],
+		"desc": "Das große Jahrmarkt-Nagelbrett! Schieb deinen Abwurf in Position und lass drei Kugeln durch die Nägel kullern – wer trifft das goldene 10er-Fach? Der wandernde Bumper mischt kräftig mit.",
+		"controls": "Stick: Abwurf verschieben · A: Kugel fallen lassen"},
+	{"id": "coaster_shooter", "name": "Achterbahn-Schießbude", "scene": "res://scenes/minigames/CoasterShooter.tscn", "kind": "score", "online": true, "cats": ["ffa"],
+		"desc": "Alle in einen Wagen – die Achterbahn dreht ihre Runde über den Jahrmarkt! Links und rechts klappen Pappziele hoch. Zielt mit eurem Fadenkreuz und drückt A, bevor es ein anderer tut. Goldsterne zählen dreifach.",
+		"controls": "Stick: Fadenkreuz bewegen · A: Schießen"},
+	{"id": "stone_skip", "name": "Flitzestein-Wurf", "scene": "res://scenes/minigames/StoneSkip.tscn", "kind": "score", "online": true, "cats": ["ffa"],
+		"desc": "Wer lässt den Stein am weitesten über den See hüpfen? Halte A für die Kraft, stell mit dem Stick einen flachen Winkel ein und lass los – drei Würfe, die beste Weite zählt.",
+		"controls": "A halten/loslassen: Kraft & Wurf · Stick hoch/runter: Winkel"},
+	{"id": "ghost_manor", "name": "Spukvilla-Sprint", "scene": "res://scenes/minigames/GhostManor.tscn", "kind": "race", "online": true, "cats": ["ffa"],
+		"desc": "Drei Räume, drei Türen pro Raum – nur eine führt weiter! Hinter den anderen lauern Gespenster. Pass auf, welche Türen die anderen öffnen, weich den Geistern aus und entkomm als Erster der Spukvilla.",
+		"controls": "Stick: Laufen · A: Tür öffnen"},
 ]
 
 const TRACKS := [

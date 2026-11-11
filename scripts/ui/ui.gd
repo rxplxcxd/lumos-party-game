@@ -321,6 +321,7 @@ static func prompt_text(action: String, text: String) -> String:
 # --- Vektor-Icons (SVG, zur Laufzeit gerastert – schriftunabhängig, keine Tofu-Kästchen) ----
 
 const SVG_ICONS := {
+	"target": "<circle cx='32' cy='32' r='20' fill='none' stroke='#2e1708' stroke-width='9'/><circle cx='32' cy='32' r='20' fill='none' stroke='#C' stroke-width='5'/><path d='M32 2 V18 M32 46 V62 M2 32 H18 M46 32 H62' stroke='#2e1708' stroke-width='8' stroke-linecap='round'/><path d='M32 4 V17 M32 47 V60 M4 32 H17 M47 32 H60' stroke='#C' stroke-width='4' stroke-linecap='round'/><circle cx='32' cy='32' r='3.5' fill='#C'/>",
 	"arrow_left": "<path d='M40 10 L18 32 L40 54' fill='none' stroke='#C' stroke-width='11' stroke-linecap='round' stroke-linejoin='round'/>",
 	"arrow_right": "<path d='M24 10 L46 32 L24 54' fill='none' stroke='#C' stroke-width='11' stroke-linecap='round' stroke-linejoin='round'/>",
 	"arrow_up": "<path d='M10 40 L32 18 L54 40' fill='none' stroke='#C' stroke-width='11' stroke-linecap='round' stroke-linejoin='round'/>",

@@ -47,13 +47,13 @@ func build_arena() -> void:
 		var dir := (nxt - prv).normalized()
 		var side := Vector3(-dir.z, 0, dir.x)
 		for s in [-1.0, 1.0]:
-			var b := Assets.spawn("water/buoy", g, side * s * 2.6 + Vector3(0, -0.35, 0), 0.0, 1.6)
+			var b := Assets.spawn("water/buoy", g, side * s * 2.6 + Vector3(0, -0.35, 0), 0.0, 0.8)
 			b.set_meta("bob", s)
 		var flag := WorldKit.place(g, "qp/flag", Vector3(0, 1.4, 0), rad_to_deg(atan2(side.x, side.z)), 0.4)
 		flag.visible = false
 		_gate_nodes.append(g)
 	for t in 2:
-		var n := Assets.spawn("water/boat_row", world, Vector3(-3.0 - t * 2.8, -0.3, -10.5), 90.0, 1.4)
+		var n := Assets.spawn("water/boat_row", world, Vector3(-3.0 - t * 2.8, -0.3, -10.5), 90.0, 2.0)
 		WorldKit.box(n, Vector3(0.5, 0.5, 0.06), Vector3(0, 0.9, -0.9), Color("#ff4d6d") if t == 0 else Color("#4da6ff"), false)
 		_boats.append({"node": n, "pos": Vector3(-3.0 - t * 2.8, 0, -10.5), "head": PI / 2.0, "speed": 0.0, "crew": [], "gate": 0, "lap": 0,
 			"last": {}, "done": false})

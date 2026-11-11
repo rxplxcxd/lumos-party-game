@@ -36,7 +36,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.water(world, Vector2(80, 80), -0.5, Color(0.12, 0.3, 0.5), Color(0.9, 0.55, 0.45))
+	WorldKit.water(world, Vector2(80, 80), -0.5, Color(0.1, 0.28, 0.48), Color(0.42, 0.62, 0.78))
 	# Langer Holzsteg, Laternen, Boot, Seerosen; Sonnenuntergang über dem See
 	WorldKit.box(world, Vector3(7.0, 0.3, 8.0), Vector3(0, 0.55, 3.5), Color("#a4703f"))
 	for z in range(0, 8):
