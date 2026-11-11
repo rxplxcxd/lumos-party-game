@@ -54,9 +54,16 @@ func shake(strength := 0.4) -> void:
 	trauma = clampf(trauma + strength, 0.0, 1.0)
 
 
-## Kurzer Hitstop (Echtzeit-Sekunden).
+## Kurzer Hitstop (Echtzeit-Sekunden). Nach einem Hitstop folgen mindestens 0,3 s normales Tempo – sonst
+## würden Treffer-Serien (z. B. Dauer-Rempeln) das Spiel ins Stocken bringen.
 func hitstop(duration := 0.07) -> void:
-	_hitstop_until = maxi(_hitstop_until, Time.get_ticks_msec() + int(duration * 1000.0))
+	var now := Time.get_ticks_msec()
+	if now < _hitstop_until:
+		_hitstop_until = maxi(_hitstop_until, now + int(duration * 1000.0))   # laufenden Hitstop höchstens verlängern
+		return
+	if now < _hitstop_until + 300:
+		return
+	_hitstop_until = now + int(duration * 1000.0)
 
 
 func slowmo(scale := 0.3, duration := 0.5) -> void:

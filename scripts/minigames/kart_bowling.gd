@@ -170,7 +170,8 @@ func _collide_karts() -> void:
 						Audio.sfx("punch", mid)
 						FX.stars(mid + Vector3.UP, Color(1, 1, 0.5), 8)
 						Juice.shake(0.2)
-						Juice.hitstop(0.05)
+						if strength > 11.0:
+							Juice.hitstop(0.05)   # nur harte Treffer (Turbo-Rammen)
 						InputHub.rumble(a, 0.6, 0.15)
 						InputHub.rumble(b, 0.6, 0.15)
 

@@ -42,6 +42,8 @@ Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--nex
   * Modular-Terrain-Modelle (OBJ) wirkten fast schwarz: Godots OBJ-Import machte aus „Ks 1“ metallic = 1. Sie
     werden jetzt matt dargestellt.
   * Lange Boss-Namen passen ins Minispiel-Intro.
+  * Hitstops haben einen Mindestabstand von 0,3 s: Rempel-Serien (Kart-Kegeln mit Turbo) ließen das Spiel
+    vorher stocken. Kart-Kegeln stoppt nur noch bei harten Treffern.
   * Fanfaren-Jingles in Mega-Summser, Schalter-Schikane, Steinkopf-Kegeln, Lumos-Athlon und Reise-Modus waren
     stumm (falscher Sound-Kanal).
 * **Prüfungen:**
