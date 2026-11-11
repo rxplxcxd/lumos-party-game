@@ -175,6 +175,7 @@ const SETTINGS_PATH := "user://settings.cfg"
 
 var players: Array[Dictionary] = []
 var settings := {
+	"online_pool_off": [],   # Online-Lobby: abgewählte Minispiele (MinigamePicker)
 	"music": 0.7, "sfx": 0.9, "voice": 1.0,
 	"haptics": true, "touch_opacity": 0.8, "touch_scale": 1.0, "touch_layout": {},
 	"auto_accel": true, "steer_sens": 1.0, "screen_shake": 1.0, "quality": "auto", "show_fps": false, "dynamic_res": true,
@@ -390,8 +391,13 @@ func start_party(board_id: String, rounds: int, party_mode := "classic") -> void
 
 
 ## Darf dieses Minispiel gerade laufen? (Online nur netzwerkfähige Spiele.)
-func minigame_allowed(m: Dictionary) -> bool:
-	return not Net.in_game() or bool(m.get("online", false))
+## strict: online zusätzlich die Lobby-Auswahl des Hosts beachten (cfg.pool_off).
+func minigame_allowed(m: Dictionary, strict := true) -> bool:
+	if not Net.in_game():
+		return true
+	if not bool(m.get("online", false)):
+		return false
+	return not strict or not (String(m.id) in (Net.game_cfg.get("pool_off", []) as Array))
 
 
 # --- Grand Prix ---------------------------------------------------------------

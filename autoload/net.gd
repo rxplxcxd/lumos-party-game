@@ -49,6 +49,14 @@ var _ping_t := 0.0
 var _connect_watch: Dictionary = {}  # id -> verbleibende Sekunden bis Relay-Fallback
 var _joining := false
 var _relay_consumed: Dictionary = {}   # verarbeitete Relay-Schlüssel, gebündelt gelöscht
+# Synchronisations-Gates (sync_point): tag -> {id: true} bzw. tag -> true. Liegen im Autoload, damit Meldungen,
+# die vor dem eigenen Erreichen des Gates (z. B. noch beim Laden) eintreffen, nicht verloren gehen.
+var _sp_arrived: Dictionary = {}
+var _sp_go: Dictionary = {}
+var scene_epoch := 0               # zählt Szenenwechsel in einer Sitzung (gleich auf allen Geräten)
+var _last_pong := 0.0
+var _notice_layer: CanvasLayer
+var _wait_label: Label
 
 
 func _ready() -> void:
@@ -149,7 +157,10 @@ func join_room(room: String) -> void:
 func leave(reason := "Raum verlassen.") -> void:
 	if code != "":
 		if is_host:
-			_db.remove("rooms/%s" % code)
+			# Mitspieler ausdrücklich informieren (sonst flögen sie wortlos raus) – kurz vor dem Löschen des Raums
+			send({"k": "bye", "r": "Der Host hat das Spiel beendet." if session else "Der Host hat den Raum geschlossen."}, true)
+			var room := code
+			get_tree().create_timer(0.5, true).timeout.connect(func() -> void: _db.remove("rooms/%s" % room))
 		else:
 			_db.remove("rooms/%s/players/%s" % [code, me])
 	_db.off_all()
@@ -267,7 +278,7 @@ func _on_child(tag: String, ev: String, key: String, val: Variant) -> void:
 			if ev == "removed":
 				players.erase(key)
 				if key == host_id and not is_host:
-					leave("Der Host hat den Raum verlassen.")
+					end_with_notice("Der Host hat das Spiel beendet." if session else "Der Host hat den Raum verlassen.")
 					return
 				if _pcs.has(key):
 					(_pcs[key].pc as WebRTCPeerConnection).close()
@@ -290,7 +301,7 @@ func _on_child(tag: String, ev: String, key: String, val: Variant) -> void:
 		"meta":
 			if ev == "removed":
 				if not is_host:
-					leave("Der Raum wurde geschlossen.")
+					end_with_notice("Der Host hat das Spiel beendet." if session else "Der Raum wurde geschlossen.")
 				return
 			meta[key] = val
 			if key == "state" and String(val) == "playing" and not is_host and meta.has("cfg"):
@@ -408,6 +419,10 @@ func _process(delta: float) -> void:
 	if _ping_t <= 0.0 and not is_host and connected():
 		_ping_t = 1.0
 		send({"k": "ping", "t": Time.get_ticks_msec()}, true, false)
+	# Verbindungswächter: im Spiel kommt jede Sekunde ein Pong – bleibt er 12 s aus, ist der Host weg
+	if session and not is_host and _last_pong > 0.0 and Time.get_ticks_msec() / 1000.0 - _last_pong > 12.0:
+		_last_pong = 0.0
+		end_with_notice("Die Verbindung zum Host wurde getrennt.")
 
 
 func connected() -> bool:
@@ -468,6 +483,17 @@ func _receive(from: String, msg: Dictionary) -> void:
 		return
 	if k == "pong":
 		rtt_ms = float(Time.get_ticks_msec() - int(msg.get("t", 0)))
+		_last_pong = Time.get_ticks_msec() / 1000.0
+		return
+	if k == "sp":
+		if is_host:
+			_sp_mark(String(msg.get("tag", "")), String(msg.get("f", from)))
+		return
+	if k == "sp_go":
+		_sp_go[String(msg.get("tag", ""))] = true
+		return
+	if k == "bye" and not is_host:
+		end_with_notice(String(msg.get("r", "Der Host hat das Spiel beendet.")))
 		return
 	if k == "bd":
 		decisions[int(msg.get("n", -1))] = msg.get("v")
@@ -542,9 +568,21 @@ func back_to_lobby() -> void:
 
 
 func _start_local(cfg: Dictionary) -> void:
-	game_cfg = cfg
+	# Derselbe Start kann über zwei Datenbank-Ereignisse (state + cfg) ankommen – ein zweiter Aufruf würde die
+	# laufende Partie zurücksetzen (Felder -1 → Figuren auf einem falschen Feld). Nur einmal je Spiel starten.
+	if session and int(game_cfg.get("seed", -1)) == int(cfg.get("seed", -2)):
+		return
 	var slots: Dictionary = cfg.get("slots", {})
+	if not slots.has(me) and not is_host:
+		# Später Beitritt: Das Spiel lief schon ohne uns los – nicht mitstarten, sondern sauber Bescheid geben
+		status.emit("Das Spiel hat bereits begonnen – du bist bei der nächsten Runde dabei.")
+		return
+	game_cfg = cfg
 	my_slot = int(slots.get(me, my_slot))
+	_sp_arrived.clear()
+	_sp_go.clear()
+	scene_epoch = 0
+	_last_pong = Time.get_ticks_msec() / 1000.0
 	var heroes: Dictionary = cfg.get("heroes", {})
 	for i in 4:
 		var key := str(i)
@@ -588,6 +626,147 @@ func _start_local(cfg: Dictionary) -> void:
 			Router.goto("res://scenes/racer/NitroDash.tscn")
 		"minigame":
 			Router.goto(Game.minigame_info(String(cfg.get("id", "sumo_shove"))).scene)
+
+
+# --- Synchronisations-Gate ---------------------------------------------------------------------------------------
+
+## Teilnehmer der laufenden Sitzung, die noch im Raum sind (Host eingeschlossen).
+func session_peers() -> Array:
+	var out: Array = []
+	for id in (game_cfg.get("slots", {}) as Dictionary):
+		if players.has(id) or id == me:
+			out.append(id)
+	return out
+
+
+## Wartet, bis ALLE Teilnehmer diesen Punkt erreicht haben (z. B. Szene fertig geladen, Zugbeginn).
+## Der Host sammelt die Meldungen und gibt frei; Gäste melden sich wiederholt, bis die Freigabe kommt.
+## timeout: Sicherheitsnetz gegen Hänger (dann geht es ohne Nachzügler weiter).
+func sync_point(tag: String, timeout := 45.0) -> void:
+	if not in_game():
+		return
+	var t0 := Time.get_ticks_msec() / 1000.0
+	var resend := 0.0
+	if is_host:
+		_sp_mark(tag, me)
+	while in_game() and not _sp_go.has(tag):
+		var now := Time.get_ticks_msec() / 1000.0
+		if not is_host and now >= resend:
+			resend = now + 1.5
+			send({"k": "sp", "tag": tag}, true, false)
+		if is_host:
+			_sp_check(tag)   # Teilnehmer kann inzwischen gegangen sein
+		if now - t0 > 0.6:
+			_show_wait(tag)
+		if now - t0 > timeout:
+			if is_host:
+				_sp_release(tag)
+			break
+		await get_tree().process_frame
+	_hide_wait()
+
+
+## Szenenwechsel-Gate: jede neu geladene Online-Szene ruft das auf, bevor irgendetwas läuft.
+func loading_gate() -> void:
+	if not in_game():
+		return
+	scene_epoch += 1
+	await sync_point("load:%d" % scene_epoch, 60.0)
+
+
+func _sp_mark(tag: String, id: String) -> void:
+	if not _sp_arrived.has(tag):
+		_sp_arrived[tag] = {}
+	(_sp_arrived[tag] as Dictionary)[id] = true
+	_sp_check(tag)
+
+
+func _sp_check(tag: String) -> void:
+	if not is_host or _sp_go.has(tag) or not (_sp_arrived.get(tag, {}) as Dictionary).has(me):
+		return
+	var arr: Dictionary = _sp_arrived.get(tag, {})
+	for id in session_peers():
+		if not arr.has(id):
+			return
+	_sp_release(tag)
+
+
+func _sp_release(tag: String) -> void:
+	_sp_go[tag] = true
+	send({"k": "sp_go", "tag": tag}, true)
+
+
+func _show_wait(tag: String) -> void:
+	if _wait_label == null:
+		var layer := CanvasLayer.new()
+		layer.layer = 110
+		add_child(layer)
+		_wait_label = UI.label("", 26, Color.WHITE, true, 10)
+		_wait_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		UI.place(_wait_label, Control.PRESET_CENTER_TOP, Vector2(-450, 86), Vector2(900, 40))
+		layer.add_child(_wait_label)
+	var n := session_peers().size()
+	var have := (_sp_arrived.get(tag, {}) as Dictionary).size() if is_host else -1
+	var dots := ".".repeat(1 + int(Time.get_ticks_msec() / 400) % 3)
+	_wait_label.text = ("Warte auf Mitspieler%s  (%d/%d bereit)" % [dots, have, n]) if have >= 0 else "Warte auf die anderen%s" % dots
+	_wait_label.visible = true
+
+
+func _hide_wait() -> void:
+	if _wait_label:
+		_wait_label.visible = false
+
+
+# --- Abbruch mit Hinweis -----------------------------------------------------------------------------------------
+
+## Beendet das Online-Spiel und zeigt einen klaren Hinweis (statt wortlos ins Menü zu fliegen).
+func end_with_notice(reason: String) -> void:
+	var was_game := session
+	if "--net-test" in str(OS.get_cmdline_user_args()):
+		print("[NET] Hinweis: ", reason)
+	leave(reason)
+	_show_notice(reason, was_game)
+
+
+func _show_notice(reason: String, to_menu: bool) -> void:
+	if _notice_layer and is_instance_valid(_notice_layer):
+		_notice_layer.queue_free()
+	_notice_layer = CanvasLayer.new()
+	_notice_layer.layer = 125
+	_notice_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(_notice_layer)
+	var dim := ColorRect.new()
+	dim.color = Color(0.03, 0.01, 0.08, 0.72)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_notice_layer.add_child(dim)
+	var panel := UI.panel()
+	UI.place(panel, Control.PRESET_CENTER, Vector2(-330, -150), Vector2(660, 300))
+	_notice_layer.add_child(panel)
+	var v := UI.vbox(18)
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	panel.add_child(v)
+	var title := UI.label("Online-Spiel beendet", 40, UI.GOLD, true, 10)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(title)
+	var msg := UI.label(reason, 26, Color.WHITE)
+	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	msg.custom_minimum_size.x = 600
+	v.add_child(msg)
+	var hint := UI.label("Das ist kein Fehler im Spiel – die Sitzung wurde beendet.", 18, Color(1, 1, 1, 0.65))
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(hint)
+	var ok := UI.button("OK", Color("#2ecc71"), 28, 240)
+	v.add_child(ok)
+	Audio.sfx("negative", null, -4.0)
+	ok.pressed.connect(func() -> void:
+		_notice_layer.queue_free()
+		get_tree().paused = false
+		if to_menu:
+			Router.goto("res://scenes/menu/MainMenu.tscn", {"page": "online"}))
+	ok.grab_focus.call_deferred()
+	if to_menu:
+		get_tree().paused = true   # laufende Szene anhalten, bis der Hinweis bestätigt ist
 
 
 ## Gehört ein Slot (bzw. eine CPU) zu diesem Gerät? Host simuliert alle CPUs.

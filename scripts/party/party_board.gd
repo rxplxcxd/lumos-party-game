@@ -84,7 +84,7 @@ func _spawn_players() -> void:
 		add_child(r)
 		r.setup(Game.hero(Game.players[i].hero).model, i, 0.8)
 		r.surface = surface
-		if Game.players[i].space < 0:
+		if Game.players[i].space < 0 or Game.players[i].space >= spaces.size():
 			Game.players[i].space = 0
 		rigs.append(r)
 	_formation_all(true)
@@ -115,6 +115,10 @@ func _formation_all(instant := false) -> void:
 
 
 func _space_pos(id: int) -> Vector3:
+	# Ungültige Feldnummer (z. B. -1 nach einem zurückgesetzten Spielstand) → Startfeld. Vorher lieferte
+	# space_nodes[-1] stillschweigend das LETZTE Feld: Figuren standen irgendwo mitten auf der Karte.
+	if id < 0 or id >= builder.space_nodes.size():
+		id = 0
 	return builder.space_nodes[id].position + Vector3.UP * 0.45
 
 
@@ -122,6 +126,8 @@ func _space_pos(id: int) -> Vector3:
 
 func _main() -> void:
 	await get_tree().process_frame
+	# Online: erst los, wenn alle Geräte das Brett fertig geladen haben
+	await Net.loading_gate()
 	var party: Dictionary = Game.party
 	match String(party.phase):
 		"minigame":
@@ -151,10 +157,14 @@ func _main() -> void:
 			return
 		for t in range(int(party.turn), 4):
 			party.turn = t
+			# Rundenbasiert und synchron: Der nächste Zug beginnt erst, wenn ALLE Geräte den vorigen fertig
+			# gezeigt haben – so sieht jeder live, wie der Spieler am Zug würfelt und zieht.
+			await Net.sync_point("turn:%d:%d" % [int(party.round), t])
 			await _turn(t)
 			if String(party.phase) != "turns":
 				return   # Zug für ein Partner-/Duell-Minispiel unterbrochen
 		party.turn = 0
+		await Net.sync_point("mgsel:%d" % int(party.round))
 		await _choose_minigame()
 		return
 
@@ -1597,9 +1607,13 @@ func _choose_minigame() -> void:
 	for m in Game.MINIGAMES:
 		if cat in (m.get("cats", ["ffa"]) as Array) and Game.minigame_allowed(m) and not (m.id in played.slice(maxi(0, played.size() - 4))):
 			pool.append(m)
-	if pool.is_empty():
+	if pool.is_empty():   # alle kürzlich gespielt → Wiederholung erlaubt
 		for m in Game.MINIGAMES:
 			if cat in (m.get("cats", ["ffa"]) as Array) and Game.minigame_allowed(m):
+				pool.append(m)
+	if pool.is_empty():   # Lobby-Auswahl hat für diese Kategorie nichts aktiv → alle Online-Spiele der Kategorie
+		for m in Game.MINIGAMES:
+			if cat in (m.get("cats", ["ffa"]) as Array) and Game.minigame_allowed(m, false):
 				pool.append(m)
 	if cat != "ffa":
 		await CutsceneManager.play("TeamIntro", {"board": self, "setup": setup})

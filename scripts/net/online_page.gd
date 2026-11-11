@@ -33,11 +33,9 @@ var _ready := false
 
 func build(m: Node) -> OnlinePage:
 	menu = m
+	# Nur drei Modi – einzelne Minispiele wählt man in der Minispiel-Auswahl (Kategorien, Häkchen, ▶ direkt starten)
 	GAMES = [{"mode": "party", "name": "Lumos Party – Brettspiel"}, {"mode": "race", "name": "Nitro Dash – Online-Rennen"},
-		{"mode": "minigame", "id": "_random", "name": "Minispiel: Zufall!"}]
-	for mg in Game.MINIGAMES:
-		if bool(mg.get("online", false)) and not ("boss" in (mg.get("cats", []) as Array) and (mg.get("cats", []) as Array).size() == 1):
-			GAMES.append({"mode": "minigame", "id": mg.id, "name": "Minispiel: " + String(mg.name)})
+		{"mode": "minigame", "id": "_random", "name": "Minispiele (Zufall aus Auswahl)"}]
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var panel := UI.panel()
@@ -185,8 +183,22 @@ func _build_room() -> void:
 	ms.changed.connect(func(i: int) -> void: _pmode_idx = i)
 	var mode_row := _row("Regeln", ms)
 	_host_box.add_child(mode_row)
+	var pick_btn := UI.button("", Color("#7b3cff"), 24, 420)
+	var refresh_pick := func() -> void:
+		pick_btn.text = "Auswahl: %d von %d aktiv" % [MinigamePicker.enabled_ids().size(), MinigamePicker.online_games().size()]
+	refresh_pick.call()
+	pick_btn.pressed.connect(func() -> void:
+		var pk := MinigamePicker.new().build(GAMES[_game_idx].mode == "minigame")
+		add_child(pk)
+		pk.closed.connect(func() -> void:
+			refresh_pick.call()
+			pick_btn.grab_focus.call_deferred())
+		pk.play.connect(func(id: String) -> void: _start_game(id)))
+	var pick_row := _row("Minispiele", pick_btn)
+	_host_box.add_child(pick_row)
 	var vis := func(i: int) -> void:
 		_game_idx = i
+		pick_row.visible = GAMES[i].mode != "race"
 		track_row.visible = GAMES[i].mode == "race"
 		laps_row.visible = GAMES[i].mode == "race"
 		board_row.visible = GAMES[i].mode == "party"
@@ -206,12 +218,15 @@ func _build_room() -> void:
 	_room_box.add_child(leave)
 
 
-func _start_game() -> void:
+func _start_game(only_id := "") -> void:
 	if Net.capacity() > Net.MAX_PLAYERS:
 		Net.start_game({"mode": "athlon"})
 		return
 	var g: Dictionary = GAMES[_game_idx]
-	var cfg := {"mode": g.mode}
+	var cfg := {"mode": g.mode, "pool_off": MinigamePicker.disabled_ids()}
+	if only_id != "":
+		Net.start_game({"mode": "minigame", "id": only_id, "pool_off": cfg.pool_off})
+		return
 	if g.mode == "race":
 		cfg["track"] = Game.TRACKS[_track_idx].id
 		cfg["laps"] = [2, 3, 5][_laps_idx]
@@ -220,14 +235,11 @@ func _start_game() -> void:
 		cfg["rounds"] = ROUNDS[_rounds_idx]
 		cfg["pmode"] = Game.PARTY_MODES[_pmode_idx].id
 	else:
-		var id := String(g.id)
-		if id == "_random":
-			var ids: Array = []
-			for k in range(3, GAMES.size()):
-				if not bool(Game.minigame_info(String(GAMES[k].id)).get("mode", false)):
-					ids.append(GAMES[k].id)
-			id = String(ids[randi() % ids.size()])
-		cfg["id"] = id
+		var ids: Array = MinigamePicker.enabled_ids().filter(func(i: String) -> bool: return not bool(Game.minigame_info(i).get("mode", false)))
+		if ids.is_empty():
+			ids = MinigamePicker.online_games().map(func(m: Dictionary) -> String: return String(m.id))
+			_on_status("Keine Minispiele ausgewählt – es wird aus allen gewählt.")
+		cfg["id"] = String(ids[randi() % ids.size()])
 	Net.start_game(cfg)
 
 

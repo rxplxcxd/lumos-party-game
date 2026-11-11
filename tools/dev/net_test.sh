@@ -28,8 +28,8 @@ if [ "$HEADLESS" = "1" ]; then
   SHOTS_C=""
 else
   RUN="xvfb-run -a -s '-screen 0 960x540x24' $G --path . --rendering-driver opengl3 --resolution 960x540"
-  SHOTS_H="--shots=40,60 --shotdir=$OUT/host"
-  SHOTS_C="--shots=40,60 --shotdir=$OUT/client"
+  SHOTS_H="--shots=${SHOTS:-40,60} --shotdir=$OUT/host"
+  SHOTS_C="--shots=${SHOTS:-40,60} --shotdir=$OUT/client"
 fi
 LUMOS_NET_TEST_UID=hostA timeout $((DUR + 20)) bash -c "$RUN -- --net-test=host --net-autodrive --net-game=$GAME --track=$TRACK --net-board=$TRACK --net-rounds=5 --laps=1 --net-code-file=$CODE_FILE $SHOTS_H --quit=$DUR" > "$OUT/host.log" 2>&1 &
 H=$!

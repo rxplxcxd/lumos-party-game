@@ -526,25 +526,8 @@ func _slot_of_peer(id: String) -> int:
 func _net_barrier() -> void:
 	if not Net.online:
 		return
-	_message("Warte auf Mitspieler …", Color(1, 1, 1, 0.9), 2.0)
-	if Net.is_host:
-		var waited := 0.0
-		while waited < 12.0:
-			var all := true
-			for id in Net.players:
-				if id != Net.me and not _net_ready.has(id):
-					all = false
-			if all:
-				break
-			await get_tree().process_frame
-			waited += get_process_delta_time()
-		Net.send({"k": "go"}, true)
-	else:
-		Net.send({"k": "ready"}, true, false)
-		var w2 := 0.0
-		while not _net_go and w2 < 15.0:
-			await get_tree().process_frame
-			w2 += get_process_delta_time()
+	# Lade-Gate: Der Countdown startet erst, wenn ALLE Geräte die Strecke fertig geladen haben
+	await Net.loading_gate()
 	if "--net-test" in str(OS.get_cmdline_user_args()):
 		print("[NET] Start-Countdown um %.2f s (Host=%s)" % [Time.get_ticks_msec() / 1000.0, Net.is_host])
 

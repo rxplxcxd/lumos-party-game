@@ -73,8 +73,6 @@ var backdrop_style := "auto"
 var critters := true
 var hurry_at := 12.0             # Sekunden vor Schluss: taktsynchroner Wechsel in die Hurry-Up-Version
 var _music_hurried := false
-var _net_ready: Dictionary = {}
-var _net_go := false
 var _debug_ai := "--debug-ai" in OS.get_cmdline_user_args()
 
 
@@ -200,6 +198,8 @@ func _flow() -> void:
 	state = "intro"
 	_freeze_all(true)
 	await get_tree().process_frame
+	# Online: Intro erst, wenn alle Geräte die Arena geladen haben (sonst läuft beim Host schon „3, 2, 1“)
+	await Net.loading_gate()
 	await CutsceneManager.play("MinigameTeaser", {"game": self})
 	await _instructions()
 	if Net.in_game():
@@ -283,34 +283,9 @@ func _physics_process(delta: float) -> void:
 
 
 ## Online: alle Geräte starten gleichzeitig (Host gibt "go").
-func _on_net_barrier_msg(from: String, msg: Dictionary) -> void:
-	var k := String(msg.get("k", ""))
-	if k == "ready":
-		_net_ready[from] = true
-	elif k == "go":
-		_net_go = true
-
-
+## Zweites Gate direkt vor dem Countdown (Anleitungen können auf Geräten unterschiedlich lang stehen).
 func _net_barrier() -> void:
-	Net.message.connect(_on_net_barrier_msg)
-	if Net.is_host:
-		var waited := 0.0
-		while waited < 12.0:
-			var all := true
-			for id in Net.players:
-				if id != Net.me and not _net_ready.has(id):
-					all = false
-			if all:
-				break
-			await get_tree().process_frame
-			waited += get_process_delta_time()
-		Net.send({"k": "go"}, true)
-	else:
-		Net.send({"k": "ready"}, true, false)
-		var w := 0.0
-		while not _net_go and w < 15.0:
-			await get_tree().process_frame
-			w += get_process_delta_time()
+	await Net.sync_point("mg_go:%d" % Net.scene_epoch, 40.0)
 
 
 func alive_count() -> int:
