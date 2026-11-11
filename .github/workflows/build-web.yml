@@ -128,7 +128,10 @@ jobs:
       - name: Rauchtest im Browser (Chromium/WebGL2, inkl. Audio)
         run: |
           npm install --no-save playwright@1.49.1
-          npx playwright install --with-deps chromium
+          # System-Pakete nur nach bestem Bemühen: Die Runner-Images bringen die nötigen Bibliotheken mit, und
+          # ein Ausfall der Ubuntu-Paketserver (DNS) soll den Rauchtest nicht verhindern.
+          timeout 300 npx playwright install-deps chromium || echo "::warning::playwright install-deps fehlgeschlagen – nutze vorhandene Systembibliotheken"
+          npx playwright install chromium
           (cd build/web && python3 -m http.server 8765 &) && sleep 2
           node tools/web_smoke_test.js http://localhost:8765/
 
