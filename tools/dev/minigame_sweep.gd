@@ -85,7 +85,7 @@ func run() -> void:
 					tr += " platten=%s" % str(cnt)
 				var ys := []
 				for av in mg.avatars:
-					ys.append(snappedf((av as Node3D).global_position.y, 0.1) if av else 0.0)
+					ys.append(((av as Node3D).global_position.snapped(Vector3.ONE * 0.1)) if av else Vector3.ZERO)
 				print("TRACE ", tr, " y=", ys)
 			for i in 4:
 				var av = mg.avatars[i]

@@ -145,6 +145,18 @@ const MINIGAMES := [
 	{"id": "rhythm_kitchen", "name": "Rhythmus-Küche", "scene": "res://scenes/minigames/RhythmKitchen.tscn", "kind": "score", "online": true, "cats": ["coop"], "mode": true,
 		"desc": "Gemeinsam ein Fünf-Gänge-Menü im Takt kochen: schnippeln, rühren, wenden, würzen, verzieren. Am Ende vergibt Chefkoch Brummbär die Küchen-Note!",
 		"controls": "A/B: Noten · Stick: Pfeil-Noten schnippen"},
+	{"id": "bumper_balls", "name": "Kugel-Karambolage", "scene": "res://scenes/minigames/BumperBalls.tscn", "kind": "survival", "online": true, "cats": ["ffa"],
+		"desc": "Balanciere auf deiner Gummikugel und ramme die anderen von der Plattform ins Meer! Der Außenring bricht zweimal weg – wer zuletzt oben ist, gewinnt.",
+		"controls": "Stick: Kugel rollen · A: Hopsen · B: Sprint-Stoß"},
+	{"id": "log_bridge", "name": "Wackelsteg-Wirbel", "scene": "res://scenes/minigames/LogBridge.tscn", "kind": "survival", "online": true, "cats": ["ffa"],
+		"desc": "Vom Sägewerk rollen Baumstämme über den wackeligen Steg – spring im richtigen Moment drüber und halte dagegen, wenn der Steg kippt. Wer getroffen wird, fliegt in den Fluss!",
+		"controls": "Stick: Laufen & gegenhalten · A: Springen"},
+	{"id": "spark_carousel", "name": "Funken-Karussell", "scene": "res://scenes/minigames/SparkCarousel.tscn", "kind": "survival", "online": true, "cats": ["ffa"],
+		"desc": "Die Jahrmarkt-Drehscheibe nimmt dich mit! Spring über den kreisenden Funkenarm und geh aus den Blitzstreifen, bevor sie einschlagen. Drei Treffer und du bist raus.",
+		"controls": "Stick: Laufen · A: Springen"},
+	{"id": "sandwich_storm", "name": "Sandwich-Sturm", "scene": "res://scenes/minigames/SandwichStorm.tscn", "kind": "survival", "online": true, "cats": ["ffa"],
+		"desc": "Riesige Brotscheiben, Käse und Tomaten regnen auf den Picknickteller – der Schatten verrät, wo! Gelandete Zutaten stapeln sich zu Plattformen. Wer drunter steht, wird plattgedrückt.",
+		"controls": "Stick: Laufen · A: Springen (auf Stapel)"},
 ]
 
 const TRACKS := [
