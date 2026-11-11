@@ -267,6 +267,7 @@ func _physics_process(delta: float) -> void:
 		for i in 4:
 			if Game.players[i].cpu and active[i] and Net.owns_slot(i):
 				cpu_think(i, delta)
+				_cpu_full_jump(i, delta)
 		if _is_host_model_client() and not Game.players[Net.my_slot].cpu:
 			var mv := InputHub.move(Net.my_slot)
 			var held := {}
@@ -280,6 +281,24 @@ func _physics_process(delta: float) -> void:
 				print("[AI] P%d pos=%s mv=%s score=%s alive=%s" % [i, a.global_position.snapped(Vector3.ONE * 0.1), InputHub.move(i).snapped(Vector2.ONE * 0.01), scores[i], alive[i]])
 	elif state != "setup":
 		InputHub.clear_virtual()
+
+
+## Sprünge haben variable Höhe (A loslassen bremst). CPUs drücken A oft nur einen Frame lang – damit sie
+## trotzdem voll springen, wird A nach einem Absprung gehalten, solange die Figur steigt (wie ein Mensch, der
+## die Taste gedrückt lässt). Spiele mit eigener Sprunglogik bleiben unberührt (kein PartyAvatar / am Boden).
+var _cpu_jump_t: Array[float] = [0.0, 0.0, 0.0, 0.0]
+
+
+func _cpu_full_jump(i: int, delta: float) -> void:
+	var av = avatars[i]
+	if not (av is PartyAvatar):
+		return
+	var pa := av as PartyAvatar
+	if InputHub.virtual_held(i, "a") and pa.is_on_floor():
+		_cpu_jump_t[i] = 0.5
+	_cpu_jump_t[i] = maxf(0.0, _cpu_jump_t[i] - delta)
+	if _cpu_jump_t[i] > 0.0 and not pa.is_on_floor() and pa.velocity.y > 0.0:
+		InputHub.hold_virtual(i, "a")
 
 
 ## Online: alle Geräte starten gleichzeitig (Host gibt "go").

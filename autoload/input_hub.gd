@@ -242,6 +242,17 @@ func set_virtual(slot: int, mv: Vector2, held_actions: Dictionary = {}) -> void:
 	_virtual[slot].held = held_actions
 
 
+## Zusätzlich eine Aktion für diesen Frame halten (z. B. Sprungtaste der CPU weiterhalten)
+func hold_virtual(slot: int, action: String) -> void:
+	var h: Dictionary = (_virtual[slot].held as Dictionary).duplicate()
+	h[action] = true
+	_virtual[slot].held = h
+
+
+func virtual_held(slot: int, action: String) -> bool:
+	return bool((_virtual[slot].held as Dictionary).get(action, false))
+
+
 func clear_virtual() -> void:
 	for v in _virtual:
 		v.move = Vector2.ZERO

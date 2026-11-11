@@ -208,6 +208,18 @@ const MINIGAMES := [
 	{"id": "veggie_harvest", "name": "Gemüse-Ernte", "scene": "res://scenes/minigames/VeggieHarvest.tscn", "kind": "score", "online": true, "cats": ["2v2"],
 		"desc": "Erntezeit auf dem Bauernhof! Zieht das Gemüse aus dem Acker und bringt es in eure Kiste – aber nur die Sorte, die auf dem Schild steht. Goldenes Gemüse zählt immer dreifach.",
 		"controls": "Stick: Laufen · B mehrmals: Herausziehen · A: Rempler"},
+	{"id": "quick_fishing", "name": "Schnell-Angler", "scene": "res://scenes/minigames/QuickFishing.tscn", "kind": "score", "online": true, "cats": ["duel"],
+		"desc": "Zwei Angler, ein Biss: Sobald die Pose abtaucht und das Ausrufezeichen erscheint, schnell A! Aber Vorsicht – manchmal zuckt sie nur. Wer zu früh zieht, geht diese Runde leer aus.",
+		"controls": "A: Rute hochreißen (erst beim Biss!)"},
+	{"id": "slap_carousel", "name": "Klatsch-Karussell", "scene": "res://scenes/minigames/SlapCarousel.tscn", "kind": "survival", "online": true, "cats": ["duel"],
+		"desc": "Ein Riesenhandschuh kreist über dem Karussell! Orange heißt tief – drüberspringen. Lila heißt hoch – ducken. Wer erwischt wird, verliert ein Herz. Drei Herzen, ein Sieger.",
+		"controls": "Stick: Laufen · A: Springen · B halten: Ducken"},
+	{"id": "marble_maze", "name": "Murmel-Labyrinth", "scene": "res://scenes/minigames/MarbleMaze.tscn", "kind": "score", "online": true, "cats": ["duel"],
+		"desc": "Kipp dein Holzlabyrinth und lotse alle drei Murmeln ins grüne Zielloch – an den schwarzen Fallenlöchern vorbei! Wer zuerst alle versenkt, gewinnt das Duell.",
+		"controls": "Stick: Brett kippen"},
+	{"id": "stone_bowling", "name": "Steinkopf-Kegeln", "scene": "res://scenes/minigames/StoneBowling.tscn", "kind": "score", "online": true, "cats": ["duel"],
+		"desc": "Sechs grimmige Steinköpfe drehen sich am Ende der Tempelbahn. Leg mit A die Richtung fest, dann die Kraft – und räum möglichst viele ab. Alle sechs bringen einen Bonus!",
+		"controls": "A: Richtung festlegen · A: Kraft festlegen & werfen"},
 ]
 
 const TRACKS := [
