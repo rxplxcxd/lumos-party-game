@@ -62,6 +62,7 @@ var _net_pack_t := 0.0
 var _handicap := -1
 ## Spiel-Zufall: online auf allen Geräten gleich geseedet → identische Ereignisse (Farben, Bälle, Folgen).
 var rng := RandomNumberGenerator.new()
+var forced_extra: Dictionary = {}   # Online-Client: Zusatzergebnisse des Hosts
 var forced_placements: Array[int] = []
 var net_sync: NetAvatarSync
 ## Minispiel-Musik: -1 = automatisch (Rotation über die vier Soundtracks), 0..3 = fester Track,
@@ -399,14 +400,24 @@ func end_game() -> void:
 	# Online-Client: Endergebnis kommt vom Host (alle Geräte zeigen und verbuchen dasselbe)
 	if (net_sync or _host_model_online()) and not Net.is_host:
 		var w := 0.0
-		while forced_placements.size() != 4 and w < 5.0 and Net.online:
+		var hint: Label = null
+		while forced_placements.size() != 4 and w < 15.0 and Net.online:
 			await get_tree().process_frame
 			w += get_process_delta_time()
+			if w > 1.0 and hint == null:
+				hint = UI.label("Warte auf das Ergebnis des Hosts …", 28, Color.WHITE, true, 8)
+				hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+				hint.position.y -= 120
+				hud.add_child(hint)
+		if is_instance_valid(hint):
+			hint.queue_free()
+		if forced_placements.size() != 4:
+			push_warning("Online: kein Endergebnis vom Host – eigenes Ergebnis, der Host-Schnappschuss gleicht danach ab")
 	var placements := forced_placements if forced_placements.size() == 4 else compute_placements()
 	if (net_sync or _host_model_online()) and "--net-test" in str(OS.get_cmdline_user_args()):
 		print("[NET] Minispiel-Ende · Platzierungen %s · alive %s · empfangen %s" % [placements, alive, Net.debug_counts])
 	if (net_sync or _host_model_online()) and Net.is_host:
-		Net.send({"k": "end", "pl": placements, "sc": scores}, true)
+		Net.send({"k": "end", "pl": placements, "sc": scores, "x": NetCodec.enc(result_extra())}, true)
 	get_tree().call_group("critters", "excite", 6.0)
 	await CutsceneManager.play("MinigameWin", {"game": self, "placements": placements})
 	await _show_results(placements)
@@ -685,6 +696,8 @@ func _on_host_model_msg(_from: String, msg: Dictionary) -> void:
 					for fi in mini(4, fsc.size()):
 						scores[fi] = float(fsc[fi])
 					forced_placements = places
+					var x: Variant = NetCodec.dec(msg.get("x", {}))
+					forced_extra = x if x is Dictionary else {}
 					end_game()
 
 
@@ -731,7 +744,8 @@ func _unpack_avatars(arr: Array) -> void:
 
 func _return(placements: Array[int]) -> void:
 	Game.last_results = {"game": game_id, "placements": placements, "scores": scores.duplicate(), "cat": category, "teams": teams.duplicate()}
-	Game.last_results.merge(result_extra(), true)
+	# Online-Client: Zusatzergebnisse (z. B. Boss-Schaden) ebenfalls vom Host
+	Game.last_results.merge(forced_extra if not forced_extra.is_empty() else result_extra(), true)
 	if not Game.players[0].cpu:
 		EventBus.minigame_result.emit(placements)
 	match Game.mode:

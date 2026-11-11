@@ -2127,27 +2127,27 @@ func _state_pack() -> Dictionary:
 
 ## Übernimmt den Host-Stand. Rückgabe: true, wenn etwas abwich (und korrigiert wurde).
 func _state_apply(st: Dictionary) -> bool:
-	var mine: Dictionary = NetCodec.roundtrip(_state_pack())
-	var changed := false
+	var diffs: Array = []
 	var pl: Array = st.get("pl", [])
 	for i in mini(4, pl.size()):
 		for k in (pl[i] as Dictionary):
 			if k in SYNC_PLAYER_KEYS and str(Game.players[i].get(k)) != str(pl[i][k]):
+				diffs.append("P%d.%s %s→%s" % [i, k, str(Game.players[i].get(k)), str(pl[i][k])])
 				Game.players[i][k] = pl[i][k]
-				changed = true
 	var party: Dictionary = st.get("party", {})
 	for k in party:
 		if k in SYNC_PARTY_KEYS and str(Game.party.get(k)) != str(party[k]):
+			diffs.append("%s %s→%s" % [k, str(Game.party.get(k)), str(party[k])])
 			Game.party[k] = party[k]
-			changed = true
 	var rng := String(st.get("rng", ""))
 	if rng.is_valid_int() and str(Game.prng.state) != rng:
+		diffs.append("Zufall")
 		Game.prng.state = int(rng)
-		changed = true
+	var changed := not diffs.is_empty()
 	if changed:
-		push_warning("Online: Brettzustand vom Host übernommen (%s)" % str(mine).left(120))
+		push_warning("Online: Brettzustand vom Host übernommen: %s" % ", ".join(diffs))
 		if "--net-test" in str(OS.get_cmdline_user_args()):
-			print("[NET] Resync vom Host")
+			print("[NET] Resync vom Host: %s" % ", ".join(diffs))
 		if not is_inside_tree() or rigs.size() < 4:
 			return true   # ohne aufgebaute Szene (Prüfskript) nur die Daten übernehmen
 		_formation_all(true)

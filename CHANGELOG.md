@@ -35,12 +35,20 @@ Rennen); Lumos-Athlon profitiert von der neuen Platzvergabe.
   * Weicht ein Gerät ab, übernimmt es den Host-Stand sofort.
   * Der neue `NetCodec` überträgt Ganzzahl-Schlüssel, Ganzzahlen und Vektoren verlustfrei über JSON und erzeugt
     nie Objekte aus Netzdaten.
+* **Minispiel-Übergänge:**
+  * Das Endergebnis enthält jetzt auch Zusatzergebnisse (z. B. Boss-Schaden).
+  * Gäste warten bis zu 15 s statt 5 s darauf und zeigen dabei einen Hinweis. Vorher rechneten sie bei
+    langsamer Verbindung eigene Platzierungen.
 * **Tests:**
   * `net_test.sh` kann jetzt mehrere Gäste testen (`CLIENTS=2`), mit einem bedienenden Mensch-Gast (`HUMAN=1`)
     und eigener Figur je Gerät (`HEROES=…`).
   * Das Skript prüft: identische Spielerliste auf allen Geräten, eindeutige Plätze, Bedienelemente nur für den
     eigenen Platz und identischen Brettzustand.
   * `test_systems.gd` prüft zusätzlich Codec, Spielerliste und Host-Korrektur.
+  * Die CI spielt jetzt zusätzlich ein Online-Brett mit drei Geräten (zwei Gäste, einer davon bedient als
+    Mensch).
+  * Testhilfe `--test-partner` (nur Debug-Builds) lässt Partner früh erscheinen und erzwingt so unterbrochene
+    Züge.
 
 ## 1.2.4 – System-Update: Items, CPU-Stufen, Routen, Emotes, Touch & Controller
 * **Item-Persistenz (Bugfix):** Items gingen verloren, wenn ein Zug durch ein Partner-Feld, ein Minispiel oder

@@ -78,9 +78,10 @@ func expire_round() -> void:
 
 ## Rundenstart: ggf. neuen Partner aufs Brett setzen.
 func maybe_spawn() -> void:
-	if int(Game.party.round) < 2 or String(Game.party.get("free_partner", "")) != "":
+	var forced := OS.is_debug_build() and "--test-partner" in OS.get_cmdline_user_args()   # Test: immer, ab Runde 1
+	if (int(Game.party.round) < 2 and not forced) or String(Game.party.get("free_partner", "")) != "":
 		return
-	if Game.prng.randf() > 0.7:
+	if Game.prng.randf() > (1.0 if forced else 0.7):
 		return
 	var taken: Array = []
 	for p in 4:

@@ -105,7 +105,9 @@ und Zufallsmodus ziehen nur aus aktiven Spielen (mit Rückfall auf alle Online-S
   zeigen den Zustand (`gs`) – für Spiele mit gemeinsamen Objekten (Seilziehen, Korbschlacht, Schatzkisten,
   Kugel-Karambolage, Stampf-Wellen, Nagel-Profi, Raketen-Rucksack, Eislauf-Münzjagd, Blockpfad-Poker,
   UFO-Kaperung, Schalter-Schikane …). Hilfsfunktionen `net_pack`/`net_unpack` übertragen den Spielzustand.
-* **Endergebnis** kommt immer vom Host (`end` mit Platzierungen und Punkten) – alle Geräte verbuchen dasselbe.
+* **Endergebnis:** Es kommt immer vom Host (`end` mit Platzierungen, Punkten und seit 1.2.5 auch Zusatzergebnissen
+  `x`, z. B. Boss-Schaden). Alle Geräte verbuchen dasselbe. Gäste warten bis zu 15 s darauf („Warte auf das
+  Ergebnis des Hosts …“); kommt es nicht, gleicht der Host-Schnappschuss beim nächsten Zug ab.
 
 ### Online-Party (Brett)
 Alle Geräte führen den Brettablauf identisch aus (`Game.prng`, gleicher Startwert). Jede Spieler-Entscheidung –

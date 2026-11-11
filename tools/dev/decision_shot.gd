@@ -20,8 +20,8 @@ func run() -> void:
 	Game.start_party("meadow", 5, "classic")
 	Game.party.first_intro_done = true
 	Game.party.round_started = 1
-	Game.players[0].items = ["double_dice", "warp_card"]
-	Game.players[1].items = ["double_dice", "warp_card"]
+	Game.players[0].items = []   # sonst öffnet der laufende Zug einen eigenen Item-Dialog
+	Game.players[1].items = []
 	var board: Node = load("res://scenes/party/PartyBoard.tscn").instantiate()
 	add_child(board)
 	for k in 30:
@@ -30,15 +30,12 @@ func run() -> void:
 	var labels := ["Doppelwürfel\nZwei Würfel: 2–20 Felder", "Platztausch-Karte\nTausche den Platz", "Kein Item"]
 	# Zuschauer-Ansicht: CPU (Platz 1) entscheidet
 	board.call("_decision_panel", 1, "Item benutzen?", labels, [Color("#43b8c9"), Color("#43b8c9"), Color("#8a5a3c")], 1, [], 2, 1, 22, 460.0, 3.0, 0.5)
-	for k in 125:
-		await tree.process_frame
+	await tree.create_timer(2.2).timeout   # Markierung erscheint nach 1,65 s, Auswahl nach 3 s
 	tree.root.get_texture().get_image().save_png(out + "/decision_spectator.png")
-	for k in 120:
-		await tree.process_frame
+	await tree.create_timer(2.0).timeout
 	# Bedienansicht: lokaler Mensch (Platz 0)
 	board.call("_decision_panel", 0, "Item benutzen?", labels, [Color("#43b8c9"), Color("#43b8c9"), Color("#8a5a3c")], 2, [], 2, 1, 22, 460.0, 6.0, 0.5)
-	for k in 30:
-		await tree.process_frame
+	await tree.create_timer(0.8).timeout
 	tree.root.get_texture().get_image().save_png(out + "/decision_player.png")
 	print("SHOTS OK")
 	tree.quit()
