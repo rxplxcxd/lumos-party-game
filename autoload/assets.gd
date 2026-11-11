@@ -159,6 +159,8 @@ const MODELS_Q := {
 	"mt/fence": QMT + "Hilly_Prop_Fence_Boards_1.obj", "mt/fence_gate": QMT + "Hilly_Prop_Fence_Gate_1.obj",
 	"mt/log_bridge": QMT + "Hilly_Prop_Bridge_Log_Middle.obj", "mt/branch": QMT + "Hilly_Prop_Branch_1.obj",
 	"mt/grass_clump": QMT + "Hilly_Prop_Grass_Clump_2.obj", "mt/bush_round": QMT + "Hilly_Prop_Bush_2.obj",
+	# Fahrzeuge für die neuen Minispiele
+	"car/taxi": KCAR + "taxi.glb", "water/boat_row": KW + "boat-row-large.glb", "water/boat_fan": KW + "boat-fan.glb",
 }
 
 
