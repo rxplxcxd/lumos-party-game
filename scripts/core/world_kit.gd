@@ -62,6 +62,7 @@ static var _lava_shader: Shader
 
 static func env(parent: Node, preset := "day", glow := true) -> WorldEnvironment:
 	var p: Dictionary = PRESETS.get(preset, PRESETS.day)
+	Assets.season = String(Assets.SEASON_OF_ENV.get(preset, ""))
 	var we := WorldEnvironment.new()
 	var e := Environment.new()
 	var sky := Sky.new()
@@ -449,9 +450,18 @@ static func backdrop(parent: Node3D, style: String, ground: Color, ground_y := -
 		hill_col = Color("#f4f8ff").lerp(horizon, 0.2)
 	elif style == "night":
 		hill_col = ground.darkened(0.2).lerp(horizon, 0.15)
+	# Jede zweite Erhebung ist ein echtes Low-Poly-Gebirge (eingefärbt wie der Dunst) – organischere Silhouette
+	var mount_mat := mat(hill_col.lerp(horizon, 0.08), 1.0)
+	var use_mountains := not style in ["sky", "sky_dusk", "cake"]
 	for i in 22:
 		var a := TAU * i / 22.0 + rng.randf_range(-0.08, 0.08)
 		var r := rng.randf_range(150.0, 240.0)
+		if use_mountains and i % 2 == 0:
+			var mk: String = ["env/mount_a", "env/mount_b", "env/mount_c"][i / 2 % 3]
+			var mnt := Assets.spawn(mk, root, Vector3(cos(a) * r, ground_y - 1.5, sin(a) * r), rng.randf() * 360.0, rng.randf_range(3.2, 5.5))
+			mnt.scale.y *= rng.randf_range(0.9, 1.5) if style != "beach" else 0.7
+			_tint_all(mnt, mount_mat)
+			continue
 		var h := MeshInstance3D.new()
 		var sm := SphereMesh.new()
 		sm.radius = rng.randf_range(28.0, 60.0)
@@ -473,24 +483,14 @@ static func backdrop(parent: Node3D, style: String, ground: Color, ground_y := -
 	var cloud_col := Color(1, 1, 1) if style != "night" else Color("#5a6496")
 	if style in ["sky_dusk", "cake"]:
 		cloud_col = Color("#ffe6f0")
+	var cloud_mat := mat(cloud_col, 1.0, 0.18 if style != "night" else 0.0)
 	for c in 16:
-		var cluster := Node3D.new()
-		cloud_pivot.add_child(cluster)
 		var a2 := TAU * c / 16.0 + rng.randf() * 0.3
 		var r2 := rng.randf_range(90.0, 230.0)
-		cluster.position = Vector3(cos(a2) * r2, rng.randf_range(38.0, 75.0), sin(a2) * r2)
-		for k in rng.randi_range(3, 6):
-			var puff := MeshInstance3D.new()
-			var ps := SphereMesh.new()
-			ps.radius = rng.randf_range(6.0, 12.0)
-			ps.height = ps.radius * 1.3
-			ps.radial_segments = 16
-			ps.rings = 8
-			ps.material = mat(cloud_col, 1.0, 0.12 if style != "night" else 0.0)
-			puff.mesh = ps
-			puff.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			puff.position = Vector3(k * 7.0 - 14.0 + rng.randf_range(-2, 2), rng.randf_range(-2.0, 3.0), rng.randf_range(-4, 4))
-			cluster.add_child(puff)
+		# Low-Poly-Wolken (Quaternius) statt Kugelhaufen – ein Modell je Wolke, gemeinsames Material
+		var ck: String = ["qp/cloud_a", "qp/cloud_b", "qp/cloud_c"][c % 3]
+		var cloud := Assets.spawn(ck, cloud_pivot, Vector3(cos(a2) * r2, rng.randf_range(38.0, 75.0), sin(a2) * r2), rng.randf() * 360.0, rng.randf_range(5.0, 9.0))
+		_tint_all(cloud, cloud_mat)
 	var ct := cloud_pivot.create_tween().set_loops()
 	ct.tween_property(cloud_pivot, "rotation:y", TAU, 900.0).as_relative()
 	# Kreisende Vögel (Möwen am Strand, Schwalben auf der Wiese) – nachts dafür Sternschnuppen
@@ -550,6 +550,13 @@ static func backdrop(parent: Node3D, style: String, ground: Color, ground_y := -
 		em.preprocess = 6.0
 		em.emitting = true
 	return root
+
+
+## Ein Material für alle Meshes eines Modells (Horizont-Deko: einheitlich eingefärbt, ohne Schatten)
+static func _tint_all(n: Node, m: Material) -> void:
+	for mi in n.find_children("*", "MeshInstance3D", true, false):
+		(mi as MeshInstance3D).material_override = m
+		(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 static func _find_env(n: Node) -> WorldEnvironment:

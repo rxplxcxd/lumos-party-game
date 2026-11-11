@@ -35,6 +35,9 @@ func build(parent: Node3D, id: String, graph: Array) -> void:
 	root = Node3D.new()
 	root.name = "Board"
 	parent.add_child(root)
+	# Jahreszeit der Vegetation (Upgrade-Pools in Assets): Zauberwald bemoost, sonst nach Umgebung
+	if id == "glowforest":
+		Assets.season = "moss"
 	match id:
 		"pirates":
 			_build_pirates()
@@ -56,6 +59,7 @@ func build(parent: Node3D, id: String, graph: Array) -> void:
 			_build_tower()
 		_:
 			_build_dungeon()
+	_build_extra()
 	_build_spaces()
 	_build_paths()
 	_build_star()
@@ -297,6 +301,37 @@ func _free_spot(p: Vector3, min_d := 3.2, tall := false) -> bool:
 		if tall and p.z > q.z and p.z - q.z < 10.0 and absf(p.x - q.x) < 4.5:
 			return false
 	return true
+
+
+## Etappe 3: Themen-Details aus den neuen Low-Poly-Packs – Felder, Ufer, Lager, Ruinen, Grubenbahn, Strandgut.
+## Alles über _scatter_free (hält Abstand zu Feldern und Wegen), daher nie im Weg der Figuren.
+func _build_extra() -> void:
+	var A := Rect2(-30, -22, 60, 44)
+	match board_id:
+		"meadow":
+			_scatter_free(["qn/corn", "qn/corn_b", "qn/wheat"], 22, A, 0.0, Vector2(0.9, 1.2), 3.0)
+			_scatter_free(["mt/cattail", "mt/cattail_b", "mt/grass_clump", "env/plant_lotus"], 18, A, 0.0, Vector2(1.4, 2.0), 2.6)
+			_scatter_free(["mt/hollow_trunk", "mt/sit_log", "mt/wood_pile", "qn/log_moss", "mt/stepping", "mt/stepping_b"], 10, A, 0.0, Vector2(1.3, 1.7), 3.4)
+			_scatter_free(["mt/campfire", "mt/lean_to"], 2, A, 0.0, Vector2(1.4, 1.6), 5.0)
+			_scatter_free(["qp/tree_fruit", "qp/bush_fruit"], 5, A, 0.0, Vector2(0.28, 0.36), 4.5)
+		"pirates":
+			_scatter_free(["mt/shell", "mt/shell_b", "mt/starfish"], 26, A, 0.02, Vector2(4.0, 6.0), 2.4)
+			_scatter_free(["mt/coconut", "mt/treasure", "qp/chest"], 7, A, 0.0, Vector2(1.3, 1.8), 3.6)
+			_scatter_free(["mt/palm", "mt/dock_steps"], 6, A, 0.0, Vector2(1.1, 1.4), 4.5)
+		"dungeon":
+			_scatter_free(["mt/stalagmite", "mt/stalagmite_s", "mt/minecart", "mt/pick", "mt/support", "mt/rail_stop"], 16, A, 0.0, Vector2(1.4, 2.2), 3.4)
+			_scatter_free(["qp/gem_blue", "qp/gem_pink", "qp/gem_green"], 8, A, 0.3, Vector2(0.3, 0.45), 3.0)
+		"graveyard":
+			_scatter_free(["qn/tree_dead", "mt/ruin", "mt/ruin_b", "mt/ruin_c", "qn/log_moss", "qn/stump_moss"], 14, A, 0.0, Vector2(1.1, 1.6), 3.6)
+		"frost":
+			_scatter_free(["qn/tree_dead_snow", "mt/wood_pile", "mt/lean_to", "mt/sit_log"], 10, A, 0.0, Vector2(1.1, 1.5), 3.8)
+		"glowforest":
+			_scatter_free(["mt/hollow_trunk", "qn/log_moss", "qn/stump_moss", "qn/rock_moss", "env/plant_bulb", "env/plant_lotus", "mt/cattail"], 22, A, 0.0, Vector2(1.2, 1.8), 3.0)
+			_scatter_free(["qn/willow_autumn", "qn/birch_autumn"], 4, A, 0.0, Vector2(0.9, 1.1), 5.0)
+		"cake":
+			_scatter_free(["qp/tree_fruit", "qp/bush_fruit", "qp/fruit"], 10, A, 0.0, Vector2(0.25, 0.34), 4.0)
+		"sky":
+			_scatter_free(["qp/cloud_a", "qp/cloud_b", "qp/cloud_c"], 8, A, -1.2, Vector2(1.2, 1.8), 4.5)
 
 
 func _scatter_free(keys: Array, count: int, area: Rect2, y := 0.0, scl := Vector2(0.8, 1.2), min_d := 3.2) -> void:

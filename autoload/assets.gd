@@ -40,6 +40,128 @@ const KSB := "res://assets/3d/minigames-and-others/KayKit_Space_Base_Bits_1.0_FR
 const KCITY := "res://assets/3d/tracks-enviroment/kenney_city-kit-commercial_2.1/Models/GLB format/"
 const KSUB := "res://assets/3d/tracks-enviroment/kenney_city-kit-suburban_20/Models/GLB format/"
 
+# --- Etappe 3: hochwertigere Low-Poly-Packs (Quaternius Ultimate Nature/Platformer, LowPoly Environment, Modular Terrain) ---
+const QN := "res://assets/3d/quaternius/nature/"
+const QP := "res://assets/3d/quaternius/platformer/"
+const QENV := "res://assets/3d/nature/lowpoly_env/"
+const QMT := "res://assets/3d/nature/modular_terrain/"
+
+## Bisherige Natur-Schlüssel → neue Modell-Pools (je Position eine Variante, Größe auf das alte Modell normiert:
+## "h" = Zielhöhe, "w" = Zielbreite). So werden alle Bretter, Minispiele und Menüs auf einmal aufgewertet.
+const UPGRADE := {
+	"nat/tree_oak": {"pool": ["CommonTree_1", "CommonTree_2", "CommonTree_3", "CommonTree_4", "CommonTree_5"], "h": 1.5},
+	"nat/tree_default": {"pool": ["BirchTree_1", "BirchTree_2", "BirchTree_3", "CommonTree_2", "CommonTree_4"], "h": 1.8},
+	"nat/tree_fat": {"pool": ["Willow_1", "Willow_2", "Willow_3", "Willow_4", "Willow_5"], "h": 1.4},
+	"nat/tree_pine": {"pool": ["PineTree_1", "PineTree_2", "PineTree_3", "PineTree_4", "PineTree_5"], "h": 1.6},
+	"nat/pine": {"pool": ["PineTree_1", "PineTree_2", "PineTree_3", "PineTree_4", "PineTree_5"], "h": 1.5},
+	"nat/pine_snow": {"pool": ["PineTree_Snow_1", "PineTree_Snow_2", "PineTree_Snow_3", "PineTree_Snow_4", "PineTree_Snow_5"], "h": 1.7},
+	"hk/tree_snow": {"pool": ["PineTree_Snow_1", "PineTree_Snow_3", "PineTree_Snow_5", "CommonTree_Snow_1"], "h": 2.0},
+	"hk/tree_snow_b": {"pool": ["PineTree_Snow_2", "PineTree_Snow_4", "BirchTree_Snow_2", "CommonTree_Snow_3"], "h": 2.0},
+	"nat/tree_palm": {"pool": ["PalmTree_1", "PalmTree_2", "PalmTree_3", "PalmTree_4"], "h": 1.5},
+	"nat/tree_palm_bend": {"pool": ["PalmTree_2", "PalmTree_3", "PalmTree_4"], "h": 1.5},
+	"pirate/palm": {"pool": ["PalmTree_1", "PalmTree_2", "PalmTree_3", "PalmTree_4"], "h": 4.4},
+	"pirate/palm_bend": {"pool": ["PalmTree_2", "PalmTree_3", "PalmTree_4"], "h": 4.4},
+	"plat/tree": {"pool": ["BirchTree_1", "BirchTree_2", "BirchTree_4", "CommonTree_1", "CommonTree_3"], "h": 2.1},
+	"plat/tree_pine": {"pool": ["PineTree_1", "PineTree_3", "PineTree_5"], "h": 2.1},
+	"for/tree_a": {"pool": ["CommonTree_1", "CommonTree_2", "CommonTree_3", "CommonTree_5"], "h": 4.3},
+	"for/tree_b": {"pool": ["PineTree_2", "PineTree_4", "BirchTree_3", "BirchTree_5"], "h": 5.8},
+	"for/tree_c": {"pool": ["Willow_1", "Willow_3", "CommonTree_4"], "h": 3.6},
+	"for/tree_bare": {"pool": ["CommonTree_Dead_1", "CommonTree_Dead_2", "BirchTree_Dead_1", "Willow_Dead_2"], "h": 3.0},
+	"surv/tree": {"pool": ["PineTree_1", "PineTree_2", "PineTree_3"], "h": 1.8},
+	"nat/bush": {"pool": ["Bush_1", "Bush_2", "BushBerries_1", "BushBerries_2"], "hw": [0.36, 0.55]},
+	"for/bush": {"pool": ["Bush_1", "Bush_2", "BushBerries_1"], "hw": [0.34, 0.45]},
+	"nat/rock_large": {"pool": ["Rock_1", "Rock_2", "Rock_3", "Rock_4", "Rock_5"], "hw": [0.42, 1.0]},
+	"nat/rock_tall": {"pool": ["Rock_6", "Rock_7"], "hw": [1.0, 0.95]},
+	"nat/rock_small": {"pool": ["Rock_1", "Rock_3", "Rock_5"], "hw": [0.24, 0.4]},
+	"for/rock_a": {"pool": ["Rock_2", "Rock_4"], "hw": [0.52, 0.62]},
+	"for/rock_b": {"pool": ["Rock_6", "Rock_7", "Rock_3"], "hw": [0.95, 0.86]},
+	"nat/stump": {"pool": ["TreeStump"], "w": 0.45},
+	"nat/log": {"pool": ["WoodLog"], "w": 1.05},
+	"nat/grass": {"pool": ["Grass", "Grass_2", "Grass_Short"], "w": 0.5},
+	"for/grass": {"pool": ["Grass", "Grass_2"], "h": 0.5},
+	"nat/cactus": {"pool": ["Cactus_1", "Cactus_2", "Cactus_3", "CactusFlower_1", "CactusFlowers_2"], "h": 0.85},
+	"nat/cactus_short": {"pool": ["Cactus_4", "Cactus_5", "CactusFlowers_3", "CactusFlowers_4"], "h": 0.55},
+	"nat/lily": {"pool": ["Lilypad"], "w": 0.4},
+	"plat/flowers": {"pool": ["Flowers", "Plant_1", "Plant_3", "@env:Plant_5", "@env:Plant_6", "@mt:Hilly_Prop_Flower_Daisy"], "w": 0.8},
+	"nat/flower_red": {"pool": ["@mt:Hilly_Prop_Flower_Rose", "@mt:Hilly_Prop_Flower_Tulip"], "h": 0.34},
+	"nat/flower_yellow": {"pool": ["@mt:Hilly_Prop_Flower_Sunflower", "@mt:Hilly_Prop_Flower_Daisy"], "h": 0.34},
+	"nat/flower_purple": {"pool": ["@mt:Hilly_Prop_Flower_Lily_Blue", "@mt:Hilly_Prop_Flower_Lily_Pink"], "h": 0.34},
+	"nat/mushroom": {"pool": ["@mt:Hilly_Prop_Mushroom_1", "@mt:Hilly_Prop_Mushroom_2"], "h": 0.3},
+	"plat/mushrooms": {"pool": ["@mt:Hilly_Prop_Mushroom_1", "@mt:Hilly_Prop_Mushroom_2"], "h": 0.42},
+}
+
+## Neue, direkt nutzbare Modelle (Schlüssel wie bisher "gruppe/name").
+const MODELS_Q := {
+	# Quaternius Nature – Felder, Pflanzen
+	"qn/corn": QN + "Corn_1.fbx", "qn/corn_b": QN + "Corn_2.fbx", "qn/wheat": QN + "Wheat.fbx",
+	"qn/plant": QN + "Plant_2.fbx", "qn/plant_b": QN + "Plant_4.fbx", "qn/plant_c": QN + "Plant_5.fbx",
+	"qn/flowers": QN + "Flowers.fbx", "qn/lilypad": QN + "Lilypad.fbx",
+	"qn/log_moss": QN + "WoodLog_Moss.fbx", "qn/stump_moss": QN + "TreeStump_Moss.fbx", "qn/rock_moss": QN + "Rock_Moss_2.fbx",
+	"qn/willow": QN + "Willow_2.fbx", "qn/willow_autumn": QN + "Willow_Autumn_2.fbx", "qn/birch_autumn": QN + "BirchTree_Autumn_1.fbx",
+	"qn/tree_dead": QN + "CommonTree_Dead_3.fbx", "qn/tree_dead_snow": QN + "CommonTree_Dead_Snow_2.fbx",
+	# Quaternius Platformer
+	"qp/cloud_a": QP + "nature/Cloud_1.gltf", "qp/cloud_b": QP + "nature/Cloud_2.gltf", "qp/cloud_c": QP + "nature/Cloud_3.gltf",
+	"qp/tree": QP + "nature/Tree.gltf", "qp/tree_fruit": QP + "nature/Tree_Fruit.gltf", "qp/bush": QP + "nature/Bush.gltf",
+	"qp/bush_fruit": QP + "nature/Bush_Fruit.gltf", "qp/fruit": QP + "nature/Fruit.gltf",
+	"qp/rock_plat_a": QP + "nature/RockPlatforms_1.gltf", "qp/rock_plat_b": QP + "nature/RockPlatforms_2.gltf",
+	"qp/rock_plat_c": QP + "nature/RockPlatforms_3.gltf", "qp/rock_plat_l": QP + "nature/RockPlatforms_Large.gltf",
+	"qp/rock_plat_m": QP + "nature/RockPlatforms_Medium.gltf", "qp/rock_plat_tall": QP + "nature/RockPlatform_Tall.gltf",
+	"qp/bomb": QP + "level_and_mechanics/Bomb.gltf", "qp/bouncer": QP + "level_and_mechanics/Bouncer.gltf",
+	"qp/cannon": QP + "level_and_mechanics/Cannon.gltf", "qp/cannonball": QP + "level_and_mechanics/Cannonball.gltf",
+	"qp/chest": QP + "level_and_mechanics/Chest.gltf", "qp/door": QP + "level_and_mechanics/Door.gltf",
+	"qp/flag": QP + "level_and_mechanics/Goal_Flag.gltf", "qp/lever": QP + "level_and_mechanics/Lever.gltf",
+	"qp/saw": QP + "level_and_mechanics/Hazard_Saw.gltf", "qp/spike_trap": QP + "level_and_mechanics/Hazard_SpikeTrap.gltf",
+	"qp/hazard_cyl": QP + "level_and_mechanics/Hazard_Cylinder.gltf", "qp/spikes": QP + "level_and_mechanics/Spikes.gltf",
+	"qp/spiky_ball": QP + "level_and_mechanics/SpikyBall.gltf", "qp/bridge": QP + "level_and_mechanics/Bridge_Small.gltf",
+	"qp/bridge_mod": QP + "level_and_mechanics/Bridge_Modular.gltf", "qp/fence": QP + "level_and_mechanics/Fence_Middle.gltf",
+	"qp/fence_post": QP + "level_and_mechanics/Fence_1.gltf", "qp/arrow": QP + "level_and_mechanics/Arrow_Side.gltf",
+	"qp/arrow_up": QP + "level_and_mechanics/Arrow_Up.gltf", "qp/pipe": QP + "level_and_mechanics/Pipe_Straight.gltf",
+	"qp/pipe_end": QP + "level_and_mechanics/Pipe_End.gltf", "qp/pipe_90": QP + "level_and_mechanics/Pipe_90.gltf",
+	"qp/tower": QP + "level_and_mechanics/Tower.gltf", "qp/stairs": QP + "level_and_mechanics/Stairs_Small.gltf",
+	"qp/plant_large": QP + "level_and_mechanics/Plant_Large.gltf", "qp/plant_small": QP + "level_and_mechanics/Plant_Small.gltf",
+	"qp/coin": QP + "powerups_and_pickups/Coin.gltf", "qp/gem_blue": QP + "powerups_and_pickups/Gem_Blue.gltf",
+	"qp/gem_green": QP + "powerups_and_pickups/Gem_Green.gltf", "qp/gem_pink": QP + "powerups_and_pickups/Gem_Pink.gltf",
+	"qp/heart": QP + "powerups_and_pickups/Heart.gltf", "qp/key": QP + "powerups_and_pickups/Key.gltf",
+	"qp/star": QP + "powerups_and_pickups/Star.gltf", "qp/thunder": QP + "powerups_and_pickups/Thunder.gltf",
+	"qp/cube_q": QP + "cubes/Cube_Question.gltf", "qp/cube_crate": QP + "cubes/Cube_Crate.gltf",
+	"qp/cube_bricks": QP + "cubes/Cube_Bricks.gltf", "qp/cube_grass": QP + "cubes/Cube_Grass_Single.gltf",
+	"qp/cube_excl": QP + "cubes/Cube_Exclamation.gltf", "qp/cube_spikes": QP + "cubes/Cube_Spikes.gltf",
+	"qp/bee": QP + "enemies/Bee.gltf", "qp/crab": QP + "enemies/Crab.gltf", "qp/skull": QP + "enemies/Skull.gltf",
+	"qp/blob": QP + "enemies/Enemy.gltf",
+	# LowPoly Environment
+	"env/tree_a": QENV + "Tree_1.fbx", "env/tree_b": QENV + "Tree_2.fbx", "env/tree_c": QENV + "Tree_3.fbx",
+	"env/bush_a": QENV + "Bush_1.fbx", "env/bush_b": QENV + "Bush_2.fbx", "env/bush_c": QENV + "Bush_3.fbx",
+	"env/rock_a": QENV + "Rock_2.fbx", "env/rock_b": QENV + "Rock_3.fbx", "env/rock_c": QENV + "Rock_6.fbx",
+	"env/rock_flat": QENV + "Rock_1.fbx", "env/stone": QENV + "Stone_1.fbx", "env/log_a": QENV + "Log_1.fbx",
+	"env/log_b": QENV + "Log_2.fbx", "env/stump": QENV + "Log_3.fbx", "env/plant_a": QENV + "Plant_1.fbx",
+	"env/plant_b": QENV + "Plant_2.fbx", "env/plant_c": QENV + "Plant_3.fbx", "env/plant_sun": QENV + "Plant_4.fbx",
+	"env/plant_ring": QENV + "Plant_5.fbx", "env/plant_lotus": QENV + "Plant_6.fbx", "env/plant_bulb": QENV + "Plant_7.fbx",
+	"env/grass_a": QENV + "Grass_1.fbx", "env/grass_b": QENV + "Grass_2.fbx",
+	"env/mount_a": QENV + "Mounting_1.fbx", "env/mount_b": QENV + "Mounting_2.fbx", "env/mount_c": QENV + "Mounting_3.fbx",
+	"env/terrain_path": QENV + "Terrain_1.fbx", "env/terrain_hill": QENV + "Terrain_2.fbx", "env/sandbank": QENV + "Environment_1.fbx",
+	# Modular Terrain – Props
+	"mt/dock": QMT + "Beach_Prop_Docks_Straight_Supports.obj", "mt/dock_corner": QMT + "Beach_Prop_Docks_Corner_Supports.obj",
+	"mt/dock_steps": QMT + "Beach_Prop_Docks_Steps.obj", "mt/shell": QMT + "Beach_Prop_Shell_1.obj",
+	"mt/shell_b": QMT + "Beach_Prop_Shell_2.obj", "mt/starfish": QMT + "Beach_Prop_Starfish_1.obj",
+	"mt/coconut": QMT + "Beach_Prop_Coconut_1.obj", "mt/treasure": QMT + "Beach_Prop_Treasure_Chest.obj",
+	"mt/palm": QMT + "Beach_Prop_Tree_Palm_1.obj", "mt/minecart": QMT + "Cave_Prop_Minecart_1.obj",
+	"mt/rail": QMT + "Cave_Prop_Railway_Straight_1.obj", "mt/rail_curve": QMT + "Cave_Prop_Railway_Curve_Large.obj",
+	"mt/rail_stop": QMT + "Cave_Prop_Railway_Bumpstop.obj", "mt/pick": QMT + "Cave_Prop_Pick_Large.obj",
+	"mt/lamp": QMT + "Cave_Prop_Hanging_Lamp_1.obj", "mt/stalagmite": QMT + "Cave_Prop_Stalagmite_Normal.obj",
+	"mt/stalagmite_s": QMT + "Cave_Prop_Stalagmite_Tiny.obj", "mt/support": QMT + "Cave_Prop_Support_Wall_Pillar_1.obj",
+	"mt/cave_entrance": QMT + "Cave_Prop_Entrance_1.obj",
+	"mt/cattail": QMT + "Hilly_Prop_Cattail_1.obj", "mt/cattail_b": QMT + "Hilly_Prop_Cattail_2.obj",
+	"mt/ruin": QMT + "Hilly_Prop_Ruins_Pillar_1.obj", "mt/ruin_b": QMT + "Hilly_Prop_Ruins_Pillar_3.obj",
+	"mt/ruin_c": QMT + "Hilly_Prop_Ruins_Pillar_5.obj", "mt/stepping": QMT + "Hilly_Prop_Stepping_Stones_1.obj",
+	"mt/stepping_b": QMT + "Hilly_Prop_Stepping_Stones_3.obj", "mt/campfire": QMT + "Hilly_Prop_Camp_Campfire.obj",
+	"mt/lean_to": QMT + "Hilly_Prop_Camp_Lean_To.obj", "mt/sit_log": QMT + "Hilly_Prop_Camp_Sitting_Log.obj",
+	"mt/wood_pile": QMT + "Hilly_Prop_Camp_Wood_Pile.obj", "mt/hollow_trunk": QMT + "Hilly_Prop_Hollow_Trunk.obj",
+	"mt/fence": QMT + "Hilly_Prop_Fence_Boards_1.obj", "mt/fence_gate": QMT + "Hilly_Prop_Fence_Gate_1.obj",
+	"mt/log_bridge": QMT + "Hilly_Prop_Bridge_Log_Middle.obj", "mt/branch": QMT + "Hilly_Prop_Branch_1.obj",
+	"mt/grass_clump": QMT + "Hilly_Prop_Grass_Clump_2.obj", "mt/bush_round": QMT + "Hilly_Prop_Bush_2.obj",
+}
+
+
 const MODELS := {
 	# --- Helden (KayKit Adventurers, Rig_Medium) ---
 	"hero/knight": KADV + "Knight.glb",
@@ -558,6 +680,10 @@ var _aabb_cache: Dictionary = {}
 func path(key: String) -> String:
 	if key.begins_with("res://"):
 		return key
+	if MODELS_Q.has(key):
+		return MODELS_Q[key]
+	if UPGRADE.has(key):
+		return _pool_path(String(UPGRADE[key].pool[0]))
 	if not MODELS.has(key):
 		push_error("Assets: unbekannter Modell-Schlüssel '%s'" % key)
 		return ""
@@ -565,14 +691,18 @@ func path(key: String) -> String:
 
 
 func scene(key: String) -> PackedScene:
+	return _res(key) as PackedScene
+
+
+## Geladene Ressource eines Schlüssels (PackedScene, bei OBJ ein Mesh), gecacht
+func _res(key: String) -> Resource:
 	var p := path(key)
 	if p == "":
 		return null
 	if not _cache.has(p):
-		var res: Resource = load(p)
-		_cache[p] = res
+		_cache[p] = load(p)
 	_used[p] = _gen
-	return _cache[p] as PackedScene
+	return _cache[p]
 
 
 func icon(key: String) -> Texture2D:
@@ -587,6 +717,7 @@ func icon(key: String) -> Texture2D:
 ## Vorher blieb jedes jemals geladene Modell (Meshes + Texturen, im Browser auch im Grafikspeicher) für immer
 ## im Speicher – lange Sessions liefen voll, bis der Browser den Tab neu geladen hat.
 func prune_cache() -> void:
+	season = ""
 	_gen += 1
 	for p in _cache.keys():
 		if int(_used.get(p, -99)) < _gen - 2:
@@ -594,12 +725,102 @@ func prune_cache() -> void:
 			_used.erase(p)
 
 
+## Jahreszeit der aktuellen Welt: "" | "snow" | "autumn" | "dead" | "moss" – wählt passende Pool-Varianten
+## (Schnee-Kiefern im Frostdorf, Totholz auf dem Friedhof, Moos im Zauberwald). Setzt WorldKit.env, Bretter
+## können überschreiben; jeder Szenenwechsel setzt zurück.
+var season := ""
+const SEASON_OF_ENV := {"snow": "snow", "graveyard": "dead", "ghost": "dead", "mansion": "dead", "sunset": "autumn",
+	"forest_night": "moss", "dungeon": "moss"}
+var _h_cache: Dictionary = {}
+
+
+func _pool_path(entry: String) -> String:
+	if entry.begins_with("@env:"):
+		return QENV + entry.substr(5) + ".fbx"
+	if entry.begins_with("@mt:"):
+		return QMT + entry.substr(4) + ".obj"
+	return QN + entry + ".fbx"
+
+
+## Variante der Jahreszeit (falls vorhanden): CommonTree_3 → CommonTree_Snow_3, Rock_2 → Rock_Moss_2 …
+func _seasonal(entry: String, sea: String) -> String:
+	if sea == "" or entry.begins_with("@"):
+		return entry
+	var tag: String = {"snow": "Snow", "autumn": "Autumn", "dead": "Dead", "moss": "Moss"}.get(sea, "")
+	var parts := entry.rsplit("_", true, 1)
+	var cand := ""
+	if parts.size() == 2 and parts[1].is_valid_int():
+		cand = "%s_%s_%s" % [parts[0], tag, parts[1]]
+	else:
+		cand = "%s_%s" % [entry, tag]
+	if sea == "snow" and entry.begins_with("Bush"):
+		cand = "Bush_Snow_1" if not entry.ends_with("2") else "Bush_Snow_2"
+	return cand if ResourceLoader.exists(_pool_path(cand)) else entry
+
+
+## Gewählte Datei für einen Upgrade-Schlüssel an dieser Position (deterministisch → online auf allen Geräten gleich)
+func upgrade_path(key: String, pos: Vector3) -> String:
+	var u: Dictionary = UPGRADE[key]
+	var pool: Array = u.pool
+	var idx := absi(hash(Vector3i(roundi(pos.x * 3.0), roundi(pos.y * 3.0), roundi(pos.z * 3.0))) + hash(key)) % pool.size()
+	return _pool_path(_seasonal(String(pool[idx]), season))
+
+
+## Normierfaktor, damit ein neues Modell so groß wirkt wie das alte (Höhe bzw. Breite; "hw" = beides)
+func _norm(key: String, p: String) -> Vector3:
+	var u: Dictionary = UPGRADE[key]
+	if not _h_cache.has(p):
+		var box := AABB(Vector3.ZERO, Vector3.ONE)
+		var tmp := _instantiate(load(p))
+		if tmp:
+			box = compute_aabb(tmp)
+			tmp.free()
+		_h_cache[p] = box.size
+	var sz: Vector3 = _h_cache[p]
+	var horiz := maxf(maxf(sz.x, sz.z), 0.01)
+	if u.has("hw"):
+		var fw := float(u.hw[1]) / horiz
+		return Vector3(fw, float(u.hw[0]) / maxf(sz.y, 0.01), fw)
+	if u.has("h"):
+		return Vector3.ONE * (float(u.h) / maxf(sz.y, 0.01))
+	return Vector3.ONE * (float(u.w) / horiz)
+
+
+## Szene oder (OBJ-)Mesh instanzieren – OBJ-Dateien importiert Godot als Mesh statt als Szene.
+func _instantiate(res: Resource) -> Node3D:
+	if res is PackedScene:
+		return (res as PackedScene).instantiate() as Node3D
+	if res is Mesh:
+		var root := Node3D.new()
+		var mi := MeshInstance3D.new()
+		mi.mesh = res as Mesh
+		root.add_child(mi)
+		return root
+	return null
+
+
 ## Instanziert ein Modell. Gibt immer einen Node3D zurück (Fallback: Platzhalter-Würfel).
 func spawn(key: String, parent: Node = null, pos := Vector3.ZERO, rot_y_deg := 0.0, scl := 1.0) -> Node3D:
-	var ps := scene(key)
-	var n: Node3D
-	if ps:
-		n = ps.instantiate() as Node3D
+	if UPGRADE.has(key):
+		var up := upgrade_path(key, pos)
+		if not _cache.has(up):
+			_cache[up] = load(up)
+		_used[up] = _gen
+		var un := _instantiate(_cache[up])
+		if un:
+			# Normierung auf die Kinder anwenden – die Wurzel bleibt für Aufrufer frei skalierbar
+			var f := _norm(key, up)
+			for c in un.get_children():
+				if c is Node3D:
+					(c as Node3D).transform = Transform3D(Basis.from_scale(f), Vector3.ZERO) * (c as Node3D).transform
+			if parent:
+				parent.add_child(un)
+			un.position = pos
+			un.rotation_degrees.y = rot_y_deg
+			if scl != 1.0:
+				un.scale = Vector3.ONE * scl
+			return un
+	var n: Node3D = _instantiate(_res(key))
 	if n == null:
 		n = MeshInstance3D.new()
 		(n as MeshInstance3D).mesh = BoxMesh.new()
@@ -616,10 +837,15 @@ func spawn(key: String, parent: Node = null, pos := Vector3.ZERO, rot_y_deg := 0
 func model_aabb(key: String) -> AABB:
 	if _aabb_cache.has(key):
 		return _aabb_cache[key]
-	var ps := scene(key)
-	if ps == null:
+	if UPGRADE.has(key):
+		var tmp := spawn(key)
+		var nb := compute_aabb(tmp)
+		tmp.free()
+		_aabb_cache[key] = nb
+		return nb
+	var n := _instantiate(_res(key))
+	if n == null:
 		return AABB(Vector3(-0.5, 0, -0.5), Vector3.ONE)
-	var n := ps.instantiate() as Node3D
 	var box := compute_aabb(n)
 	n.free()
 	_aabb_cache[key] = box
@@ -650,7 +876,8 @@ static func compute_aabb(root: Node3D) -> AABB:
 
 ## Erzeugt statische Kollision (vereinfachte Box) für ein instanziertes Modell.
 func add_box_collision(model: Node3D, key: String = "", layer := 1) -> StaticBody3D:
-	var box := model_aabb(key) if key != "" else compute_aabb(model)
+	# Upgrade-Modelle sind je Position verschieden und normiert → Kiste aus der echten Instanz
+	var box := model_aabb(key) if key != "" and not UPGRADE.has(key) else compute_aabb(model)
 	var body := StaticBody3D.new()
 	body.collision_layer = layer
 	var cs := CollisionShape3D.new()
@@ -742,6 +969,15 @@ func all_paths() -> PackedStringArray:
 	var out := PackedStringArray()
 	for v in MODELS.values():
 		out.append(v)
+	for v in MODELS_Q.values():
+		out.append(v)
+	# Upgrade-Pools inkl. aller Jahreszeit-Varianten (welche gebraucht wird, entscheidet erst die Welt)
+	for k in UPGRADE:
+		for e in UPGRADE[k].pool:
+			for sea in ["", "snow", "autumn", "dead", "moss"]:
+				var pp := _pool_path(_seasonal(String(e), sea))
+				if not pp in out:
+					out.append(pp)
 	for v in RIG_ANIMS:
 		out.append(v)
 	for v in ICONS.values():
