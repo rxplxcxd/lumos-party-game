@@ -3,6 +3,31 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.3.0 – Trailer filmisch überarbeitet
+Alle Änderungen liegen ausschließlich in `trailer/` (dazu Doku und Versionsnummer). Das Spiel ist unverändert.
+* **Lebendigere Figuren:**
+  * Aufeinanderfolgende Wegstücke gehen ohne Halt ineinander über. Angefahren und ausgerollt wird nur am Anfang
+    und Ende einer Bewegung.
+  * Der Kopf wandert weich zum Blickziel, statt umzuspringen. Beim Laufen schweift der Blick voraus, bei jedem
+    in eigenem Takt.
+  * Beim Anhalten sackt die Figur kurz ein, beim Loslaufen streckt sie sich. Jeder läuft seinen eigenen, leicht
+    geschwungenen Weg. Der erschöpfte Barbar atmet sichtbar.
+* **Nähe zum Zuschauer:** Der Held entdeckt nach der Enthüllung des Waldes die Kamera und winkt uns mit. Am
+  Lagerfeuer zeigt eine Nahaufnahme die Keks-Pointe, und zum Schluss schauen Held und Barbar der aufsteigenden
+  Kamera nach.
+* **Weltenwechsel als zusammenhängende Laufsequenz:**
+  * Wald → Wiese: hinter dem Baumstamm im Vordergrund (wie bisher, bildgenau unsichtbar).
+  * Wiese → Schnee: Die Kamera fährt hinter einem Wasserfall im Raum hindurch (eigener Wasser-Shader, Gischt).
+    Die frühere Überblendung entfällt.
+  * Schnee → Strand: Der Träumer springt nach dem Stern. Die Welt wechselt in der Luft (Match Cut), er landet
+    im Sand.
+  * Die Gruppe läuft dabei durchgehend weiter.
+* **Nitro Dash neu:** Gefahren wird auf dem echten Lumos-Ring aus dem Spiel (Streckenbaukasten nur gelesen) mit
+  Banden, Tribünen, Zieltor und Horizont. Vier Einstellungen: Start, Drift durch die Kurve, Überholen mit Boost
+  und Zieldurchfahrt. Die Kamera fährt in Streckenkoordinaten mit. Die Montage ist dafür einen Takt länger
+  (Gesamtlänge 97 s), das Hurry-Thema läuft nahtlos weiter.
+* **Kamera:** ein Hauch Handkamera (wenige Zentimeter) statt völlig starrer Fahrten.
+
 ## 1.2.9 – Trailer als eigenständige Produktion, fertiges 4K60-Video
 * **Vollständig vom Spiel getrennt:** Die Trailer-Produktion liegt jetzt in einem eigenen Ordner `trailer/`
   (Szene, Regie, Render-Skript, Video-Prüfung, Doku in `trailer/README.md`):

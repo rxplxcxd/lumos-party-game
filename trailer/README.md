@@ -56,16 +56,16 @@ Bild für Bild (Analyse in 192×108) und für den Ton in 50-ms-Fenstern:
 * **Ton:** Aussetzer (kurzes Wegbrechen mitten in lauter Musik), Stille, Übersteuerung, True Peak und Lautheit.
   Gewollt ist nur die Pause vor dem BOOM (65,0–65,4 s).
 
-## Aufbau des Trailers (95,5 s)
+## Aufbau des Trailers (97 s)
 
 | Zeit | Akt | Inhalt |
 |---|---|---|
 | 0–15 s | 1 · Ein kleiner Stern | Dunkelheit, Stern erscheint, Neugier, Stern weicht aus, Berührung → Lichtwelle → Glühwürmchen-Wald, Kran nach oben |
 | 15–35 s | 2 · Eine Welt voller Wunder | Weg, Glühwürmchen vor der Nase, Stolpern über den Ast, Wasserfall, die Magierin winkt in der Ferne, Loslaufen |
-| 35–58 s | 3 · Gemeinsam unterwegs | High-Five, Schmetterling auf der Nase, Zusammenstoß, der keuchende Barbar, der Träumer auf dem Stein, Beinahe-Zusammenprall, Weltenwechsel hinter dem Stamm und durch die Wasserwand, der vergessene Freund wird an der Hand mitgezogen |
-| 58–65 s | 4 · Das Abenteuer eskaliert | Sternenblitz, Strand → Vulkangestein, der Boss erhebt sich, alle schauen nach oben, Stille … BOOM |
-| 65–83 s | Montage | auf dem Takt (138 BPM): Minispiel-Start, Münzduell, Fotofinish, Wasserplumps, Boss-Ausweichen, Siegerpose, Nitro-Dash-Drift, Überholen, Ziellinie, Jubel |
-| 83–95 s | 5 · Wieder zusammen | Lagerfeuer: Hände wärmen, Sterne schauen, essen, eingeschlafen an der Schulter, Keks-Pointe, Funke steigt auf, Logo, Slogans, Plattform-Hinweis |
+| 35–58 s | 3 · Gemeinsam unterwegs | High-Five, Schmetterling auf der Nase, Zusammenstoß, der keuchende Barbar, der Träumer auf dem Stein, Beinahe-Zusammenprall, der vergessene Freund wird an der Hand mitgezogen; die Gruppe läuft durch, während die Welt wechselt: hinter dem Baumstamm (Wald → Wiese) und hinter dem Wasserfall (Wiese → Schnee) |
+| 58–65 s | 4 · Das Abenteuer eskaliert | Sprung nach dem Stern, Weltenwechsel in der Luft, Landung im Sand, Strand → Vulkangestein, der Boss erhebt sich, alle schauen nach oben, Stille … BOOM |
+| 65–84,5 s | Montage | auf dem Takt (138 BPM): Minispiel-Start, Münzduell, Fotofinish, Wasserplumps, Boss-Ausweichen, Siegerpose, dann Nitro Dash auf dem Lumos-Ring (Start, Drift, Überholen, Ziel), Jubel |
+| 84,5–97 s | 5 · Wieder zusammen | Lagerfeuer: Hände wärmen, Sterne schauen, essen, eingeschlafen an der Schulter, Nahaufnahme der Keks-Pointe, Funke steigt auf, Blick zur aufsteigenden Kamera, Logo, Slogans, Plattform-Hinweis |
 
 Kein Dialog. Musik: Glühwald-Thema (Akte 1–4 und 5), Hurry-Up-Thema (Montage), dazu Effekte aus der
 Sound-Bibliothek des Spiels.
@@ -74,3 +74,16 @@ Sound-Bibliothek des Spiels.
 
 Der GL-Compatibility-Renderer (Web-tauglich) hat keine echte Tiefenunschärfe. Die Bildtiefe entsteht über Nebel,
 Licht, Brennweite und Staffelung im Raum.
+
+## Animationsregie
+
+* **Wege:** `go()` beschreibt Wegstücke. Folgen zwei Stücke zeitlich und räumlich direkt aufeinander und zeigen
+  in eine ähnliche Richtung, läuft die Figur ohne Halt durch.
+* **Blick:** `look()` setzt ein Ziel (Punkt, Objekt, Figur oder `"cam"` für den Zuschauer). Der Kopf folgt mit
+  Verzögerung. Ohne Ziel schweift der Blick beim Laufen voraus.
+* **Gewicht:** Vorlage beim Beschleunigen, Rücklage beim Bremsen, kurzes Einsacken beim Anhalten.
+* **Weltenwechsel:** Stamm und Wasserfall sind Verdecker, die keiner Welt gehören. Sie werden zum Wechselzeitpunkt
+  genau vor die Kamera gesetzt und ziehen mit in die neue Welt. `qa.py` prüft, dass im Wechselbild kein Sprung
+  messbar ist.
+* **Rennen:** `_race_state()` liefert je Einstellung den Zustand aller Karts als reine Funktion der Zeit. Karts und
+  Kamera lesen denselben Zustand. Die Fahrbahn nutzt eine Trailer-eigene Kopie des Straßen-Shaders.
