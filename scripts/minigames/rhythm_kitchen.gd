@@ -53,6 +53,7 @@ var _cpu_plan: Array[Dictionary] = [{}, {}, {}, {}]
 
 func _init() -> void:
 	game_id = "rhythm_kitchen"
+	no_seasonal = true   # Innenraum
 	music_track = -2   # Musik wird je Gang selbst gesteuert
 	touch_profile = "dance"
 	env_preset = "day"
@@ -156,14 +157,21 @@ func build_arena() -> void:
 			for k in 4:
 				var jar := WorldKit.cylinder(world, 0.28, 0.7, Vector3(side * 7.0 - 1.8 + k * 1.2, 4.05 + row * 1.6, -6.7), [Color("#ffb3c7"), Color("#a8dcff"), Color("#ffe08a"), Color("#b6f29a")][(k + row) % 4], false)
 				jar.name = "Jar"
-	# Herd mit Kupfertöpfen hinten
-	WorldKit.box(world, Vector3(8, 1.8, 1.6), Vector3(0, 0.9, -6.2), Color("#f2ead8"), false)
-	for k in 3:
-		WorldKit.cylinder(world, 0.6, 0.8, Vector3(-2.4 + k * 2.4, 2.2, -6.2), Color("#d98c4a"), false)
+	# Echte Küchenzeile (KayKit Restaurant Bits) an der Rückwand: Kühlschrank · Theke · Herd · Ofen · Herd · Spüle · Theke
+	var line := [["rest/fridge_a_decorated", -6.0], ["rest/kitchencounter_straight_a_decorated", -4.0], ["rest/stove_multi_decorated", -1.9],
+		["rest/oven", 0.0], ["rest/stove_multi_decorated", 1.9], ["rest/kitchencounter_sink", 4.0], ["rest/kitchencounter_straight_b", 6.0]]
+	for e in line:
+		WorldKit.place(world, String(e[0]), Vector3(float(e[1]), 0, -6.05), 0.0, 1.0)
+	for x in [-1.9, 1.9]:
+		WorldKit.place(world, "rest/pot_a_stew", Vector3(x, 1.72, -6.05), 0.0, 1.0)
+		WorldKit.place(world, "rest/extractorhood", Vector3(x, 3.1, -6.6), 0.0, 1.0)
+	# Zutaten-Kisten in den Ecken
+	for e in [["rest/crate_carrots", Vector3(-9.6, 0, -5.6)], ["rest/crate_tomatoes", Vector3(-9.6, 0, -3.4)], ["rest/crate_cheese", Vector3(9.6, 0, -5.6)], ["rest/crate_lettuce", Vector3(9.6, 0, -3.4)]]:
+		WorldKit.place(world, String(e[0]), e[1], 90.0, 0.8)
 	var steam := FX.emitter({"amount": 26, "life": 2.2, "one_shot": false, "explosive": 0.0, "spread": 18.0, "vel_min": 0.4, "vel_max": 0.9,
 		"gravity": Vector3(0, 0.25, 0), "size": 0.5, "color": Color(1, 1, 1, 0.35), "box": Vector3(5, 0.2, 0.4)})
 	world.add_child(steam)
-	steam.position = Vector3(0, 2.7, -6.2)
+	steam.position = Vector3(0, 2.4, -6.05)
 	steam.emitting = true
 	# Lange Arbeitstheke mit vier Stationen
 	WorldKit.box(world, Vector3(16, 1.1, 1.6), Vector3(0, 0.55, -0.2), Color("#b07a4a"))

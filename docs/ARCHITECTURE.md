@@ -97,3 +97,25 @@ Gegenmittel:
   <url> <minuten>` (WASM-/JS-Heap, Browser-RAM).
 * **Schatten:** Kulisse weit außerhalb der Arena wirft keine Schatten (spart Zeichenaufrufe je Schattenkarte),
   kleine Teile haben Sichtweiten, Statisten laufen mit Animations-LOD.
+
+## Saison-Deko (seit 1.2.8)
+
+`Seasonal` (`scripts/core/seasonal.gd`) erkennt die Saison am Gerätedatum oder an der Einstellung `season_deco`
+(`auto`/`off`/`christmas`/`halloween`, Test: `--season=`). Brett (`BoardBuilder._build_seasonal`), Minispiel-Kulisse
+(`MinigameBase._seasonal_deco`, abschaltbar mit `no_seasonal`) und Hauptmenü übergeben Kandidaten-Stellen.
+`decorate()` mischt sie mit einem lokalen, ortsfesten Zufall und prüft jede Stelle:
+
+* fester Untergrund unter Mitte und Rand der Grundfläche (`PropSettler._ground_at`, ohne Wasser/Lava-Shader),
+* keine Überlappung mit vorhandenen Modellen (bei Bäumen zählt nur der Stamm, Bodendecker gar nicht),
+* `exclude(p)` sperrt die Spielfläche, `allow_tall(p)` erlaubt Hohes nur außerhalb der Kamerasicht.
+
+`centerpiece()` sucht spiralförmig um einen Wunschpunkt Platz für ein Ensemble (Baum + Geschenke bzw. Kürbishaufen).
+
+## Trailer (seit 1.2.8)
+
+`scripts/trailer/trailer.gd` ist ein kleines Regie-System: Zeitereignisse (`at`), Wegstrecken mit weichem
+Anfahren und Abbremsen (`go`), Blickziele (`look`), Haltungen (`pose`), Reaktionen (`react`) und Kamera-Keys mit
+Schnitten (`key`). Die Sets liegen weit auseinander in einer Szene, und gewechselt wird nur dann, wenn ein
+Verdecker das Bild füllt (Stamm, Wasserwand, Lichtblitz). So gibt es keine sichtbaren Sprünge. Im Movie-Maker-Modus
+läuft alles mit fester Bildrate, deshalb ist jeder Render gleich. Tiefenschärfe gibt es im GL-Compatibility-Renderer
+nicht. Die Bildtiefe entsteht über Nebel, Licht und Brennweite.

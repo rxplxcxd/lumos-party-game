@@ -459,9 +459,12 @@ func zzz(target: Node3D, height := 2.4, duration := 3.0) -> void:
 		tw.parallel().tween_property(l, "position", Vector3(0.3 + 0.6 * (i + 1) * 0.5, height + 1.2, 0), 1.2)
 		tw.tween_property(l, "modulate:a", 0.0, 0.2)
 		tw.tween_callback(func() -> void: l.position = Vector3(0.3, height, 0))
+		# Schwache Referenz: Der Timer gehört dem SceneTree und überlebt einen Szenenwechsel – das Label nicht.
+		var wl: WeakRef = weakref(l)
 		get_tree().create_timer(duration + 0.2, false).timeout.connect(func() -> void:
-			if is_instance_valid(l):
-				l.queue_free())
+			var lab := wl.get_ref() as Node
+			if lab:
+				lab.queue_free())
 
 
 ## Schweißtropfen / Schreck-Symbol über dem Kopf.

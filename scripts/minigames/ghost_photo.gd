@@ -27,6 +27,7 @@ var _t := 0.0
 
 func _init() -> void:
 	game_id = "ghost_photo"
+	no_seasonal = true   # geschlossener Raum
 	env_preset = "mansion"
 	backdrop_style = "none"
 	time_limit = 45.0
@@ -97,6 +98,16 @@ func build_arena() -> void:
 	fl.position = Vector3(0, 1.0, -hz + 1.6)
 	world.add_child(fl)
 	_flicker.append(fl)
+	# Einrichtung (KayKit Furniture Bits) eng an den Wänden – die Raummitte bleibt frei zum Herumschleichen; die Möbel
+	# sind fest (niemand läuft durch Sessel oder Schränke)
+	for x in [-6.5, 6.5]:
+		WorldKit.place(world, "fur/shelf_b_large_decorated", Vector3(x, 0, -hz + 0.62), 0.0, 1.0, true)   # unter den Fenstern
+	for sx in [-1.0, 1.0]:
+		WorldKit.place(world, "fur/cabinet_medium_decorated", Vector3(sx * (hx - 1.35), 0, -hz + 0.85), 0.0, 1.0, true)
+		WorldKit.place(world, "fur/armchair_pillows", Vector3(sx * (hx - 1.15), 0, -1.6), -sx * 90.0, 1.0, true)
+		WorldKit.place(world, "fur/lamp_standing", Vector3(sx * (hx - 0.85), 0, -3.4), 0.0, 1.0, true)
+		WorldKit.place(world, "fur/table_low", Vector3(sx * (hx - 1.2), 0, 1.6), 90.0, 0.8, true)
+		WorldKit.place(world, "fur/book_set", Vector3(sx * (hx - 1.2), 0.42, 1.6), sx * 20.0, 1.0)
 	# Gemälde über dem Kamin und an den Wänden (mit leise leuchtenden Augen)
 	for pp in [Vector3(0, 4.3, -hz + 0.32), Vector3(-hx + 0.32, 3.6, -2.5), Vector3(hx - 0.32, 3.6, -2.5)]:
 		var side_wall: bool = absf(pp.x) > 1.0

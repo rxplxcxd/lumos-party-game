@@ -98,6 +98,7 @@ func _ready() -> void:
 	_build_backdrop()
 	# Deko sauber aufsetzen: nichts schwebt neben der Arena oder ragt über Kanten. Was das Spielskript selbst hält
 	# (Seil-Markierung, Automaten, Balken …), ist ein Spielelement und bleibt unangetastet.
+	_seasonal_deco()
 	var _st := Time.get_ticks_usec()
 	var _moved := PropSettler.settle(world, PropSettler.script_refs(self))
 	if "--perf-log" in OS.get_cmdline_user_args():
@@ -684,6 +685,22 @@ func _alive_teams() -> Array:
 		if alive[i] and not (teams[i] in out):
 			out.append(teams[i])
 	return out
+
+
+## Saisonale Deko (Weihnachten/Halloween) im Kulissenring um die Arena: nie auf der Spielfläche, nie am Kanonenplatz
+## des Auftritts, hohe Teile nur hinter der Arena (die Kamera blickt von vorne).
+func _seasonal_deco() -> void:
+	if Seasonal.current() == "" or no_seasonal:
+		return
+	var c := arena_center
+	var excl := func(p: Vector3) -> bool:
+		return Vector2(p.x - c.x, p.z - c.z).length() < arena_radius + 1.2 or Vector2(p.x - cannon_pos.x, p.z - cannon_pos.z).length() < 4.0
+	var tall_ok := func(p: Vector3) -> bool: return p.z < c.z - arena_radius * 0.4
+	var cands := Seasonal.ring(c, arena_radius + 2.0, arena_radius + 6.5, 20)
+	Seasonal.decorate(world, world, cands, 10, game_id, tall_ok, excl, 2)
+
+
+var no_seasonal := false   # Spiele mit eigener, geschlossener Kulisse (Innenräume) schalten die Saison-Deko ab
 
 
 ## Kulisse weit außerhalb der Arena wirft keine Schatten mehr (Bäume, Felsen, Häuser am Horizont): Ihre Schatten

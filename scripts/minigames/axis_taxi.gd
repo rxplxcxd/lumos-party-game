@@ -53,6 +53,14 @@ func build_arena() -> void:
 		WorldKit.place(world, "nat/tree_oak", c + Vector3(1.6, 0.25, -0.8), randf() * 360.0, 1.4)
 		WorldKit.place(world, "nat/bush", c + Vector3(1.8, 0.25, 0.8), 0.0, 2.0)
 		WorldKit.place(world, "town/lantern", c + Vector3(r.size.x * 0.5 - 0.3, 0.25, r.size.y * 0.5 - 0.3), 0.0, 0.9)
+		# Stadtmöbel (KayKit City Builder, Miniatur-Maßstab ×2,4) an den Blockecken – Fahrbahn bleibt frei
+		var hx := r.size.x * 0.5 - 0.35
+		var hz := r.size.y * 0.5 - 0.3
+		var inner := Vector3(-signf(c.x) * hx, 0.25, -signf(c.z) * hz)   # Ecke zur Kreuzung in der Mitte
+		WorldKit.place(world, "cb/trafficlight_a", c + inner, rad_to_deg(atan2(-inner.x, -inner.z)), 2.4)
+		WorldKit.place(world, "cb/firehydrant", c + Vector3(inner.x * 0.55, 0.25, inner.z), 0.0, 2.6)
+		WorldKit.place(world, "cb/bench", c + Vector3(-inner.x * 0.4, 0.25, inner.z * 1.0), 0.0 if inner.z < 0 else 180.0, 2.6)
+		WorldKit.place(world, "cb/trash_a", c + Vector3(-inner.x, 0.25, inner.z * 0.2), 0.0, 2.4)
 	for side in [-1.0, 1.0]:
 		WorldKit.box(world, Vector3(HALF_X * 2 + 1.4, 0.6, 0.4), Vector3(0, 0.3, side * (HALF_Z + 0.9)), Color("#9aa3b5"))
 		WorldKit.box(world, Vector3(0.4, 0.6, HALF_Z * 2 + 1.4), Vector3(side * (HALF_X + 0.9), 0.3, 0), Color("#9aa3b5"))

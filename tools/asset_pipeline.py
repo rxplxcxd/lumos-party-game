@@ -32,6 +32,12 @@ ASSETS = ROOT / "assets"
 # Rolle = wofür das Paket im Spiel (teils zweckentfremdet) eingesetzt wird.
 # --------------------------------------------------------------------------
 PACK_ROLES: dict[str, str] = {
+    "3d/minigames-and-others/KayKit_HalloweenBits_1.0_FREE": "Friedhof-Brett & Geister-Spiele (Gruft, Grabsteine, Zäune, Totholz, Laternen, Kerzen); Halloween-Deko (Kürbisse, Kerzen, Schädel)",
+    "3d/minigames-and-others/KayKit_Furniture_Bits_1.0_FREE": "Einrichtung der Spukvilla & Geister-Villa (Sessel, Regale, Bilder, Lampen, Teppiche)",
+    "3d/minigames-and-others/KayKit_Restaurant_Bits_1.0_FREE": "Rhythmus-Küche (Theken, Herd, Kühlschrank, Zutaten-Kisten, Gerichte), Sandwich-Sturm-Zutaten",
+    "3d/minigames-and-others/KayKit_City_Builder_Bits_1.0_FREE": "Stadt-Kulisse: Achsen-Taxi, Raumstation-Vorplatz (Gebäude, Ampeln, Laternen, Hydranten, Autos)",
+    "3d/minigames-and-others/KayKit_Platformer_Pack_1.0_FREE": "Hüpf-Parcours-Teile: Zielbanner, Federn, Fahnen, Sterne, Ringe für Plattform-Minispiele",
+    "3d/characters/KayKit_Skeletons_1.1_FREE": "Skelett-Figuren (Rig_Medium, nutzen die gemeinsame Animationsbibliothek) als Zuschauer am Friedhof/Dungeon und Halloween-Tänzer",
     # Charaktere
     "3d/characters/KayKit_Adventurers_2.0_FREE": "Spielbare Helden (Knight, Barbarian, Mage, Ranger, Rogue) auf Rig_Medium",
     "3d/characters/KayKit_Character_Animations_1.1": "Geteilte Rig_Medium-Animationsbibliothek (Jubeln, Winken, Treffer, Sprünge, Skelett-Taunts)",

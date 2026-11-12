@@ -27,6 +27,7 @@ var gate_nodes := {}            # Abzweig → Schlüsseltor
 var sleepers: Array[Node3D] = []
 var traps: Array[Node3D] = []
 var star_node: Node3D
+var spectators: Array[CharacterRig] = []   # Zuschauer-Figuren am Brettrand (jubeln bei Ereignissen)
 var _rng := RandomNumberGenerator.new()
 
 
@@ -66,6 +67,41 @@ func build(parent: Node3D, id: String, graph: Array) -> void:
 	_build_spaces()
 	_build_paths()
 	_build_star()
+	_build_seasonal()
+
+
+## Saisonale Deko (Weihnachten/Halloween): Ensemble am Start, Kleinteile am Wegesrand – nie auf Feldern, Wegen,
+## im Kamerakorridor oder auf Wasser/Lava (Seasonal prüft Boden und Überlappung).
+func _build_seasonal() -> void:
+	if Seasonal.current() == "":
+		return
+	var cands: Array[Vector3] = []
+	var start := Vector3.INF
+	for i in spaces.size():
+		var sp: Dictionary = spaces[i]
+		var pos: Vector3 = sp.pos
+		if String(sp.type) == "S" and start == Vector3.INF:
+			start = pos
+		if i % 2 != 0:
+			continue
+		var out := _outward(sp)
+		var side := out.cross(Vector3.UP)
+		for o in [out * 3.0, -out * 3.0, out * 3.0 + side * 1.6, -out * 3.0 - side * 1.6]:
+			cands.append(pos + o)
+	var excl := func(q: Vector3) -> bool: return not _free_spot(q, 2.2, false)
+	var tall_ok := func(q: Vector3) -> bool: return _free_spot(q, 3.0, true)
+	if start != Vector3.INF:
+		# Ensemble hinter dem Startfeld (aus Kamerasicht, die von +Z blickt) – sichtbar, nie im Weg
+		var done := false
+		for d in [5.0, 6.5, 8.0]:
+			for k in 7:
+				var c: Vector3 = start + Vector3(sin(-1.2 + k * 0.4), 0, -cos(-1.2 + k * 0.4)) * float(d)
+				if _free_spot(c, 3.4, false) and Seasonal.centerpiece(root, root, c, board_id):
+					done = true
+					break
+			if done:
+				break
+	Seasonal.decorate(root, root, cands, 16, board_id, tall_ok, excl, 3)
 
 
 # --- Felder ------------------------------------------------------------------------------------------
@@ -634,6 +670,29 @@ func _build_graveyard() -> void:
 	for p in [Vector3(-12, 0, 6), Vector3(4, 0, 8), Vector3(16, 0, -8)]:
 		WorldKit.place(root, "grave/fire_basket", p, 0.0, 2.0)
 		WorldKit.torch_light(root, p + Vector3.UP * 1.6, Color(0.5, 1.0, 0.6), 1.6, 7.0)
+	# KayKit Halloween Bits: knorrige Totholz-Bäume, Kerzen-Schrein, Sarg, Laternenpfosten (nur auf freien Stellen)
+	_scatter_free(["hal/tree_dead_large_decorated", "hal/tree_dead_medium", "hal/tree_dead_small"], 9, Rect2(-29, -21, 58, 42), 0.0, Vector2(0.8, 1.1), 3.6)
+	_scatter_free(["hal/gravemarker_a", "hal/gravemarker_b", "hal/grave_a", "hal/candle_melted", "hal/bone_a"], 18, Rect2(-27, -19, 54, 38), 0.0, Vector2(0.9, 1.2), 2.6)
+	for e in [[Vector3(-19, 0, -6), 70.0, "hal/shrine_candles"], [Vector3(20, 0, 6), -110.0, "hal/coffin_decorated"], [Vector3(-4, 0, 17), 180.0, "hal/bench_decorated"]]:
+		if _free_spot(e[0], 3.2, true):
+			WorldKit.place(root, String(e[2]), e[0], float(e[1]), 1.0)
+	for p in [Vector3(-27, 0, -2), Vector3(27, 0, 3)]:
+		if _free_spot(p, 3.0, true):
+			WorldKit.place(root, "hal/post_lantern", p, 0.0, 0.9)
+			WorldKit.torch_light(root, p + Vector3.UP * 2.8, Color(1.0, 0.7, 0.35), 1.4, 6.0)
+	# Skelett-Zuschauer (KayKit Skeletons, gemeinsame Animationsbibliothek): sitzen, gähnen, feuern an
+	var skel_spots := [[Vector3(-22, 0, -19), "hero/skeleton_minion", "sit", 20.0], [Vector3(5, 0, -20.5), "hero/skeleton_warrior", "skel_idle", 0.0],
+		[Vector3(23, 0, -18), "hero/skeleton_rogue", "cheer", -25.0], [Vector3(-28, 0, 14), "hero/skeleton_mage", "taunt_long", 110.0]]
+	for e in skel_spots:
+		if not _free_spot(e[0], 3.0, true):
+			continue
+		var sk := CharacterRig.new()
+		root.add_child(sk)
+		sk.setup(String(e[1]), -1, 0.9)
+		sk.position = e[0]
+		sk.rotation.y = deg_to_rad(float(e[3]))
+		sk.play(String(e[2]) if sk.has_clip(String(e[2])) else "idle")
+		spectators.append(sk)
 	# Mond + Bodennebel
 	var moon := MeshInstance3D.new()
 	var sm := SphereMesh.new()

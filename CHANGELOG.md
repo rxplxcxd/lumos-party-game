@@ -3,6 +3,53 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.2.8 – Neue Asset-Pakete, Saison-Deko und Trailer
+* **Asset-Inventur der hochgeladenen Pakete:**
+  * Neu im Projekt (entpackt, in `tools/asset_pipeline.py` eingeordnet, `docs/ASSET_INVENTORY.md` neu erzeugt):
+    KayKit Halloween Bits, Furniture Bits, Restaurant Bits, City Builder Bits, Platformer Pack und Skeletons 1.1.
+  * Bereits vorhanden und inhaltsgleich, daher nicht doppelt abgelegt: Brettspiel-Teile, Dungeon Pack,
+    RPG-Werkzeuge, Raumbasis und Holiday Bits. Character Animations 1.2 bringt keine neuen Clips für unser Rig.
+    Seine Beispielfigur nutzt ein anderes Skelett und einen anderen Stil und wurde deshalb nicht übernommen.
+  * Die ZIP-Dateien sind entfernt. Exportiert wird nur, was der Katalog wirklich benutzt (`tools/export_list.gd`).
+* **Thematischer Einbau:**
+  * Friedhof-Brett: Totholz, Grabmale, Gruft-Schrein, Sarg, Bank und Laternen (mit Licht) aus den Halloween Bits.
+    Dazu vier Skelett-Zuschauer, die sitzen, wippen, jubeln und sticheln.
+  * Geister-Fotograf: Die Villa ist eingerichtet (Regale unter den Fenstern, Schränke, Sessel, Stehlampen,
+    Beistelltische mit Büchern). Die Möbel stehen eng an den Wänden, sind fest und lassen die Raummitte frei.
+  * Rhythmus-Küche: Statt des Kastens steht dort eine echte Küchenzeile mit Kühlschrank, Theken, zwei Herden mit
+    Eintopf-Töpfen und Dunstabzug, Ofen und Spüle. In den Ecken stehen Zutatenkisten.
+  * Achsen-Taxi: Jede Blockecke hat jetzt Ampel, Hydrant, Bank und Mülleimer. Die Fahrbahn bleibt frei.
+* **Saisonale Feiertags-Deko (`scripts/core/seasonal.gd`):**
+  * Weihnachten (1. Dezember – 6. Januar) und Halloween (15. Oktober – 2. November) werden am Gerätedatum erkannt.
+  * Es schmücken sich das Hauptmenü (Insel-Deko, Gruß unter dem Logo, an Halloween ein tanzendes Skelett), alle
+    Bretter (Deko entlang des Wegs und ein Ensemble hinter dem Start: Weihnachtsbaum mit Geschenken bzw.
+    Kürbishaufen mit Kerzen) und die Kulissen der Minispiele.
+  * Jede Stelle wird geprüft: fester Boden unter der ganzen Grundfläche (nie Wasser, Lava oder Luft), keine
+    Überlappung mit Bäumen, Häusern oder Figuren, nichts auf der Spielfläche und nichts Hohes zwischen Kamera und
+    Geschehen. Kürbislaternen leuchten. Innenräume (Villa, Küche) bleiben ohne Außendeko.
+  * Der Zufall ist lokal und fest je Ort, online bleibt der gemeinsame Spielzufall unberührt.
+  * Neue Einstellung „Saison-Deko“: Automatisch / Aus / Weihnachten / Halloween. Zum Testen: `--season=…`.
+* **Trailer „Lumos Party – Best adventures are shared.“:**
+  * In der Engine inszeniert (`scenes/trailer/Trailer.tscn`), 95 Sekunden in fünf Akten:
+    1. Stern in der Dunkelheit, Lichtwelle und Glühwürmchen-Wald.
+    2. Weg mit Glühwürmchen, Stolpern und Wasserfall.
+    3. Freunde finden sich: High-Five, Schmetterling auf der Nase, Zusammenstoß, der Träumer auf dem Stein, der
+       vergessene Freund wird mitgezogen. Dazu drei Weltenwechsel hinter einem Stamm, durch eine Wasserwand und
+       per Sternenblitz.
+    4. Strand → Vulkan mit Boss, Stille, BOOM, dann eine Montage auf dem Takt: Minispiel-Start, Münzduell,
+       Fotofinish, Wasserplumps, Boss-Ausweichen, Siegerpose, Nitro-Dash-Drift, Überholen, Ziellinie, Jubel.
+    5. Lagerfeuer mit Keks-Pointe, aufsteigendem Funken, Logo, Slogan und Plattform-Hinweis.
+  * Im Hauptmenü unter „Trailer ansehen“, jede Taste überspringt.
+  * Als Video: `xvfb-run ./godot --path . --resolution 1280x720 --write-movie trailer.avi --fixed-fps 30
+    res://scenes/trailer/Trailer.tscn -- --trailer-quit`, danach mit ffmpeg nach MP4. `--trailer-from=X` startet
+    ab Sekunde X.
+* **Credits & Lizenzen:** Die Credits nennen die neuen KayKit-Pakete und Quaternius. `LICENSES.md` führt die
+  Soundpakete von lolurio und Nomagician Music (CC BY 4.0, Namensnennung im Spiel) jetzt ausdrücklich auf.
+* **Tests:** `tools/dev/test_systems.gd` prüft die Saison-Deko: Datumsgrenzen, Einstellung Aus/erzwingen,
+  Platzierung nur auf festem Boden (nie im Wasser) und keine Überlappungen.
+* **Kleiner Fix:** Die Schlaf-„Z“ (`FX.zzz`) halten ihr Label nur noch über eine schwache Referenz. Endet eine
+  Szene, bevor ihr Timer abläuft (z. B. ein übersprungener Trailer), meldet die Engine keinen Fehler mehr.
+
 ## 1.2.7 – Stabilitäts-, Physik- und Release-Update
 * **Kein Neuladen mehr in langen Sessions:**
   * Hauptursache: Schrift-Glyphen. Jede Schriftgröße × Konturstärke legt eigene Texturseiten an, und die Engine

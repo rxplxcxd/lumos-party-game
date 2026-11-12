@@ -23,8 +23,10 @@ Werkzeuge in `tools/`) gehört zum Projekt. Die genaue Paketliste mit Verwendung
 
 | Herkunft | Pakete | Lizenz |
 |---|---|---|
+| **lolurio** (lolurio.itch.io) | „UI Sound Effects by lolurio“ – Menü-Klicks und Bestätigungen | CC BY 4.0 – Namensnennung erforderlich (im Spiel unter Credits) |
+| **Nomagician Music** (nomagician.itch.io) | „Cute, Cozy & Magical UI SFX“ | CC BY 4.0 – Namensnennung erforderlich (im Spiel unter Credits) |
 | **Kenney** (kenney.nl) | alle `kenney_*`-Pakete: Bauteile, Fahrzeuge, Figuren, Eingabe-Symbole, Interface-/Impact-/RPG-/Sci-Fi-Sounds, Jingles, Sprachaufnahmen | CC0 1.0 (gemeinfrei) |
-| **KayKit** (Kay Lousberg) | alle `KayKit_*`-Pakete: Abenteurer, Animationen, Dungeon, Natur, Brettspiel-Teile, Raumstation, Minispiel-Pack | CC0 1.0 (gemeinfrei) |
+| **KayKit** (Kay Lousberg) | alle `KayKit_*`-Pakete: Abenteurer, Animationen, Skelette, Dungeon, Natur, Brettspiel-Teile, Raumstation, Minispiel-Pack, Holiday, Halloween, Möbel, Restaurant, City Builder, Platformer | CC0 1.0 (gemeinfrei) |
 | **Quaternius** (quaternius.com) | `3d/quaternius/nature`, `3d/quaternius/platformer` | CC0 1.0 (siehe `License.txt` im Paket) |
 | vom Projekt bereitgestellt | `3d/nature/lowpoly_env`, `3d/nature/modular_terrain` | Lizenztext liegt nicht im Repository – vor einer kommerziellen Veröffentlichung prüfen |
 | **dobo_ui** (itch.io) | `assets/ui/cozy` – Cozy UI Pack (Demo-Version) | Bedingungen des Anbieters, siehe `README_dobo_ui.txt`; vor einer kommerziellen Veröffentlichung prüfen |

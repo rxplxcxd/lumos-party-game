@@ -365,5 +365,51 @@ func run() -> void:
 	_ok(mage.current != "" and (menu.get("_pokes") as Dictionary).has(mage.get_instance_id()), "Menü: Figur reagiert (%s)" % mage.current)
 	_ok(not bool(menu.call("_poke_at", Vector2(2, 2))), "Menü: Klick ins Leere löst nichts aus")
 	menu.queue_free()
+	# --- Saison-Deko (1.2.8) ------------------------------------------------------------------------------------
+	_ok(Seasonal.for_date({"month": 12, "day": 1}) == "christmas" and Seasonal.for_date({"month": 1, "day": 6}) == "christmas" \
+		and Seasonal.for_date({"month": 11, "day": 30}) == "" and Seasonal.for_date({"month": 1, "day": 7}) == "", "Saison: Weihnachten 1.12.–6.1.")
+	_ok(Seasonal.for_date({"month": 10, "day": 15}) == "halloween" and Seasonal.for_date({"month": 11, "day": 2}) == "halloween" \
+		and Seasonal.for_date({"month": 10, "day": 14}) == "" and Seasonal.for_date({"month": 11, "day": 3}) == "", "Saison: Halloween 15.10.–2.11.")
+	var old_mode: Variant = Game.settings.get("season_deco", "auto")
+	Game.settings["season_deco"] = "off"
+	_ok(Seasonal.current() == "", "Saison: Einstellung Aus schaltet die Deko ab")
+	Game.settings["season_deco"] = "halloween"
+	_ok(Seasonal.current() == "halloween" and Seasonal.greeting() != "", "Saison: Einstellung erzwingt Halloween samt Gruß")
+	Game.settings["season_deco"] = old_mode
+	# Platzierung: links fester Boden, rechts Wasser – Deko nur auf dem Boden, nie überlappend
+	var yard := Node3D.new()
+	add_child(yard)
+	WorldKit.box(yard, Vector3(12, 1, 12), Vector3(-6, -0.5, 0), Color(0.3, 0.6, 0.3), false)
+	var pond := WorldKit.water(yard, Vector2(12, 12), 0.0)
+	pond.position = Vector3(6, 0, 0)
+	var deco := Node3D.new()
+	yard.add_child(deco)
+	Seasonal.test_override = "christmas"
+	var cands: Array[Vector3] = []
+	for x in range(-11, 12, 2):
+		for z in range(-5, 6, 2):
+			cands.append(Vector3(x, 0, z))
+	var placed := Seasonal.decorate(yard, deco, cands, 14, "test", func(_p: Vector3) -> bool: return true, Callable())
+	var dry := true
+	var rects: Array[Rect2] = []
+	var overlap := false
+	for c in deco.get_children():
+		var n3 := c as Node3D
+		var gp := n3.global_position
+		if gp.x >= 0.0 or absf(gp.y) > 0.05:
+			dry = false
+		var fp := Seasonal._footprint(String(n3.get_meta("asset", "")), n3.scale.x)
+		var r := Rect2(Vector2(gp.x, gp.z) + fp.position, fp.size)
+		for o in rects:
+			if o.intersects(r):
+				overlap = true
+		rects.append(r)
+	_ok(placed >= 6 and placed == deco.get_child_count(), "Saison: Deko gesetzt (%d Modelle)" % placed)
+	_ok(dry, "Saison: Deko steht nur auf festem Boden (nie im Wasser, nie schwebend)")
+	_ok(not overlap, "Saison: Deko-Modelle überlappen sich nicht")
+	Seasonal.test_override = "off"
+	_ok(Seasonal.decorate(yard, deco, cands, 14, "test", Callable(), Callable()) == 0, "Saison: ohne Saison keine Deko")
+	Seasonal.test_override = ""
+	yard.queue_free()
 	print("TESTS %s – %d Fehler" % ["OK" if _fails == 0 else "FEHLGESCHLAGEN", _fails])
 	get_tree().quit(1 if _fails > 0 else 0)

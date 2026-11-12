@@ -124,6 +124,11 @@ Alle Boss-Modelle sind prozedural gebaut (`scripts/bosses/boss_model.gd`) und an
 * **Siegerehrungen**: Goldregen, Feuerwerk oder Sternen-Schweben für den Sieger; Amboss, Sahnetorte,
   Regenwolke oder Hüpfpilz-Bruchlandung für den letzten Platz.
 * **Abkürzungen**: Schließt eine Abkürzung, auf der jemand steht, fliegt Hummel Summsi ihn zur Abzweigung zurück.
+* **Saison-Deko**: Zu Weihnachten (1.12.–6.1.) und Halloween (15.10.–2.11.) schmücken sich Menü, Bretter und
+  Minispiel-Kulissen automatisch. Jede Stelle wird auf festen Boden und freie Fläche geprüft. Die Einstellung
+  „Saison-Deko“ schaltet zwischen Automatisch, Aus, Weihnachten und Halloween.
+* **Trailer**: „Best adventures are shared.“ – 95 Sekunden in der Engine inszeniert, im Hauptmenü unter
+  „Trailer ansehen“. Als Video rendern lässt er sich mit dem Movie Maker (siehe `CHANGELOG.md`, 1.2.8).
 
 ### Eigene 3D-Avatare (Lumos-Profil)
 * **Kein Editor** – das Modell kommt fertig aus dem Profil: Lumos One OS (`window.LumosOS.getAvatar()`), die

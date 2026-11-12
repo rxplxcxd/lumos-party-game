@@ -92,6 +92,25 @@ func _build_diorama() -> void:
 	_act_walk(knight, chick)
 	_act_bunny(_actor("pet/bunny", Vector3(2.0, 0.25, 3.4), 0.6))
 	_act_cat(_actor("pet/cat", Vector3(-0.2, 0.25, 2.9), 0.6))
+	_seasonal_diorama()
+
+
+## Feiertage: geschmücktes Ensemble hinten auf der Insel, Kleinteile am Inselrand; zu Halloween tanzt ein Skelett.
+func _seasonal_diorama() -> void:
+	var season := Seasonal.current()
+	if season == "":
+		return
+	Seasonal.centerpiece(self, self, Vector3(4.4, 0.25, -3.2), "menu", true, 0.62)   # kleinere Ausgabe für die volle Insel   # rechts hinten: neben der Szene, nicht hinter dem Menü
+	var excl := func(p: Vector3) -> bool: return Vector2(p.x, p.z).length() > 6.6 or (p.z > 1.0 and absf(p.x) < 3.0)
+	var tall_ok := func(p: Vector3) -> bool: return p.z < -2.0
+	Seasonal.decorate(self, self, Seasonal.ring(Vector3(0, 0.25, 0), 4.6, 6.3, 16), 8, "menu", tall_ok, excl, 2)
+	if season == "halloween":
+		var sk := CharacterRig.new()
+		add_child(sk)
+		sk.setup("hero/skeleton_minion", -1, 0.9)
+		sk.position = Vector3(6.3, 0.25, 0.4)
+		sk.face_now(Vector3(-0.6, 0, 1))
+		sk.play("dance" if sk.has_clip("dance") else "cheer")
 
 
 var _kart: Node3D
@@ -628,6 +647,12 @@ func _page_main() -> Control:
 	logo.add_child(l1)
 	var l2 := UI.label("& NITRO DASH", 44, UI.GOLD, true, 12)
 	logo.add_child(l2)
+	if Seasonal.greeting() != "":
+		var sp := Control.new()
+		sp.custom_minimum_size = Vector2(0, 22)   # die Logo-Zeilen rücken mit negativem Abstand zusammen – Gruß mit Luft darunter
+		logo.add_child(sp)
+		var gl := UI.label(Seasonal.greeting(), 28, Color("#ffd9a8") if Seasonal.current() == "halloween" else Color("#d8f2ff"), true, 8)
+		logo.add_child(gl)   # kleiner Feiertagsgruß unter dem Logo
 	_logo = logo
 	var tw := logo.create_tween().set_loops()
 	tw.tween_property(logo, "position:y", 28.0, 1.6).set_trans(Tween.TRANS_SINE)
@@ -635,7 +660,7 @@ func _page_main() -> Control:
 	# Fünf große Modus-Kacheln – wie auf der Konsole
 	var v := UI.vbox(10)
 	root.add_child(v)
-	v.position = Vector2(48, 170)
+	v.position = Vector2(48, 206 if Seasonal.greeting() != "" else 170)
 	var items := [
 		["Lumos Party", "Das Brettspiel mit Freunden", "dice", Color("#ff4fb8"), "party"],
 		["Nitro Dash", "Arcade-Kart-Rennen & Grand Prix", "bolt", Color("#2f9bff"), "race"],
@@ -1274,6 +1299,14 @@ func _page_settings() -> Control:
 		Game.save_settings()
 		Gfx.apply_fps())
 	v.add_child(_row("Bildrate", fs))
+	var skeys := ["auto", "off", "christmas", "halloween"]
+	var auto_name: String = {"christmas": "Weihnachten", "halloween": "Halloween"}.get(Seasonal.for_date(Time.get_date_dict_from_system()), "keine")
+	var snames := ["Automatisch (jetzt: %s)" % auto_name, "Aus", "Weihnachten", "Halloween"]
+	var ss := Stepper.new().setup(snames, maxi(0, skeys.find(String(Game.settings.get("season_deco", "auto")))), 360)
+	ss.changed.connect(func(i: int) -> void:
+		Game.settings.season_deco = skeys[i]
+		Game.save_settings())
+	v.add_child(_row("Saison-Deko", ss))
 	v.add_child(_toggle("Dynamische Auflösung (stabile Bildrate)", "dynamic_res"))
 	v.add_child(_toggle("FPS anzeigen", "show_fps"))
 	v.add_child(_toggle("Split-Screen für mehrere Fahrer", "split_screen"))
@@ -1360,7 +1393,8 @@ func _page_credits() -> Control:
 Engine: Godot 4 (MIT-Lizenz) · GL-Compatibility / WebGL2
 
 [b]3D-Modelle[/b] (CC0): Kenney – Pirate, Platformer, Castle, Graveyard, Racing, Car, Toy Car, Survival, Space, Nature, Mini Arena, Mini Arcade, Tower Defense, Modular Cave, Watercraft, Fantasy Town, Holiday, Mini Characters, Cube Pets
-KayKit (CC0, Kay Lousberg) – Adventurers, Character Animations, Dungeon Pack, Mini-Game Variety Pack, Board Game Bits, Holiday Bits, Forest Nature, RPG Tools
+KayKit (CC0, Kay Lousberg) – Adventurers, Character Animations, Skeletons, Dungeon Pack, Mini-Game Variety Pack, Board Game Bits, Holiday Bits, Halloween Bits, Furniture Bits, Restaurant Bits, City Builder Bits, Platformer Pack, Space Base Bits, Forest Nature, RPG Tools
+Quaternius (CC0) – Nature, Platformer
 
 [b]Audio[/b] (CC0): Kenney – Impact, Interface, Digital, RPG, Sci-Fi, UI, Music Jingles, Voiceover
 [b]UI-Sounds[/b] (CC BY 4.0): „UI Sound Effects by lolurio“ (lolurio.itch.io) · „Cute, Cozy & Magical UI SFX“ von Nomagician Music (nomagician.itch.io)
@@ -1379,5 +1413,10 @@ Cartoon-SFX: tools/compose_sfx.py
 	rt.add_theme_font_size_override("normal_font_size", 21)
 	rt.add_theme_font_size_override("bold_font_size", 24)
 	v.add_child(rt)
+	var tb := UI.button("Trailer ansehen", UI.ACCENT)
+	tb.pressed.connect(func() -> void:
+		Audio.sfx("ui_confirm")
+		Router.goto("res://scenes/trailer/Trailer.tscn"))
+	v.add_child(tb)
 	_back_button(v)
 	return arr[0]

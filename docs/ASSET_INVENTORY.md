@@ -2,8 +2,8 @@
 
 Automatisch erzeugt von `tools/asset_pipeline.py`. Nicht von Hand bearbeiten.
 
-* Pakete gesamt: **49**, davon im Spiel verwendet: **49**
-* Runtime-Modelle (glTF/GLB): **3116**
+* Pakete gesamt: **55**, davon im Spiel verwendet: **55**
+* Runtime-Modelle (glTF/GLB): **3804**
 * Audio-Dateien: **698**
 * Defekte/unvollständige Modelle: **0**
 
@@ -17,13 +17,19 @@ die Dateien, die der Code tatsächlich lädt (`tools/gen_export_list.py`).
 | `3d/boardgame/kenney_board-game-info` | ✅ | Feld-Icons (Glück, Sanduhr, Spieler) im HUD | 0.31 MB | 0 | 0 |
 | `3d/characters/KayKit_Adventurers_2.0_FREE` | ✅ | Spielbare Helden (Knight, Barbarian, Mage, Ranger, Rogue) auf Rig_Medium | 4.07 MB | 6 | 0 |
 | `3d/characters/KayKit_Character_Animations_1.1` | ✅ | Geteilte Rig_Medium-Animationsbibliothek (Jubeln, Winken, Treffer, Sprünge, Skelett-Taunts) | 7.51 MB | 8 | 0 |
+| `3d/characters/KayKit_Skeletons_1.1_FREE` | ✅ | Skelett-Figuren (Rig_Medium, nutzen die gemeinsame Animationsbibliothek) als Zuschauer am Friedhof/Dungeon und Halloween-Tänzer | 1.63 MB | 17 | 0 |
 | `3d/characters/kenney_cube-pets_1.0` | ✅ | Zuschauer-Tiere, Maskottchen im Menü, Brett-Deko | 3.55 MB | 24 | 0 |
 | `3d/characters/kenney_mini-characters` | ✅ | Kart-Fahrer (drive-Animation), Publikum, Händler-NPC | 5.8 MB | 43 | 0 |
 | `3d/minigames-and-others/KayKit Mini-Game Variety Pack 1.2` | ✅ | Bomben, Spike-Roller, Swiper-Pendel, Powerup-Blöcke, Bär/Hund/Ente-NPCs | 6.34 MB | 134 | 0 |
+| `3d/minigames-and-others/KayKit_City_Builder_Bits_1.0_FREE` | ✅ | Stadt-Kulisse: Achsen-Taxi, Raumstation-Vorplatz (Gebäude, Ampeln, Laternen, Hydranten, Autos) | 1.74 MB | 41 | 0 |
 | `3d/minigames-and-others/KayKit_Dungeon_Pack_1.1_FREE` | ✅ | Dungeon-Deep-Brett, Dungeon-Drop-Platten, Fackeln als Event-Felder, Säulen fürs Turm-Balancieren | 7.18 MB | 211 | 0 |
 | `3d/minigames-and-others/KayKit_Forest_Nature_Pack_1.0_FREE` | ✅ | Bäume/Felsen für Strecken und Bretter | 2.57 MB | 105 | 0 |
+| `3d/minigames-and-others/KayKit_Furniture_Bits_1.0_FREE` | ✅ | Einrichtung der Spukvilla & Geister-Villa (Sessel, Regale, Bilder, Lampen, Teppiche) | 0.86 MB | 53 | 0 |
+| `3d/minigames-and-others/KayKit_HalloweenBits_1.0_FREE` | ✅ | Friedhof-Brett & Geister-Spiele (Gruft, Grabsteine, Zäune, Totholz, Laternen, Kerzen); Halloween-Deko (Kürbisse, Kerzen, Schädel) | 1.35 MB | 63 | 0 |
 | `3d/minigames-and-others/KayKit_Holiday_Bits_1.0_FREE` | ✅ | Konfetti-/Geschenk-Deko, Schneeball-Kanone | 6.83 MB | 98 | 0 |
+| `3d/minigames-and-others/KayKit_Platformer_Pack_1.0_FREE` | ✅ | Hüpf-Parcours-Teile: Zielbanner, Federn, Fahnen, Sterne, Ringe für Plattform-Minispiele | 5.56 MB | 370 | 0 |
 | `3d/minigames-and-others/KayKit_RPGToolsBits_1.0_FREE` | ✅ | Amboss für den Podest-Gag, Werkzeuge | 1.98 MB | 49 | 0 |
+| `3d/minigames-and-others/KayKit_Restaurant_Bits_1.0_FREE` | ✅ | Rhythmus-Küche (Theken, Herd, Kühlschrank, Zutaten-Kisten, Gerichte), Sandwich-Sturm-Zutaten | 3.58 MB | 144 | 0 |
 | `3d/minigames-and-others/KayKit_Space_Base_Bits_1.0_FREE` | ✅ | Raumstation-Brett & Orbit-Strecke (Module, Landeplätze, Windräder) | 4.2 MB | 57 | 0 |
 | `3d/minigames-and-others/kenney_castle-kit` | ✅ | Sky-Kingdom-Burg, Türme, Brücken | 2.51 MB | 76 | 0 |
 | `3d/minigames-and-others/kenney_crosshair-pack` | ✅ | Zielmarker der Homing-Kanonenkugel | 0.6 MB | 0 | 0 |
@@ -162,11 +168,11 @@ die Dateien, die der Code tatsächlich lädt (`tools/gen_export_list.py`).
 ## Dateiformate gesamt
 
 * `.import`: 5481
-* `.glb`: 2343
-* `.png`: 1170
-* `.gltf`: 773
+* `.glb`: 2347
+* `.gltf`: 1457
+* `.bin`: 1366
+* `.png`: 1181
 * `.ogg`: 698
-* `.bin`: 682
 * `.obj`: 305
 * `.fbx`: 192
 * `.url`: 119

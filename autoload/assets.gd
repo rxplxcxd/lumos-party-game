@@ -41,6 +41,12 @@ const KCITY := "res://assets/3d/tracks-enviroment/kenney_city-kit-commercial_2.1
 const KSUB := "res://assets/3d/tracks-enviroment/kenney_city-kit-suburban_20/Models/GLB format/"
 
 # --- Etappe 3: hochwertigere Low-Poly-Packs (Quaternius Ultimate Nature/Platformer, LowPoly Environment, Modular Terrain) ---
+const KHAL := "res://assets/3d/minigames-and-others/KayKit_HalloweenBits_1.0_FREE/KayKit_HalloweenBits_1.0_FREE/Assets/gltf/"
+const KFUR := "res://assets/3d/minigames-and-others/KayKit_Furniture_Bits_1.0_FREE/KayKit_Furniture_Bits_1.0_FREE/Assets/gltf/"
+const KREST := "res://assets/3d/minigames-and-others/KayKit_Restaurant_Bits_1.0_FREE/KayKit_Restaurant_Bits_1.0_FREE/Assets/gltf/"
+const KCB := "res://assets/3d/minigames-and-others/KayKit_City_Builder_Bits_1.0_FREE/KayKit_City_Builder_Bits_1.0_FREE/Assets/gltf/"
+const KPLK := "res://assets/3d/minigames-and-others/KayKit_Platformer_Pack_1.0_FREE/KayKit_Platformer_Pack_1.0_FREE/Assets/gltf/"
+const KSKEL := "res://assets/3d/characters/KayKit_Skeletons_1.1_FREE/KayKit_Skeletons_1.1_FREE/characters/gltf/"
 const QN := "res://assets/3d/quaternius/nature/"
 const QP := "res://assets/3d/quaternius/platformer/"
 const QENV := "res://assets/3d/nature/lowpoly_env/"
@@ -166,6 +172,93 @@ const MODELS_Q := {
 
 const MODELS := {
 	# --- Helden (KayKit Adventurers, Rig_Medium) ---
+	# --- KayKit Halloween Bits (Friedhof, Geister-Spiele, saisonale Halloween-Deko) ---
+	"hal/crypt": KHAL + "crypt.gltf",
+	"hal/gravestone": KHAL + "gravestone.gltf",
+	"hal/gravemarker_a": KHAL + "gravemarker_A.gltf",
+	"hal/gravemarker_b": KHAL + "gravemarker_B.gltf",
+	"hal/grave_a": KHAL + "grave_A.gltf",
+	"hal/coffin_decorated": KHAL + "coffin_decorated.gltf",
+	"hal/shrine_candles": KHAL + "shrine_candles.gltf",
+	"hal/post_lantern": KHAL + "post_lantern.gltf",
+	"hal/post_skull": KHAL + "post_skull.gltf",
+	"hal/lantern_standing": KHAL + "lantern_standing.gltf",
+	"hal/tree_dead_large_decorated": KHAL + "tree_dead_large_decorated.gltf",
+	"hal/tree_dead_medium": KHAL + "tree_dead_medium.gltf",
+	"hal/tree_dead_small": KHAL + "tree_dead_small.gltf",
+	"hal/pumpkin_orange_jackolantern": KHAL + "pumpkin_orange_jackolantern.gltf",
+	"hal/pumpkin_yellow_jackolantern": KHAL + "pumpkin_yellow_jackolantern.gltf",
+	"hal/pumpkin_orange_small": KHAL + "pumpkin_orange_small.gltf",
+	"hal/pumpkin_yellow_small": KHAL + "pumpkin_yellow_small.gltf",
+	"hal/pumpkin_orange": KHAL + "pumpkin_orange.gltf",
+	"hal/candle_triple": KHAL + "candle_triple.gltf",
+	"hal/candle_melted": KHAL + "candle_melted.gltf",
+	"hal/skull_candle": KHAL + "skull_candle.gltf",
+	"hal/bench_decorated": KHAL + "bench_decorated.gltf",
+	"hal/tree_pine_orange_large": KHAL + "tree_pine_orange_large.gltf",
+	"hal/tree_pine_orange_medium": KHAL + "tree_pine_orange_medium.gltf",
+	"hal/tree_pine_yellow_medium": KHAL + "tree_pine_yellow_medium.gltf",
+	"hal/fence_broken": KHAL + "fence_broken.gltf",
+	"hal/plaque_candles": KHAL + "plaque_candles.gltf",
+	"hal/ribcage": KHAL + "ribcage.gltf",
+	"hal/bone_a": KHAL + "bone_A.gltf",
+	# --- KayKit Holiday Bits: saisonale Weihnachts-Deko ---
+	"hol/christmas_tree_decorated": KHOL + "christmas_tree_decorated.gltf",
+	"hol/snowman_a": KHOL + "snowman_A.gltf",
+	"hol/snowman_b": KHOL + "snowman_B.gltf",
+	"hol/candycane_small": KHOL + "candycane_small.gltf",
+	"hol/gingerbread_house_decorated": KHOL + "gingerbread_house_decorated.gltf",
+	"hol/gingerbread_man": KHOL + "gingerbread_man.gltf",
+	"hol/present_sphere_a_red": KHOL + "present_sphere_A_red.gltf",
+	"hol/present_sphere_b_green": KHOL + "present_sphere_B_green.gltf",
+	"hol/present_e_yellow": KHOL + "present_E_yellow.gltf",
+	"hol/present_f_blue": KHOL + "present_F_blue.gltf",
+	"hol/hot_chocolate_decorated": KHOL + "hot_chocolate_decorated.gltf",
+	"hol/mistletoe_a": KHOL + "mistletoe_A.gltf",
+	# --- KayKit Furniture Bits (Geister-Villa) ---
+	"fur/armchair_pillows": KFUR + "armchair_pillows.gltf",
+	"fur/couch_pillows": KFUR + "couch_pillows.gltf",
+	"fur/shelf_b_large_decorated": KFUR + "shelf_B_large_decorated.gltf",
+	"fur/cabinet_medium_decorated": KFUR + "cabinet_medium_decorated.gltf",
+	"fur/lamp_standing": KFUR + "lamp_standing.gltf",
+	"fur/lamp_table": KFUR + "lamp_table.gltf",
+	"fur/table_low": KFUR + "table_low.gltf",
+	"fur/rug_oval_a": KFUR + "rug_oval_A.gltf",
+	"fur/book_set": KFUR + "book_set.gltf",
+	# --- KayKit Restaurant Bits (Rhythmus-Küche, Trailer-Lagerfeuer) ---
+	"rest/stove_multi_decorated": KREST + "stove_multi_decorated.gltf",
+	"rest/oven": KREST + "oven.gltf",
+	"rest/fridge_a_decorated": KREST + "fridge_A_decorated.gltf",
+	"rest/kitchencounter_straight_a_decorated": KREST + "kitchencounter_straight_A_decorated.gltf",
+	"rest/kitchencounter_sink": KREST + "kitchencounter_sink.gltf",
+	"rest/extractorhood": KREST + "extractorhood.gltf",
+	"rest/crate_carrots": KREST + "crate_carrots.gltf",
+	"rest/crate_tomatoes": KREST + "crate_tomatoes.gltf",
+	"rest/crate_cheese": KREST + "crate_cheese.gltf",
+	"rest/crate_lettuce": KREST + "crate_lettuce.gltf",
+	"rest/pot_a_stew": KREST + "pot_A_stew.gltf",
+	"rest/food_stew": KREST + "food_stew.gltf",
+	"rest/food_burger": KREST + "food_burger.gltf",
+	"rest/shelf_papertowel_decorated": KREST + "shelf_papertowel_decorated.gltf",
+	"rest/kitchencounter_straight_b": KREST + "kitchencounter_straight_B.gltf",
+	# --- KayKit City Builder Bits (Achsen-Taxi; Miniatur-Maßstab, ×2–5 skalieren) ---
+	"cb/streetlight": KCB + "streetlight.gltf",
+	"cb/trafficlight_a": KCB + "trafficlight_A.gltf",
+	"cb/firehydrant": KCB + "firehydrant.gltf",
+	"cb/bench": KCB + "bench.gltf",
+	"cb/trash_a": KCB + "trash_A.gltf",
+	"cb/bush": KCB + "bush.gltf",
+	"cb/box_a": KCB + "box_A.gltf",
+	# --- KayKit Platformer Pack (Trailer: Stern, Zielbanner, Fahnen) ---
+	"kp/star": KPLK + "yellow/star_yellow.gltf",
+	"kp/finish_wide": KPLK + "neutral/signage_finish_wide.gltf",
+	"kp/flag_red": KPLK + "red/flag_A_red.gltf",
+	"kp/flag_blue": KPLK + "blue/flag_A_blue.gltf",
+	# --- KayKit Skeletons (Rig_Medium: gemeinsame Animationsbibliothek) ---
+	"hero/skeleton_minion": KSKEL + "Skeleton_Minion.glb",
+	"hero/skeleton_warrior": KSKEL + "Skeleton_Warrior.glb",
+	"hero/skeleton_rogue": KSKEL + "Skeleton_Rogue.glb",
+	"hero/skeleton_mage": KSKEL + "Skeleton_Mage.glb",
 	"hero/knight": KADV + "Knight.glb",
 	"hero/barbarian": KADV + "Barbarian.glb",
 	"hero/mage": KADV + "Mage.glb",

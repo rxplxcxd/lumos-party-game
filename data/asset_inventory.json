@@ -224,6 +224,22 @@
    }
   },
   {
+   "pack": "3d/characters/KayKit_Skeletons_1.1_FREE",
+   "used": true,
+   "role": "Skelett-Figuren (Rig_Medium, nutzen die gemeinsame Animationsbibliothek) als Zuschauer am Friedhof/Dungeon und Halloween-Tänzer",
+   "size_mb": 1.63,
+   "formats": {
+    ".bin": 13,
+    ".gltf": 13,
+    ".glb": 4,
+    ".png": 2
+   },
+   "runtime_models": 17,
+   "audio_files": 0,
+   "images": 2,
+   "animated_models": {}
+  },
+  {
    "pack": "3d/characters/kenney_cube-pets_1.0",
    "used": true,
    "role": "Zuschauer-Tiere, Maskottchen im Menü, Brett-Deko",
@@ -1200,6 +1216,21 @@
    "animated_models": {}
   },
   {
+   "pack": "3d/minigames-and-others/KayKit_City_Builder_Bits_1.0_FREE",
+   "used": true,
+   "role": "Stadt-Kulisse: Achsen-Taxi, Raumstation-Vorplatz (Gebäude, Ampeln, Laternen, Hydranten, Autos)",
+   "size_mb": 1.74,
+   "formats": {
+    ".bin": 41,
+    ".gltf": 41,
+    ".png": 1
+   },
+   "runtime_models": 41,
+   "audio_files": 0,
+   "images": 1,
+   "animated_models": {}
+  },
+  {
    "pack": "3d/minigames-and-others/KayKit_Dungeon_Pack_1.1_FREE",
    "used": true,
    "role": "Dungeon-Deep-Brett, Dungeon-Drop-Platten, Fackeln als Event-Felder, Säulen fürs Turm-Balancieren",
@@ -1236,6 +1267,36 @@
    "animated_models": {}
   },
   {
+   "pack": "3d/minigames-and-others/KayKit_Furniture_Bits_1.0_FREE",
+   "used": true,
+   "role": "Einrichtung der Spukvilla & Geister-Villa (Sessel, Regale, Bilder, Lampen, Teppiche)",
+   "size_mb": 0.86,
+   "formats": {
+    ".gltf": 53,
+    ".bin": 53,
+    ".png": 1
+   },
+   "runtime_models": 53,
+   "audio_files": 0,
+   "images": 1,
+   "animated_models": {}
+  },
+  {
+   "pack": "3d/minigames-and-others/KayKit_HalloweenBits_1.0_FREE",
+   "used": true,
+   "role": "Friedhof-Brett & Geister-Spiele (Gruft, Grabsteine, Zäune, Totholz, Laternen, Kerzen); Halloween-Deko (Kürbisse, Kerzen, Schädel)",
+   "size_mb": 1.35,
+   "formats": {
+    ".gltf": 63,
+    ".bin": 63,
+    ".png": 1
+   },
+   "runtime_models": 63,
+   "audio_files": 0,
+   "images": 1,
+   "animated_models": {}
+  },
+  {
    "pack": "3d/minigames-and-others/KayKit_Holiday_Bits_1.0_FREE",
    "used": true,
    "role": "Konfetti-/Geschenk-Deko, Schneeball-Kanone",
@@ -1250,6 +1311,21 @@
    "runtime_models": 98,
    "audio_files": 0,
    "images": 4,
+   "animated_models": {}
+  },
+  {
+   "pack": "3d/minigames-and-others/KayKit_Platformer_Pack_1.0_FREE",
+   "used": true,
+   "role": "Hüpf-Parcours-Teile: Zielbanner, Federn, Fahnen, Sterne, Ringe für Plattform-Minispiele",
+   "size_mb": 5.56,
+   "formats": {
+    ".gltf": 370,
+    ".bin": 370,
+    ".png": 5
+   },
+   "runtime_models": 370,
+   "audio_files": 0,
+   "images": 5,
    "animated_models": {}
   },
   {
@@ -1268,6 +1344,21 @@
    "runtime_models": 49,
    "audio_files": 0,
    "images": 9,
+   "animated_models": {}
+  },
+  {
+   "pack": "3d/minigames-and-others/KayKit_Restaurant_Bits_1.0_FREE",
+   "used": true,
+   "role": "Rhythmus-Küche (Theken, Herd, Kühlschrank, Zutaten-Kisten, Gerichte), Sandwich-Sturm-Zutaten",
+   "size_mb": 3.58,
+   "formats": {
+    ".gltf": 144,
+    ".bin": 144,
+    ".png": 1
+   },
+   "runtime_models": 144,
+   "audio_files": 0,
+   "images": 1,
    "animated_models": {}
   },
   {
@@ -2510,11 +2601,11 @@
  ],
  "totals": {
   ".import": 5481,
-  ".glb": 2343,
-  ".png": 1170,
-  ".gltf": 773,
+  ".glb": 2347,
+  ".gltf": 1457,
+  ".bin": 1366,
+  ".png": 1181,
   ".ogg": 698,
-  ".bin": 682,
   ".obj": 305,
   ".fbx": 192,
   ".url": 119,
