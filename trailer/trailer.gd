@@ -16,7 +16,8 @@ extends Node3D
 
 const DUR := 95.5
 const BEAT := 60.0 / 138.0   # Hurry-Up-Track der Montage
-const WIPE_T := 52.0       # Weltenwechsel hinter dem Stamm (Wald → Wiese)
+const WIPE_T := 52.0
+const BOSS_SCALE := 2.2       # Weltenwechsel hinter dem Stamm (Wald → Wiese)
 const MONTAGE_T0 := 65.4   # BOOM – Montage im 4-Schläge-Raster (1,74 s je Bild)
 
 var t := 0.0
@@ -34,6 +35,7 @@ var _last_v: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3
 var _marks: Array = []
 var _cam_tan: Array = []
 var _trunk: MeshInstance3D
+var _flames: Array[MeshInstance3D] = []
 var _trunk_local := Vector3.ZERO   # Schnitt-/Übergangsliste für die Video-Prüfung (trailer/qa.py)
 var _hold: Array[bool] = [false, false, false, false]   # eigene Pose (Sitzen, Liegen) – kein Gehen/Stehen
 var _cam_keys: Array = []                 # [t, Position, Blickpunkt, FOV]
@@ -135,8 +137,6 @@ func _unlimit_ranges() -> void:
 
 func _process(delta: float) -> void:
 	t += delta
-	if _trunk.visible:
-		_trunk.global_position = _origin + _trunk_local
 	var vp := get_viewport()
 	if vp.scaling_3d_scale != 1.0:
 		vp.scaling_3d_scale = 1.0
@@ -146,6 +146,8 @@ func _process(delta: float) -> void:
 	for i in heroes.size():
 		_drive(i, delta)
 	_drive_camera()
+	if _trunk.visible:   # nach den Ereignissen: im Wechselbild steht der Stamm schon in der neuen Welt
+		_trunk.global_position = _origin + _trunk_local
 	_drive_music()
 	_animate_props(delta)
 	if t >= DUR:
@@ -362,7 +364,21 @@ func _build_ui() -> void:
 	var root := UI.center_root(_ui)
 	_black = _rect(root, Color.BLACK, 1.0)
 	_flash = _rect(root, Color(1, 0.97, 0.85), 0.0)
-	_water = _rect(root, Color(0.55, 0.8, 1.0), 0.0)
+	_water = _rect(root, Color(0.5, 0.78, 1.0), 0.0)
+	var wg := Gradient.new()
+	wg.set_color(0, Color(0.92, 0.98, 1.0, 0.75))
+	wg.set_color(1, Color(0.1, 0.38, 0.7, 0.8))
+	wg.add_point(0.45, Color(0.55, 0.85, 1.0, 0.35))
+	var gt := GradientTexture2D.new()
+	gt.gradient = wg
+	gt.fill_from = Vector2(0.5, 0.0)
+	gt.fill_to = Vector2(0.5, 1.0)
+	var wr := TextureRect.new()
+	wr.texture = gt
+	wr.stretch_mode = TextureRect.STRETCH_SCALE
+	wr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wr.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_water.add_child(wr)
 	for top in [true, false]:
 		var b := ColorRect.new()
 		b.color = Color.BLACK
@@ -514,6 +530,8 @@ func _scatter(s: Node3D, keys: Array, n: int, x0: float, x1: float, z0: float, z
 			continue   # Kameraseite: nichts, was dicht vor der Linse durchs Bild wischt
 		if s.name == "Forest" and p.x > -17.0 and p.x < 7.0 and p.z > -27.5 and p.z < -8.0:
 			continue   # Lagerfeuer-Lichtung samt Kamerablick (Akt 5) frei
+		if s.name == "Forest" and p.x > 8.5 and p.x < 23.5 and p.z > -13.5 and p.z < -6.0:
+			continue   # Felswand am Wasserfall: keine Bäume hindurch
 		WorldKit.place(s, keys[key_i], p, rot, sc)
 
 
@@ -551,6 +569,8 @@ func _build_forest(o: Vector3) -> Node3D:
 		_glow_mushroom(s, Vector3(x, 0, -3.6 - (k % 3) * 1.2), [Color("#d9a8ff"), Color("#8fe8ff"), Color("#ffb3e6")][k % 3])
 	_fireflies(s, Vector3(25, 2.0, -3), Vector3(60, 2.5, 10))
 	# Wasserfall am Weg (Akt 2) mit Felsen, Gischt und Nebel
+	WorldKit.box(s, Vector3(12.0, 10.6, 2.4), Vector3(16.0, 5.3, -9.9), Color("#3d4b52"), false)   # Felswand
+	WorldKit.box(s, Vector3(13.0, 0.8, 3.2), Vector3(16.0, 10.7, -9.9), Color("#2f5a35"), false)    # bemooste Kante
 	var wf := WorldKit.water(s, Vector2(4.5, 10.0), 0.0, Color(0.42, 0.7, 0.95), Color(0.92, 0.98, 1.0))
 	wf.rotation_degrees = Vector3(90, 0, 0)
 	wf.position = Vector3(16.0, 5.0, -8.5)
@@ -575,13 +595,34 @@ func _build_forest(o: Vector3) -> Node3D:
 	_fire_light.omni_range = 9.0
 	_fire_light.position = Vector3(-6.0, 1.2, -18.0)
 	s.add_child(_fire_light)
-	var fire := FX.emitter({"amount": 40, "life": 0.9, "one_shot": false, "explosive": 0.0, "spread": 18.0, "dir": Vector3.UP, "vel_min": 0.8,
-		"vel_max": 1.8, "gravity": Vector3(0, 0.8, 0), "size": 0.42, "additive": true, "color": Color(1.0, 0.55, 0.18, 0.95), "box": Vector3(0.7, 0.1, 0.7)})
+	for e in [[0.34, 1.05, Color(1.0, 0.42, 0.1)], [0.24, 0.8, Color(1.0, 0.68, 0.2)], [0.13, 0.5, Color(1.0, 0.93, 0.6)]]:
+		var fl := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 0.0
+		cm.bottom_radius = float(e[0])
+		cm.height = float(e[1])
+		cm.radial_segments = 10
+		cm.rings = 1
+		cm.set_meta("gfx_tuned", true)
+		var fm := StandardMaterial3D.new()
+		fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		fm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		fm.albedo_color = Color(e[2], 0.85)
+		fm.no_depth_test = false
+		cm.material = fm
+		fl.mesh = cm
+		fl.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		s.add_child(fl)
+		fl.position = Vector3(-6.0, 0.22 + float(e[1]) * 0.5, -18.0)
+		_flames.append(fl)
+	var fire := FX.emitter({"amount": 22, "life": 0.8, "one_shot": false, "explosive": 0.0, "spread": 10.0, "dir": Vector3.UP, "vel_min": 0.6,
+		"vel_max": 1.4, "gravity": Vector3(0, 0.6, 0), "size": 0.16, "additive": true, "color": Color(1.0, 0.62, 0.22, 0.95), "box": Vector3(0.5, 0.1, 0.5)})
 	s.add_child(fire)
-	fire.position = Vector3(-6.0, 0.3, -18.0)
+	fire.position = Vector3(-6.0, 0.6, -18.0)
 	fire.emitting = true
 	_scatter(s, ["nat/tree_oak", "nat/tree_fat", "nat/tree_pine"], 26, -30, 18, -34, -23, Vector2(2.8, 4.0))
-	_fireflies(s, Vector3(-6, 2.6, -21), Vector3(18, 3, 8), 35)
+	_fireflies(s, Vector3(-6, 3.0, -24.5), Vector3(20, 3, 5), 24)
 	# Stern für den Weg (wird von Akt 1 benutzt, Ursprung)
 	_star = Assets.spawn("kp/star", self, o + Vector3(1.2, 1.55, 0), 0.0, 0.0)
 	_star.visible = false
@@ -675,6 +716,7 @@ func _build_beach(o: Vector3) -> Node3D:
 	s.add_child(_boss)
 	_boss.position = Vector3(92.0, 0, -11.0)
 	_boss.rotation.y = deg_to_rad(-20)
+	_boss.scale = Vector3.ONE * BOSS_SCALE   # riesig gegenüber der kleinen Gruppe
 	_boss.visible = false
 	var glow := OmniLight3D.new()
 	glow.light_color = Color(1.0, 0.45, 0.15)
@@ -1147,17 +1189,18 @@ func _act4() -> void:
 	# Der Boss taucht auf – alle stehen still und schauen nach oben
 	at(63.3, func() -> void:
 		_boss.visible = true
-		_boss.position.y = -7.0
-		create_tween().tween_property(_boss, "position:y", 0.0, 1.1).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_boss.position.y = -7.0 * BOSS_SCALE
+		create_tween().tween_property(_boss, "position:y", 0.0, 1.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		Juice.shake(0.35)
 		Audio.sfx("stone_hit", null, 0.0, 0.6, 0.0)
 		_boss.act("roar"))
 	for k in 4:
-		look(k, 63.5 + k * 0.08, Vector3(92.0, 6.5, -11.0))
+		look(k, 63.5 + k * 0.08, Vector3(92.0, 11.0, -11.0))
 		face(k, 63.5, Vector3(0.5, 0, -1))
 		react(k, 63.6 + k * 0.1, "scared")
-	key(63.45, Vector3(81.6, 1.0, 5.2), Vector3(89.0, 5.2, -10.0), 50.0, true)
-	key(65.3, Vector3(82.2, 1.2, 4.2), Vector3(90.0, 6.2, -10.5), 44.0)
+	# Tief hinter der Gruppe: die vier klein im unteren Bilddrittel, der Boss türmt sich darüber auf
+	key(63.45, Vector3(78.6, 1.3, 6.6), Vector3(89.0, 6.8, -9.5), 56.0, true)
+	key(65.3, Vector3(79.8, 1.2, 5.4), Vector3(90.0, 8.0, -10.5), 50.0)
 	at(64.5, func() -> void: _boss.act("slam"))   # hebt den Arm …
 	# … die Musik stoppt einen Moment … BOOM!
 	at(MONTAGE_T0, func() -> void:
@@ -1419,6 +1462,11 @@ func _animate_props(delta: float) -> void:
 				_butterfly.visible = false
 	if _fire_light:
 		_fire_light.light_energy = 3.0 + sin(t * 9.0) * 0.35 + sin(t * 23.0) * 0.2
+	for k in _flames.size():
+		var fl := _flames[k]
+		var fy := 1.0 + sin(t * (11.0 + k * 3.0) + k) * 0.14 + sin(t * 27.0 + k * 2.0) * 0.07
+		fl.scale = Vector3(1.0 + sin(t * 17.0 + k) * 0.06, fy, 1.0 + cos(t * 15.0 + k) * 0.06)
+		fl.rotation.y = t * (0.8 + k * 0.4)
 	_drive_karts(delta)
 
 
