@@ -111,11 +111,13 @@ func _build_world() -> void:
 			WorldKit.water(self, Vector2(bb.size.x + 500, bb.size.y + 500), -0.6).position = Vector3(bc.x, -0.6, bc.z)
 			# Sand nur unter dem Hafen-Teil der Strecke – der Tauchtunnel bleibt im Wasser sichtbar
 			var ss := 0.0
+			var sand: Array[Vector3] = []
 			while ss < track.length:
 				if not track.is_water(ss) and not track.is_water(ss + 12.0) and not track.is_water(ss - 12.0):
 					var o := track.frame(ss).origin
-					WorldKit.box(self, Vector3(40, 1, 40), Vector3(o.x, -0.75, o.z), Color("#f1d9a0"), false)
+					sand.append(Vector3(o.x, -0.75, o.z))
 				ss += 18.0
+			WorldKit.boxes(self, Vector3(40, 1, 40), sand, Color("#f1d9a0"))
 		"volcano":
 			WorldKit.box(self, Vector3(bb.size.x + 320, 1, bb.size.y + 320), Vector3(bc.x, -0.8, bc.z), Color("#7a9a4a"), false)
 			WorldKit.box(self, Vector3(bb.size.x + 60, 1, bb.size.y + 60), Vector3(bc.x, -0.75, bc.z), Color("#b88a5a"), false)

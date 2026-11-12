@@ -330,7 +330,7 @@ static func _desert() -> Dictionary:
 	return d
 
 
-## Glühwald-Pfad – Nachtfahrt durch den Zauberwald: Leuchtpilze als Sprungfedern, hohler Baumtunnel, nasser Bachlauf.
+## Glühwald-Pfad – Abendfahrt durch den Zauberwald: Leuchtpilze als Sprungfedern, hohler Baumtunnel, nasser Bachlauf.
 static func _glow() -> Dictionary:
 	var d := _base("glow_forest", "Glühwald-Pfad", "forest_dusk", "forest", 15.0)
 	var t := build_path(d, [
@@ -345,7 +345,7 @@ static func _glow() -> Dictionary:
 	d.boosts = [[t["b1"], 0.0], [t["end2"], 2.0]]
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d["bounce"] = [[t["bo1"], 0.0, 3.5, 4.0, 12.0], [t["bo2"], 0.0, -3.5, 4.0, 12.0], [t["bo3"], 0.0, 0.0, 4.0, 12.0]]
-	d["desc"] = "Nachtfahrt durch den Zauberwald: Leuchtpilze als Sprungfedern, hohler Baumtunnel, nasser Bachlauf."
+	d["desc"] = "Abendfahrt durch den Zauberwald: Leuchtpilze als Sprungfedern, hohler Baumtunnel, nasser Bachlauf."
 	return d
 
 
@@ -408,5 +408,5 @@ static func _falls() -> Dictionary:
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d.bank = {t["i1"]: -8}
 	d["falls"] = [t["fall"]]
-	d["desc"] = "Fahrt durch die Gischt eines Wasserfalls, Brücke über die eigene Strecke, Sprung über die Schlucht."
+	d["desc"] = "Mitten durch den Wasserfall, Brücke über die eigene Strecke, Gleitflug über den Schluchtfluss."
 	return d

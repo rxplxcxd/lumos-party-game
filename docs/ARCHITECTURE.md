@@ -62,6 +62,18 @@ Jedes Minispiel überschreibt nur `build_arena()`, ggf. `spawn_players()`, `on_t
   Leitplanken-Abpraller und Item-Projektile (Kuchendeckel prallt lateral ab) sind exakt, und die KI fährt eine
   Ideallinie mit Krümmungs-Vorsteuerung.
 * `NitroDash` verwaltet Rennen, Items, Kollisionen, Platzierungen, Kamera, HUD und Minimap.
+* `TrackDefs` beschreibt Strecken als Befehlsfolge (Gerade, Kurve mit festem Radius, Looping, Marken). Die Runde
+  schließt sich über eine Dubins-Kurve, der Restfehler wird über die Runde verteilt. `tools/dev/track_check.gd`
+  prüft Überschneidungen, Knicke und zu enge Radien.
+* `TrackMechanics` baut Mittelinseln (zwei Routen), Sprungfelder, Gefahren, Tunnel, Wasserfälle und Pfützen.
+  Gefahren takten nur aus der Rennzeit (`RaceTrack.hazard_phase`) und sind damit auf allen Geräten gleich, ohne
+  Netzverkehr. Treffer durch Gefahren meldet nur das Gerät, dem das Kart gehört (Opfer-Autorität wie bei Items).
+* `KartVisual` trennt Fahrwerk und Karosserie: Die Räder bleiben am Boden, die Karosserie hängt an Federn für
+  Schräglauf (Gieren um die Vorderachse), Rollen, Nicken und Fahrbahnstöße. Trefferreaktionen (Dreher, Salto,
+  Überschlag, Sahne, Stromschlag) laufen als additive Federimpulse, ohne die Physik anzuhalten.
+* Online-Fairness: Zeitlupe und Treffer-Stopp gibt es nur offline, weil beides die eigene Simulation bremst.
+* Tests: `race_items_test.gd` (Item-Regeln), `race_test.gd` bzw. `race_sweep.sh` (Fahrtest mit 8 CPU-Karts je
+  Strecke), `race_shot.gd` (Kontrollbilder von Mechaniken, Würfen und Treffern).
 
 ## Web-Export
 

@@ -3,8 +3,8 @@
 Der zweite exklusive Titel für **Lumos OS** – zwei vollwertige Spiele in einem:
 
 * **Modus A – Lumos Party:** chaotisches 3D-Party-Brettspiel mit 10 Brettern, 69 Minispielen und 10 Bossen.
-* **Modus B – Nitro Dash:** High-Speed-Arcade-Kart-Racer mit 8 Strecken, 3 Cups, Items, Drift-Boost,
-  Split-Screen für bis zu vier Fahrer und Online-Rennen.
+* **Modus B – Nitro Dash:** Arcade-Kart-Racer mit 12 Strecken, 4 Cups, 12 Items, Schräglauf-Drift mit
+  Mini-Turbo, Streckenmechaniken, Split-Screen für bis zu vier Fahrer und Online-Rennen.
 
 Gebaut mit **Godot 4.7** (GL-Compatibility/WebGL2), läuft auf dem Lumos One Handheld (Download aus dem
 Lumos Store) und als installierbare **PWA** in jedem modernen Browser – mit Touch, Tastatur und bis zu
@@ -50,12 +50,28 @@ vier Gamepads.
   Schmetterlinge, Glühwürmchen oder Fledermäuse.
 
 ### Modus B – Nitro Dash
-* **8 Strecken** mit eigenem Thema: Lumos-Ring · Korallen-Kanal · Vulkan-Inselchen · Gewitter-Pass · Frostgipfel ·
-  Sternenstaub-Bahn · Stadt-Rallye · Wüsten-Canyon – Sprungschanzen, Abkürzungen, Gleiter-Abschnitte.
-* **Modi:** Einzelrennen · **Grand Prix** (Lumos-Cup, Sternen-Cup, Mega-Cup mit allen 8 Strecken; Punkte
-  15–12–10–8–6–4–2–1, Siegerehrung) · **Zeitfahren** mit Bestzeiten je Strecke.
-* **Fahrgefühl:** weiche Arcade-Lenkung mit Trägheit, Federung, Drift mit Mini-Turbo, Auto-Gas für Touch.
-* **Items:** Kuchendeckel, Homing-Kanonenkugel, Megafon-Schock, Piraten-Anker, Nitro – fair nach Platzierung verteilt.
+* **12 Strecken** (je ca. 1 km, Runde 38–46 s) mit eigenem Thema und eigener Mechanik:
+  * Lumos-Ring · Korallen-Kanal · Vulkan-Inselchen · Gewitter-Pass · Frostgipfel · Sternenstaub-Bahn ·
+    Stadt-Rallye · Wüsten-Canyon (alle 1.4.0 neu entworfen)
+  * neu: **Glühwald-Pfad** (Leuchtpilz-Sprungfedern, Baumtunnel, nasser Bachlauf) · **Zuckerguss-Allee**
+    (Kaugummi-Kissen, Lolli-Looping, Brücke) · **Dschungel-Tempel** (rollende Baumstämme, Tempelruine mit zwei
+    Routen) · **Wasserfall-Schlucht** (Fahrt durch den Wasserfall, Brücke über die eigene Strecke, Schluchtsprung)
+  * Mechaniken: Mittelinseln mit zwei Routen, Sprungfelder mit Trick-Boost, angekündigte Gefahren
+    (Lavafontänen, Baumstämme), nasse Abschnitte mit weniger Grip, Eis, Wasser, Gleiter, Loopings, Rampen.
+* **Modi:** Einzelrennen · **Grand Prix** (Lumos-, Sternen-, Wunder-Cup und Mega-Cup mit allen 12 Strecken;
+  Punkte 15–12–10–8–6–4–2–1, Siegerehrung) · **Zeitfahren** mit Bestzeiten je Strecke.
+* **Fahrgefühl:**
+  * Drift mit Schräglauf: Die Nase zeigt in die Kurve, das Heck schwenkt aus, die Vorderräder lenken gegen.
+    Das Kart legt sich in die Kurve und federt danach von selbst zurück.
+  * Mini-Turbo in drei Stufen, Tricks in der Luft (Boost bei der Landung), Bandenstöße kosten den Drift.
+  * Kräftiger Antritt, Gewicht bei Kollisionen (Boost schiebt, geschrumpfte Karts fliegen), Auto-Gas für Touch.
+* **12 Items** mit eigenem Modell, Wurf- und Trefferanimation, verteilt nach Platz (vorn Verteidigung, hinten
+  Aufholhilfe):
+  * Angriff: Kuchendeckel, Bonbon-Salve (3 Schuss), Kanonenkugel (zielsuchend), Piraten-Anker (−18 m),
+    Honigtopf (Falle nach hinten), Megafon (Schockwelle), Donnerwolke (nur Vorausfahrende, Abklingzeit)
+  * Schutz und Tempo: Seifenblase (schluckt einen Treffer), Spiegelschild (wirft Geschosse zurück),
+    Funkenkern (schnellere Drift-Ladung), Nitro, Kometenritt (seltener Aufhol-Joker, unverwundbar)
+  * Treffer sind kurz (höchstens 1,5 s) und danach kurz geschützt. Es gibt keinen dauerhaften Kontrollverlust.
 * **Bis zu 4 Fahrer lokal** (Split-Screen, auf Wunsch auf mehreren Monitoren) und **online** mit 8 Karts.
 
 ### Boss-Kämpfe (10 Bosse, je Brett einer)
@@ -167,7 +183,7 @@ Alle Boss-Modelle sind prozedural gebaut (`scripts/bosses/boss_model.gd`) und an
 | A – Springen / Würfeln / OK | Leertaste, Enter | A | grüner Button |
 | B – Aktion / Schubsen / Nein | K | B | roter Button |
 | Item (Nitro Dash) | E | X oder LB/LT | gelber Button |
-| Drift (Nitro Dash) | Shift / Leertaste | RB oder RT | blauer Button |
+| Drift (Nitro Dash), in der Luft nach Rampe/Sprungfeld: Trick | Shift / Leertaste | RB oder RT | blauer Button |
 | Pause | Esc | Start | ‖ |
 
 * **Menüs wie auf der Konsole:** Steuerkreuz/Stick bewegen den Fokus, **A bestätigt, B geht zurück** – überall
@@ -177,8 +193,8 @@ Alle Boss-Modelle sind prozedural gebaut (`scripts/bosses/boss_model.gd`) und an
 * **Touch-Steuerelemente erscheinen nur auf echten Mobilgeräten** (Handy/Tablet, iPadOS); Desktop-Browser, App
   und Laptops mit Touchscreen zeigen sie nicht. Layout in **Einstellungen → Layout anpassen** (Größe/Deckkraft).
 * **Nitro Dash** fährt sich wie ein klassischer Arcade-Kart: weich ansprechende Lenkung mit Trägheit,
-  Federung (Einfedern bei Landungen, Nicken beim Gasgeben/Bremsen, Wanken in Kurven) und ein Regler
-  **Einstellungen → Kart-Lenkung** für die Empfindlichkeit.
+  Schräglauf im Drift, Federung (Einfedern bei Landungen, Nicken beim Gasgeben/Bremsen, Wanken in Kurven,
+  Fahrbahnstöße) und ein Regler **Einstellungen → Kart-Lenkung** für die Empfindlichkeit.
 
 Vibration läuft über Gamepad-Rumble bzw. `navigator.vibrate`. CPU-Züge lassen sich mit gehaltenem A vorspulen.
 
@@ -261,7 +277,8 @@ scripts/core/    CharacterRig, SlapstickModifier, ReactionClip, AvatarRetarget, 
 scripts/modes/   Partyhelfer-Reise, Lumos-Athlon, Kolosseum-Turnier
 scripts/party/   Brett-Daten, Brett-Baukasten, Brettspiel-Logik
 scripts/minigames/  MinigameBase + 38 Minispiele
-scripts/racer/   TrackDefs, RaceTrack, Racer (Fahrphysik + KI), NitroDash (Rennleitung, Items, HUD)
+scripts/racer/   TrackDefs, RaceTrack, Racer (Fahrphysik + KI), NitroDash (Rennleitung, Items, HUD),
+                 TrackMechanics (Streckenmechaniken), TrackScenery (Kulisse), ItemModels (Item-Modelle)
 scripts/ui/      Boot, Hauptmenü, Touch-Steuerung, Theme, Icons, Glücksrad
 scenes/          boot, menu, party, minigames, racer, cutscenes
 assets/          Original-Assetpakete (3d/, audio/) + animations/, music/, sfx/, fonts/, shaders/

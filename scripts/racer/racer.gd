@@ -684,4 +684,9 @@ func _ai_input(delta: float) -> Dictionary:
 	if item != "" and _ai_item_t <= 0.0:
 		_ai_item_t = randf_range(0.8, 2.0)
 		use = get_parent().call("ai_wants_item", self)
-	return {"steer": steer, "accel": true, "brake": false, "drift": drift, "item": use, "pitch": -0.3 if gliding else 0.0}
+	# Rollender Baumstamm kreuzt genau bei Ankunft: kurz vom Gas (seitlich ausweichen hilft nicht, er rollt quer)
+	var gas := true
+	if mech != null and cpu_level > 0 and (mech as TrackMechanics).log_ahead(s, x, v, float(get_parent().get("race_time"))):
+		gas = false
+		drift = false
+	return {"steer": steer, "accel": gas, "brake": false, "drift": drift, "item": use, "pitch": -0.3 if gliding else 0.0}

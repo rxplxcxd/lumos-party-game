@@ -5,6 +5,7 @@ extends Node
 ##                 (Rampen, Gleiter, Trennwände, Sprungfelder, Gefahren, Tunnel, Wasserfall, Nässe, Eis, Wasser)
 ##   --mode=items  Wurf- und Trefferanimationen aller Items in Nahaufnahme (je 3 Phasen)
 ##   --mode=kart   Kart im Stand, in der Kurve und im Drift von vorne, seitlich und hinten
+##   --mode=perf   Render-Last der Spielkamera nach 6 s Rennen: Zeile "PERF {json}" (Draw-Calls, Objekte, Dreiecke …)
 ##   xvfb-run -a -s "-screen 0 1280x720x24" ./godot --path . --resolution 960x540 res://tools/dev/Run.tscn -- \
 ##     --dev-script=res://tools/dev/race_shot.gd --track=glow_forest --mode=spots --out=/pfad
 
@@ -62,6 +63,8 @@ func run() -> void:
 			await _items()
 		"kart":
 			await _kart()
+		"perf":
+			await _perf(track_id)
 	tree.quit(0)
 
 
@@ -280,3 +283,28 @@ func _kart() -> void:
 	for ph in [0.3, 0.8]:
 		await _follow(a, Vector3(0.0, 3.0, 6.0), Vector3(0, 0.6, -2.0), 0.25)
 		await _save("kart_drift_%02d" % int(ph * 10))
+
+
+func _perf(track_id: String) -> void:
+	while float(nd.get("race_time")) < 6.0:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	var rs := RenderingServer
+	var c := {"mesh": 0, "omni": 0, "particles": 0}
+	var stack: Array[Node] = [get_tree().root]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is MeshInstance3D and (n as MeshInstance3D).is_visible_in_tree():
+			c.mesh += 1
+		elif n is OmniLight3D and (n as OmniLight3D).is_visible_in_tree():
+			c.omni += 1
+		elif n is CPUParticles3D and (n as CPUParticles3D).emitting:
+			c.particles += 1
+		stack.append_array(n.get_children())
+	print("PERF " + JSON.stringify({"track": track_id,
+		"draw_calls": rs.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
+		"objects": rs.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME),
+		"primitives": rs.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME),
+		"meshes": c.mesh, "omni_lights": c.omni, "particles": c.particles,
+		"nodes": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+		"video_mb": snappedf(rs.get_rendering_info(RenderingServer.RENDERING_INFO_VIDEO_MEM_USED) / 1048576.0, 0.1)}))

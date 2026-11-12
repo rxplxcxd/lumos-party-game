@@ -3,6 +3,73 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.4.0 – Nitro Dash: Gameplay- und Qualitätsoffensive
+Sicherungsstand vor dem Umbau: Commit `841697b1` (Version 1.3.0). Alle anderen Spielmodi sind unverändert und
+geprüft (siehe unten).
+* **Fahrgefühl und Drift:**
+  * Drift mit echtem Schräglauf: Die Nase zeigt in die Kurve, das Heck schwenkt nach außen (Linkskurve → Heck
+    rechts). Das Kart giert dabei um die Vorderachse, die Vorderräder lenken sichtbar gegen.
+  * Fahrwerk als Federn: Die Räder bleiben am Boden, die Karosserie legt sich in die Kurve (nach Querbeschleunigung),
+    nickt beim Gasgeben und Bremsen, federt bei Landungen, Fahrbahnstößen und Lenkwechseln und findet nach dem
+    Drift von selbst in die Geradeausfahrt zurück. Optik und Physik nutzen dieselben Werte (Schräglauf, Querkraft).
+  * Kräftiger Antritt, der zur Höchstgeschwindigkeit hin abflacht, Rollwiderstand und Luftwiderstand.
+  * Drift-Ladung nur am Boden, enger gelenkt lädt schneller. Drei Mini-Turbo-Stufen, Bandenstoß bei Tempo bricht
+    den Drift ohne Boost ab.
+  * Tricks: Drift-Taste in der Luft nach Rampe oder Sprungfeld → Salto oder Schraube, Boost bei der Landung.
+    Schief aufgekommen kostet Tempo. Wer beim Landen den Drift hält, driftet direkt weiter.
+  * Kollisionen mit Gewicht: Boost schiebt, geschrumpfte Karts fliegen, beide Karts bekommen einen Stoß in die
+    Federung.
+* **Strecken – alle 8 neu entworfen, 4 neue:** Ein Streckenbaukasten (Gerade, Kurve mit festem Radius, Looping,
+  Marken) ersetzt die Punktlisten. Die Runde schließt sich über eine Dubins-Kurve, `tools/dev/track_check.gd`
+  prüft Überschneidungen, Knicke und zu enge Radien.
+  * Länge vorher 373–754 m (Runde 14–29 s), jetzt 993–1186 m (Runde 38–46 s): mehr Kurvenarten, Drift-Passagen,
+    Höhenunterschiede, Überholstellen und Alternativrouten statt längerer Geraden.
+  * Neue Mechaniken: Mittelinseln mit zwei Routen (Felsinsel, Häuserblock, Tempelruine), Sprungfelder mit
+    Trick-Möglichkeit (Leuchtpilz, Kaugummi-Kissen, Düne, Sternfeder), angekündigte Gefahren im festen Takt
+    (Lavafontänen mit Glühen und Grollen, rollende Baumstämme, die vorher am Rand wackeln), nasse Abschnitte mit
+    weniger Grip und Gischt, Baumtunnel, ein Wasserfall über der Fahrbahn.
+  * **Glühwald-Pfad** (Abendlicht, Leuchtpilze, Baumtunnel, Bachlauf) · **Zuckerguss-Allee** (Riesen-Süßigkeiten,
+    Lolli-Looping, Schokofluss) · **Dschungel-Tempel** (Baumstämme, Tempelruine, Flusssprung) ·
+    **Wasserfall-Schlucht** (durch den Wasserfall, Brücke über die eigene Strecke, Gleitflug über den Fluss).
+  * Neuer Wunder-Cup, der Mega-Cup umfasst jetzt alle 12 Strecken.
+* **Items – 12 statt 5:**
+  * Kuchendeckel, Bonbon-Salve (3 Schuss im Fächer), Kanonenkugel (zielsuchend), Piraten-Anker (−18 m),
+    Honigtopf (Falle nach hinten), Megafon, Nitro
+  * neu: Seifenblase (schluckt einen Treffer), Spiegelschild (wirft Geschosse zum Absender zurück), Funkenkern
+    (Drift lädt schneller), Donnerwolke (trifft nur Vorausfahrende, 14 s Abklingzeit), Kometenritt (seltener
+    Aufhol-Joker für hintere Plätze: Autopilot, unverwundbar, höchstens einer gleichzeitig)
+  * Verteilung nach Platz: vorn Verteidigung, hinten Aufholhilfe. Fünf Box-Spuren, schnellere Wiederkehr, die
+    KI steuert Boxen an und hält Items nicht ewig.
+  * Jede Trefferart hat eine eigene, kurze Reaktion (höchstens 1,5 s Betäubung): Sahne im Gesicht, Dreher, Salto
+    mit Ruß, Schrumpfen, Ankerruck, klebriger Honig, Stromschlag, Überschlag. Danach kurz geschützt, nie
+    dauerhafter Kontrollverlust.
+* **Wurf- und Trefferanimationen:** Das Item liegt sichtbar in der Hand. Ausholen über die Schulter (Oberkörper
+  dreht mit, Kart federt), Freigabe, Nachschwung, zurück ans Lenkrad. Honig fliegt über die Schulter nach hinten.
+  Flugbahnen im Bogen mit Drehung, Aufprall-Effekte je Item. Das Kart blinkt erst nach der Reaktion.
+* **Optik:** Karts mit feineren Materialien (Lack, Chrom-Auspuff, Scheinwerfer, Achsschenkel), sichtbarer Lenkung und
+  Federung. Eigene Modelle für alle Items und Schilde (Seifenblase, kreisende Spiegel), dazu HUD-Symbole.
+* **Multiplayer und Fairness:**
+  * Zustand mit Schräglauf und Effekten (Blase, Spiegel, Funken, Komet, Honig). Spiegel-Rückwürfe,
+    Honigfallen und Blasen-Blocks werden übertragen.
+  * Treffer meldet weiterhin das Opfer-Gerät. Gefahren takten nur aus der Rennzeit und sind damit überall gleich.
+  * Online keine Zeitlupen-Nahaufnahme und kein Treffer-Stopp mehr: Beides bremste nur die eigene Simulation.
+* **Leistung:** Bodenkacheln als ein Mesh (Wüsten-Canyon: Draw-Calls 533 → 256). Kulisse bekommt eine Sichtweite
+  (Dschungel 441 → 363, Stadt 353 → 297, Gewitter-Pass 319 → 249).
+* **Trailer geschützt:** Der Trailer hat eine eigene, eingefrorene Kopie des alten Lumos-Rings
+  (`trailer/trailer_track.gd`). Seine Kamerafahrten bleiben gültig, geprüft im Bildvergleich gegen 1.3.0.
+* **Tests:**
+  * `tools/dev/race_items_test.gd`: 46 Prüfungen der Item-Regeln, neu in der CI
+  * `tools/dev/race_test.gd` und `race_sweep.sh`: Fahrtest mit 8 CPU-Karts, Stichprobe in der CI
+  * `tools/dev/race_shot.gd`: Kontrollbilder und Render-Last
+  * Ergebnisse:
+    * Fahrtest über alle 12 Strecken mit je 3 Runden und 8 CPU-Karts: alle im Ziel, kein Kart länger als
+      3 s festgefahren, Feldabstand 1,7–4,7 s, keine Skriptfehler. Alle 12 Items kommen vor, Komet und
+      Donnerwolke bleiben selten.
+    * Online mit 3 Geräten sowie mit 120 ms Verzögerung und 3 % Paketverlust: gleiche Reihenfolge überall,
+      keine Skriptfehler.
+    * Kart-Bowling und Ballon-Schlacht (gleiche Kart-Optik) laufen fehlerfrei, System-Tests grün,
+      Trailer-Trennung OK.
+
 ## 1.3.0 – Trailer filmisch überarbeitet
 Alle Änderungen liegen ausschließlich in `trailer/` (dazu Doku und Versionsnummer). Das Spiel ist unverändert.
 * **Lebendigere Figuren:**

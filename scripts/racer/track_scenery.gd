@@ -95,12 +95,14 @@ func _build_ground() -> void:
 	if theme == "desert":
 		# Boden in Kacheln, die Schlucht unter dem Gleitflug bleibt offen
 		var tile := 24.0
+		var centers: Array[Vector3] = []
+		var bc := bounds(track).get_center()
 		for ix in range(-12, 13):
 			for iz in range(-12, 13):
-				var c := Vector3(ix * tile, 0, iz * tile) + Vector3(bounds(track).get_center().x, 0, bounds(track).get_center().y)
-				if _in_gorge(c, tile * 0.5):
-					continue
-				WorldKit.box(self, Vector3(tile, 1, tile), c + Vector3(0, -0.8, 0), col, false)
+				var c := Vector3(ix * tile + bc.x, 0, iz * tile + bc.y)
+				if not _in_gorge(c, tile * 0.5):
+					centers.append(c + Vector3(0, -0.8, 0))
+		WorldKit.boxes(self, Vector3(tile, 1, tile), centers, col)   # ein Mesh statt ~600 Kacheln
 		return
 	var b := bounds(track)
 	WorldKit.box(self, Vector3(b.size.x + 320.0, 1, b.size.y + 320.0), Vector3(b.get_center().x, -0.8, b.get_center().y), col, false)
@@ -145,6 +147,7 @@ func _decorate() -> void:
 					var e: Array = near[_rng.randi() % near.size()]
 					var n := WorldKit.place(self, e[0], p, 0.0, _rng.randf_range(e[1], e[2]), false, false)
 					n.look_at(p + fr.basis.z, Vector3.UP)
+					_view_range(n, 130.0)
 				var f: Array = far[_rng.randi() % far.size()]
 				var f_scl := _rng.randf_range(f[1], f[2])
 				var footprint := Assets.model_aabb(f[0]).size * f_scl
@@ -156,8 +159,18 @@ func _decorate() -> void:
 					var rot := _rng.randf() * 360.0
 					if theme == "city":
 						rot = rad_to_deg(atan2(fr.basis.x.x * -side, fr.basis.x.z * -side))   # Fassade zur Straße
-					WorldKit.place(self, f[0], far_p, rot, f_scl, false, _rng.randf() < 0.35)
+					_view_range(WorldKit.place(self, f[0], far_p, rot, f_scl, false, _rng.randf() < 0.35), 230.0)
 		s += 11.0 if theme != "city" else 9.0
+
+
+## Sichtweite für Kulisse: dahinter wird sie nicht mehr gezeichnet (bei 1-km-Strecken liegt viel gleichzeitig im
+## Blickfeld; den Rand verdeckt der Dunst). Spart auf Mobilgeräten deutlich Draw-Calls.
+static func _view_range(n: Node, dist: float) -> void:
+	if n is GeometryInstance3D:
+		(n as GeometryInstance3D).visibility_range_end = dist
+		(n as GeometryInstance3D).visibility_range_end_margin = 12.0
+	for c in n.get_children():
+		_view_range(c, dist)
 
 
 # --- Gewitter-Pass ----------------------------------------------------------------------------------

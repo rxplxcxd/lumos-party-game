@@ -175,6 +175,21 @@ static func mat(color: Color, rough := 0.85, emission := 0.0) -> StandardMateria
 	return m
 
 
+## Viele gleich große Quader ohne Kollision als EIN Mesh (ein Draw-Call statt hunderter, z. B. Bodenkacheln).
+static func boxes(parent: Node, size: Vector3, centers: Array, color := Color(0.6, 0.6, 0.65)) -> MeshInstance3D:
+	var bm := BoxMesh.new()
+	bm.size = size
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for c in centers:
+		st.append_from(bm, 0, Transform3D(Basis.IDENTITY, c as Vector3))
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	mi.material_override = mat(color)
+	parent.add_child(mi)
+	return mi
+
+
 ## Statischer Quader mit Kollision (Boden, Wände, Plattformen).
 static func box(parent: Node, size: Vector3, pos: Vector3, color := Color(0.6, 0.6, 0.65), collide := true, layer := 1) -> Node3D:
 	var root: Node3D = StaticBody3D.new() if collide else Node3D.new()

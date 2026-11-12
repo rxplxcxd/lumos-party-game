@@ -61,9 +61,11 @@ func run() -> void:
 	var max_back := []
 	var glide := []
 	glide.resize(n)
+	var run_now := []   # aktuelle zusammenhängende Steh-Phase
+	run_now.resize(n)
 	stuck.resize(n); wall.resize(n); air.resize(n); drift.resize(n); stun_prev.resize(n); max_back.resize(n)
 	for i in n:
-		glide[i] = 0.0; stuck[i] = 0.0; wall[i] = 0.0; air[i] = 0.0; drift[i] = 0.0; stun_prev[i] = 0.0; max_back[i] = 0.0
+		glide[i] = 0.0; run_now[i] = 0.0; stuck[i] = 0.0; wall[i] = 0.0; air[i] = 0.0; drift[i] = 0.0; stun_prev[i] = 0.0; max_back[i] = 0.0
 	var dt := 1.0 / 60.0
 	var t := 0.0
 	var race_t := 0.0
@@ -88,6 +90,10 @@ func run() -> void:
 				continue
 			if r.started and r.stun_t <= 0.0 and absf(r.v) < 4.0 and race_t > 4.0:
 				stuck[i] = float(stuck[i]) + dt
+				run_now[i] = float(run_now[i]) + dt
+				max_back[i] = maxf(float(max_back[i]), float(run_now[i]))
+			else:
+				run_now[i] = 0.0
 			if absf(r.x) >= track.width * 0.5 - Racer.RADIUS - 0.02 and not r.gliding:
 				wall[i] = float(wall[i]) + dt
 			if r.gliding:
@@ -136,12 +142,12 @@ func run() -> void:
 	var res := {"track": track_id, "length_m": snappedf(track.length, 1.0), "laps": laps, "race_s": snappedf(race_t, 0.1),
 		"lap_best_s": snappedf(best, 0.1) if best < INF else 0.0, "lap_median_s": snappedf(med, 0.1), "finished": finished, "of": n,
 		"field_spread_s": snappedf(spread, 0.1),
-		"stuck_s": _r(stuck), "wall_s": _r(wall), "air_s": _r(air), "glide_s": _r(glide), "air_by_kind_s": _air_by, "air_count": _air_n, "drift_s": _r(drift),
+		"stuck_s": _r(stuck), "stuck_run_s": _r(max_back), "wall_s": _r(wall), "air_s": _r(air), "glide_s": _r(glide), "air_by_kind_s": _air_by, "air_count": _air_n, "drift_s": _r(drift),
 		"items_used": _used, "hits": _hits, "got": _got, "used": _use}
 	print("RACE " + JSON.stringify(res))
 	for i in n:
-		if float(stuck[i]) > 3.0:
-			print("RACE-WARN Kart %d hängt %.1f s fest" % [i, stuck[i]])
+		if float(max_back[i]) > 3.0:   # zusammenhängend (aufsummiert stehen auch Treffer und Anfahren drin)
+			print("RACE-WARN Kart %d hängt %.1f s am Stück fest" % [i, max_back[i]])
 	if finished < n:
 		print("RACE-WARN nur %d/%d im Ziel" % [finished, n])
 	tree.quit(0)

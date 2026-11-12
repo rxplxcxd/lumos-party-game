@@ -246,10 +246,10 @@ const TRACKS := [
 	{"id": "orbit_ring", "name": "Sternenstaub-Bahn", "desc": "Boost-Tunnel, Sternenfedern, Looping und langer Schwebeflug.", "music": "race"},
 	{"id": "city_rally", "name": "Stadt-Rallye", "desc": "Enge 90°-Ecken, Häuserblock mit zwei Routen, Schikane und Kanalsprung.", "music": "race"},
 	{"id": "desert_canyon", "name": "Wüsten-Canyon", "desc": "Canyon-S-Kurven, Dünen-Sprungfeld, Looping und Gleitflug über die Schlucht.", "music": "race"},
-	{"id": "glow_forest", "name": "Glühwald-Pfad", "desc": "Nachtfahrt durch den Zauberwald: Leuchtpilze als Sprungfedern, hohler Baumtunnel, nasser Bachlauf.", "music": "race"},
+	{"id": "glow_forest", "name": "Glühwald-Pfad", "desc": "Abendfahrt durch den Zauberwald: Leuchtpilze als Sprungfedern, hohler Baumtunnel, nasser Bachlauf.", "music": "race"},
 	{"id": "candy_lane", "name": "Zuckerguss-Allee", "desc": "Riesen-Süßigkeiten, Kaugummi-Sprungfelder, Lolli-Looping, Brücke über die erste Kurve.", "music": "race"},
 	{"id": "jungle_ruins", "name": "Dschungel-Tempel", "desc": "Rollende Baumstämme, Tempelruine mit zwei Routen, Sprung über den Fluss.", "music": "race"},
-	{"id": "falls_gorge", "name": "Wasserfall-Schlucht", "desc": "Fahrt durch die Gischt eines Wasserfalls, Brücke über die eigene Strecke, Sprung über die Schlucht.", "music": "race"},
+	{"id": "falls_gorge", "name": "Wasserfall-Schlucht", "desc": "Mitten durch den Wasserfall, Brücke über die eigene Strecke, Gleitflug über den Schluchtfluss.", "music": "race"},
 ]
 
 const CUPS := [

@@ -312,14 +312,10 @@ func tick(race_t: float, racers: Array) -> void:
 			"log":
 				var root: Node3D = e.root
 				var period := float(h.get("period", 5.0))
-				var on := float(h.get("on", 2.0))
 				var u := fposmod(race_t + float(h.get("phase", 0.0)), period)
-				var hw := track.width * 0.5 + 2.0
-				var cycle := int(floor((race_t + float(h.get("phase", 0.0))) / period))
-				var dir := 1.0 if cycle % 2 == 0 else -1.0
-				if u < on:
+				var x := log_x(h, race_t)
+				if x < INF:
 					root.visible = true
-					var x := lerpf(-hw * dir, hw * dir, u / on)
 					root.global_transform = _xf(float(h.s), x, 0.75)
 					var mesh: Node3D = e.mesh
 					mesh.rotation = Vector3(PI * 0.5, 0.0, -x / 0.75)   # rollt
@@ -332,8 +328,46 @@ func tick(race_t: float, racers: Array) -> void:
 						var ds := absf(track.wrap_s(rr.s - float(h.s) + track.length * 0.5) - track.length * 0.5)
 						if ds < 2.6 and absf(rr.x - x) < 1.4:
 							on_hit.call(rr, "log")
+				elif RaceTrack.hazard_phase(h, race_t) < 0.0:
+					# Vorwarnung: der nächste Stamm wackelt schon am Straßenrand, Staub rieselt
+					var cyc := int(floor((race_t + float(h.get("phase", 0.0))) / period)) + 1
+					var x0 := -(track.width * 0.5 + 2.0) * (1.0 if cyc % 2 == 0 else -1.0)
+					root.visible = true
+					root.global_transform = _xf(float(h.s), x0, 0.75)
+					(e.mesh as Node3D).rotation = Vector3(PI * 0.5, 0.0, sin(race_t * 38.0) * 0.12)
+					if int(u * 6.0) != int((u - 0.016) * 6.0):
+						FX.dust(root.global_position + Vector3.DOWN * 0.6, Color(0.6, 0.5, 0.35), 2, 0.5)
 				else:
 					root.visible = false
+
+
+## Querposition eines rollenden Baumstamms zur Rennzeit t (INF = gerade keiner unterwegs). Er rollt abwechselnd
+## von links nach rechts und zurück, jeweils "on" Sekunden lang.
+func log_x(h: Dictionary, t: float) -> float:
+	var period := float(h.get("period", 5.0))
+	var on := float(h.get("on", 2.0))
+	var u := fposmod(t + float(h.get("phase", 0.0)), period)
+	if u >= on:
+		return INF
+	var hw := track.width * 0.5 + 2.0
+	var cycle := int(floor((t + float(h.get("phase", 0.0))) / period))
+	var dir := 1.0 if cycle % 2 == 0 else -1.0
+	return lerpf(-hw * dir, hw * dir, u / on)
+
+
+## Kreuzt ein Baumstamm (s, x) genau dann, wenn ein Kart mit Tempo v dort ankommt? (KI: kurz vom Gas)
+func log_ahead(s: float, x: float, v: float, race_t: float) -> bool:
+	for e in _hz_nodes:
+		var h: Dictionary = e.h
+		if String(h.type) != "log":
+			continue
+		var ds := track.wrap_s(float(h.s) - s)
+		if ds < 1.0 or ds > 32.0:
+			continue
+		var lx := log_x(h, race_t + ds / maxf(v, 6.0))
+		if lx < INF and absf(lx - x) < 3.2:
+			return true
+	return false
 
 
 ## Ist eine Gefahr bei (s, x) in Kürze aktiv? (für die KI: lieber ausweichen)
