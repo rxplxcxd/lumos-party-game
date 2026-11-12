@@ -14,9 +14,10 @@ extends Node3D
 ##  * Antizipation → Aktion → Nachschwingen bei Sprüngen, Stolpern, Zusammenstößen (Squash & Stretch, Taumeln).
 ##  * Weltenwechsel sind verdeckt (Baumstamm, Wasserwand, Sternenblitz) oder fließend (Bodenwechsel).
 
-const DUR := 95.5
+const DUR := 97.25
 const BEAT := 60.0 / 138.0   # Hurry-Up-Track der Montage
 const WIPE_T := 52.0
+const WIPE2_T := 57.95      # Weltenwechsel hinter dem Wasserfall (Wiese → Schnee)
 const BOSS_SCALE := 2.2       # Weltenwechsel hinter dem Stamm (Wald → Wiese)
 const MONTAGE_T0 := 65.4   # BOOM – Montage im 4-Schläge-Raster (1,74 s je Bild)
 
@@ -33,6 +34,15 @@ var _prev_v: Array[float] = [0.0, 0.0, 0.0, 0.0]
 var _acc_s: Array[float] = [0.0, 0.0, 0.0, 0.0]          # geglättete Beschleunigung (Gewichtsverlagerung)
 var _last_v: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO]
 var _marks: Array = []
+var _gaze: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO]
+var _gaze_w: Array[float] = [0.0, 0.0, 0.0, 0.0]
+var _moving: Array[bool] = [false, false, false, false]
+var _curtain: Node3D
+var _curtain_local := Vector3.ZERO
+var _track: RaceTrack
+var _rc_pos := Vector3.ZERO
+var _rc_look := Vector3.ZERO
+var _rc_shot := -1
 var _cam_tan: Array = []
 var _trunk: MeshInstance3D
 var _flames: Array[MeshInstance3D] = []
@@ -94,6 +104,8 @@ func _ready() -> void:
 	# Vordergrund-Stamm für den verdeckten Weltenwechsel genau dorthin, wo die Kamera im Wechselmoment steht
 	var cw: Vector3 = _cam_eval(WIPE_T)[0]
 	_trunk_local = Vector3(cw.x, 8.0, cw.z - 2.2)
+	var cw2: Vector3 = _cam_eval(WIPE2_T)[0]
+	_curtain_local = Vector3(cw2.x, 0.0, cw2.z - 1.7)
 	_use_set("forest")
 	_sets.forest.visible = false   # Akt 1 beginnt in völliger Dunkelheit
 	_use_env("void")
@@ -148,6 +160,8 @@ func _process(delta: float) -> void:
 	_drive_camera()
 	if _trunk.visible:   # nach den Ereignissen: im Wechselbild steht der Stamm schon in der neuen Welt
 		_trunk.global_position = _origin + _trunk_local
+	if _curtain.visible:
+		_curtain.global_position = _origin + _curtain_local
 	_drive_music()
 	_animate_props(delta)
 	if t >= DUR:
@@ -234,14 +248,24 @@ func _mark(kind: String) -> void:
 func _pos_of(i: int, time: float) -> Vector3:
 	var segs: Array = _segs[i]
 	var last := Vector3.INF
-	for s in segs:
+	for k in segs.size():
+		var s: Array = segs[k]
 		var t0: float = s[0]
 		var t1: float = s[1]
 		if time < t0:
 			break
 		if time <= t1:
 			var u := (time - t0) / maxf(t1 - t0, 0.001)
-			var e := u * u * u * (u * (u * 6.0 - 15.0) + 10.0)   # Smootherstep: weich an- und abfahren
+			var pre := k > 0 and _chained(segs[k - 1], s)
+			var post := k + 1 < segs.size() and _chained(s, segs[k + 1])
+			var e := u
+			if pre and not post:
+				var q := 1.0 - u
+				e = 1.0 - q * q * (1.5 - 0.5 * q)   # nur ausrollen
+			elif post and not pre:
+				e = u * u * (1.5 - 0.5 * u)          # nur anfahren
+			elif not pre and not post:
+				e = u * u * u * (u * (u * 6.0 - 15.0) + 10.0)   # Smootherstep: weich an- und abfahren
 			var p: Vector3 = (s[2] as Vector3).lerp(s[3], e)
 			var hop: float = s[4]
 			if hop > 0.0:
@@ -249,6 +273,18 @@ func _pos_of(i: int, time: float) -> Vector3:
 			return p
 		last = s[3]
 	return last
+
+
+## Zwei Wegstücke gehen fließend ineinander über (gleicher Zeitpunkt, gleicher Ort, ähnliche Richtung) – dann wird
+## dazwischen nicht angehalten.
+func _chained(a: Array, b: Array) -> bool:
+	if absf(float(a[1]) - float(b[0])) > 0.02 or (a[3] as Vector3).distance_to(b[2]) > 0.06:
+		return false
+	var da := (a[3] as Vector3) - (a[2] as Vector3)
+	var db := (b[3] as Vector3) - (b[2] as Vector3)
+	da.y = 0.0
+	db.y = 0.0
+	return da.length() > 0.3 and db.length() > 0.3 and da.normalized().dot(db.normalized()) > 0.25
 
 
 func _drive(i: int, delta: float) -> void:
@@ -278,20 +314,57 @@ func _drive(i: int, delta: float) -> void:
 	if not _hold[i]:
 		r.locomote(spd, 6.5, absf(v.y) < 2.5 or lp.y < 0.05, v.y, delta)
 	var lk = _look[i]
+	var head := p + Vector3.UP * 1.7
+	var want := Vector3.ZERO
+	var w := 0.0
 	if lk is Vector3:
-		r.look_at_point(_origin + (lk as Vector3), 1.0)
+		want = _origin + (lk as Vector3)
+		w = 1.0
 	elif lk is Node3D and is_instance_valid(lk):
-		r.look_at_point((lk as Node3D).global_position + Vector3.UP * 0.2, 1.0)
+		want = (lk as Node3D).global_position + Vector3.UP * 0.2
+		w = 1.0
 	elif lk is int:
-		r.look_at_point(heroes[int(lk)].global_position + Vector3.UP * 1.6, 1.0)
-	else:
-		r.clear_look()
+		want = heroes[int(lk)].global_position + Vector3.UP * 1.6
+		w = 1.0
+	elif lk is String and String(lk) == "cam":
+		want = cam.global_position   # Blick zum Zuschauer
+		w = 1.0
+	elif spd > 0.6 and not _hold[i]:
+		# unterwegs: Blick voraus, der Kopf schweift leicht (jeder in seinem eigenen Takt)
+		var fdir := flat.normalized()
+		want = head + fdir * 4.0 + fdir.cross(Vector3.UP) * sin(t * 0.6 + i * 2.3) * 1.3 + Vector3.UP * (sin(t * 0.9 + i * 1.7) * 0.35 - 0.2)
+		w = 0.45
+	if w > 0.0:
+		if _gaze_w[i] < 0.02:
+			_gaze[i] = want
+		_gaze[i] = _gaze[i].lerp(want, 1.0 - exp(-delta / 0.14))   # der Kopf wandert zum Ziel, statt umzuspringen
+	_gaze_w[i] = lerpf(_gaze_w[i], w, 1.0 - exp(-delta / 0.2))
+	if r.modifier:
+		r.modifier.look_target = _gaze[i]
+		r.modifier.look_weight = _gaze_w[i]
+	# Nachschwingen: beim Anhalten sackt die Figur kurz ein, beim Loslaufen streckt sie sich
+	if not _hold[i] and lp.y < 0.05:
+		if _moving[i] and spd < 0.3:
+			_moving[i] = false
+			r.squash(1.05, 0.96, 0.34)
+		elif not _moving[i] and spd > 1.6:
+			_moving[i] = true
+			r.squash(0.97, 1.04, 0.24)
+	# eigener Laufweg: niemand läuft wie auf Schienen
+	if spd > 0.5 and lp.y < 0.05 and _set_now != "montage":
+		r.global_position = p + flat.normalized().cross(Vector3.UP) * sin(t * 1.3 + i * 2.1) * 0.09 * clampf(spd / 4.0, 0.0, 1.0)
 
 
 func _drive_camera() -> void:
 	if _cam_keys.is_empty():
 		return
+	if _set_now == "race":
+		_race_camera()
+		return
 	var c := _cam_eval(t)
+	# ein Hauch Handkamera: die Kamera atmet (Zentimeter, nie spürbar als Wackeln)
+	c[0] = (c[0] as Vector3) + Vector3(sin(t * 0.53) * 0.02, sin(t * 0.71 + 1.3) * 0.014, 0.0)
+	c[1] = (c[1] as Vector3) + Vector3(sin(t * 0.37 + 2.0) * 0.03, sin(t * 0.47) * 0.018, 0.0)
 	cam.global_position = _origin + (c[0] as Vector3)
 	cam.fov = float(c[2])
 	var target := _origin + (c[1] as Vector3)
@@ -480,11 +553,13 @@ func _build_sets() -> void:
 	_trunk.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_trunk.visible = false
 	add_child(_trunk)
+	_curtain = _build_curtain()
 	_sets["forest"] = _build_forest(Vector3(0, 0, 0))
 	_sets["meadow"] = _build_meadow(Vector3(0, 0, 600))
 	_sets["snow"] = _build_snow(Vector3(0, 0, 1200))
 	_sets["beach"] = _build_beach(Vector3(0, 0, 1800))
 	_sets["montage"] = _build_montage(Vector3(0, 0, 2600))
+	_sets["race"] = _build_race()
 	for s in _sets.values():
 		(s as Node3D).visible = false
 
@@ -739,6 +814,7 @@ func _build_montage(o: Vector3) -> Node3D:
 	add_child(s)
 	s.position = o
 	WorldKit.box(s, Vector3(800, 1, 200), Vector3(300, -0.5, 0), Color("#7fc96a"), false)
+	WorldKit.backdrop(s, "meadow", Color("#7fc96a"), -0.55, Vector3(300, 0, 0))   # Horizont: Hügel, Wolken, Dunst
 	# 0 Start-Arena · 1 letzte Münze · 2 Zielsprint · 3 Planke über Wasser · 4 Boss-Ausweichen · 5 Siegerpose
 	WorldKit.cylinder(s, 6.0, 0.6, Vector3(0, 0.3, 0), Color("#ffb347"), false)
 	WorldKit.cylinder(s, 5.0, 0.62, Vector3(0, 0.31, 0), Color("#ff6f91"), false)
@@ -845,6 +921,10 @@ func _build_music() -> void:
 		var a := AudioStreamPlayer.new()
 		a.bus = "Music"
 		a.stream = load(p)
+		if p.contains("hurry"):   # die Montage ist einen Takt länger als das Stück – nahtlos weiterlaufen lassen
+			var lp := (a.stream as AudioStreamOggVorbis).duplicate() as AudioStreamOggVorbis
+			lp.loop = true
+			a.stream = lp
 		a.volume_db = -80.0
 		add_child(a)
 		_music.append(a)
@@ -861,7 +941,7 @@ func _drive_music() -> void:
 		v0 = clampf(t / 3.0, 0.0, 1.0) * lerpf(0.55, 1.0, clampf((t - 10.0) / 22.0, 0.0, 1.0))
 	elif t < 65.0:
 		v0 = lerpf(1.0, 0.0, (t - 64.6) / 0.4)
-	var end_m := MONTAGE_T0 + 10.0 * 4.0 * BEAT
+	var end_m := MONTAGE_T0 + 11.0 * 4.0 * BEAT
 	var v1 := 0.0
 	if t >= MONTAGE_T0 and t < end_m - 0.2:
 		v1 = 1.0
@@ -954,6 +1034,9 @@ func _act1() -> void:
 	face(A, 12.0, Vector3(-1, 0, -0.3))
 	look(A, 12.8, Vector3(1.0, 14.0, -4.0))   # ganz nach oben in die Baumkronen
 	face(A, 13.6, Vector3(0.2, 0, 1))
+	look(A, 14.0, "cam")            # … und entdeckt uns: „Kommst du mit?“
+	react(A, 14.3, "wave")
+	look(A, 15.4, null)
 
 
 # --- Akt 2 – Eine Welt voller Wunder (15–35 s) ----------------------------------------------------------------
@@ -1058,6 +1141,8 @@ func _act3() -> void:
 	go(C, 42.6, 43.8, Vector3(32.6, 0, 1.0), Vector3(34.4, 0, 0.9))   # außer Atem, wird langsamer
 	at(42.8, func() -> void: heroes[C].set_lean(0.6))
 	react(C, 43.9, "sleepy")
+	for k in 5:   # außer Atem: der Brustkorb pumpt
+		at(44.0 + k * 0.42, func() -> void: heroes[C].squash(1.05, 0.955, 0.4))
 	look(A, 41.8, C)
 	look(B, 42.2, C)
 	key(40.4, Vector3(31.0, 1.8, 7.4), Vector3(31.0, 1.1, 0.0), 48.0)
@@ -1139,15 +1224,11 @@ func _act3() -> void:
 	key(55.6, Vector3(63.4, 1.6, 5.2), Vector3(61.5, 1.3, -0.6), 42.0)
 	# Weltenwechsel 2: durch die Wasserwand
 	key(58.0, Vector3(69.0, 2.0, 7.0), Vector3(67.0, 1.2, 0.0), 46.0)
-	at(57.75, func() -> void:
-		Audio.sfx("splash", null, -6.0, 1.0, 0.0)
-		_mark("Wasserwand")
-		create_tween().tween_property(_water, "modulate:a", 0.95, 0.18))
-	at(57.95, func() -> void:
-		_use_set("snow", "snow")
-		_fade(_water, 0.0, 0.5))
-
-
+	# Die Kamera fährt hinter einem Wasserfall hindurch; solange das Wasser das Bild füllt, wechselt die Welt
+	at(55.0, func() -> void: _curtain.visible = true)
+	at(WIPE2_T - 0.35, func() -> void: Audio.sfx("splash", null, -6.0, 1.0, 0.0))
+	at(WIPE2_T, func() -> void: _use_set("snow", "snow"))
+	at(58.95, func() -> void: _curtain.visible = false)   # längst hinter der Kamera
 # --- Akt 4 – Das Abenteuer eskaliert (Weltenwechsel 3+4, Boss, BOOM, Montage) --------------------------------------
 func _act4() -> void:
 	var A := 0
@@ -1158,23 +1239,27 @@ func _act4() -> void:
 	go(A, 58.4, 60.4, Vector3(68.4, 0, 0.0), Vector3(74.6, 0, 0.1))
 	go(B, 58.4, 60.4, Vector3(67.4, 0, -0.9), Vector3(73.6, 0, -0.6))
 	go(C, 58.4, 60.4, Vector3(67.0, 0, 1.0), Vector3(73.0, 0, 1.0))
-	go(D, 58.4, 59.6, Vector3(66.0, 0, -1.8), Vector3(73.0, 0, -1.4))
+	go(D, 58.4, 59.5, Vector3(66.0, 0, -1.8), Vector3(72.4, 0, -1.4))
 	look(D, 58.8, Vector3(73.6, 1.7, -1.4))
-	clip(D, 59.6, "interact", 0.1, 1.2)
+	at(59.4, func() -> void: heroes[D].anticipate(0.3, 0.06))
+	go(D, 59.5, 60.15, Vector3(72.4, 0, -1.4), Vector3(74.7, 0, -1.2), 1.25)   # Sprung – in der Luft wechselt die Welt
 	key(59.8, Vector3(75.4, 1.9, 5.6), Vector3(73.2, 1.3, -0.6), 44.0)
-	at(59.85, func() -> void:
+	at(59.76, func() -> void:
 		Audio.sfx("chime", null, -3.0, 1.2, 0.0)
 		_mark("Blitz")
-		create_tween().tween_property(_flash, "modulate:a", 1.0, 0.1))
-	at(60.0, func() -> void:
+		create_tween().tween_property(_flash, "modulate:a", 0.92, 0.07))
+	at(59.84, func() -> void:
+		_curtain.visible = false
 		_use_set("beach", "sunset")
-		_fade(_flash, 0.0, 0.7))
-	go(D, 60.0, 60.4, Vector3(73.0, 0, -1.4), Vector3(73.6, 0, -1.2))
+		_fade(_flash, 0.0, 0.55))
+	at(60.15, func() -> void: heroes[D].land_impact(0.8))   # landet im Sand
+	look(D, 60.2, null)
+	go(D, 60.15, 60.4, Vector3(74.7, 0, -1.2), Vector3(75.2, 0, -1.1))
 	# Strand → Vulkangestein: Boden wandelt sich, die Gruppe läuft, springt, stupst sich an
 	go(A, 60.4, 63.4, Vector3(74.6, 0, 0.1), Vector3(84.6, 0, 0.2))
 	go(B, 60.4, 63.4, Vector3(73.6, 0, -0.6), Vector3(83.4, 0, -0.9))
 	go(C, 60.4, 61.6, Vector3(73.0, 0, 1.0), Vector3(77.2, 0, 0.6))
-	go(D, 60.4, 61.6, Vector3(73.6, 0, -1.2), Vector3(77.0, 0, -0.2))
+	go(D, 60.4, 61.6, Vector3(75.2, 0, -1.1), Vector3(77.0, 0, -0.2))
 	at(61.6, func() -> void:   # Stupser
 		heroes[D].squash(1.12, 0.9, 0.25)
 		heroes[D].modifier_pulse("scared", 0.5, 0.6)
@@ -1218,7 +1303,7 @@ func _act4() -> void:
 func _montage() -> void:
 	var sh := 4.0 * BEAT
 	var s := []
-	for k in 10:
+	for k in 11:
 		s.append(MONTAGE_T0 + k * sh)
 	var A := 0
 	var B := 1
@@ -1229,7 +1314,7 @@ func _montage() -> void:
 			for k in 4:
 				heroes[k].visible = k in on
 				heroes[k].set_lean(0.0)
-				heroes[k].clear_look()
+				_look[k] = null
 			for kv in _karts:
 				kv.visible = false)
 	at(s[0], func() -> void: _use_set("montage", "day"))
@@ -1316,35 +1401,29 @@ func _montage() -> void:
 	react(A, s[5] + 1.0, "flex")
 	key(s[5], Vector3(300.4, 0.7, 4.6), Vector3(300.0, 2.3, 0.0), 48.0, true)
 	key(s[6] - 0.01, Vector3(301.8, 0.9, 4.2), Vector3(300.0, 2.4, 0.0), 44.0)
-	# 6 – Nitro Dash: Drift durch die Kurve · 7 – knappes Überholen · 8 – Ziellinie
-	cast.call([], s[6])
-	at(s[6], func() -> void: _karts[0].visible = true)
-	key(s[6], Vector3(357.0, 2.0, -1.0), Vector3(363.8, 0.6, -11.4), 32.0, true)
-	key(s[7] - 0.01, Vector3(358.0, 2.0, 0.5), Vector3(368.8, 0.6, 8.2), 30.0)
-	cast.call([], s[7])
-	at(s[7], func() -> void:
-		_karts[1].visible = true
-		_karts[2].visible = true)
-	key(s[7], Vector3(420.0, 1.5, 7.4), Vector3(425.0, 0.8, 0.0), 44.0, true)
-	key(s[8] - 0.01, Vector3(441.0, 1.5, 7.4), Vector3(446.0, 0.8, 0.0), 44.0)
-	cast.call([], s[8])
-	at(s[8], func() -> void: _karts[2].visible = true)
-	at(s[8] + 0.85, func() -> void:
-		FX.confetti(_origin + Vector3(480, 4.4, 0), 120)
-		Audio.sfx("go", null, -2.0, 1.0, 0.0))
-	key(s[8], Vector3(485.0, 1.4, 6.0), Vector3(477.0, 1.0, 0.0), 44.0, true)
-	key(s[9] - 0.01, Vector3(485.6, 1.6, 5.4), Vector3(479.0, 1.2, 0.0), 42.0)
-	# 9 – Jubel
-	cast.call([A, B, C, D], s[9])
+	# 6–9 – Nitro Dash auf dem echten Lumos-Ring: Start · Drift · Überholen · Ziel (Kamera fährt mit, siehe _race_camera)
+	at(s[6], func() -> void:
+		_use_set("race", "day")
+		Audio.sfx("go", null, -3.0, 1.0, 0.0))
+	for k in [6, 7, 8, 9]:
+		cast.call([], s[k])
+		key(s[k], Vector3(0, 2, 0), Vector3(0, 2, -5), 60.0, true)
+		at(s[k] + 0.1, func() -> void: Audio.sfx("whoosh", null, -5.0, 0.8, 0.0))
+	at(s[9] + 0.36 * sh, func() -> void:
+		FX.confetti(_track.frame(0.0).origin + Vector3.UP * 6.0, 160)
+		Audio.sfx("chime", null, -2.0, 1.0, 0.0))
+	at(s[10], func() -> void: _use_set("montage", "day"))
+	# 10 – Jubel
+	cast.call([A, B, C, D], s[10])
 	var spots := [Vector3(300.0, 1.2, 0), Vector3(298.2, 0, 0.8), Vector3(301.8, 0, 0.8), Vector3(300.0, 0, 2.0)]
 	for k in 4:
-		go(k, s[9], s[9] + 0.01, spots[k], spots[k])
-		face(k, s[9], Vector3(0, 0, 1))
-		go(k, s[9] + 0.2 + k * 0.1, s[9] + 0.75 + k * 0.1, spots[k], spots[k], 0.8)
-		react(k, s[9] + 0.8, "cheer")
-	at(s[9] + 0.3, func() -> void: FX.confetti(_origin + Vector3(300, 4, 0), 120))
-	key(s[9], Vector3(300.0, 2.2, 8.6), Vector3(300.0, 1.5, 0.0), 46.0, true)
-	key(s[9] + sh - 0.02, Vector3(300.0, 2.6, 7.4), Vector3(300.0, 1.6, 0.0), 44.0)
+		go(k, s[10], s[10] + 0.01, spots[k], spots[k])
+		face(k, s[10], Vector3(0, 0, 1))
+		go(k, s[10] + 0.2 + k * 0.1, s[10] + 0.75 + k * 0.1, spots[k], spots[k], 0.8)
+		react(k, s[10] + 0.8, "cheer")
+	at(s[10] + 0.3, func() -> void: FX.confetti(_origin + Vector3(300, 4, 0), 120))
+	key(s[10], Vector3(300.0, 2.2, 8.6), Vector3(300.0, 1.5, 0.0), 46.0, true)
+	key(s[10] + sh - 0.02, Vector3(300.0, 2.6, 7.4), Vector3(300.0, 1.6, 0.0), 44.0)
 
 
 ## Großes Wort mitten im Bild (Pop-in, kurz stehen, weg)
@@ -1366,7 +1445,7 @@ func _act5() -> void:
 	var B := 1
 	var C := 2
 	var D := 3
-	var t0 := MONTAGE_T0 + 10.0 * 4.0 * BEAT
+	var t0 := MONTAGE_T0 + 11.0 * 4.0 * BEAT
 	at(t0, func() -> void:
 		_use_set("forest", "forest_night")
 		for k in 4:
@@ -1424,8 +1503,16 @@ func _act5() -> void:
 		sp.visible = true
 		create_tween().tween_property(sp, "global_position", _origin + fire + Vector3(0.8, 9.0, -1.0), 4.5).set_trans(Tween.TRANS_SINE))
 	key(t0, Vector3(-4.3, 1.9, -12.0), Vector3(-6.0, 0.8, -18.9), 40.0, true)
-	key(t0 + 6.0, Vector3(-4.7, 2.1, -12.7), Vector3(-6.0, 0.9, -18.9), 42.0)
-	key(t0 + 11.2, Vector3(8.0, 17.0, 6.0), Vector3(-6.0, 0.0, -18.0), 56.0)
+	key(t0 + 2.49, Vector3(-4.45, 1.95, -12.3), Vector3(-6.0, 0.8, -18.9), 40.5)
+	# nah dran: die Keks-Pointe, das Feuer flackert im Vordergrund
+	key(t0 + 2.5, Vector3(-5.7, 1.45, -14.1), Vector3(-5.95, 1.05, -19.3), 48.0, true)
+	key(t0 + 6.19, Vector3(-5.9, 1.4, -14.8), Vector3(-6.0, 1.05, -19.3), 45.0)
+	key(t0 + 6.2, Vector3(-4.5, 2.0, -12.4), Vector3(-6.0, 0.9, -18.9), 41.0, true)
+	key(t0 + 11.8, Vector3(8.0, 17.0, 6.0), Vector3(-6.0, 0.0, -18.0), 56.0)
+	# Die Kamera steigt – der Held und der Barbar schauen uns nach
+	look(A, t0 + 7.6, "cam")
+	look(C, t0 + 8.2, "cam")
+	at(t0 + 8.4, func() -> void: heroes[A].squash(1.04, 0.97, 0.35))
 	# Logo und Slogan
 	at(t0 + 8.4, func() -> void: _fade(_title, 1.0, 1.0))
 	at(t0 + 9.4, func() -> void: _fade(_slogan, 1.0, 0.9))
@@ -1473,37 +1560,236 @@ func _animate_props(delta: float) -> void:
 var _spark_acc := 0.0
 
 
-func _drive_karts(delta: float) -> void:
-	if _set_now != "montage" or _karts.is_empty():
-		return
+## Wasserfall im Vordergrund (zwischen Kamera und Weg): Die Kamera fährt dahinter entlang. Er gehört keiner Welt und
+## zieht mit dem Set-Ursprung um – solange sein Wasser das Bild füllt, wechselt die Welt unsichtbar.
+func _build_curtain() -> Node3D:
+	var n := Node3D.new()
+	n.name = "Curtain3D"
+	n.visible = false
+	add_child(n)
+	var sh := Shader.new()
+	sh.code = """shader_type spatial;
+render_mode unshaded, cull_disabled;
+void fragment() {
+	float x = UV.x * 30.0;
+	float y = UV.y * 4.0 - TIME * 1.5;
+	float a = sin(x + sin(y * 2.0 + x * 0.31) * 1.3) * 0.5 + 0.5;
+	float b = sin(x * 2.7 + y * 5.0) * 0.5 + 0.5;
+	float f = smoothstep(0.5, 1.0, a * 0.7 + b * 0.3);
+	vec3 deep = vec3(0.47, 0.75, 0.96);
+	vec3 foam = vec3(0.94, 0.98, 1.0);
+	ALBEDO = mix(deep, foam, clamp(f * 0.8 + smoothstep(0.86, 1.0, UV.y) * 0.5, 0.0, 1.0));
+}"""
+	var sm := ShaderMaterial.new()
+	sm.shader = sh
+	var q := QuadMesh.new()
+	q.size = Vector2(3.1, 14.0)
+	q.material = sm
+	var mi := MeshInstance3D.new()
+	mi.mesh = q
+	mi.position = Vector3(0, 6.6, 0)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	n.add_child(mi)
+	var spray := FX.emitter({"amount": 50, "life": 1.1, "one_shot": false, "explosive": 0.0, "spread": 50.0, "dir": Vector3.UP, "vel_min": 0.6,
+		"vel_max": 1.6, "gravity": Vector3(0, -2.5, 0), "size": 0.22, "color": Color(1, 1, 1, 0.55), "box": Vector3(2.9, 0.2, 0.4)})
+	n.add_child(spray)
+	spray.position = Vector3(0, 0.25, -0.2)
+	spray.emitting = true
+	return n
+
+
+## Nitro Dash: der echte Lumos-Ring aus dem Spiel (Streckenbaukasten, nur gelesen) mit Kulisse wie im Rennen –
+## geschlossene Strecke, Banden, Tribünen, Zieltor, Horizont. Liegt im Ursprung (immer nur ein Set sichtbar).
+func _build_race() -> Node3D:
+	var s := Node3D.new()
+	s.name = "Race"
+	add_child(s)
+	_track = RaceTrack.new()
+	s.add_child(_track)
+	_track.build(TrackDefs.get_def("lumos_ring"))
+	WorldKit.box(s, Vector3(700, 1, 700), Vector3(80, -0.8, 20), Color("#4c9a36"), false)
+	if not ("--no-bd" in OS.get_cmdline_user_args()):
+		WorldKit.backdrop(s, "meadow", Color("#4c9a36"), -0.85, Vector3(80, 0, 20))
+	var keys := ["race/tree_large", "race/tree_small", "nat/tree_oak", "nat/tree_default", "race/tent", "race/billboard", "race/banner_tower_red",
+		"race/banner_tower_green", "race/radar", "race/pits"]
+	var near := ["race/barrier_red", "race/barrier_white", "race/light_post", "race/flag_checkers", "race/pylon"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4711
+	var hw := _track.width * 0.5
+	var ts := 0.0
+	while ts < _track.length:
+		var fr := _track.frame(ts)
+		if fr.basis.y.dot(Vector3.UP) > 0.95 and fr.origin.y < 2.5 and fr.origin.y > -1.5 and not _track.is_glide(ts) and not _track.is_loop(ts):
+			for side: float in [-1.0, 1.0]:
+				var p: Vector3 = fr.origin + fr.basis.x * side * (hw + rng.randf_range(2.5, 4.0))
+				p.y = 0.0
+				if rng.randf() < 0.6 and _track.min_dist_to_track(p) > hw + 1.0:
+					var n := WorldKit.place(s, near[rng.randi() % near.size()], p, 0.0, 3.0, false, false)
+					n.look_at(p + fr.basis.z, Vector3.UP)
+				var far_p: Vector3 = fr.origin + fr.basis.x * side * (hw + rng.randf_range(9.0, 26.0))
+				far_p.y = 0.0
+				if rng.randf() < 0.6 and _track.min_dist_to_track(far_p) > hw + 5.0:
+					var k: String = keys[rng.randi() % keys.size()]
+					WorldKit.place(s, k, far_p, rng.randf() * 360.0, rng.randf_range(3.0, 5.0), false, rng.randf() < 0.4)
+		ts += 9.0
+	# Fahrbahn: eigene Kopie des Straßen-Shaders nur für den Trailer – die Oberseite der Fahrbahn ist im Mesh die
+	# Rückseite, ihre Normale wird sonst nach unten gedreht und die Sonne erreicht den Asphalt nicht.
+	for c in _track.get_children():
+		if c is MeshInstance3D and (c as MeshInstance3D).material_override is ShaderMaterial:
+			var src := (c as MeshInstance3D).material_override as ShaderMaterial
+			var sh2 := Shader.new()
+			sh2.code = src.shader.code.replace("void fragment() {", "void fragment() {\n\tif (!FRONT_FACING) NORMAL = -NORMAL;")
+			var m2 := ShaderMaterial.new()
+			m2.shader = sh2
+			m2.set_shader_parameter("track_len", _track.length)
+			(c as MeshInstance3D).material_override = m2
+			break
+	var f0 := _track.frame(0.0)
+	var gate := Assets.spawn("toy/gate_finish", s, f0.origin, 0.0, 1.0)
+	gate.global_transform = Transform3D(f0.basis.scaled(Vector3.ONE * (_track.width / 1.55 * 1.05)), f0.origin)
+	for i in 5:
+		var f2 := _track.frame(_track.length - 30.0 + i * 12.0)
+		var p2 := f2.origin - f2.basis.x * (hw + 6.0)
+		p2.y = 0.0
+		var gs := WorldKit.place(s, "race/grandstand_round", p2, 0.0, 5.0, false)
+		gs.look_at(f2.origin, Vector3.UP)
+	for kv in _karts:
+		kv.reparent(s)
+	var k4 := KartVisual.new()
+	s.add_child(k4)
+	k4.setup("kart/oodi", "hero/ranger", 3, 2.0)
+	_karts.append(k4)
+	for kv in _karts:
+		kv.visible = false
+	return s
+
+
+func _track_fwd(s: float) -> Vector3:
+	return (_track.frame(s + 1.0).origin - _track.frame(s).origin).normalized()
+
+
+## Punkt in Streckenkoordinaten: s entlang der Strecke, x nach rechts, h nach oben.
+func _track_pt(s: float, x: float, h: float) -> Vector3:
+	var fr := _track.frame(s)
+	var up := fr.basis.y.normalized()
+	return fr.origin + _track_fwd(s).cross(up).normalized() * x + up * h
+
+
+func _kart_xf(s: float, x: float, yaw: float) -> Transform3D:
+	var up := _track.frame(s).basis.y.normalized()
+	var fwd := _track_fwd(s)
+	var right := fwd.cross(up).normalized()
+	return Transform3D(Basis.looking_at((fwd * cos(yaw) + right * sin(yaw)).normalized(), up), _track_pt(s, x, 0.05))
+
+
+## Kurveninnenseite (+1 rechts, −1 links) der Drift-Kurve.
+func _drift_inner() -> float:
+	var s := _track.point_s[2] + 14.0
+	var right := _track_fwd(s).cross(Vector3.UP).normalized()
+	return signf(right.dot(_track.frame(s + 22.0).origin - _track.frame(s - 8.0).origin))
+
+
+## Renn-Einstellung k (0 Start · 1 Drift · 2 Überholen · 3 Ziel) zum Anteil u → je Kart [s, x, Gierwinkel, Tempo, Boost].
+## Reine Funktion der Zeit: Karts und Kamera lesen denselben Zustand, bildgenau.
+func _race_state(k: int, u: float) -> Array:
 	var sh := 4.0 * BEAT
-	var s6 := MONTAGE_T0 + 6.0 * sh
-	var s7 := s6 + sh
-	var s8 := s7 + sh
-	if t >= s6 and t < s7:   # Drift: Bogen um die Kurve, Heck schwenkt aus
-		var u := (t - s6) / sh
-		var a := lerpf(-1.25, 0.75, u)
-		var p := Vector3(360, 0, 0) + Vector3(cos(a), 0, sin(a)) * 12.0
-		var tang := Vector3(-sin(a), 0, cos(a))
-		_place_kart(_karts[0], p, tang.rotated(Vector3.UP, 0.45))
-		_karts[0].update_visual(22.0, 0.9, 1, 2, false, false, delta)
-		_spark_acc += delta
-		if _spark_acc >= 0.05:   # zeitbasiert – bei 30 und 60 fps gleich dicht
-			_spark_acc = 0.0
-			FX.sparks(_origin + p - tang * 1.2, Color(0.5, 0.8, 1.0), 4, 0.5)
-	elif t >= s7 and t < s8:   # Überholen: der hintere Kart zündet den Boost
-		var u2 := (t - s7) / sh
-		var e := u2 * u2 * (3.0 - 2.0 * u2)
-		_place_kart(_karts[1], Vector3(lerpf(420, 441, u2), 0, -1.7), Vector3.RIGHT)
-		_place_kart(_karts[2], Vector3(lerpf(414, 447, e), 0, 1.7), Vector3.RIGHT)
-		_karts[1].update_visual(20.0, 0.0, 0, 0, false, false, delta)
-		_karts[2].update_visual(26.0, -0.1, 0, 0, u2 > 0.3, false, delta)
-	elif t >= s8 and t < s8 + sh:   # Ziellinie
-		var u3 := (t - s8) / sh
-		_place_kart(_karts[2], Vector3(lerpf(468, 492, u3), 0, 0.0), Vector3.RIGHT)
-		_karts[2].update_visual(24.0, 0.0, 0, 0, true, false, delta)
+	var ln := _track.length
+	var st: Array = []
+	match k:
+		0:   # Startaufstellung – jeder kommt etwas anders weg, der Held am besten
+			for g: Array in [[-3.0, -3.2, 50.0, 0.0], [-3.0, 3.2, 45.0, 0.06], [-9.5, -3.2, 42.0, 0.1], [-9.5, 3.2, 39.0, 0.14]]:
+				var uu := clampf((u - float(g[3])) / (1.0 - float(g[3])), 0.0, 1.0)
+				st.append([float(g[0]) + float(g[2]) * uu * uu * (1.6 - 0.6 * uu), float(g[1]), 0.0,
+					float(g[2]) * (3.2 * uu - 1.8 * uu * uu) / sh, uu > 0.05 and uu < 0.7])
+		1:   # Drift: von außen an den Scheitel, das Heck bricht aus und fängt sich
+			var s0 := _track.point_s[2] - 14.0
+			var inner := _drift_inner()
+			var e1 := u * u * (3.0 - 2.0 * u)
+			var slide := sin(clampf(u * 1.12, 0.0, 1.0) * PI)
+			st.append([s0 + 58.0 * u, inner * lerpf(-4.2, 3.6, e1), inner * 0.5 * slide, 33.0, false])
+			st.append([s0 - 10.0 + 55.0 * u, inner * lerpf(-1.0, -4.5, e1), inner * 0.2 * slide, 31.5, false])
+			st.append([s0 - 19.0 + 54.0 * u, inner * 2.0, inner * 0.12 * slide, 31.0, false])
+			st.append([s0 - 30.0 + 54.0 * u, -inner * 2.5, 0.0, 31.0, false])
+		2:   # Überholen: der Held zündet den Boost und zieht innen vorbei
+			var e2 := u * u * (3.0 - 2.0 * u)
+			st.append([ln - 86.0 + 52.0 * u + 16.0 * e2, lerpf(3.4, 2.6, e2), 0.0, 30.0 + 55.0 * u * (1.0 - u), u > 0.2])
+			st.append([ln - 76.0 + 52.0 * u, -2.6, 0.0, 30.0, false])
+			st.append([ln - 92.0 + 51.0 * u, -0.5, 0.0, 29.5, false])
+			st.append([ln - 101.0 + 50.0 * u, 3.0, 0.0, 29.0, false])
+		_:   # Zieldurchfahrt
+			st.append([ln - 21.0 + 60.0 * u, 2.6, 0.0, 34.5, true])
+			st.append([ln - 28.0 + 58.0 * u, -2.6, 0.0, 33.5, false])
+			st.append([ln - 41.0 + 57.0 * u, -0.3, 0.0, 33.0, false])
+			st.append([ln - 52.0 + 56.0 * u, 3.4, 0.0, 32.0, false])
+	return st
 
 
-func _place_kart(kv: KartVisual, p: Vector3, dir: Vector3) -> void:
-	kv.global_position = _origin + p
-	kv.rotation.y = atan2(dir.x, dir.z) + PI
+func _race_shot() -> Vector2:
+	var sh := 4.0 * BEAT
+	var rt := (t - (MONTAGE_T0 + 6.0 * sh)) / sh
+	var k := clampi(int(rt), 0, 3)
+	return Vector2(k, clampf(rt - k, 0.0, 1.0))
+
+
+func _drive_karts(delta: float) -> void:
+	if _set_now != "race":
+		return
+	var rs := _race_shot()
+	var st := _race_state(int(rs.x), rs.y)
+	for j in _karts.size():
+		var kv := _karts[j]
+		var e: Array = st[j]
+		var yaw := float(e[2])
+		var sc := kv.scale
+		kv.visible = true
+		kv.global_transform = _kart_xf(float(e[0]), float(e[1]), yaw)
+		kv.scale = sc
+		kv.update_visual(float(e[3]), clampf(yaw * 2.0, -1.0, 1.0), int(signf(yaw)) if absf(yaw) > 0.12 else 0, 2 if absf(yaw) > 0.3 else 0,
+			bool(e[4]), false, delta)
+	_spark_acc += delta
+	if absf(float(st[0][2])) > 0.3 and _spark_acc >= 0.05:   # Funken am Heck, zeitbasiert
+		_spark_acc = 0.0
+		var xf := _karts[0].global_transform
+		FX.sparks(xf.origin + xf.basis.z.normalized() * 1.4 + Vector3.UP * 0.2, Color(0.5, 0.8, 1.0), 4, 0.5)
+
+
+## Kamera im Rennen: fährt mit (in Streckenkoordinaten), leicht nachgeführt – Tempo durch Nähe zum Boden, weite
+## Brennweite in der Verfolgung und Vorbeiflug dicht an der Linse.
+func _race_camera() -> void:
+	var rs := _race_shot()
+	var k := int(rs.x)
+	var u := rs.y
+	var st := _race_state(k, u)
+	var a := _track_pt(float(st[0][0]), float(st[0][1]), 0.0)
+	var b := _track_pt(float(st[1][0]), float(st[1][1]), 0.0)
+	var pos := Vector3.ZERO
+	var lk := Vector3.ZERO
+	var fov := 60.0
+	match k:
+		0:   # am Boden vor der Startlinie: die Karts schießen an der Linse vorbei
+			pos = _track_pt(15.0, 5.8, 0.55)
+			lk = a.lerp(b, 0.35) + Vector3.UP * 0.7
+			fov = lerpf(64.0, 54.0, u)
+		1:   # Verfolger: tief hinter dem driftenden Kart, auf der Außenseite
+			var inner := _drift_inner()
+			pos = _track_pt(float(st[0][0]) - 6.2, float(st[0][1]) - inner * 1.8, 1.75)
+			lk = _track_pt(float(st[0][0]) + 7.0, float(st[0][1]) + inner * 2.0, 0.7)
+			fov = 74.0
+		2:   # Parallelfahrt knapp über dem Asphalt
+			pos = _track_pt(float(st[1][0]) + 8.5, 7.2, 0.95)
+			lk = a.lerp(b, 0.5) + Vector3.UP * 0.8
+			fov = 56.0
+		_:   # hinter der Ziellinie, Schwenk mit dem Sieger
+			pos = _track_pt(10.0, -5.0, 0.6)
+			lk = a + Vector3.UP * 0.9
+			fov = lerpf(58.0, 66.0, u)
+	if _rc_shot != k:
+		_rc_shot = k
+		_rc_pos = pos
+		_rc_look = lk
+	var dt := get_process_delta_time()
+	_rc_pos = _rc_pos.lerp(pos, 1.0 - exp(-dt / 0.09))
+	_rc_look = _rc_look.lerp(lk, 1.0 - exp(-dt / 0.07))
+	cam.global_position = _rc_pos + Vector3(sin(t * 31.0), sin(t * 37.0 + 1.0), 0.0) * (0.012 if k == 1 else 0.004)
+	cam.fov = fov
+	cam.look_at(_rc_look, Vector3.UP)
