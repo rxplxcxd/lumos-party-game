@@ -1,16 +1,23 @@
 extends Node3D
 ## Nitro Dash – Arcade-Racer.
-## 8 Karts (4 Spieler-Slots + 4 Zusatz-CPUs), 3 Strecken, Items mit Juice:
-##   Kuchendeckel (prallt von Wänden ab) · Homing-Kanonenkugel (verfolgt den Vordermann, lacht fies)
-##   Megafon-Schock (Schrumpfen/Drehen in der Umgebung) · Piraten-Anker (20 m zurück) · Nitro
+## 8 Karts (4 Spieler-Slots + 4 Zusatz-CPUs), 12 Strecken, 12 Items (siehe ItemModels.INFO):
+##   Angriff: Kuchendeckel, Konfetti-Salve, Homing-Kanonenkugel, Piraten-Anker, Megafon-Schock, Donnerwolke
+##   Verteidigung: Seifenblase, Spiegelschild, Honigfalle (nach hinten) · Tempo: Nitro, Funkenkern, Kometenritt
+## Verteilung nach Platz: vorn eher Verteidigung, hinten eher Aufholen – aber nie ein Item, das die Platzierung
+## einfach umdreht (Donnerwolke nur kurz, Kometenritt nur weit hinten und höchstens einer zugleich).
+## Online gilt Opfer-Autorität: Ob ein Treffer wirkt, entscheidet das Gerät, dem das getroffene Kart gehört.
 
+## Gewichte je Platz (ab Platz k gilt die Zeile). Summen müssen nicht 100 sein.
 const ITEM_TABLE := {
-	1: {"pie": 50, "nitro": 30, "megaphone": 20},
-	2: {"pie": 35, "nitro": 25, "megaphone": 20, "anchor": 10, "homing": 10},
-	4: {"homing": 25, "anchor": 25, "nitro": 25, "megaphone": 15, "pie": 10},
-	7: {"homing": 35, "anchor": 30, "nitro": 30, "megaphone": 5},
+	1: {"pie": 24, "honey": 26, "bubble": 18, "mirror": 12, "candy": 10, "nitro": 10},
+	2: {"pie": 18, "honey": 14, "candy": 16, "bubble": 12, "mirror": 10, "nitro": 14, "spark": 8, "homing": 8},
+	4: {"candy": 14, "homing": 16, "nitro": 16, "spark": 12, "megaphone": 12, "anchor": 10, "honey": 8, "bubble": 6, "pie": 6},
+	6: {"homing": 18, "nitro": 18, "anchor": 14, "megaphone": 14, "spark": 12, "thunder": 8, "comet": 6, "bubble": 6, "candy": 4},
+	8: {"nitro": 18, "homing": 16, "anchor": 14, "comet": 14, "thunder": 12, "megaphone": 12, "spark": 10, "bubble": 4},
 }
-const ITEM_NAMES := {"pie": "Kuchendeckel", "homing": "Homing-Kanonenkugel", "megaphone": "Megafon-Schock", "anchor": "Piraten-Anker", "nitro": "Nitro"}
+const THUNDER_COOLDOWN := 14.0
+const BOX_LANES := [-6.0, -3.0, 0.0, 3.0, 6.0]
+const BOX_RESPAWN := 1.6
 const EXTRA := [
 	{"model": "mini/robot", "name": "Robo-Rudi", "kart": "kart/oozi", "color": Color("#9aa7b8")},
 	{"model": "mini/alien", "name": "Zorbi", "kart": "kart/ooli", "color": Color("#7dff9a")},
@@ -27,6 +34,8 @@ var laps := 3
 var state := "intro"
 var race_time := 0.0
 var projectiles: Array[Dictionary] = []
+var traps: Array[Dictionary] = []        # Honigpfützen: {node, s, x, life, hits, owner}
+var _last_thunder := -99.0
 var boxes: Array[Dictionary] = []
 var _closeup_cd := 0.0
 var _finish_wait := -1.0
@@ -63,6 +72,10 @@ func _ready() -> void:
 	track = RaceTrack.new()
 	add_child(track)
 	track.build(def)
+	mech = TrackMechanics.new()
+	add_child(mech)
+	mech.on_hit = _hazard_hit
+	mech.build(track, def)
 	_build_world()
 	if _rays_sun:
 		for k in 4:
@@ -82,6 +95,7 @@ func _ready() -> void:
 # --- Welt -----------------------------------------------------------------------------------------------
 
 var scenery: TrackScenery
+var mech: TrackMechanics
 
 
 func _build_world() -> void:
@@ -90,17 +104,26 @@ func _build_world() -> void:
 		scenery = TrackScenery.new()
 		add_child(scenery)
 		scenery.build(track, def, _env)
+	var bb := TrackScenery.bounds(track)
+	var bc := Vector3(bb.get_center().x, 0, bb.get_center().y)
 	match theme:
-		"storm", "snow", "space", "city", "desert":
-			pass
 		"pirates":
-			WorldKit.water(self, Vector2(600, 600), -0.6)
-			WorldKit.box(self, Vector3(110, 1, 160), Vector3(30, -0.75, 20), Color("#f1d9a0"), false)
+			WorldKit.water(self, Vector2(bb.size.x + 500, bb.size.y + 500), -0.6).position = Vector3(bc.x, -0.6, bc.z)
+			# Sand nur unter dem Hafen-Teil der Strecke – der Tauchtunnel bleibt im Wasser sichtbar
+			var ss := 0.0
+			while ss < track.length:
+				if not track.is_water(ss) and not track.is_water(ss + 12.0) and not track.is_water(ss - 12.0):
+					var o := track.frame(ss).origin
+					WorldKit.box(self, Vector3(40, 1, 40), Vector3(o.x, -0.75, o.z), Color("#f1d9a0"), false)
+				ss += 18.0
 		"volcano":
-			WorldKit.box(self, Vector3(500, 1, 500), Vector3(60, -0.8, 30), Color("#7a9a4a"), false)
-			WorldKit.box(self, Vector3(140, 1, 170), Vector3(60, -0.75, 30), Color("#b88a5a"), false)
-			var lava := WorldKit.lava(self, Vector2(70, 90), -0.5, Vector2(0.05, 0.1))
-			lava.position = Vector3(110, -0.5, 60)
+			WorldKit.box(self, Vector3(bb.size.x + 320, 1, bb.size.y + 320), Vector3(bc.x, -0.8, bc.z), Color("#7a9a4a"), false)
+			WorldKit.box(self, Vector3(bb.size.x + 60, 1, bb.size.y + 60), Vector3(bc.x, -0.75, bc.z), Color("#b88a5a"), false)
+			for g in track.glide_ranges:   # Lavasee unter dem Gleitflug
+				var gm := track.frame((g.x + g.y) * 0.5)
+				var lava := WorldKit.lava(self, Vector2(40, g.y - g.x + 30.0), -0.5, Vector2(0.05, 0.1))
+				lava.position = Vector3(gm.origin.x, -0.5, gm.origin.z)
+				lava.rotation.y = gm.basis.get_euler().y
 			var cone := MeshInstance3D.new()
 			var cm := CylinderMesh.new()
 			cm.top_radius = 14.0
@@ -108,19 +131,20 @@ func _build_world() -> void:
 			cm.height = 38.0
 			cm.material = WorldKit.mat(Color("#8a5a42"), 0.95)
 			cone.mesh = cm
-			cone.position = Vector3(-60, 18, -120)
+			var cpos := Vector3(bb.position.x - 70.0, 18, bb.position.y - 50.0)
+			cone.position = cpos
 			add_child(cone)
 			var top := WorldKit.lava(self, Vector2(26, 26), 37.2, Vector2(0.02, 0.03))
-			top.position = Vector3(-60, 37.2, -120)
+			top.position = Vector3(cpos.x, 37.2, cpos.z)
 			var smoke := FX.emitter({"amount": 30, "life": 6.0, "one_shot": false, "explosive": 0.0, "spread": 15.0, "vel_min": 2.0, "vel_max": 4.0,
 				"gravity": Vector3(0.3, 0.4, 0), "size": 6.0, "color": Color(1, 0.95, 0.9, 0.35), "box": Vector3(10, 1, 10)})
 			add_child(smoke)
-			smoke.position = Vector3(-60, 39, -120)
+			smoke.position = Vector3(cpos.x, 39, cpos.z)
 			smoke.emitting = true
+		"ring":
+			WorldKit.box(self, Vector3(bb.size.x + 320, 1, bb.size.y + 320), Vector3(bc.x, -0.8, bc.z), Color("#4c9a36"), false)
 		_:
-			WorldKit.box(self, Vector3(500, 1, 500), Vector3(80, -0.8, 20), Color("#4c9a36"), false)
-			var canyon := WorldKit.water(self, Vector2(50, 70), -26.0)
-			canyon.position = Vector3(172, -26, 50)
+			pass
 	_decorate(theme)
 	# Start-/Zieltor
 	var fr := track.frame(0.0)
@@ -204,7 +228,7 @@ func _decorate(theme: String) -> void:
 
 func _build_boxes() -> void:
 	for rs in track.item_rows:
-		for lx in [-5.25, -1.75, 1.75, 5.25]:
+		for lx in BOX_LANES:
 			var n := Node3D.new()
 			add_child(n)
 			var m := Assets.spawn("toy/item_box", n, Vector3(0, -0.65, 0), 45.0, 3.0)
@@ -495,17 +519,26 @@ func _on_net(from: String, msg: Dictionary) -> void:
 		"item":
 			if r and r.remote:
 				use_item(r, String(msg.get("kind", "")), true)
+		"refl":   # Spiegelschild: Geschoss kehrt um und fliegt zum Absender zurück
+			var owner_i := int(msg.get("o", -1))
+			if r and r.remote and owner_i >= 0 and owner_i < racers.size():
+				_remove_near_projectile(r, String(msg.get("p", "")))
+				_reflect(r, racers[owner_i], String(msg.get("p", "pie")))
+		"trap":   # Honigpfütze verbraucht
+			for tp in traps.duplicate():
+				if int(tp.get("id", -1)) == int(msg.get("t", -2)):
+					_remove_trap(tp)
 		"hit":
 			if r and r.remote:
-				r.hit(String(msg.get("kind", "spin")))
-				# passendes Geschoss in der Nähe entfernen
-				var proj := String(msg.get("p", ""))
-				for p in projectiles.duplicate():
-					if (proj == "" or p.kind == proj) and absf(track.wrap_s(r.s - float(p.s) + track.length * 0.5) - track.length * 0.5) < 8.0:
-						FX.smoke((p.node as Node3D).global_position, Color(1, 1, 1), 6, 0.6)
-						(p.node as Node3D).queue_free()
-						projectiles.erase(p)
-						break
+				if String(msg.get("kind", "")) == "block":
+					r.bubble_t = 0.0
+					FX.burst(r.global_position + Vector3.UP * 1.2, {"amount": 18, "life": 0.6, "spread": 180.0, "vel_min": 3.0, "vel_max": 6.0,
+						"size": 0.35, "color": Color(0.75, 0.95, 1.0, 0.8)})
+					Audio.sfx("pop", r.global_position, -4.0, 0.9)
+				else:
+					r.invuln_t = 0.0
+					r.hit(String(msg.get("kind", "spin")))
+				_remove_near_projectile(r, String(msg.get("p", "")))
 		"ready":
 			_net_ready[from] = true
 		"go":
@@ -516,6 +549,17 @@ func _on_net(from: String, msg: Dictionary) -> void:
 					o.finished = true
 					o.finish_time = race_time + 999.0
 					_message("%s hat das Spiel verlassen" % o.display_name, Color(1, 1, 1, 0.8))
+
+
+func _remove_near_projectile(r: Racer, proj: String) -> void:
+	if proj == "":
+		return
+	for p in projectiles.duplicate():
+		if p.kind == proj and absf(track.wrap_s(r.s - float(p.s) + track.length * 0.5) - track.length * 0.5) < 9.0:
+			FX.smoke((p.node as Node3D).global_position, Color(1, 1, 1), 6, 0.6)
+			(p.node as Node3D).queue_free()
+			projectiles.erase(p)
+			return
 
 
 func _slot_of_peer(id: String) -> int:
@@ -555,6 +599,10 @@ func _physics_process(delta: float) -> void:
 	_collide_racers()
 	_update_boxes(delta)
 	_update_projectiles(delta)
+	_update_traps(delta)
+	_update_item_fx(delta)
+	if state == "race" or state == "finish":
+		mech.tick(race_time, racers)
 	_rank()
 	_closeup_cd = maxf(0.0, _closeup_cd - delta)
 	# Online: Ein entfernter Fahrer meldet sein Ziel per Zustand („fi“) – dabei läuft _on_lap nicht durch die
@@ -606,6 +654,9 @@ func _rubber_band(r: Racer) -> void:
 	r.speed_mult = base * band
 
 
+## Kart-Kollisionen mit Masse: Boost und Komet schieben stärker, geschrumpfte Karts fliegen weg. Seitliche Rempler
+## geben beiden einen Dreh- und Wank-Impuls; Auffahrunfälle tauschen Tempo. Wer den Kometen berührt, wird
+## weggeschleudert (entschieden vom Gerät des Getroffenen).
 func _collide_racers() -> void:
 	for a in racers.size():
 		for b in range(a + 1, racers.size()):
@@ -617,23 +668,72 @@ func _collide_racers() -> void:
 			if absf(ds) > 2.8 or absf(rb.h - ra.h) > 1.5:
 				continue
 			var dx := rb.x - ra.x
-			if absf(dx) < 2.3:
-				var push := (2.3 - absf(dx)) * 0.5 * (1.0 if dx >= 0 else -1.0)
-				ra.x -= push
-				rb.x += push
-				var dv := (ra.v - rb.v) * 0.25
-				if ds > 0:
-					ra.v -= maxf(dv, 0.0)
-					rb.v += maxf(dv, 0.0)
-				else:
-					rb.v -= maxf(-dv, 0.0)
-					ra.v += maxf(-dv, 0.0)
-				if absf(push) > 0.25:
-					var mid := (ra.global_position + rb.global_position) * 0.5
-					Audio.sfx("punch", mid, -8.0)
-					FX.sparks(mid + Vector3.UP * 0.5, Color(1, 0.9, 0.5), 6)
-					if ra == focus or rb == focus:
-						InputHub.rumble(focus.slot, 0.4, 0.1)
+			if absf(dx) >= 2.3:
+				continue
+			# Komet: weg da!
+			if ra.comet_t > 0.0 or rb.comet_t > 0.0:
+				var victim := rb if ra.comet_t > 0.0 else ra
+				var rammer := ra if victim == rb else rb
+				if victim.comet_t <= 0.0 and not victim.remote and victim.hit("knock"):
+					victim.x = clampf(victim.x + signf(victim.x - rammer.x + 0.01) * 2.5, -track.width * 0.5 + 2.0, track.width * 0.5 - 2.0)
+					_net_hit(victim, "knock")
+					Audio.sfx("explosion_big", victim.global_position, -8.0, 1.5)
+					FX.stars(victim.global_position + Vector3.UP * 1.5, Color(1, 0.9, 0.4), 14)
+				continue
+			var ma := _mass(ra)
+			var mb := _mass(rb)
+			var overlap := 2.3 - absf(dx)
+			var dirx := 1.0 if dx >= 0 else -1.0
+			ra.x -= overlap * dirx * mb / (ma + mb)
+			rb.x += overlap * dirx * ma / (ma + mb)
+			var dv := (ra.v - rb.v) * 0.3
+			if ds > 0:
+				ra.v -= maxf(dv, 0.0) * mb / (ma + mb) * 2.0
+				rb.v += maxf(dv, 0.0) * ma / (ma + mb) * 2.0
+			else:
+				rb.v -= maxf(-dv, 0.0) * ma / (ma + mb) * 2.0
+				ra.v += maxf(-dv, 0.0) * mb / (ma + mb) * 2.0
+			if overlap > 0.25:
+				var strength := clampf(overlap / 1.2, 0.3, 1.0)
+				ra.psi -= dirx * 0.1 * strength * mb / ma
+				rb.psi += dirx * 0.1 * strength * ma / mb
+				ra.visual.bump(dirx, strength * mb / ma)
+				rb.visual.bump(-dirx, strength * ma / mb)
+				if ra.drift_dir != 0 and overlap > 0.8:
+					ra.drift_level = maxi(0, ra.drift_level - 1)
+				if rb.drift_dir != 0 and overlap > 0.8:
+					rb.drift_level = maxi(0, rb.drift_level - 1)
+				var mid := (ra.global_position + rb.global_position) * 0.5
+				Audio.sfx("punch", mid, -8.0)
+				FX.sparks(mid + Vector3.UP * 0.5, Color(1, 0.9, 0.5), 6)
+				if ra == focus or rb == focus:
+					InputHub.rumble(focus.slot, 0.4, 0.1)
+
+
+## Streckengefahr hat ein eigenes Kart erwischt (Lavafontäne, Baumstamm).
+func _hazard_hit(r: Racer, kind: String) -> void:
+	if r.hit("spin"):
+		if kind == "geyser":
+			r.vh = 7.0
+			r.h = maxf(r.h, 0.1)
+			FX.burst(r.global_position + Vector3.UP, {"amount": 18, "life": 0.7, "spread": 50.0, "dir": Vector3.UP, "vel_min": 4.0, "vel_max": 8.0,
+				"gravity": Vector3(0, -12, 0), "size": 0.4, "additive": true, "color": Color(1.0, 0.55, 0.2)})
+			Audio.sfx("explosion_big", r.global_position, -8.0, 1.4)
+		else:
+			Audio.sfx("stone_hit", r.global_position, -2.0, 0.8)
+			FX.dust(r.global_position, Color(0.6, 0.5, 0.35), 12, 1.2)
+		_net_hit(r, "spin")
+		if r == focus:
+			_message("Lava!" if kind == "geyser" else "Baumstamm!", Color("#ff9f43"))
+
+
+## Sprungfeld überfahren (vom Kart gemeldet) – nur Optik.
+func on_bounce(s: float, x: float) -> void:
+	mech.bounce_fx(s, x)
+
+
+func _mass(r: Racer) -> float:
+	return (1.6 if r.boost_t > 0.0 else 1.0) * (0.45 if r.shrink_t > 0.0 else 1.0)
 
 
 func _rank() -> void:
@@ -882,17 +982,24 @@ func _roll_item(place: int) -> String:
 	if _mode() == "time":
 		return "nitro"
 	var table: Dictionary = ITEM_TABLE[1]
-	for k in [1, 2, 4, 7]:
-		if place >= k:
+	for k in ITEM_TABLE.keys():
+		if place >= int(k):
 			table = ITEM_TABLE[k]
-	var total := 0
-	for v in table.values():
-		total += int(v)
-	var r := randi() % total
+	var allowed := {}
 	for k2 in table.keys():
-		r -= int(table[k2])
+		if k2 == "thunder" and race_time - _last_thunder < THUNDER_COOLDOWN:
+			continue   # Donnerwolke nicht im Dauerfeuer
+		if k2 == "comet" and racers.any(func(o: Racer) -> bool: return o.comet_t > 0.0):
+			continue   # höchstens ein Komet zugleich
+		allowed[k2] = table[k2]
+	var total := 0
+	for v in allowed.values():
+		total += int(v)
+	var r := randi() % maxi(total, 1)
+	for k3 in allowed.keys():
+		r -= int(allowed[k3])
 		if r < 0:
-			return k2
+			return k3
 	return "nitro"
 
 
@@ -913,7 +1020,7 @@ func _update_boxes(delta: float) -> void:
 			var ds := absf(track.wrap_s(r.s - float(b.s) + track.length * 0.5) - track.length * 0.5)
 			if ds < 2.2 and absf(r.x - float(b.x)) < 2.0 and r.h < 2.5:
 				n.visible = false
-				b.respawn = 3.0
+				b.respawn = BOX_RESPAWN
 				FX.stars(n.global_position, Color(1, 0.8, 1.0), 10)
 				Audio.sfx("glass", n.global_position, -6.0 if not r.is_cpu else -14.0)
 				if r.item == "" and r.rolling <= 0.0 and not r.remote:
@@ -928,22 +1035,43 @@ func ai_wants_item(r: Racer) -> bool:
 	match r.item:
 		"nitro":
 			return absf(track.curvature(r.s, 15.0)) < 0.01
+		"spark":
+			return absf(track.curvature(r.s, 20.0)) > 0.014
 		"megaphone":
 			for o in racers:
 				if o != r and o.global_position.distance_to(r.global_position) < 16.0:
 					return true
 			return false
-		"pie":
+		"pie", "candy":
 			for o in racers:
 				var ahead := track.wrap_s(o.s - r.s)
-				if o != r and ahead > 3.0 and ahead < 40.0 and absf(o.x - r.x) < 3.0:
+				if o != r and ahead > 3.0 and ahead < 40.0 and absf(o.x - r.x) < (3.0 if r.item == "pie" else 7.0):
 					return true
-			return randf() < 0.15
-		"homing", "anchor":
+			return randf() < 0.12 or r.item_age > 5.0
+		"honey":
+			if r.item_age > 7.0:
+				return true
+			for o in racers:
+				var behind := track.wrap_s(r.s - o.s)
+				if o != r and behind > 3.0 and behind < 28.0:
+					return true
+			return randf() < 0.2
+		"bubble", "mirror":
+			if r.item_age > 6.0:
+				return true   # nicht ewig horten
+			for p in projectiles:
+				if p.owner != r and (p.target == r or p.kind in ["pie", "candy"]) and track.wrap_s(r.s - float(p.s)) < 45.0:
+					return true
+			return r.place <= 2 and randf() < 0.25 or randf() < 0.08
+		"homing", "anchor", "thunder":
 			return r.place > 1
+		"comet":
+			return true
 	return false
 
 
+## Item einsetzen. Würfe beginnen mit einer Ausholbewegung des Fahrers; das Geschoss löst sich erst beim Loslassen.
+## Online spielen alle Geräte dieselbe Abfolge ab (Nachricht "item"), die Wirkung auf ein Kart entscheidet dessen Besitzer.
 func use_item(r: Racer, kind: String, from_net := false) -> void:
 	var pos := r.global_position
 	if Net.online and not from_net and not r.remote:
@@ -953,10 +1081,38 @@ func use_item(r: Racer, kind: String, from_net := false) -> void:
 			r._boost(1.6, false)
 			if r == focus:
 				Audio.voice("power_up")
+		"spark":
+			r.spark_t = 7.0
+			Audio.sfx("sparkle_up", pos, -4.0, 1.0)
+			FX.stars(pos + Vector3.UP * 1.5, Color(0.5, 0.85, 1.0), 12)
+		"bubble":
+			r.bubble_t = 10.0
+			Audio.sfx("pop", pos, -4.0, 0.7)
+			Audio.sfx("sparkle_up", pos, -8.0, 1.3)
+		"mirror":
+			r.mirror_t = 8.0
+			Audio.sfx("chime", pos, -4.0, 1.2)
+		"comet":
+			r.comet_t = 4.0
+			r.invuln_t = 0.0
+			r.stun_t = 0.0
+			r._boost(4.0, false)
+			Audio.sfx("whoosh", pos, 0.0, 0.7)
+			Audio.sfx("explosion_big", pos, -10.0, 1.8)
+			if r == focus:
+				Juice.fov_punch(cam, 14.0, 0.8)
+				_message("KOMETENRITT!", UI.GOLD)
+		"thunder":
+			_last_thunder = race_time
+			Audio.sfx("thunder", pos, -2.0, 1.0)
+			for o in racers:
+				if o != r and o.place < r.place and not o.finished:
+					_thunder_strike(o, r)
 		"megaphone":
 			Audio.sfx("megaphone", pos)
 			Audio.sfx("explosion_big", pos, -6.0, 1.6)
 			FX.shockwave(pos, 18.0, Color(1.0, 0.5, 0.8, 0.9))
+			r.visual.wobble(0.15, 0.4)
 			if r == focus:
 				Juice.shake(0.35)
 			for o in racers:
@@ -965,18 +1121,47 @@ func use_item(r: Racer, kind: String, from_net := false) -> void:
 					if o.hit(mk):
 						_net_hit(o, mk)
 						_maybe_closeup(o, r)
+					elif o.bubble_t <= 0.0 and o.invuln_t > 0.0:
+						pass
+		"pie", "candy", "homing", "anchor":
+			var release := r.visual.throw_anim(false)
+			_after(r, release, func() -> void: _launch_item(r, kind))
+		"honey":
+			var release2 := r.visual.throw_anim(true)
+			_after(r, release2, func() -> void: _drop_honey(r))
+
+
+## Verzögert ausführen, solange das Kart existiert (Tween hängt am Kart → stirbt mit ihm).
+func _after(r: Racer, t: float, f: Callable) -> void:
+	if t <= 0.0:
+		f.call()
+		return
+	var tw := r.create_tween()
+	tw.tween_interval(t)
+	tw.tween_callback(f)
+
+
+func _launch_item(r: Racer, kind: String) -> void:
+	var pos := r.global_position
+	match kind:
 		"pie":
-			_spawn_projectile(r, "pie", maxf(r.v + 22.0, 42.0), sin(r.psi) * 22.0, 0.8)
+			_spawn_projectile(r, "pie", maxf(r.v + 22.0, 42.0), sin(r.psi) * 22.0, 1.6, 5.0)
 			Audio.sfx("whoosh", pos)
+		"candy":
+			for k in 3:
+				var p := _spawn_projectile(r, "candy", maxf(r.v + 24.0, 44.0), sin(r.psi) * 24.0 + (k - 1) * 9.0, 1.5, 4.0 + k * 0.6)
+				p.life = 4.0
+			Audio.sfx("pop", pos, -2.0, 1.3)
 		"homing":
 			var target: Racer = null
 			for o in racers:
 				if o.place == r.place - 1:
 					target = o
-			var p := _spawn_projectile(r, "homing", 58.0, 0.0, 1.8)
-			p.target = target
+			var p2 := _spawn_projectile(r, "homing", 58.0, 0.0, 1.8, 0.0)
+			p2.target = target
 			Audio.sfx("evil_laugh", pos)
 			Audio.sfx("cannon", pos, -4.0)
+			FX.smoke(pos + Vector3.UP * 1.5, Color(0.85, 0.85, 0.85), 8, 0.5)
 		"anchor":
 			var best: Racer = null
 			var bd := 75.0
@@ -987,129 +1172,135 @@ func use_item(r: Racer, kind: String, from_net := false) -> void:
 				if ahead > 1.0 and ahead < bd:
 					bd = ahead
 					best = o
-			var p2 := _spawn_projectile(r, "anchor", 66.0, 0.0, 1.4)
-			p2.target = best
+			var p3 := _spawn_projectile(r, "anchor", 66.0, 0.0, 1.6, 2.0)
+			p3.target = best
 			Audio.sfx("metal_hit", pos, -4.0)
 
 
-func _spawn_projectile(owner: Racer, kind: String, speed: float, vx: float, h: float) -> Dictionary:
+## Geschoss starten. up = Anfangs-Steiggeschwindigkeit (Wurfbogen); danach landet es und rollt/rutscht weiter.
+func _spawn_projectile(owner: Racer, kind: String, speed: float, vx: float, h: float, up := 0.0) -> Dictionary:
 	var n := Node3D.new()
 	add_child(n)
+	var model: Node3D
 	match kind:
 		"pie":
-			var crust := MeshInstance3D.new()
-			var cm := CylinderMesh.new()
-			cm.top_radius = 0.9
-			cm.bottom_radius = 0.75
-			cm.height = 0.35
-			cm.material = WorldKit.mat(Color("#c8803a"))
-			crust.mesh = cm
-			n.add_child(crust)
-			var cream := MeshInstance3D.new()
-			var sm := SphereMesh.new()
-			sm.radius = 0.8
-			sm.height = 0.6
-			sm.material = WorldKit.mat(Color("#fff6e8"), 0.4)
-			cream.mesh = sm
-			cream.position.y = 0.2
-			n.add_child(cream)
-			var cherry := MeshInstance3D.new()
-			var sm2 := SphereMesh.new()
-			sm2.radius = 0.18
-			sm2.height = 0.36
-			sm2.material = WorldKit.mat(Color("#e0203a"), 0.3)
-			cherry.mesh = sm2
-			cherry.position.y = 0.55
-			n.add_child(cherry)
-		"homing":
-			Assets.spawn("pirate/cannon_ball", n, Vector3.ZERO, 0.0, 1.6)
+			model = ItemModels.pie(1.0)
+		"candy":
+			model = ItemModels.candy([Color("#ff5c9a"), Color("#5cc8ff"), Color("#ffd23f")][randi() % 3], 1.15)
+		"homing", "reflect":
+			model = ItemModels.cannonball(1.15)
 			var fuse := FX.make_trail(n, "sparks")
 			fuse.emitting = true
 			fuse.color = Color(1, 0.7, 0.2)
 			var reticle := Sprite3D.new()
 			reticle.texture = Assets.icon("crosshair")
 			reticle.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-			reticle.modulate = Color(1, 0.2, 0.2)
+			reticle.modulate = Color(1, 0.2, 0.2) if kind == "homing" else Color(0.6, 0.85, 1.0)
 			reticle.pixel_size = 0.02
 			reticle.visible = false
 			n.add_child(reticle)
 			n.set_meta("reticle", reticle)
 		"anchor":
-			var a := Node3D.new()
-			n.add_child(a)
-			var shaft := MeshInstance3D.new()
-			var cm2 := CylinderMesh.new()
-			cm2.top_radius = 0.12
-			cm2.bottom_radius = 0.12
-			cm2.height = 2.0
-			cm2.material = WorldKit.mat(Color("#7a8ca8"), 0.3)
-			shaft.mesh = cm2
-			a.add_child(shaft)
-			var hook := MeshInstance3D.new()
-			var tm := TorusMesh.new()
-			tm.inner_radius = 0.6
-			tm.outer_radius = 0.85
-			tm.material = WorldKit.mat(Color("#7a8ca8"), 0.3)
-			hook.mesh = tm
-			hook.rotation.x = PI / 2.0
-			hook.position.y = -0.7
-			a.add_child(hook)
-	var p := {"node": n, "kind": kind, "s": owner.s + 2.5, "x": owner.x, "h": h, "speed": speed, "vx": vx,
-		"life": 7.0 if kind == "pie" else 5.0, "owner": owner, "target": null, "age": 0.0, "bounces": 0}
+			model = ItemModels.anchor(1.0)
+	if model:
+		model.name = "Model"
+		n.add_child(model)
+	var p := {"node": n, "kind": kind, "s": owner.s + 2.5, "x": owner.x, "h": h, "vh": up, "speed": speed, "vx": vx,
+		"life": 7.0 if kind == "pie" else 5.0, "owner": owner, "target": null, "age": 0.0, "bounces": 0, "spin": 0.0}
 	projectiles.append(p)
+	_place_projectile(p)
 	return p
 
 
+func _place_projectile(p: Dictionary) -> void:
+	var n: Node3D = p.node
+	var fr := track.frame(float(p.s))
+	n.global_transform = Transform3D(fr.basis, fr.origin + fr.basis.x * float(p.x) + fr.basis.y * float(p.h))
+
+
 func _update_projectiles(delta: float) -> void:
-	var hw := track.width * 0.5 - 0.8
 	for p in projectiles.duplicate():
 		p.age = float(p.age) + delta
 		p.life = float(p.life) - delta
 		var n: Node3D = p.node
+		var model := n.get_node_or_null("Model") as Node3D
 		var target: Racer = p.target
+		var ground := 0.55 if p.kind == "pie" else (0.5 if p.kind == "candy" else 0.0)
 		match p.kind:
-			"pie":
+			"pie", "candy":
 				p.s = track.wrap_s(float(p.s) + float(p.speed) * delta)
 				p.x = float(p.x) + float(p.vx) * delta
-				if absf(float(p.x)) > hw:
-					p.x = signf(float(p.x)) * hw
-					p.vx = -float(p.vx)
+				# Wurfbogen → aufsetzen → rutschen (Kuchen) bzw. hüpfen (Bonbons)
+				p.vh = float(p.vh) - 30.0 * delta
+				p.h = float(p.h) + float(p.vh) * delta
+				if float(p.h) <= ground:
+					p.h = ground
+					if float(p.vh) < -3.0:
+						p.vh = -float(p.vh) * (0.45 if p.kind == "candy" else 0.0)
+						if p.kind == "candy" and model:
+							Juice.squash(model, 1.3, 0.7, 0.2, model.scale)
+					else:
+						p.vh = 0.0
+				var lim := track.lane_limits(float(p.s), float(p.x))
+				lim += Vector2(Racer.RADIUS - 0.8, -(Racer.RADIUS - 0.8))
+				if float(p.x) < lim.x or float(p.x) > lim.y:
+					p.x = clampf(float(p.x), lim.x, lim.y)
+					p.vx = -float(p.vx) * 0.9
 					p.bounces = int(p.bounces) + 1
 					Audio.sfx("boing", n.global_position, -6.0)
 					FX.sparks(n.global_position, Color(1, 1, 0.8), 6)
-				n.rotation.y += delta * 10.0
-			"homing", "anchor":
-				p.s = track.wrap_s(float(p.s) + float(p.speed) * delta)
+				if model:
+					p.spin = float(p.spin) + delta * (11.0 if p.kind == "pie" else 16.0)
+					if p.kind == "pie":   # flach rotierend, leicht taumelnd
+						model.rotation = Vector3(sin(float(p.age) * 9.0) * 0.12, float(p.spin), cos(float(p.age) * 7.0) * 0.1)
+					else:
+						model.rotation = Vector3(-float(p.spin), float(p.spin) * 0.3, 0.0)
+			"homing", "anchor", "reflect":
+				p.s = track.wrap_s(float(p.s) + float(p.speed) * (delta if p.kind != "reflect" else -delta))
 				if target and is_instance_valid(target):
 					p.x = lerpf(float(p.x), target.x, clampf(delta * 4.0, 0, 1))
 					p.h = lerpf(float(p.h), target.h + 1.0, clampf(delta * 3.0, 0, 1))
 					var reticle: Variant = n.get_meta("reticle") if n.has_meta("reticle") else null
 					if reticle:
-						var near := track.wrap_s(target.s - float(p.s)) < 30.0
+						var near := absf(track.wrap_s(target.s - float(p.s) + track.length * 0.5) - track.length * 0.5) < 30.0
 						(reticle as Sprite3D).visible = near
 						if near:
 							(reticle as Sprite3D).global_position = target.global_position + target.global_basis.y * 2.5
+				if model:
+					if p.kind == "anchor":
+						model.rotation.x += delta * 14.0
+					else:   # Kugel rollt vorwärts, das Gesicht schaut grimmig nach vorn
+						model.rotation = Vector3(sin(float(p.age) * 6.0) * 0.15, (PI if p.kind == "reflect" else 0.0), sin(float(p.age) * 8.0) * 0.1)
 				if p.kind == "homing" and int(p.age * 1.2) != int((float(p.age) - delta) * 1.2):
 					Audio.sfx("evil_laugh", n.global_position, -10.0, 1.2)
-				if p.kind == "anchor":
-					n.rotation.x += delta * 14.0
-		var fr := track.frame(float(p.s))
-		n.global_transform = Transform3D(fr.basis, fr.origin + fr.basis.x * float(p.x) + fr.basis.y * float(p.h)) * Transform3D(Basis().rotated(Vector3.UP, n.rotation.y), Vector3.ZERO)
-		# Treffer
-		var done: int = p.life <= 0.0 or (p.kind == "pie" and int(p.bounces) > 6)
+		_place_projectile(p)
+		# Treffer (nur auf eigenen Karts – Opfer-Autorität)
+		var done: bool = p.life <= 0.0 or (p.kind == "pie" and int(p.bounces) > 6) or (p.kind == "candy" and int(p.bounces) > 3)
 		for r in racers:
 			if r == p.owner and float(p.age) < 0.6:
 				continue
-			if p.kind != "pie" and target and r != target:
+			if p.kind in ["homing", "anchor", "reflect"] and target and r != target:
 				continue
 			if r.remote:
-				continue   # Treffer auf fremde Karts meldet deren Besitzer (Opfer-Autorität)
+				continue
 			var ds := track.wrap_s(r.s - float(p.s) + track.length * 0.5) - track.length * 0.5
-			if absf(ds) < 2.4 and absf(r.x - float(p.x)) < 2.0 and absf(r.h - float(p.h) + 0.8) < 2.4:
-				var kind: String = {"pie": "spin", "homing": "blast", "anchor": "anchor"}.get(p.kind, "spin")
-				if r.hit(kind):
-					_impact(r, p)
-					_net_hit(r, kind, String(p.kind))
+			var reach := 2.0 if p.kind != "candy" else 1.7
+			if absf(ds) < 2.4 and absf(r.x - float(p.x)) < reach and absf(r.h - float(p.h) + 0.8) < 2.4:
+				if r.mirror_t > 0.0 and p.kind != "reflect" and is_instance_valid(p.owner) and p.owner != r:
+					r.mirror_t = 0.0
+					Audio.sfx("metal_hit", r.global_position, -2.0, 1.4)
+					FX.ring(r.global_position + Vector3.UP, Color(0.7, 0.9, 1.0, 0.9), 4.0, 0.3)
+					_reflect(r, p.owner as Racer, String(p.kind))
+					if Net.online:
+						Net.send({"k": "refl", "i": r.idx, "o": (p.owner as Racer).idx, "p": p.kind}, true)
+				else:
+					var kind: String = {"pie": "splat", "candy": "spin", "homing": "blast", "reflect": "blast", "anchor": "anchor"}.get(p.kind, "spin")
+					var had_bubble := r.bubble_t > 0.0
+					if r.hit(kind):
+						_impact(r, p)
+						_net_hit(r, kind, String(p.kind))
+					elif had_bubble and r.bubble_t <= 0.0:
+						_net_hit(r, "block", String(p.kind))
 				done = true
 				break
 		if done:
@@ -1117,6 +1308,143 @@ func _update_projectiles(delta: float) -> void:
 				FX.smoke(n.global_position, Color(0.8, 0.8, 0.8), 4, 0.5)
 			n.queue_free()
 			projectiles.erase(p)
+
+
+## Spiegelschild: aus dem Geschoss wird eine Kanonenkugel, die zum Absender zurückfliegt.
+func _reflect(from: Racer, owner: Racer, _kind: String) -> void:
+	if owner == null or not is_instance_valid(owner):
+		return
+	var p := _spawn_projectile(from, "reflect", 60.0, 0.0, 1.8, 0.0)
+	p.s = from.s - 1.0
+	p.owner = from
+	p.target = owner
+	var fwd := track.wrap_s(owner.s - from.s)
+	if fwd < track.length * 0.5:   # Absender liegt vorn → die Kugel fliegt vorwärts
+		p.kind = "homing"
+		p.s = from.s + 2.5
+	p.age = 0.0
+
+
+## Honigtopf nach hinten werfen: fliegt im Bogen ein Stück zurück und zerplatzt zur Pfütze.
+func _drop_honey(r: Racer) -> void:
+	var start := r.global_position + Vector3.UP * 1.6
+	var s_drop := track.wrap_s(r.s - 4.5)
+	var x_drop := clampf(r.x, -track.width * 0.5 + 2.0, track.width * 0.5 - 2.0)
+	var fr := track.frame(s_drop)
+	var end_pos := fr.origin + fr.basis.x * x_drop + fr.basis.y * 0.05
+	var pot := ItemModels.honey_pot(1.0)
+	add_child(pot)
+	pot.global_position = start
+	var tw := pot.create_tween()
+	tw.tween_method(func(u: float) -> void:
+		pot.global_position = start.lerp(end_pos, u) + Vector3.UP * sin(u * PI) * 2.0
+		pot.rotation = Vector3(u * 5.0, u * 2.0, 0.0), 0.0, 1.0, 0.4)
+	tw.tween_callback(func() -> void:
+		Audio.sfx("slime", end_pos, -2.0)
+		FX.burst(end_pos + Vector3.UP * 0.3, {"amount": 14, "life": 0.6, "spread": 70.0, "vel_min": 2.0, "vel_max": 4.0,
+			"gravity": Vector3(0, -12, 0), "size": 0.3, "color": Color(1.0, 0.7, 0.15)})
+		pot.queue_free()
+		var puddle := ItemModels.honey_puddle(1.7)
+		add_child(puddle)
+		puddle.global_transform = Transform3D(fr.basis, end_pos)
+		puddle.scale = Vector3(0.2, 1.0, 0.2)
+		puddle.create_tween().tween_property(puddle, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		traps.append({"node": puddle, "s": s_drop, "x": x_drop, "life": 14.0, "hits": 0, "owner": r, "id": r.idx * 1000 + traps.size() + int(race_time * 10.0) % 997}))
+
+
+func _update_traps(delta: float) -> void:
+	for tp in traps.duplicate():
+		tp.life = float(tp.life) - delta
+		if float(tp.life) <= 0.0:
+			_remove_trap(tp)
+			continue
+		for r in racers:
+			if r.remote or r.h > 0.6 or (r == tp.owner and float(tp.life) > 13.0):
+				continue
+			var ds := absf(track.wrap_s(r.s - float(tp.s) + track.length * 0.5) - track.length * 0.5)
+			if ds < 2.2 and absf(r.x - float(tp.x)) < 2.3:
+				var had_bubble := r.bubble_t > 0.0
+				if r.hit("honey"):
+					_net_hit(r, "honey")
+					FX.burst(r.global_position + Vector3.UP * 0.4, {"amount": 12, "life": 0.7, "spread": 60.0, "vel_min": 1.5, "vel_max": 3.0,
+						"gravity": Vector3(0, -8, 0), "size": 0.28, "color": Color(1.0, 0.7, 0.15)})
+					Audio.sfx("slime", r.global_position, -4.0)
+					if r == focus:
+						_message("Klebrig! Honig!", Color("#ffb21e"))
+				elif had_bubble:
+					_net_hit(r, "block", "honey")
+				else:
+					continue
+				tp.hits = int(tp.hits) + 1
+				if int(tp.hits) >= 2:
+					_remove_trap(tp)
+					if Net.online:
+						Net.send({"k": "trap", "t": int(tp.id)}, true)
+				break
+
+
+func _remove_trap(tp: Dictionary) -> void:
+	if traps.has(tp):
+		traps.erase(tp)
+		var n: Node3D = tp.node
+		if is_instance_valid(n):
+			var tw := n.create_tween()
+			tw.tween_property(n, "scale", Vector3(0.05, 1.0, 0.05), 0.3)
+			tw.tween_callback(n.queue_free)
+
+
+## Donnerwolke: zieht über dem Opfer auf, kurzer Blitz. Nur eigene Karts werden getroffen (Opfer-Autorität).
+func _thunder_strike(o: Racer, attacker: Racer) -> void:
+	var cloud := ItemModels.thunder_cloud(1.4)
+	o.add_child(cloud)
+	cloud.position = Vector3(0, 7.0, 0)
+	cloud.scale = Vector3.ONE * 0.2
+	var tw := cloud.create_tween()
+	tw.tween_property(cloud, "scale", Vector3.ONE * 1.4, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(0.35)
+	tw.tween_callback(func() -> void:
+		FX.sparks(o.global_position + Vector3.UP * 1.0, Color(1.0, 0.95, 0.4), 14)
+		Audio.sfx("zap", o.global_position, -2.0, 1.0)
+		if not o.remote and o.hit("zap"):
+			_net_hit(o, "zap")
+			if o == focus:
+				_message("Bzzzt! Donnerwolke!", Color("#ffe14a"))
+				Juice.shake(0.25)
+		elif not o.remote and o.bubble_t <= 0.0 and o.invuln_t > 0.0:
+			pass)
+	tw.tween_interval(0.5)
+	tw.tween_property(cloud, "scale", Vector3.ONE * 0.05, 0.3)
+	tw.tween_callback(cloud.queue_free)
+	if attacker == focus:
+		_message("Donnerwolke!", Color("#ffe14a"))
+
+
+## Laufende Item-Optik: kreisender Funkenkern, Kometen-Stern vor dem Kart.
+func _update_item_fx(_delta: float) -> void:
+	for r in racers:
+		var core := r.get_node_or_null("SparkCore") as Node3D
+		if r.spark_t > 0.0:
+			if core == null:
+				core = ItemModels.spark_core(1.0)
+				core.name = "SparkCore"
+				r.add_child(core)
+			var a := race_time * 4.0 + r.idx
+			core.position = Vector3(cos(a) * 1.8, 2.2 + sin(a * 2.0) * 0.2, sin(a) * 1.8)
+			core.rotation.y = a * 2.0
+		elif core:
+			core.queue_free()
+		var comet := r.get_node_or_null("Comet") as Node3D
+		if r.comet_t > 0.0:
+			if comet == null:
+				comet = ItemModels.comet(1.3)
+				comet.name = "Comet"
+				r.add_child(comet)
+				comet.position = Vector3(0, 1.2, -2.4)
+				var trail := FX.make_trail(comet, "flame")
+				trail.emitting = true
+			comet.rotation.z = race_time * 6.0
+		elif comet:
+			comet.queue_free()
 
 
 func _impact(r: Racer, p: Dictionary) -> void:
@@ -1129,7 +1457,10 @@ func _impact(r: Racer, p: Dictionary) -> void:
 			FX.burst(pos + Vector3.UP, {"amount": 24, "life": 0.8, "spread": 80.0, "vel_min": 4.0, "vel_max": 8.0, "gravity": Vector3(0, -14, 0), "size": 0.6, "color": Color("#fff6e8")})
 			if r == focus:
 				_pie_splat()
-		"homing":
+		"candy":
+			Audio.sfx("pop", pos, 0.0, 1.2)
+			FX.confetti(pos + Vector3.UP * 1.2, 30)
+		"homing", "reflect":
 			FX.explosion(pos, 1.2)
 			Juice.hitstop(0.08)
 			_maybe_closeup(r, owner)
@@ -1140,7 +1471,7 @@ func _impact(r: Racer, p: Dictionary) -> void:
 			FX.stars(pos + Vector3.UP * 2.0, Color(0.8, 0.9, 1.0), 12)
 			_maybe_closeup(r, owner)
 	if r == focus:
-		_message({"pie": "Kuchen im Gesicht!", "homing": "BUMM!", "anchor": "Geankert! −20 m"}.get(p.kind, "Autsch!"), Color("#ff6b6b"))
+		_message({"pie": "Kuchen im Gesicht!", "candy": "Bonbon-Treffer!", "homing": "BUMM!", "reflect": "Zurück zum Absender!", "anchor": "Geankert! −18 m"}.get(p.kind, "Autsch!"), Color("#ff6b6b"))
 	elif owner == focus:
 		_message("Treffer!", Color("#7dff9a"))
 		Audio.voice("correct")
@@ -1248,11 +1579,11 @@ func _update_hud(delta: float) -> void:
 		_item_icon.visible = true
 		_roll_t -= delta
 		if int(Time.get_ticks_msec() / 70) % 2 == 0:
-			_item_icon.set_kind(["pie", "cannonball", "megaphone", "anchor", "nitro"][randi() % 5])
+			_item_icon.set_kind(ItemModels.icon_of(ItemModels.INFO.keys()[randi() % ItemModels.INFO.size()]))
 			Audio.sfx("item_roll", null, -10.0)
 	elif focus.item != "":
 		_item_icon.visible = true
-		_item_icon.set_kind({"pie": "pie", "homing": "cannonball", "megaphone": "megaphone", "anchor": "anchor", "nitro": "nitro"}[focus.item])
+		_item_icon.set_kind(ItemModels.icon_of(focus.item))
 	else:
 		_item_icon.visible = false
 	_minimap.queue_redraw()
@@ -1261,10 +1592,10 @@ func _update_hud(delta: float) -> void:
 func _on_item_changed(r: Racer) -> void:
 	for v in views:
 		if v.racer == r and r.item != "":
-			v.message(ITEM_NAMES.get(r.item, ""), Color("#ffe066"), 0.7)
+			v.message(ItemModels.name_of(r.item), Color("#ffe066"), 0.7)
 	if r == focus and r.item != "" and not _split_in_main:
 		Juice.ui_punch(_item_panel, 0.25, 0.4)
-		_message(ITEM_NAMES.get(r.item, ""), Color("#ffe066"), 0.7)
+		_message(ItemModels.name_of(r.item), Color("#ffe066"), 0.7)
 
 
 func _message(text: String, color := Color.WHITE, hold := 1.0) -> void:

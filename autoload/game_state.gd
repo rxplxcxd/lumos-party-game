@@ -238,20 +238,25 @@ const MINIGAMES := [
 ]
 
 const TRACKS := [
-	{"id": "lumos_ring", "name": "Lumos-Ring", "desc": "Sonniger Grand-Prix-Kurs mit Looping und Gleiter-Schlucht.", "music": "race"},
-	{"id": "coral_canal", "name": "Korallen-Kanal", "desc": "Piratenbucht mit gläsernem Unterwasser-Tunnel.", "music": "race"},
-	{"id": "neon_volcano", "name": "Vulkan-Inselchen", "desc": "Sonnenuntergang auf der Vulkaninsel: Looping, Gleiter über warme Lavaseen und Palmen am Wegesrand.", "music": "race"},
-	{"id": "storm_pass", "name": "Gewitter-Pass", "desc": "Nacht, Regen, grelle Blitze: Bergpass mit Leuchtmarkierungen und Sprung über die Schlucht.", "music": "race"},
-	{"id": "frost_peak", "name": "Frostgipfel", "desc": "Spiegelglatte Eisplatten, Schneegestöber und eine Skisprungschanze.", "music": "race"},
-	{"id": "orbit_ring", "name": "Sternenstaub-Bahn", "desc": "Pastellbahn durch den Abendhimmel: Looping, Schwebe-Gleiter und ein Ringplanet zum Greifen nah.", "music": "race"},
-	{"id": "city_rally", "name": "Stadt-Rallye", "desc": "Enge 90°-Kurven zwischen Hochhäusern und ein Sprung über den Stadtkanal.", "music": "race"},
-	{"id": "desert_canyon", "name": "Wüsten-Canyon", "desc": "Sandpiste mit Looping und Gleitflug über eine schwindelerregende Schlucht.", "music": "race"},
+	{"id": "lumos_ring", "name": "Lumos-Ring", "desc": "Grand-Prix-Klassiker: schnelle Rechts, Schikane, Looping, Haarnadel und Gleiter über die Schlucht.", "music": "race"},
+	{"id": "coral_canal", "name": "Korallen-Kanal", "desc": "Hafen, Tauchgang durch den Korallentunnel, Felsinsel mit zwei Routen, Sprung über den Steg.", "music": "race"},
+	{"id": "neon_volcano", "name": "Vulkan-Inselchen", "desc": "Lavafontänen am Straßenrand, Looping, Gleitflug über den Lavasee.", "music": "race"},
+	{"id": "storm_pass", "name": "Gewitter-Pass", "desc": "Serpentinen im Unwetter, nasse Kurven, Sprung über die Schlucht, Abfahrt unter der Brücke.", "music": "race"},
+	{"id": "frost_peak", "name": "Frostgipfel", "desc": "Eisplatten, enge Kehre am Gipfel, Skisprungschanze und eisige Abfahrt.", "music": "race"},
+	{"id": "orbit_ring", "name": "Sternenstaub-Bahn", "desc": "Boost-Tunnel, Sternenfedern, Looping und langer Schwebeflug.", "music": "race"},
+	{"id": "city_rally", "name": "Stadt-Rallye", "desc": "Enge 90°-Ecken, Häuserblock mit zwei Routen, Schikane und Kanalsprung.", "music": "race"},
+	{"id": "desert_canyon", "name": "Wüsten-Canyon", "desc": "Canyon-S-Kurven, Dünen-Sprungfeld, Looping und Gleitflug über die Schlucht.", "music": "race"},
+	{"id": "glow_forest", "name": "Glühwald-Pfad", "desc": "Nachtfahrt durch den Zauberwald: Leuchtpilze als Sprungfedern, hohler Baumtunnel, nasser Bachlauf.", "music": "race"},
+	{"id": "candy_lane", "name": "Zuckerguss-Allee", "desc": "Riesen-Süßigkeiten, Kaugummi-Sprungfelder, Lolli-Looping, Brücke über die erste Kurve.", "music": "race"},
+	{"id": "jungle_ruins", "name": "Dschungel-Tempel", "desc": "Rollende Baumstämme, Tempelruine mit zwei Routen, Sprung über den Fluss.", "music": "race"},
+	{"id": "falls_gorge", "name": "Wasserfall-Schlucht", "desc": "Fahrt durch die Gischt eines Wasserfalls, Brücke über die eigene Strecke, Sprung über die Schlucht.", "music": "race"},
 ]
 
 const CUPS := [
 	{"id": "lumos", "name": "Lumos-Cup", "tracks": ["lumos_ring", "coral_canal", "neon_volcano", "storm_pass"]},
 	{"id": "stars", "name": "Sternen-Cup", "tracks": ["frost_peak", "orbit_ring", "city_rally", "desert_canyon"]},
-	{"id": "mega", "name": "Mega-Cup (8 Strecken)", "tracks": ["lumos_ring", "frost_peak", "coral_canal", "city_rally", "neon_volcano", "desert_canyon", "storm_pass", "orbit_ring"]},
+	{"id": "wonder", "name": "Wunder-Cup", "tracks": ["glow_forest", "candy_lane", "jungle_ruins", "falls_gorge"]},
+	{"id": "mega", "name": "Mega-Cup (12 Strecken)", "tracks": ["lumos_ring", "glow_forest", "frost_peak", "coral_canal", "candy_lane", "city_rally", "neon_volcano", "jungle_ruins", "desert_canyon", "storm_pass", "falls_gorge", "orbit_ring"]},
 ]
 const GP_POINTS := [15, 12, 10, 8, 6, 4, 2, 1]
 const PARTY_MODES := [

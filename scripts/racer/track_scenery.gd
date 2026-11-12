@@ -6,7 +6,7 @@ extends Node3D
 ## Gewitter: Regen folgt der Kamera, lange mehrstufige Blitze (hell, mit Nachglühen, sichtbarem Blitzstrahl
 ## und verzögertem Donner) sowie dezent leuchtende Reflektorpfosten an beiden Fahrbahnrändern.
 
-const THEMES := ["storm", "snow", "space", "city", "desert"]
+const THEMES := ["storm", "snow", "space", "city", "desert", "forest", "candy", "jungle", "falls"]
 
 ## Kulisse: far = weit vom Rand (große Objekte), near = direkt an der Leitplanke.
 ## Werte: [Katalog-Schlüssel, Skalierung min, max]
@@ -20,6 +20,15 @@ const DECO := {
 		"near": [["toy/cone", 6.0, 7.0], ["race/barrier_red", 3.0, 3.0], ["city/parasol", 6.0, 7.0], ["sub/planter", 6.0, 7.0], ["race/light_post", 3.0, 3.0]], "ground": Color("#5d626c")},
 	"desert": {"far": [["nat/cactus", 6.0, 9.0], ["nat/cactus_short", 6.0, 8.0], ["mg/tree_desert", 2.6, 3.4], ["nat/rock_tall", 6.0, 11.0], ["nat/cliff_stone", 8.0, 14.0], ["pirate/rocks_b", 3.0, 5.0]],
 		"near": [["race/barrier_white", 3.0, 3.0], ["race/flag_red", 3.0, 3.0], ["toy/cone", 6.0, 7.0]], "ground": Color("#d9b47a")},
+	# 1.4.0
+	"forest": {"far": [["nat/tree_oak", 6.0, 8.5], ["nat/tree_pine", 6.0, 8.5], ["nat/tree_fat", 6.0, 8.0], ["plat/mushrooms", 6.0, 9.0], ["nat/mushroom", 6.0, 9.0], ["nat/stump", 5.0, 7.0]],
+		"near": [["hal/post_lantern", 1.0, 1.15], ["nat/mushroom", 3.0, 4.0]], "ground": Color("#1c3322")},
+	"candy": {"far": [["hol/gingerbread_house_decorated", 5.0, 7.0], ["hk/tree_decorated", 4.0, 5.0], ["hk/candy_cane", 12.0, 16.0], ["hol/present_red", 5.0, 8.0],
+		["hol/cookie", 10.0, 14.0]], "near": [["hol/candycane_small", 4.5, 5.5], ["hk/candy_cane", 6.0, 7.0]], "ground": Color("#f7c9dc")},
+	"jungle": {"far": [["nat/tree_palm", 6.0, 8.0], ["nat/tree_palm_bend", 6.0, 8.0], ["pirate/palm_detailed", 2.0, 2.6], ["dun/pillar", 1.6, 2.4], ["arena/statue", 4.0, 6.0],
+		["nat/bush", 6.0, 9.0]], "near": [["nat/log", 3.0, 3.5], ["nat/rock_small", 5.0, 8.0]], "ground": Color("#3f7a2e")},
+	"falls": {"far": [["nat/cliff_large", 14.0, 22.0], ["nat/cliff_stone", 10.0, 16.0], ["nat/rock_tall", 8.0, 14.0], ["nat/pine", 6.0, 8.0], ["nat/tree_pine", 6.0, 8.0],
+		["nat/rock_large", 6.0, 10.0]], "near": [["race/barrier_white", 3.0, 3.0], ["nat/rock_small", 5.0, 7.0]], "ground": Color("#557a3a")},
 }
 
 var track: RaceTrack
@@ -71,6 +80,12 @@ func build(t: RaceTrack, d: Dictionary, env: Environment) -> void:
 			_build_city()
 		"desert":
 			_build_desert()
+		"forest":
+			_build_forest()
+		"candy":
+			_build_candy()
+		"jungle", "falls":
+			_build_river()
 
 
 # --- Boden & Kulisse ----------------------------------------------------------------------------------
@@ -82,12 +97,24 @@ func _build_ground() -> void:
 		var tile := 24.0
 		for ix in range(-12, 13):
 			for iz in range(-12, 13):
-				var c := Vector3(ix * tile, 0, iz * tile) + Vector3(-50, 0, 20)
+				var c := Vector3(ix * tile, 0, iz * tile) + Vector3(bounds(track).get_center().x, 0, bounds(track).get_center().y)
 				if _in_gorge(c, tile * 0.5):
 					continue
 				WorldKit.box(self, Vector3(tile, 1, tile), c + Vector3(0, -0.8, 0), col, false)
 		return
-	WorldKit.box(self, Vector3(600, 1, 600), Vector3(40, -0.8, 20), col, false)
+	var b := bounds(track)
+	WorldKit.box(self, Vector3(b.size.x + 320.0, 1, b.size.y + 320.0), Vector3(b.get_center().x, -0.8, b.get_center().y), col, false)
+
+
+## Ausdehnung der Strecke in x/z (für Boden, Horizont und Kulisse).
+static func bounds(t: RaceTrack) -> Rect2:
+	var r := Rect2(Vector2(t.frame(0.0).origin.x, t.frame(0.0).origin.z), Vector2.ZERO)
+	var s := 0.0
+	while s < t.length:
+		var o := t.frame(s).origin
+		r = r.expand(Vector2(o.x, o.z))
+		s += 10.0
+	return r
 
 
 ## Liegt ein Bodenpunkt unter einem Gleit-Abschnitt (Schlucht)?
@@ -460,3 +487,127 @@ func _build_desert() -> void:
 		river.rotation.y = mid.basis.get_euler().y
 	# Tafelberge / Felsnadeln am Horizont
 	_ring_props(["nat/rock_tall", "nat/rock_large", "pirate/rocks_b"], 22, 130.0, 190.0, Vector2(18.0, 34.0), Color(1.25, 0.82, 0.58))
+
+
+# --- 1.4.0: Glühwald, Zuckerwelt, Dschungel, Wasserfall-Schlucht ---------------------------------------------
+
+## Glühwald: Glühwürmchen über der ganzen Strecke, farbige Lichtinseln aus Leuchtpilzen, Mondlicht.
+func _build_forest() -> void:
+	var s := 0.0
+	var k := 0
+	var cols := [Color("#d9a8ff"), Color("#8fe8ff"), Color("#ffb3e6"), Color("#b5ffb0")]
+	while s < track.length:
+		var fr := track.frame(s)
+		if not track.is_glide(s):
+			var side := 1.0 if k % 2 == 0 else -1.0
+			var p: Vector3 = fr.origin + fr.basis.x * side * (track.width * 0.5 + 6.0)
+			var cluster := WorldKit.place(self, "plat/mushrooms", Vector3(p.x, 0, p.z), _rng.randf() * 360.0, 7.0, false, false)
+			var c: Color = cols[k % cols.size()]
+			Assets.tint(cluster, c.lightened(0.3))
+			var l := OmniLight3D.new()
+			l.light_color = c
+			l.light_energy = 1.6
+			l.omni_range = 14.0
+			l.shadow_enabled = false
+			add_child(l)
+			l.global_position = Vector3(p.x, 3.0, p.z)
+		s += 38.0
+		k += 1
+	var b := bounds(track)
+	var ff := FX.emitter({"amount": 260, "life": 6.0, "one_shot": false, "explosive": 0.0, "spread": 180.0, "vel_min": 0.2, "vel_max": 0.6,
+		"gravity": Vector3(0, 0.05, 0), "size": 0.35, "additive": true, "color": Color(1.0, 0.95, 0.55, 0.95), "box": Vector3(b.size.x * 0.5 + 40, 4, b.size.y * 0.5 + 40)})
+	add_child(ff)
+	ff.position = Vector3(b.get_center().x, 3.0, b.get_center().y)
+	ff.emitting = true
+	ff.preprocess = 5.0
+
+
+## Zuckerwelt: Riesen-Lollis und Donuts am Wegesrand, Schokoladenfluss unter dem Gleiter.
+func _build_candy() -> void:
+	var s := 20.0
+	var k := 0
+	while s < track.length:
+		var fr := track.frame(s)
+		if fr.basis.y.dot(Vector3.UP) > 0.95 and not track.is_glide(s) and not track.is_loop(s):
+			var side := 1.0 if k % 2 == 0 else -1.0
+			var p: Vector3 = fr.origin + fr.basis.x * side * (track.width * 0.5 + _rng.randf_range(9.0, 16.0))
+			if track.min_dist_to_track(p) > track.width * 0.5 + 6.0:
+				if k % 2 == 0:
+					_lollipop(Vector3(p.x, 0, p.z), _rng.randf_range(7.0, 11.0))
+				else:
+					_donut(Vector3(p.x, 0, p.z), _rng.randf_range(3.5, 5.0))
+		s += 26.0
+		k += 1
+	for g in track.glide_ranges:
+		var mid := track.frame((g.x + g.y) * 0.5)
+		var river := WorldKit.water(self, Vector2(26, g.y - g.x + 40.0), -0.4, Color("#5a2e17"), Color("#8a4a26"))
+		river.position = Vector3(mid.origin.x, -0.4, mid.origin.z)
+		river.rotation.y = mid.basis.get_euler().y
+
+
+func _lollipop(p: Vector3, h: float) -> void:
+	var stick := WorldKit.cylinder(self, 0.22, h, p + Vector3.UP * h * 0.5, Color("#fff8f0"), false)
+	stick.name = "Lolli"
+	var disc := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = h * 0.28
+	cm.bottom_radius = h * 0.28
+	cm.height = 0.6
+	cm.radial_segments = 24
+	cm.material = WorldKit.mat([Color("#ff5c9a"), Color("#5cc8ff"), Color("#ffd23f"), Color("#9b6bff")][_rng.randi() % 4], 0.25)
+	disc.mesh = cm
+	disc.rotation.x = PI * 0.5
+	add_child(disc)
+	disc.global_position = p + Vector3.UP * (h + h * 0.2)
+	disc.rotation.y = _rng.randf() * TAU
+	for r in 3:
+		var swirl := MeshInstance3D.new()
+		var tm := TorusMesh.new()
+		tm.inner_radius = h * (0.06 + r * 0.07)
+		tm.outer_radius = h * (0.09 + r * 0.07)
+		tm.material = WorldKit.mat(Color(1, 1, 1), 0.3)
+		swirl.mesh = tm
+		swirl.rotation.x = PI * 0.5
+		disc.add_child(swirl)
+		swirl.position = Vector3(0, 0.32, 0)
+		swirl.rotation = Vector3.ZERO
+
+
+func _donut(p: Vector3, r: float) -> void:
+	var dough := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = r * 0.45
+	tm.outer_radius = r
+	tm.rings = 24
+	tm.ring_segments = 12
+	tm.material = WorldKit.mat(Color("#d99a5b"), 0.7)
+	dough.mesh = tm
+	add_child(dough)
+	dough.global_position = p + Vector3.UP * r
+	dough.rotation = Vector3(PI * 0.5, _rng.randf() * TAU, 0)
+	var icing := MeshInstance3D.new()
+	var tm2 := TorusMesh.new()
+	tm2.inner_radius = r * 0.5
+	tm2.outer_radius = r * 0.96
+	tm2.rings = 24
+	tm2.ring_segments = 10
+	tm2.material = WorldKit.mat([Color("#ff8fc4"), Color("#fff2c8"), Color("#7a3e22")][_rng.randi() % 3], 0.3)
+	icing.mesh = tm2
+	dough.add_child(icing)
+	icing.position.y = r * 0.12
+	icing.scale = Vector3(1, 0.6, 1)
+
+
+## Dschungel und Schlucht: Fluss unter den Gleit-Abschnitten, dichtes Ufergrün.
+func _build_river() -> void:
+	for g in track.glide_ranges:
+		var mid := track.frame((g.x + g.y) * 0.5)
+		var river := WorldKit.water(self, Vector2(30, g.y - g.x + 80.0), -0.6, Color(0.1, 0.38, 0.45), Color(0.3, 0.7, 0.7))
+		river.position = Vector3(mid.origin.x, -0.6, mid.origin.z)
+		river.rotation.y = mid.basis.get_euler().y
+		for side: float in [-1.0, 1.0]:
+			for k in 6:
+				var sp := g.x - 10.0 + (g.y - g.x + 20.0) * k / 5.0
+				var fr := track.frame(sp)
+				var p: Vector3 = fr.origin + fr.basis.x * side * 17.0
+				WorldKit.place(self, "nat/bush" if theme == "jungle" else "nat/rock_large", Vector3(p.x, -0.3, p.z), _rng.randf() * 360.0, 7.0, false, false)

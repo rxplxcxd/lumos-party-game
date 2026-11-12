@@ -1,7 +1,8 @@
 class_name UIIcon
 extends Control
 ## Prozedural gezeichnete Icons (scharf in jeder Auflösung, keine Texturen nötig):
-## coin, star, pie, cannonball, megaphone, anchor, nitro, dice, double_dice, question, crown
+## coin, star, pie, cannonball, megaphone, anchor, nitro, candy, honey, bubble, mirror, spark, thunder, comet,
+## dice, double_dice, question, crown
 
 var kind := "coin"
 var tint := Color.WHITE
@@ -66,6 +67,55 @@ func _draw() -> void:
 			draw_rect(Rect2(c + Vector2(-r * 0.2, -r * 0.85), Vector2(r * 0.4, r * 0.3)), Color("#bfe4ff"))
 			draw_rect(Rect2(c + Vector2(-r * 0.4, -r * 0.05), Vector2(r * 0.8, r * 0.35)), Color("#ffcc33"))
 			_star(c + Vector2(0, r * 0.12), r * 0.15, Color("#ff5c7a"), Color("#ff5c7a"))
+		"candy":   # drei gestreifte Bonbons im Fächer
+			for k in 3:
+				var cc := c + Vector2((k - 1) * r * 0.55, (absf(k - 1.0) * r * 0.25) - r * 0.05)
+				var col2: Color = [Color("#ff5c9a"), Color("#5cc8ff"), Color("#ffd23f")][k]
+				draw_circle(cc + Vector2(0, r * 0.06), r * 0.36, col2.darkened(0.35))
+				draw_circle(cc, r * 0.36, col2)
+				draw_arc(cc, r * 0.22, 0.4, 2.4, 10, Color(1, 1, 1, 0.9), s * 0.05, true)
+		"honey":   # Honigtopf mit Tropfen
+			draw_circle(c + Vector2(0, r * 0.2), r * 0.7, Color("#c87a2a"))
+			draw_rect(Rect2(c + Vector2(-r * 0.45, -r * 0.6), Vector2(r * 0.9, r * 0.3)), Color("#a8601e"))
+			draw_circle(c + Vector2(0, -r * 0.35), r * 0.42, Color("#ffb21e"))
+			draw_circle(c + Vector2(r * 0.3, -r * 0.05), r * 0.13, Color("#ffb21e"))
+			draw_circle(c + Vector2(-r * 0.2, r * 0.05), r * 0.1, Color("#ffcf5e"))
+			draw_rect(Rect2(c + Vector2(-r * 0.4, r * 0.25), Vector2(r * 0.8, r * 0.14)), Color(1, 1, 1, 0.85))
+		"bubble":
+			draw_circle(c, r * 0.92, Color(0.6, 0.85, 1.0, 0.35))
+			draw_arc(c, r * 0.92, 0, TAU, 32, Color(0.85, 0.95, 1.0), s * 0.06, true)
+			draw_arc(c, r * 0.65, PI * 1.05, PI * 1.45, 10, Color(1, 1, 1, 0.9), s * 0.07, true)
+			draw_circle(c + Vector2(-r * 0.38, -r * 0.4), r * 0.12, Color(1, 1, 1, 0.95))
+		"mirror":   # Sechseck-Schild mit Spiegel-Glanz
+			var hexp := PackedVector2Array()
+			for k in 6:
+				var a := TAU * k / 6.0 + PI / 6.0
+				hexp.append(c + Vector2(cos(a), sin(a)) * r * 0.9)
+			draw_colored_polygon(hexp, Color("#9fb6d8"))
+			var inner := PackedVector2Array()
+			for k in 6:
+				var a2 := TAU * k / 6.0 + PI / 6.0
+				inner.append(c + Vector2(cos(a2), sin(a2)) * r * 0.66)
+			draw_colored_polygon(inner, Color("#e8f2ff"))
+			draw_line(c + Vector2(-r * 0.35, r * 0.2), c + Vector2(r * 0.15, -r * 0.4), Color(1, 1, 1), s * 0.07)
+			draw_line(c + Vector2(-r * 0.1, r * 0.4), c + Vector2(r * 0.35, -r * 0.15), Color(1, 1, 1, 0.7), s * 0.05)
+		"spark":   # leuchtender Kristall mit Funken
+			var gem := PackedVector2Array([c + Vector2(0, -r * 0.9), c + Vector2(r * 0.5, 0), c + Vector2(0, r * 0.9), c + Vector2(-r * 0.5, 0)])
+			draw_colored_polygon(gem, Color("#7fd6ff"))
+			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r * 0.9), c + Vector2(r * 0.5, 0), c]), Color("#c8f0ff"))
+			for k in 3:
+				_star(c + Vector2(cos(k * 2.1) * r * 0.85, sin(k * 2.1) * r * 0.75), r * 0.16, Color("#ffd23f"), Color("#ff9f1a"))
+		"thunder":   # dunkle Wolke mit gelbem Blitz
+			draw_circle(c + Vector2(-r * 0.35, -r * 0.15), r * 0.42, Color("#6a6e86"))
+			draw_circle(c + Vector2(r * 0.3, -r * 0.2), r * 0.48, Color("#6a6e86"))
+			draw_circle(c + Vector2(0, -r * 0.45), r * 0.4, Color("#868aa2"))
+			draw_rect(Rect2(c + Vector2(-r * 0.75, -r * 0.15), Vector2(r * 1.5, r * 0.4)), Color("#6a6e86"))
+			draw_colored_polygon(PackedVector2Array([c + Vector2(r * 0.1, r * 0.1), c + Vector2(-r * 0.25, r * 0.55), c + Vector2(0, r * 0.55),
+				c + Vector2(-r * 0.2, r * 0.98), c + Vector2(r * 0.32, r * 0.42), c + Vector2(r * 0.06, r * 0.42), c + Vector2(r * 0.28, r * 0.1)]), Color("#ffe14a"))
+		"comet":   # Stern mit Schweif
+			for k in 3:
+				draw_line(c + Vector2(r * 0.1, r * 0.1), c + Vector2(r * 0.95, r * (0.55 + k * 0.2)), Color(1.0, 0.6 + k * 0.1, 0.2, 0.8 - k * 0.2), s * (0.14 - k * 0.03))
+			_star(c + Vector2(-r * 0.15, -r * 0.15), r * 0.62, Color("#ffd23f"), Color("#ff8a1a"))
 		"dice", "double_dice":
 			var off := Vector2(r * 0.18, -r * 0.18) if kind == "double_dice" else Vector2.ZERO
 			if kind == "double_dice":

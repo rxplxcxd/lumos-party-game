@@ -11,6 +11,8 @@ extends SkeletonModifier3D
 ## * sad: hängender Kopf
 ## * lean: seitliches Neigen in Kurven (Karts, Sprint)
 ## * steer: Arme nach vorn ans Lenkrad (Kart-Sitzpose), Lenkwinkel dreht die Arme mit
+## * jolt: Oberkörper-Ruck (x = nach hinten/vorn, y = seitlich) – vom Kart als gedämpfte Feder gesetzt
+## * arm_throw: Wurfarm (rechts): −1 = weit ausgeholt, +1 = durchgeschwungen, 0 = am Lenkrad
 ##
 ## Skelett-Raum der KayKit-Rigs: Charakter blickt nach +Z, oben = +Y.
 
@@ -20,6 +22,8 @@ var look_weight := 0.0
 var lean := 0.0
 var steer_weight := 0.0
 var steer := 0.0
+var jolt := Vector2.ZERO
+var arm_throw := 0.0
 
 var _bones := {}
 var _t := 0.0
@@ -75,8 +79,8 @@ func _process_modification() -> void:
 
 	# --- Rumpf ---
 	var hips_roll := lean * 0.18
-	var chest_pitch := 0.0
-	var chest_roll := lean * 0.22
+	var chest_pitch := jolt.x * 0.22
+	var chest_roll := lean * 0.22 + jolt.y * 0.16
 	var head_pitch := 0.0
 	var head_yaw := 0.0
 	var head_roll := 0.0
@@ -133,6 +137,14 @@ func _process_modification() -> void:
 		_rot(skel, "upperarm.r", Vector3.UP, 1.25 * steer_weight)
 		_rot(skel, "upperarm.l", Vector3.FORWARD, -0.55 * steer_weight + steer * 0.35)
 		_rot(skel, "upperarm.r", Vector3.FORWARD, 0.55 * steer_weight + steer * 0.35)
+	if absf(arm_throw) > 0.001:
+		# Ausholen: Arm nach hinten-oben, Wurf: nach vorn-oben durchziehen, Unterarm schnappt nach
+		var back := clampf(-arm_throw, 0.0, 1.0)
+		var fwd := clampf(arm_throw, 0.0, 1.0)
+		_rot(skel, "upperarm.r", Vector3.RIGHT, -1.5 * back + 1.6 * fwd)
+		_rot(skel, "upperarm.r", Vector3.FORWARD, -0.9 * back - 0.5 * fwd)
+		_rot(skel, "lowerarm.r", Vector3.RIGHT, -0.9 * back + 0.3 * fwd)
+		_rot(skel, "chest", Vector3.UP, -0.35 * back + 0.3 * fwd)
 	if w.scared > 0.3:
 		_rot(skel, "upperarm.l", Vector3.FORWARD, 0.9 * w.scared + sin(_t * 40.0) * 0.1)
 		_rot(skel, "upperarm.r", Vector3.FORWARD, -0.9 * w.scared - sin(_t * 43.0) * 0.1)

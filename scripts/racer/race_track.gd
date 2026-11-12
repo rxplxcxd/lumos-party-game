@@ -34,6 +34,11 @@ var ice_ranges: Array[Vector2] = []
 var ramp_s: Array[float] = []
 var boosts: Array[Vector2] = []     # (s, x)
 var item_rows: Array[float] = []
+# 1.4.0: Streckenmechaniken (alle in Strecken-Koordinaten s/x)
+var dividers: Array[Dictionary] = []   # {s0, s1, x0, x1}: feste Trennwand → zwei Routen (Enden abgeschrägt)
+var bounces: Array[Dictionary] = []    # {s, x, w, up}: Sprungpilz/Sprungfeld auf einer Spur
+var hazards: Array[Dictionary] = []    # {type, s, x, w, period, on, phase}: zeitgesteuerte Hindernisse
+var wet_ranges: Array[Vector2] = []    # nasse Fahrbahn: weniger Grip, Gischt
 var minimap: PackedVector2Array
 
 var _pos := PackedVector3Array()
@@ -74,6 +79,17 @@ func build(d: Dictionary) -> void:
 		boosts.append(Vector2(point_s[b[0]] + 6.0, b[1]))
 	for it in d.items:
 		item_rows.append(point_s[it])
+	for dv in d.get("dividers", []):   # [punkt, offset_m, länge_m, x0, x1]
+		var ds0 := point_s[int(dv[0])] + float(dv[1])
+		dividers.append({"s0": ds0, "s1": ds0 + float(dv[2]), "x0": float(dv[3]), "x1": float(dv[4])})
+	for bo in d.get("bounce", []):     # [punkt, offset_m, x, breite, sprungkraft]
+		bounces.append({"s": point_s[int(bo[0])] + float(bo[1]), "x": float(bo[2]), "w": float(bo[3]), "up": float(bo[4])})
+	for hz in d.get("hazards", []):    # {type, p, off, x, w, period, on, phase}
+		var h: Dictionary = (hz as Dictionary).duplicate()
+		h["s"] = point_s[int(h.p)] + float(h.get("off", 0.0))
+		hazards.append(h)
+	for we in d.get("wet", []):
+		wet_ranges.append(Vector2(point_s[we[0]], point_s[we[1]]))
 	_bake_frames()
 	_build_mesh()
 	_build_extras()
@@ -186,6 +202,67 @@ func is_water(s: float) -> bool:
 
 func is_ice(s: float) -> bool:
 	return in_range(s, ice_ranges)
+
+
+func is_wet(s: float) -> bool:
+	return in_range(s, wet_ranges)
+
+
+## Erlaubter Bereich für die Kart-Mitte bei (s, x): Leitplanken und Trennwände (Kart-Radius schon abgezogen).
+## Liegt das Kart an einer Trennwand, wird es zur näheren Seite geführt – die Enden laufen keilförmig aus.
+func lane_limits(s: float, x: float) -> Vector2:
+	var hw := width * 0.5 - Racer.RADIUS
+	var lim := Vector2(-hw, hw)
+	for dv in dividers:
+		var d := wrap_s(s - float(dv.s0))
+		var span := float(dv.s1) - float(dv.s0)
+		if d < 0.0 or d > span:
+			continue
+		var taper := clampf(minf(d, span - d) / 7.0, 0.0, 1.0)
+		taper = taper * taper * (3.0 - 2.0 * taper)
+		var mid := (float(dv.x0) + float(dv.x1)) * 0.5
+		var half := (float(dv.x1) - float(dv.x0)) * 0.5 * taper
+		if half < 0.05:
+			continue
+		if x < mid:
+			lim.y = minf(lim.y, mid - half - Racer.RADIUS)
+		else:
+			lim.x = maxf(lim.x, mid + half + Racer.RADIUS)
+	return lim
+
+
+## Trennwand-Breite bei s (für KI und Geschosse): {mid, half} oder leer.
+func divider_at(s: float) -> Dictionary:
+	for dv in dividers:
+		var d := wrap_s(s - float(dv.s0))
+		var span := float(dv.s1) - float(dv.s0)
+		if d >= 0.0 and d <= span:
+			var taper := clampf(minf(d, span - d) / 7.0, 0.0, 1.0)
+			return {"mid": (float(dv.x0) + float(dv.x1)) * 0.5, "half": (float(dv.x1) - float(dv.x0)) * 0.5 * taper * taper * (3.0 - 2.0 * taper)}
+	return {}
+
+
+## Sprungkraft, wenn das Kart in diesem Schritt einen Sprungpilz überfährt (sonst 0).
+func bounce_at(s: float, x: float, ds: float) -> float:
+	for b in bounces:
+		var d := wrap_s(s - float(b.s))
+		if d < absf(ds) + 0.6 and d >= 0.0 and absf(x - float(b.x)) < float(b.w) * 0.5:
+			return float(b.up)
+	return 0.0
+
+
+## Ist eine zeitgesteuerte Gefahr gerade aktiv (0..1 = Anteil der aktiven Phase) bzw. kündigt sie sich an (< 0)?
+## Rückgabe: 1 = aktiv, Werte in (−1, 0) = Vorwarnung (kurz vor dem Ausbruch), 0 = ruhig.
+static func hazard_phase(h: Dictionary, race_t: float) -> float:
+	var period := float(h.get("period", 4.0))
+	var on := float(h.get("on", 1.0))
+	var u := fposmod(race_t + float(h.get("phase", 0.0)), period)
+	if u < on:
+		return 1.0
+	var warn := 0.9
+	if u > period - warn:
+		return -(u - (period - warn)) / warn   # 0 → −1 kurz vor dem Ausbruch
+	return 0.0
 
 
 func is_loop(s: float) -> bool:

@@ -18,6 +18,9 @@ uniform float track_len = 800.0;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
 
 void fragment() {
+	// Die Oberseite der Fahrbahn ist im Mesh die Rückseite – ohne Umdrehen zeigt die Normale nach unten und die
+	// Sonne erreicht den Asphalt nicht (Fahrbahn fast schwarz).
+	if (!FRONT_FACING) NORMAL = -NORMAL;
 	float u = UV.x;
 	float v = UV.y;           // Meter entlang der Strecke
 	vec3 col = asphalt.rgb * (0.9 + 0.2 * hash(floor(vec2(u * 60.0, v * 4.0))));

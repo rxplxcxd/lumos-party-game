@@ -129,10 +129,10 @@ func tick(delta: float, race_time: float) -> void:
 	if racer.rolling > 0.0:
 		_item.visible = true
 		if int(Time.get_ticks_msec() / 70) % 2 == 0:
-			_item.set_kind(["pie", "cannonball", "megaphone", "anchor", "nitro"][randi() % 5])
+			_item.set_kind(ItemModels.icon_of(ItemModels.INFO.keys()[randi() % ItemModels.INFO.size()]))
 	elif racer.item != "":
 		_item.visible = true
-		_item.set_kind({"pie": "pie", "homing": "cannonball", "megaphone": "megaphone", "anchor": "anchor", "nitro": "nitro"}[racer.item])
+		_item.set_kind(ItemModels.icon_of(racer.item))
 		if _last_item != racer.item:
 			Juice.ui_punch(_item_bg, 0.25, 0.4)
 	else:

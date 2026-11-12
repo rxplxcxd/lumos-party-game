@@ -1638,7 +1638,7 @@ func _build_race() -> Node3D:
 		if c is MeshInstance3D and (c as MeshInstance3D).material_override is ShaderMaterial:
 			var src := (c as MeshInstance3D).material_override as ShaderMaterial
 			var sh2 := Shader.new()
-			sh2.code = src.shader.code.replace("void fragment() {", "void fragment() {\n\tif (!FRONT_FACING) NORMAL = -NORMAL;")
+			sh2.code = src.shader.code if src.shader.code.contains("FRONT_FACING") else src.shader.code.replace("void fragment() {", "void fragment() {\n\tif (!FRONT_FACING) NORMAL = -NORMAL;")
 			var m2 := ShaderMaterial.new()
 			m2.shader = sh2
 			m2.set_shader_parameter("track_len", _track.length)
