@@ -34,8 +34,8 @@ Ergebnis in `trailer_out/`:
 * `marks.json`: Schnittliste des Trailers
 
 Eine schnelle Kontrollfassung (etwa 5 Minuten) entsteht mit `TRAILER_QUICK=1 bash trailer/render.sh /tmp/vorschau 1280 720 30`.
-Der 4K60-Master braucht mit Software-Rendering etwa 1,1 s je Bild, also rund 2 Stunden. Mit einer echten GPU
-geht es deutlich schneller.
+Der 4K60-Master braucht mit Software-Rendering etwa 1 s je Bild (gemessen: 5731 Bilder in 1 h 48 min). Mit
+einer echten GPU geht es deutlich schneller.
 
 Ansehen im Fenster (Esc beendet): `godot --path . res://trailer/Trailer.tscn`. Weitere Optionen nach `--`:
 

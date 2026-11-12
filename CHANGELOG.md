@@ -21,8 +21,22 @@ Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--nex
     Schnittliste der Regie, Standbilder, Tonaussetzer, Stille, Übersteuerung und Lautheit.
 * **Trailer-Feinschliff:** Gewichtsverlagerung und Funkenflug laufen bildratenunabhängig (gleich bei 30 und
   60 fps), und bei Weltenwechseln zucken die Figuren nicht mehr.
-* **Spiel:** Das Spiel selbst ist unverändert. Die Regressionsprüfung umfasst alle Minispiele mit 4 CPUs,
-  Systemtests, Skriptprüfung und Langzeit-Party (Ergebnisse im Abschlussbericht).
+* **Trailer-Feinschliff aus der Video-Prüfung:**
+  * Der Stamm ist jetzt ein Verdecker, der beide Welten überdauert. Er wird im Wechselbild in der neuen Welt
+    nachgeführt, sodass der Wechsel unsichtbar bleibt (gemessen Δ 0,0).
+  * Der Boss ist riesig und die Gruppe klein im unteren Drittel.
+  * Das Lagerfeuer hat eine flackernde Flamme.
+  * Der Wasserfall fällt über eine Felswand, die Wasserwand hat einen Farbverlauf.
+* **Ergebnis:** 4K60-Master und 1080p60-Fassung, beide mit „QA OK“:
+  * 5731 Bilder, 19 harte Schnitte, alle aus der Schnittliste
+  * keine Schwarz- oder Standbilder außerhalb von Auf- und Abblende
+  * keine Tonaussetzer, kein Clipping, −14,2 LUFS, True Peak −1,3 dBFS
+  * Renderzeit 1 h 48 min mit Software-Rendering
+* **Spiel unverändert, geprüft:**
+  * alle 69 Minispiele mit 4 CPUs regulär beendet: 0 Skriptfehler, niemand in Geometrie gesteckt oder
+    durchgefallen
+  * Systemtests, Skriptprüfung und Langzeit-Party bestanden
+  * Spielcode gegenüber 1.2.8: nur der entfernte Menüpunkt
 
 ## 1.2.8 – Neue Asset-Pakete, Saison-Deko und Trailer
 * **Asset-Inventur der hochgeladenen Pakete:**

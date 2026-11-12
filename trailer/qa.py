@@ -88,9 +88,12 @@ def main():
                "-f", "rawvideo", "-"], binary=True)
     fr = np.frombuffer(raw, dtype=np.uint8).reshape(-1, H, W).astype(np.float32)
     n = len(fr)
-    exp_frames = int(round(dur * fps))
+    exp_frames = int(round((mdur or dur) * fps))   # gegen die Regie-Länge, nicht gegen die Containerlänge
     if abs(n - exp_frames) > 2:
-        errors.append("%d Bilder statt %d" % (n, exp_frames))
+        errors.append("%d Bilder statt %d (Szenen fehlen oder hängen)" % (n, exp_frames))
+    vdur = float(v.get("duration", n / fps))
+    if a is not None and abs(float(a.get("duration", vdur)) - vdur) > 0.15:
+        errors.append("Ton %.2f s gegenüber Bild %.2f s (Versatz am Ende)" % (float(a["duration"]), vdur))
     lum = fr.reshape(n, -1).mean(axis=1)
     p99 = np.percentile(fr.reshape(n, -1), 99, axis=1)
     diff = np.zeros(n)

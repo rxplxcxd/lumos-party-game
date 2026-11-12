@@ -71,7 +71,7 @@ AF="loudnorm=I=-14:TP=-1.5:LRA=11:$LN:linear=true,aresample=48000"
 NAME=Lumos_Party_Trailer
 LEVEL=5.2; [ "$H" -le 1080 ] && LEVEL=4.2
 ffmpeg -v error -y -i "$WORK/raw.avi" -af "$AF" -c:v libx264 -preset slow -tune animation -crf 16 -profile:v high \
-  -level:v $LEVEL -pix_fmt yuv420p -r "$FPS" -c:a aac -b:a 256k -ar 48000 -movflags +faststart "$OUT/${NAME}_${H}p${FPS}.mp4"
+  -level:v $LEVEL -pix_fmt yuv420p -r "$FPS" -c:a aac -b:a 256k -ar 48000 -shortest -movflags +faststart "$OUT/${NAME}_${H}p${FPS}.mp4"
 if [ "$H" -gt 1080 ]; then
   ffmpeg -v error -y -i "$OUT/${NAME}_${H}p${FPS}.mp4" -vf "scale=1920:1080:flags=lanczos" -c:v libx264 -preset slow \
     -tune animation -crf 17 -profile:v high -level:v 4.2 -pix_fmt yuv420p -c:a copy -movflags +faststart \
