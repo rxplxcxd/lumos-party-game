@@ -67,8 +67,8 @@ geprüft (siehe unten).
       Donnerwolke bleiben selten.
     * Online mit 3 Geräten sowie mit 120 ms Verzögerung und 3 % Paketverlust: gleiche Reihenfolge überall,
       keine Skriptfehler.
-    * Kart-Bowling und Ballon-Schlacht (gleiche Kart-Optik) laufen fehlerfrei, System-Tests grün,
-      Trailer-Trennung OK.
+    * Alle 69 Minispiele laufen mit 4 CPUs bis zum Ende, ohne Skriptfehler. Kart-Bowling und Ballon-Schlacht
+      (gleiche Kart-Optik) sind zusätzlich im Bild geprüft. System-Tests grün, Trailer-Trennung OK.
 
 ## 1.3.0 – Trailer filmisch überarbeitet
 Alle Änderungen liegen ausschließlich in `trailer/` (dazu Doku und Versionsnummer). Das Spiel ist unverändert.
