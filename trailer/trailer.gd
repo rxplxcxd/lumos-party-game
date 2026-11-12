@@ -595,7 +595,7 @@ func _build_forest(o: Vector3) -> Node3D:
 	_fire_light.omni_range = 9.0
 	_fire_light.position = Vector3(-6.0, 1.2, -18.0)
 	s.add_child(_fire_light)
-	for e in [[0.34, 1.05, Color(1.0, 0.42, 0.1)], [0.24, 0.8, Color(1.0, 0.68, 0.2)], [0.13, 0.5, Color(1.0, 0.93, 0.6)]]:
+	for e in [[0.34, 1.0, Color(0.95, 0.32, 0.06, 0.42)], [0.24, 0.76, Color(1.0, 0.55, 0.12, 0.42)], [0.12, 0.46, Color(1.0, 0.8, 0.35, 0.45)]]:
 		var fl := MeshInstance3D.new()
 		var cm := CylinderMesh.new()
 		cm.top_radius = 0.0
@@ -608,7 +608,7 @@ func _build_forest(o: Vector3) -> Node3D:
 		fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		fm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 		fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		fm.albedo_color = Color(e[2], 0.85)
+		fm.albedo_color = e[2]
 		fm.no_depth_test = false
 		cm.material = fm
 		fl.mesh = cm
