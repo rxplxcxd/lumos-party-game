@@ -20,3 +20,4 @@ __pycache__/
 .vercel/
 # lokaler Symlink auf die Godot-Binärdatei (./godot --headless --export-release …)
 /godot
+/trailer_out/

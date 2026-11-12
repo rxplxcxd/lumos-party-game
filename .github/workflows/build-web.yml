@@ -92,6 +92,9 @@ jobs:
           grep -q "TESTS OK" systems.log
           ! grep -q "SCRIPT ERROR" systems.log
 
+      - name: Trailer-Produktion vom Spiel getrennt (keine Verweise, nicht im Export, lauffähig)
+        run: bash trailer/check_isolation.sh
+
       - name: Langzeit-Test (Party über 12 Runden, Speicher-/Objekt-Lecks, Hänger)
         run: |
           timeout 900 $GODOT_BIN --headless --fixed-fps 60 --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/soak.gd --rounds=12 2>&1 | tee soak.log

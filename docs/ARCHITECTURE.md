@@ -113,7 +113,8 @@ Gegenmittel:
 
 ## Trailer (seit 1.2.8)
 
-`scripts/trailer/trailer.gd` ist ein kleines Regie-System: Zeitereignisse (`at`), Wegstrecken mit weichem
+`trailer/trailer.gd` (eigenständige Produktion, vom Spiel getrennt – siehe `trailer/README.md`) ist ein kleines
+Regie-System: Zeitereignisse (`at`), Wegstrecken mit weichem
 Anfahren und Abbremsen (`go`), Blickziele (`look`), Haltungen (`pose`), Reaktionen (`react`) und Kamera-Keys mit
 Schnitten (`key`). Die Sets liegen weit auseinander in einer Szene, und gewechselt wird nur dann, wenn ein
 Verdecker das Bild füllt (Stamm, Wasserwand, Lichtblitz). So gibt es keine sichtbaren Sprünge. Im Movie-Maker-Modus

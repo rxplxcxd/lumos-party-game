@@ -127,8 +127,9 @@ Alle Boss-Modelle sind prozedural gebaut (`scripts/bosses/boss_model.gd`) und an
 * **Saison-Deko**: Zu Weihnachten (1.12.–6.1.) und Halloween (15.10.–2.11.) schmücken sich Menü, Bretter und
   Minispiel-Kulissen automatisch. Jede Stelle wird auf festen Boden und freie Fläche geprüft. Die Einstellung
   „Saison-Deko“ schaltet zwischen Automatisch, Aus, Weihnachten und Halloween.
-* **Trailer**: „Best adventures are shared.“ – 95 Sekunden in der Engine inszeniert, im Hauptmenü unter
-  „Trailer ansehen“. Als Video rendern lässt er sich mit dem Movie Maker (siehe `CHANGELOG.md`, 1.2.8).
+* **Trailer**: „Best adventures are shared.“ – 95 Sekunden in der Engine inszeniert, als eigenständige
+  Produktion in `trailer/` (vom Spiel getrennt, nicht im Export). `bash trailer/render.sh` rendert das fertige
+  4K60-Video samt automatischer Prüfung, Details in [trailer/README.md](trailer/README.md).
 
 ### Eigene 3D-Avatare (Lumos-Profil)
 * **Kein Editor** – das Modell kommt fertig aus dem Profil: Lumos One OS (`window.LumosOS.getAvatar()`), die
@@ -266,6 +267,7 @@ scenes/          boot, menu, party, minigames, racer, cutscenes
 assets/          Original-Assetpakete (3d/, audio/) + animations/, music/, sfx/, fonts/, shaders/
 web/             HTML-Shell, Manifest, Icons der PWA
 tools/           Asset-Pipeline, Generatoren, Export, Tests
+trailer/         eigenständige Trailer-Produktion (Regie, Render-Skript, Video-Prüfung) – nicht Teil des Spiels
 docs/            ASSET_INVENTORY.md, ARCHITECTURE.md, Screenshots
 ```
 

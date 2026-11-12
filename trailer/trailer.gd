@@ -16,6 +16,7 @@ extends Node3D
 
 const DUR := 95.5
 const BEAT := 60.0 / 138.0   # Hurry-Up-Track der Montage
+const WIPE_T := 52.0       # Weltenwechsel hinter dem Stamm (Wald → Wiese)
 const MONTAGE_T0 := 65.4   # BOOM – Montage im 4-Schläge-Raster (1,74 s je Bild)
 
 var t := 0.0
@@ -28,6 +29,12 @@ var _look: Array = [null, null, null, null]
 var _face_hint: Array = [Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO]
 var _prev_pos: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO]
 var _prev_v: Array[float] = [0.0, 0.0, 0.0, 0.0]
+var _acc_s: Array[float] = [0.0, 0.0, 0.0, 0.0]          # geglättete Beschleunigung (Gewichtsverlagerung)
+var _last_v: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO]
+var _marks: Array = []
+var _cam_tan: Array = []
+var _trunk: MeshInstance3D
+var _trunk_local := Vector3.ZERO   # Schnitt-/Übergangsliste für die Video-Prüfung (trailer/qa.py)
 var _hold: Array[bool] = [false, false, false, false]   # eigene Pose (Sitzen, Liegen) – kein Gehen/Stehen
 var _cam_keys: Array = []                 # [t, Position, Blickpunkt, FOV]
 var _sets := {}
@@ -55,6 +62,8 @@ var _fire_light: OmniLight3D
 var _snack: Node3D
 var _rng := RandomNumberGenerator.new()
 var _movie := false
+var _msaa := 2   # Viewport.MSAA_4X
+var _shadow := 4096
 
 
 func _ready() -> void:
@@ -63,15 +72,26 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if String(a).begins_with("--trailer-from="):
 			_from = String(a).substr(15).to_float()
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--trailer-msaa="):
+			_msaa = clampi(String(a).substr(15).to_int(), 0, 3)
+		if String(a).begins_with("--trailer-shadow="):
+			_shadow = clampi(String(a).substr(17).to_int(), 1024, 16384)
 	Engine.time_scale = 1.0
 	InputHub.set_touch_profile("none")
+	_lock_render_quality.call_deferred()
 	_build_ui()
 	_build_sets()
 	_build_cast()
 	_build_music()
 	_script_all()
+	at(0.25, _unlimit_ranges)   # nachdem die Spiel-Grafik die ersten Meshes eingestellt hat
 	_ev.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) < float(b[0]))
 	_cam_keys.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) < float(b[0]))
+	_prepare_camera()
+	# Vordergrund-Stamm für den verdeckten Weltenwechsel genau dorthin, wo die Kamera im Wechselmoment steht
+	var cw: Vector3 = _cam_eval(WIPE_T)[0]
+	_trunk_local = Vector3(cw.x, 8.0, cw.z - 2.2)
 	_use_set("forest")
 	_sets.forest.visible = false   # Akt 1 beginnt in völliger Dunkelheit
 	_use_env("void")
@@ -86,8 +106,40 @@ func _ready() -> void:
 				m.seek(m.get_playback_position() + _from)
 
 
+## Eigene Renderqualität der Produktion, unabhängig von der Grafik-Automatik des Spiels: Die misst im Movie-Maker
+## die echte (sehr niedrige) Bildrate und würde Auflösung und Stufe senken; bei 4K deckelt sie die 3D-Auflösung.
+## Alles nur im Speicher dieses Prozesses – es wird nichts gespeichert, das Spiel bleibt unberührt.
+func _lock_render_quality() -> void:
+	Game.settings["quality"] = "ultra"
+	Game.settings["dynamic_res"] = false
+	Game.settings["show_fps"] = false
+	Gfx.apply()
+	var vp := get_viewport()
+	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	vp.scaling_3d_scale = 1.0
+	vp.msaa_3d = _msaa as Viewport.MSAA
+	RenderingServer.directional_shadow_atlas_set_size(_shadow, true)
+	_unlimit_ranges.call_deferred()
+	print("[TRAILER] Fenster %s · Bildschirm %s · 3D-Skalierung %.2f · MSAA-Stufe %d" % [str(get_window().size),
+		str(DisplayServer.screen_get_size()), vp.scaling_3d_scale, int(vp.msaa_3d)])
+
+
+## Keine Sichtweiten-Abschaltung im Bild (die Spiel-Grafik setzt sie für kleine Teile – in weiten Kamerafahrten
+## würden sie sonst aufploppen).
+func _unlimit_ranges() -> void:
+	for n in find_children("*", "GeometryInstance3D", true, false):
+		var g := n as GeometryInstance3D
+		g.visibility_range_end = 0.0
+		g.visibility_range_begin = 0.0
+
+
 func _process(delta: float) -> void:
 	t += delta
+	if _trunk.visible:
+		_trunk.global_position = _origin + _trunk_local
+	var vp := get_viewport()
+	if vp.scaling_3d_scale != 1.0:
+		vp.scaling_3d_scale = 1.0
 	while not _ev.is_empty() and float(_ev[0][0]) <= t:
 		var e: Array = _ev.pop_front()
 		(e[1] as Callable).call()
@@ -98,10 +150,16 @@ func _process(delta: float) -> void:
 	_animate_props(delta)
 	if t >= DUR:
 		set_process(false)
-		if _movie or "--trailer-quit" in OS.get_cmdline_user_args():
-			get_tree().quit()
-		else:
-			Router.goto("res://scenes/menu/MainMenu.tscn")
+		_write_marks()
+		get_tree().quit()   # eigenständige Produktion: nach dem Abspann ist Schluss
+
+
+func _write_marks() -> void:
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--trailer-marks="):
+			var f := FileAccess.open(String(a).substr(16), FileAccess.WRITE)
+			if f:
+				f.store_string(JSON.stringify({"duration": DUR, "marks": _marks}))
 
 
 func _exit_tree() -> void:
@@ -116,10 +174,9 @@ func _exit_tree() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# Im Spiel: jede Taste überspringt den Trailer
-	if not _movie and event.is_pressed() and (event is InputEventKey or event is InputEventJoypadButton or event is InputEventScreenTouch or event is InputEventMouseButton):
-		set_process(false)
-		Router.goto("res://scenes/menu/MainMenu.tscn")
+	# Vorschau im Fenster: Esc beendet
+	if not _movie and event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
+		get_tree().quit()
 
 
 # =============================================================================================================
@@ -163,6 +220,13 @@ func react(i: int, time: float, id: String) -> void:
 ## Kamera-Schlüsselbild (Set-Koordinaten). cut = harter Schnitt (kein Übergang vom vorigen Schlüssel).
 func key(time: float, pos: Vector3, lk: Vector3, fov := 50.0, cut := false) -> void:
 	_cam_keys.append([time, pos, lk, fov, cut])
+	if cut:
+		_marks.append([time, "Schnitt"])
+
+
+## Gewollter Bildwechsel (Blitz, Wasserwand, Weltenwechsel) – die Video-Prüfung erwartet dort einen Sprung.
+func _mark(kind: String) -> void:
+	_marks.append([t, kind])
 
 
 func _pos_of(i: int, time: float) -> Vector3:
@@ -193,15 +257,18 @@ func _drive(i: int, delta: float) -> void:
 	var p := _origin + lp
 	var v := (p - _prev_pos[i]) / maxf(delta, 0.001)
 	if (p - _prev_pos[i]).length() > 6.0:
-		v = Vector3.ZERO   # Weltenwechsel / Szenensprung: keine Fantasie-Geschwindigkeit
+		v = _last_v[i]   # Weltenwechsel / Szenensprung: Bewegung läuft einfach weiter (kein Zucken)
+	_last_v[i] = v
 	_prev_pos[i] = p
 	r.global_position = p
 	var flat := Vector3(v.x, 0, v.z)
 	var spd := flat.length()
 	# Gewicht: beim Beschleunigen nach vorn, beim Bremsen zurück lehnen
-	var acc := (spd - _prev_v[i]) / maxf(delta, 0.001)
-	_prev_v[i] = lerpf(_prev_v[i], spd, 0.5)
-	r.set_lean(clampf(acc * 0.05 + spd * 0.025, -0.35, 0.45))
+	# (bildratenunabhängig: bei 30 und 60 fps dieselbe Haltung)
+	var acc_raw := (spd - _prev_v[i]) / maxf(delta, 0.001)
+	_prev_v[i] = spd
+	_acc_s[i] = lerpf(_acc_s[i], acc_raw, 1.0 - exp(-delta / 0.07))
+	r.set_lean(clampf(_acc_s[i] * 0.05 + spd * 0.025, -0.35, 0.45))
 	if spd > 0.25:
 		r.face(flat, delta, 7.0)
 	elif _face_hint[i] != Vector3.ZERO:
@@ -222,28 +289,66 @@ func _drive(i: int, delta: float) -> void:
 func _drive_camera() -> void:
 	if _cam_keys.is_empty():
 		return
-	var k0: Array = _cam_keys[0]
-	var k1: Array = _cam_keys[0]
-	for k in _cam_keys:
-		if float(k[0]) <= t:
-			k0 = k
-		else:
-			k1 = k
-			break
-	var p: Vector3 = k0[1]
-	var l: Vector3 = k0[2]
-	var f: float = k0[3]
-	if k1 != k0 and not bool(k1[4]):
-		var u := clampf((t - float(k0[0])) / maxf(float(k1[0]) - float(k0[0]), 0.001), 0.0, 1.0)
-		var e := u * u * (3.0 - 2.0 * u)
-		p = (k0[1] as Vector3).lerp(k1[1], e)
-		l = (k0[2] as Vector3).lerp(k1[2], e)
-		f = lerpf(f, float(k1[3]), e)
-	cam.global_position = _origin + p
-	cam.fov = f
-	var target := _origin + l
+	var c := _cam_eval(t)
+	cam.global_position = _origin + (c[0] as Vector3)
+	cam.fov = float(c[2])
+	var target := _origin + (c[1] as Vector3)
 	if not cam.global_position.is_equal_approx(target):
 		cam.look_at(target, Vector3.UP)
+
+
+## Kamerafahrt als monotone kubische Spline je Einstellung (Fritsch-Carlson je Kanal): Innerhalb einer Einstellung
+## fährt die Kamera ohne Halt durch alle Zwischenpunkte, beschleunigt nur am Anfang und bremst nur am Ende – ohne
+## Überschwingen (wo eine Achse ruht oder umkehrt, ist auch die Tangente null).
+func _prepare_camera() -> void:
+	_cam_tan.clear()
+	var n := _cam_keys.size()
+	for k in n:
+		var start := k == 0 or bool(_cam_keys[k][4])
+		var stop := k == n - 1 or bool(_cam_keys[k + 1][4])
+		var tan: Array[float] = []
+		var v := _cam_vec(k)
+		for ch in v.size():
+			var m := 0.0
+			if not start and not stop:
+				var vp := _cam_vec(k - 1)
+				var vn := _cam_vec(k + 1)
+				var d0 := (v[ch] - vp[ch]) / maxf(float(_cam_keys[k][0]) - float(_cam_keys[k - 1][0]), 0.001)
+				var d1 := (vn[ch] - v[ch]) / maxf(float(_cam_keys[k + 1][0]) - float(_cam_keys[k][0]), 0.001)
+				if d0 * d1 > 0.0:
+					m = clampf((d0 + d1) * 0.5, -3.0 * minf(absf(d0), absf(d1)), 3.0 * minf(absf(d0), absf(d1)))
+			tan.append(m)
+		_cam_tan.append(tan)
+
+
+func _cam_vec(k: int) -> Array[float]:
+	var p: Vector3 = _cam_keys[k][1]
+	var l: Vector3 = _cam_keys[k][2]
+	return [p.x, p.y, p.z, l.x, l.y, l.z, float(_cam_keys[k][3])]
+
+
+## Kamera (Position, Blickpunkt, Brennweite) zur Zeit tt, in Set-Koordinaten.
+func _cam_eval(tt: float) -> Array:
+	var i0 := 0
+	for k in _cam_keys.size():
+		if float(_cam_keys[k][0]) <= tt:
+			i0 = k
+		else:
+			break
+	var v0 := _cam_vec(i0)
+	var out := v0.duplicate()
+	if i0 + 1 < _cam_keys.size() and not bool(_cam_keys[i0 + 1][4]) and tt > float(_cam_keys[i0][0]):
+		var t0 := float(_cam_keys[i0][0])
+		var dt := maxf(float(_cam_keys[i0 + 1][0]) - t0, 0.001)
+		var u := clampf((tt - t0) / dt, 0.0, 1.0)
+		var u2 := u * u
+		var u3 := u2 * u
+		var v1 := _cam_vec(i0 + 1)
+		var m0: Array[float] = _cam_tan[i0]
+		var m1: Array[float] = _cam_tan[i0 + 1]
+		for ch in out.size():
+			out[ch] = (2 * u3 - 3 * u2 + 1) * v0[ch] + (u3 - 2 * u2 + u) * dt * m0[ch] + (-2 * u3 + 3 * u2) * v1[ch] + (u3 - u2) * dt * m1[ch]
+	return [Vector3(out[0], out[1], out[2]), Vector3(out[3], out[4], out[5]), out[6]]
 
 
 # =============================================================================================================
@@ -343,6 +448,22 @@ func _build_sets() -> void:
 	cam.far = 260.0
 	add_child(cam)
 	cam.make_current()
+	_trunk = MeshInstance3D.new()
+	var tm := CylinderMesh.new()
+	tm.top_radius = 1.35
+	tm.bottom_radius = 1.6
+	tm.height = 16.0
+	tm.radial_segments = 28
+	tm.set_meta("gfx_tuned", true)   # Spiel-Grafik soll die Rundung nicht reduzieren (Silhouette ganz nah)
+	var bark := StandardMaterial3D.new()
+	bark.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED   # in beiden Welten gleich dunkel – kein Lichtsprung
+	bark.albedo_color = Color("#20140d")
+	bark.disable_fog = true
+	tm.material = bark
+	_trunk.mesh = tm
+	_trunk.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_trunk.visible = false
+	add_child(_trunk)
 	_sets["forest"] = _build_forest(Vector3(0, 0, 0))
 	_sets["meadow"] = _build_meadow(Vector3(0, 0, 600))
 	_sets["snow"] = _build_snow(Vector3(0, 0, 1200))
@@ -368,8 +489,10 @@ func _use_set(name: String, env := "") -> void:
 		(_sets[k] as Node3D).visible = (k == name)
 	_origin = to.position
 	_set_now = name
+	_mark("Welt " + name)
 	if env != "":
 		_use_env(env)
+	_unlimit_ranges.call_deferred()
 
 
 ## Langer Weg entlang +X (Set-Koordinaten), Boden + Pfad + Kulisse zu beiden Seiten (vorn nur Niedriges).
@@ -459,9 +582,6 @@ func _build_forest(o: Vector3) -> Node3D:
 	fire.emitting = true
 	_scatter(s, ["nat/tree_oak", "nat/tree_fat", "nat/tree_pine"], 26, -30, 18, -34, -23, Vector2(2.8, 4.0))
 	_fireflies(s, Vector3(-6, 2.6, -21), Vector3(18, 3, 8), 35)
-	# Riesiger Stamm für den Weltenwechsel (steht zwischen Kamera und Weg)
-	var trunk := WorldKit.cylinder(s, 1.5, 16.0, Vector3(58.5, 8.0, 5.0), Color("#3d2a1e"), false)
-	trunk.name = "Trunk"
 	# Stern für den Weg (wird von Akt 1 benutzt, Ursprung)
 	_star = Assets.spawn("kp/star", self, o + Vector3(1.2, 1.55, 0), 0.0, 0.0)
 	_star.visible = false
@@ -633,6 +753,7 @@ func _build_montage(o: Vector3) -> Node3D:
 func _build_cast() -> void:
 	for k in ["hero/knight", "hero/mage", "hero/barbarian", "hero/ranger"]:
 		var r := CharacterRig.new()
+		r.set_meta("gfx_lod", 0)   # Darsteller nie ins Animations-LOD der Spiel-Grafik (immer volle Bildrate, Kopf-Blick an)
 		add_child(r)
 		r.setup(k, -1, 0.95)
 		r.play("idle")
@@ -770,6 +891,7 @@ func _act1() -> void:
 		Audio.sfx("chime", null, -2.0, 1.0, 0.0)
 		Audio.sfx("woom", null, -6.0, 0.8, 0.0)
 		FX.shockwave(_origin + Vector3(1.9, 1.0, 0), 40.0, Color(1.0, 0.85, 0.45, 0.9))
+		_mark("Blitz")
 		create_tween().tween_property(_flash, "modulate:a", 1.0, 0.12))
 	at(8.6, func() -> void:
 		_star.visible = false
@@ -948,8 +1070,10 @@ func _act3() -> void:
 	for k in 4:
 		look(k, 50.0, null)
 	key(50.0, Vector3(49.0, 1.8, 7.6), Vector3(48.0, 1.1, 0.0), 46.0)
-	key(52.4, Vector3(58.5, 1.8, 7.6), Vector3(57.5, 1.1, 0.0), 46.0)   # Stamm bei x=58,5 deckt das Bild ab
-	at(51.95, func() -> void: _use_set("meadow", "day"))
+	# Der Stamm zieht ganz nah durchs Bild und deckt es im Wechselmoment vollständig ab
+	at(48.0, func() -> void: _trunk.visible = true)
+	at(WIPE_T, func() -> void: _use_set("meadow", "day"))
+	at(56.0, func() -> void: _trunk.visible = false)
 	# Wiese: Die Magierin bleibt staunend vor der Riesenblume stehen – der Held holt sie
 	go(A, 53.2, 55.0, Vector3(57.0, 0, 0.0), Vector3(63.0, 0, 0.0))
 	go(B, 53.2, 54.4, Vector3(56.0, 0, -0.9), Vector3(60.6, 0, -1.0))
@@ -969,12 +1093,13 @@ func _act3() -> void:
 	go(D, 55.0, 58.4, Vector3(60.0, 0, -1.8), Vector3(66.0, 0, -1.8))
 	for k in 4:
 		look(k, 56.2, null)
-	key(53.0, Vector3(59.0, 1.8, 7.6), Vector3(58.5, 1.1, 0.0), 46.0)
+	key(53.6, Vector3(60.6, 1.8, 7.6), Vector3(59.8, 1.1, 0.0), 46.0)
 	key(55.6, Vector3(63.4, 1.6, 5.2), Vector3(61.5, 1.3, -0.6), 42.0)
 	# Weltenwechsel 2: durch die Wasserwand
 	key(58.0, Vector3(69.0, 2.0, 7.0), Vector3(67.0, 1.2, 0.0), 46.0)
 	at(57.75, func() -> void:
 		Audio.sfx("splash", null, -6.0, 1.0, 0.0)
+		_mark("Wasserwand")
 		create_tween().tween_property(_water, "modulate:a", 0.95, 0.18))
 	at(57.95, func() -> void:
 		_use_set("snow", "snow")
@@ -997,6 +1122,7 @@ func _act4() -> void:
 	key(59.8, Vector3(75.4, 1.9, 5.6), Vector3(73.2, 1.3, -0.6), 44.0)
 	at(59.85, func() -> void:
 		Audio.sfx("chime", null, -3.0, 1.2, 0.0)
+		_mark("Blitz")
 		create_tween().tween_property(_flash, "modulate:a", 1.0, 0.1))
 	at(60.0, func() -> void:
 		_use_set("beach", "sunset")
@@ -1037,6 +1163,7 @@ func _act4() -> void:
 	at(MONTAGE_T0, func() -> void:
 		Juice.shake(0.6)
 		Audio.sfx("explosion_big", null, 0.0, 1.0, 0.0)
+		_mark("BOOM")
 		_flash.modulate.a = 1.0
 		_fade(_flash, 0.0, 0.35)
 		_music[1].play())
@@ -1097,6 +1224,7 @@ func _montage() -> void:
 	react(B, s[2] + 1.3, "cheer")
 	react(D, s[2] + 1.4, "frustrated")
 	at(s[2] + 1.15, func() -> void:
+		_mark("Blitz")
 		_flash.modulate.a = 0.6
 		_fade(_flash, 0.0, 0.25)
 		Audio.sfx("whistle_up", null, -4.0, 1.2, 0.0))
@@ -1294,6 +1422,9 @@ func _animate_props(delta: float) -> void:
 	_drive_karts(delta)
 
 
+var _spark_acc := 0.0
+
+
 func _drive_karts(delta: float) -> void:
 	if _set_now != "montage" or _karts.is_empty():
 		return
@@ -1308,7 +1439,9 @@ func _drive_karts(delta: float) -> void:
 		var tang := Vector3(-sin(a), 0, cos(a))
 		_place_kart(_karts[0], p, tang.rotated(Vector3.UP, 0.45))
 		_karts[0].update_visual(22.0, 0.9, 1, 2, false, false, delta)
-		if Engine.get_process_frames() % 3 == 0:
+		_spark_acc += delta
+		if _spark_acc >= 0.05:   # zeitbasiert – bei 30 und 60 fps gleich dicht
+			_spark_acc = 0.0
 			FX.sparks(_origin + p - tang * 1.2, Color(0.5, 0.8, 1.0), 4, 0.5)
 	elif t >= s7 and t < s8:   # Überholen: der hintere Kart zündet den Boost
 		var u2 := (t - s7) / sh

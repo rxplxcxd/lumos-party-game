@@ -3,6 +3,27 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.2.9 – Trailer als eigenständige Produktion, fertiges 4K60-Video
+* **Vollständig vom Spiel getrennt:** Die Trailer-Produktion liegt jetzt in einem eigenen Ordner `trailer/`
+  (Szene, Regie, Render-Skript, Video-Prüfung, Doku in `trailer/README.md`):
+  * Der Menüpunkt „Trailer ansehen“ ist wieder entfernt, das Spiel verweist nirgends auf den Trailer.
+  * Der Trailer ist nicht mehr im Web- oder Linux-Export enthalten.
+  * `trailer/check_isolation.sh` prüft das, auch in der CI.
+  * Die Renderqualität (volle Auflösung, 4×MSAA, 8192er-Schatten, keine dynamische Auflösung, kein
+    Animations-LOD) setzt der Trailer nur im eigenen Prozess. Die Grafik-Automatik des Spiels hätte beim
+    langsamen Movie-Maker-Rendern die Auflösung gesenkt und bei 4K die 3D-Auflösung gedeckelt.
+  * 4K entsteht über ein temporäres Render-Projekt mit eigener Fenstergröße. Die `project.godot` des Spiels
+    bleibt unverändert.
+* **Fertiges Video:** `bash trailer/render.sh` rendert den kompletten Trailer mit Kamerafahrten, Animationen,
+  Übergängen, Musik, Effekten und Logo.
+  * Ausgabe: 3840×2160 bei 60 fps als H.264/AAC-MP4 mit −14 LUFS, dazu eine 1080p60-Fassung.
+  * Danach prüft `trailer/qa.py` das Video Bild für Bild: Format, Schwarzbilder, Bildsprünge gegen die
+    Schnittliste der Regie, Standbilder, Tonaussetzer, Stille, Übersteuerung und Lautheit.
+* **Trailer-Feinschliff:** Gewichtsverlagerung und Funkenflug laufen bildratenunabhängig (gleich bei 30 und
+  60 fps), und bei Weltenwechseln zucken die Figuren nicht mehr.
+* **Spiel:** Das Spiel selbst ist unverändert. Die Regressionsprüfung umfasst alle Minispiele mit 4 CPUs,
+  Systemtests, Skriptprüfung und Langzeit-Party (Ergebnisse im Abschlussbericht).
+
 ## 1.2.8 – Neue Asset-Pakete, Saison-Deko und Trailer
 * **Asset-Inventur der hochgeladenen Pakete:**
   * Neu im Projekt (entpackt, in `tools/asset_pipeline.py` eingeordnet, `docs/ASSET_INVENTORY.md` neu erzeugt):

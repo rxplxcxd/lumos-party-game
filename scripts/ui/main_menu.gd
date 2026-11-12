@@ -1413,10 +1413,5 @@ Cartoon-SFX: tools/compose_sfx.py
 	rt.add_theme_font_size_override("normal_font_size", 21)
 	rt.add_theme_font_size_override("bold_font_size", 24)
 	v.add_child(rt)
-	var tb := UI.button("Trailer ansehen", UI.ACCENT)
-	tb.pressed.connect(func() -> void:
-		Audio.sfx("ui_confirm")
-		Router.goto("res://scenes/trailer/Trailer.tscn"))
-	v.add_child(tb)
 	_back_button(v)
 	return arr[0]
