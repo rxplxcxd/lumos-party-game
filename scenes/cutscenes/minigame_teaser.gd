@@ -10,6 +10,7 @@ extends Cutscene
 ## Dabei werden hohe Deko-Objekte, die Kamera und Spieler trennen, ausgeblendet (auch für die Spielkamera).
 
 var _hidden: Array[Node3D] = []
+var _ids: Array[int] = []   # nur teilnehmende Figuren (im Duell sind zwei auf der Bank: deaktiviert, ihre Tweens liefen nie)
 
 
 func run(d: Node, ctx: Dictionary) -> void:
@@ -18,6 +19,8 @@ func run(d: Node, ctx: Dictionary) -> void:
 	var r := g.arena_radius
 	var targets: Array[Vector3] = []
 	for i in 4:
+		if g.active[i]:
+			_ids.append(i)
 		var a: Node3D = g.actors[i]
 		targets.append(a.global_position)
 		a.visible = false
@@ -41,7 +44,7 @@ func run(d: Node, ctx: Dictionary) -> void:
 	if g.has_method("custom_entrance"):
 		await g.custom_entrance(d, targets, self)
 		await d.move(g.cam.global_position, g.arena_center + g.cam.look_offset, 0.8, g.cam.fov)
-		for i in 4:
+		for i in _ids:
 			var a3: Node3D = g.actors[i]
 			if a3 is PartyAvatar:
 				a3.set_physics_process(true)
@@ -63,7 +66,7 @@ func run(d: Node, ctx: Dictionary) -> void:
 	for n in _hidden:
 		if is_instance_valid(n) and not n.has_meta("keep_hidden"):
 			n.visible = true
-	for i in 4:
+	for i in _ids:
 		var a2: Node3D = g.actors[i]
 		if a2 is PartyAvatar:
 			a2.set_physics_process(true)
@@ -148,7 +151,7 @@ func _cannon_entrance(d: Node, g: MinigameBase, targets: Array[Vector3]) -> void
 	d.cut(cannon_pos + side * 7.0 + Vector3.UP * 3.0 - toward * 2.0, (cannon_pos + c) * 0.5 + Vector3.UP, 55.0)
 	await d.wait(0.25)
 	var reactions := ["wave", "scared", "determined", "cheer"]
-	for i in 4:
+	for i in _ids:
 		var actor: Node3D = g.actors[i]
 		var rig: CharacterRig = g.rigs[i]
 		var tgt := targets[i]
@@ -233,7 +236,7 @@ func _ship_entrance(d: Node, g: MinigameBase, targets: Array[Vector3]) -> void:
 	Audio.sfx("splash", stop, -4.0)
 	var reactions := ["cheer", "wave", "determined", "laugh"]
 	var deck := stop + Vector3.UP * 2.4
-	for i in 4:
+	for i in _ids:
 		var actor: Node3D = g.actors[i]
 		var rig: CharacterRig = g.rigs[i]
 		actor.global_position = deck + out.cross(Vector3.UP) * (i - 1.5) * 0.7
@@ -259,7 +262,7 @@ func _ice_entrance(d: Node, g: MinigameBase, targets: Array[Vector3]) -> void:
 	var reactions := ["cheer", "wave", "determined", "laugh"]
 	d.cut(c + Vector3(0, g.arena_radius * 0.9, g.arena_radius * 1.6), c, 55.0)
 	var slides: Array = []
-	for i in 4:
+	for i in _ids:
 		var tgt := targets[i]
 		var dir := Vector3(tgt.x - c.x, 0, tgt.z - c.z)
 		if dir.length() < 0.5:
@@ -278,7 +281,7 @@ func _ice_entrance(d: Node, g: MinigameBase, targets: Array[Vector3]) -> void:
 		var actor: Node3D = g.actors[i]
 		actor.global_position = start + Vector3.UP * 0.1
 		actor.visible = true
-		slides.append([floe, actor, start, tgt])
+		slides.append([floe, actor, start, tgt, i])
 		var rig: CharacterRig = g.rigs[i]
 		if rig:
 			rig.face_now(tgt - start)
@@ -301,7 +304,7 @@ func _ice_entrance(d: Node, g: MinigameBase, targets: Array[Vector3]) -> void:
 		var s2: Array = slides[k]
 		var actor3: Node3D = s2[1]
 		await arc(actor3, actor3.global_position, s2[3], 1.2, 0.3)
-		_land(g, k, s2[3], reactions)
+		_land(g, int(s2[4]), s2[3], reactions)
 		var floe2: Node3D = s2[0]
 		var ft := floe2.create_tween()
 		ft.tween_property(floe2, "scale", Vector3.ZERO, 0.4)
@@ -315,8 +318,8 @@ func _cloud_entrance(d: Node, g: MinigameBase, targets: Array[Vector3]) -> void:
 	var c := g.arena_center
 	var reactions := ["cheer", "wave", "determined", "scared"]
 	d.cut(c + Vector3(0, g.arena_radius * 1.0, g.arena_radius * 1.7), c + Vector3.UP * 2.0, 55.0)
-	var clouds: Array[Node3D] = []
-	for i in 4:
+	var clouds := {}   # Spieler → Wolke (im Duell sind nicht alle Plätze dabei)
+	for i in _ids:
 		var cl := Node3D.new()
 		add_child(cl)
 		cl.global_position = targets[i] + Vector3.UP * 6.0
@@ -330,10 +333,10 @@ func _cloud_entrance(d: Node, g: MinigameBase, targets: Array[Vector3]) -> void:
 			puff.position = Vector3(k * 0.6 - 0.9, sin(k) * 0.15, 0)
 			cl.add_child(puff)
 		Juice.pop_in(cl, 0.3)
-		clouds.append(cl)
+		clouds[i] = cl
 	Audio.sfx("sparkle_up", null, -6.0)
 	await d.wait(0.45)
-	for i in 4:
+	for i in _ids:
 		var actor: Node3D = g.actors[i]
 		actor.global_position = targets[i] + Vector3.UP * 5.6
 		actor.visible = true
@@ -345,10 +348,11 @@ func _cloud_entrance(d: Node, g: MinigameBase, targets: Array[Vector3]) -> void:
 		tw.tween_property(actor, "global_position", targets[i], 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		await tw.finished
 		_land(g, i, targets[i], reactions)
-		var ct := clouds[i].create_tween()
-		ct.tween_property(clouds[i], "global_position", clouds[i].global_position + Vector3(0, 6, -4), 1.2)
-		ct.parallel().tween_property(clouds[i], "scale", Vector3.ZERO, 1.2)
-		ct.tween_callback(clouds[i].queue_free)
+		var cl2: Node3D = clouds[i]
+		var ct := cl2.create_tween()
+		ct.tween_property(cl2, "global_position", cl2.global_position + Vector3(0, 6, -4), 1.2)
+		ct.parallel().tween_property(cl2, "scale", Vector3.ZERO, 1.2)
+		ct.tween_callback(cl2.queue_free)
 
 
 # --- Portal ----------------------------------------------------------------------------------------------
@@ -357,7 +361,7 @@ func _portal_entrance(d: Node, g: MinigameBase, targets: Array[Vector3]) -> void
 	var c := g.arena_center
 	var reactions := ["wave", "determined", "cheer", "scared"]
 	d.cut(c + Vector3(0, g.arena_radius * 0.9, g.arena_radius * 1.6), c, 55.0)
-	for i in 4:
+	for i in _ids:
 		var ring := MeshInstance3D.new()
 		var tm := TorusMesh.new()
 		tm.inner_radius = 0.7

@@ -3,6 +3,65 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.2.7 – Stabilitäts-, Physik- und Release-Update
+* **Kein Neuladen mehr in langen Sessions:**
+  * Hauptursache: Schrift-Glyphen. Jede Schriftgröße × Konturstärke legt eigene Texturseiten an, und die Engine
+    gibt sie nie frei. Gemessen sind es ~3 MB je Größe; 53 Größen belegten 163 MB. Angepasste Labels, schwebende
+    Texte und Bossnamen erzeugen über 10–15 Runden hunderte Größen, bis Safari den Tab neu lädt. Die Glyphen-Caches
+    werden jetzt bei jedem Szenenwechsel geleert. Danach sind es 8 MB, und der Grafikspeicher wächst nicht mehr
+    mit der Zahl der Runden.
+  * Der Dreiecks-Cache der Deko-Ausrichtung hielt jedes Mesh jeder Szene fest.
+  * Kart-Motoren erzeugten je Kart und Rennen einen neuen Sound, den der Browser nie freigab.
+  * Speicher ohne Szene nach 15 Runden: vorher 224–343 MB, jetzt 165–210 MB. Der Rest ist Aufwärmen.
+  * Zwei Hänger in Duellen behoben: Der Wolken- und der Portal-Auftritt warteten auf Bank-Spieler, deren Animation
+    nie lief (die Partie fror ein), und der Wolken-Auftritt griff auf einen falschen Index zu.
+  * Neuer Langzeit-Test `tools/dev/soak.gd`: eine CPU-Party über viele Runden mit Leck- und Hänger-Erkennung. Er
+    läuft in der CI über 12 Runden, lokal mit bis zu 20 Runden und auch gerendert für den Grafikspeicher. Dazu
+    kommt `tools/dev/web_soak.js` für die Browser-Messung. `--log-scenes` protokolliert jetzt Speicher, Objekte,
+    Ressourcen, Texturen und Caches.
+* **120 FPS als Standard:**
+  * Neue Einstellung „Automatisch“: 120 FPS auf Bildschirmen ab 100 Hz (iPhone/iPad Pro, Gaming-PCs,
+    High-Hz-Android), sonst 60. Im Browser wird der Bildschirmtakt gemessen.
+  * Schafft ein Gerät die 120 nicht dauerhaft, fällt die Bildrate für die Sitzung auf stabile 60 FPS zurück, statt
+    unscharf zu werden.
+  * Notebooks und Handhelds im Akkubetrieb laufen mit 60 FPS. Der alte Standard „60“ wird automatisch übernommen.
+* **iPhone-Ecken:**
+  * HUDs, Boss-Leisten, Emote-Knopf, Cutscene-Hinweis und die FPS-Anzeige liegen innerhalb der sicheren Ränder:
+    runde Displayecken, Dynamic Island und Home-Leiste, auf allen vier Seiten gemessen.
+  * Die Debug-Anzeigen bleiben vollständig erhalten.
+* **Minigolf mit echter Physik:**
+  * Höhenfeld mit Hügeln und Senken, Rollwiderstand, saubere Banden- und Eckabpraller, elastische Ball-Stöße und
+    ein Lochfang nach Tempo und Trefferlage (Lippe).
+  * Statt der pendelnden Kraftanzeige lädt A gleichmäßig auf 100 %, der Stick dreht fein, und Leuchtpunkte zeigen
+    den Startweg.
+  * Die CPU simuliert ihre Schläge mit derselben Physik. Punkte über drei Läufe: Insane 9,7, Leicht 1,7.
+* **Volleyball:**
+  * Spieler kommen nicht mehr durchs Netz (feste Feldgrenze direkt in der Bewegung).
+  * Der Stick bestimmt das Ziel. Neu sind Zuspiel → Schmetterball, Block am Netz und Abpraller bei schlecht
+    angenommenen harten Bällen. Punkte entstehen aus dem Spiel, nicht aus Zufall.
+  * CPUs teilen sich das Feld, spielen in Lücken und blocken. Insane gegen Leicht: 27:6.
+* **Bosse:**
+  * Kompakte, halbtransparente Lebensleiste, die sich ausblendet, sobald der Boss dahinter steht.
+  * Neue Kameras zeigen den Boss unterhalb von Timer und Leiste.
+  * Der Mega-Summser wird durchscheinend, solange er Spieler verdeckt, und hat jetzt eine sichtbare Leiste.
+* **CPUs:**
+  * Festgefahrene CPUs weichen seitlich aus, überlappende Figuren halten Abstand, und beim Mega-Summser kommt jede
+    CPU von einer eigenen Seite.
+  * Betäubungen liefen nach Wanduhr statt Spielzeit, das verfälschte Zeitlupe und niedrige Bildraten.
+  * Festfahr-Zeit im Sweep: vorher bis 36 s je Spiel, jetzt meist unter 3 s.
+  * Alle 69 Spiele wurden in allen 103 Kategorie-Varianten geprüft: ohne Hänger und ohne Skriptfehler.
+* **Online:**
+  * Absender werden am Transport geprüft. Bisher konnte sich ein Gerät als Host ausgeben, etwa mit „Spiel beendet“
+    an alle. Host-Nachrichten kommen nur noch vom Host. Eingaben und Punkte gelten nur für den eigenen Platz.
+  * Hammer-Hüpfen: Der Richtungswechsel kam bei Gästen nie an (Feld-Kollision).
+  * Native REST-Zugriffe wiederholen bei Funklöchern.
+  * Neue CI-Tests: Rennen bei schlechter Verbindung (300 ms, 5 % Verlust) und Host-Absturz mitten im Brettspiel.
+* **Performance:** Kulisse weit außerhalb der Arena wirft keine Schatten mehr.
+* **Release:**
+  * Neue `LICENSES.md` mit allen Paketen und ihrer Herkunft.
+  * README mit eigenem Nitro-Dash-Abschnitt und aktuellen Zahlen; Markennamen entfernt.
+  * Doku zu Speicher/Stabilität, Online-Sicherheit, Bildrate und den überarbeiteten Minispielen.
+
 ## 1.2.6 – Polishing-, Performance- und Fix-Update
 * **Glücksrad deterministisch:**
   * Das Rad bremste Bild für Bild ab und meldete am Ende das Feld unter dem Zeiger. Bei unterschiedlicher

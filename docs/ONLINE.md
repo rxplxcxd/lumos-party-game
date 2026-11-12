@@ -88,6 +88,20 @@ JSON und erzeugt nie Objekte aus Netzdaten.
 * **Glücksrad:** Das Ergebnisfeld ist eine `bd`-Entscheidung. Die Animation endet bei jeder Bildrate exakt auf
   diesem Feld.
 
+### Absender-Prüfung & schlechte Verbindungen (seit 1.2.7)
+* **Wer etwas sendet, prüft der Empfänger am Transport**, nicht am Inhalt: Datenbank-Regeln erzwingen
+  `from == Konto` (Relay), Direktverbindungen sind je Gerät. Das Feld `f` gilt nur, wenn der Host eine Nachricht
+  weiterleitet; der Host setzt es selbst. Vorher hätte sich ein Gerät als Host ausgeben können.
+* **Nur der Host** darf `bye`, `sp_go`, `bs`, `end`, `gs` und die Athlon-Steuernachrichten erzeugen
+  (`Net.HOST_ONLY`); alles andere wird verworfen und unter `debug_counts.abgelehnt` gezählt.
+* **Eigener Platz:** Eingaben (`in`) und Punktemeldungen (`sc`) gelten nur für den Platz des sendenden Geräts
+  (`Net.may_speak_for`, der Host zusätzlich für CPU-Plätze). Eingabewerte werden begrenzt.
+* **Wiederholung:** Native REST-Schreibzugriffe wiederholen bei Funklöchern/5xx/429 bis zu dreimal (0,4/0,8/1,6 s);
+  im Browser übernimmt das das Firebase-SDK.
+* **Test mit schlechter Verbindung:** `MOCK_DELAY_MS=300 MOCK_FAIL_PCT=5 tools/dev/net_test.sh …` – der
+  RTDB-Ersatz verzögert jede Anfrage zufällig und lässt 5 % scheitern; Brett/Rennen müssen trotzdem auf allen
+  Geräten identisch enden (Teil der CI).
+
 ### Synchronisationspunkte (seit 1.2.2)
 `Net.sync_point(tag, timeout)` ist eine gemeinsame Schranke: Clients melden `sp` (alle 1,5 s wiederholt), der Host
 gibt mit `sp_go` frei, sobald alle Teilnehmer der Partie da sind. Nach 0,6 s Wartezeit erscheint „Warte auf
@@ -101,7 +115,8 @@ Mitspieler …“; nach dem Timeout geht es trotzdem weiter (ein hängendes Ger�
 ### Verbindungsabbrüche
 * Host verlässt das Spiel (Pause-Menü, Fenster zu) → sendet `bye`. Clients zeigen „Online-Spiel beendet – Der Host
   hat das Spiel beendet.“ (in der Lobby: „… hat den Raum geschlossen.“), OK führt zur Online-Seite.
-* Kein `pong` vom Host seit 12 s → „Die Verbindung zum Host wurde getrennt.“
+* Kein `pong` vom Host seit 60 s (Ladepausen ausgenommen) → „Die Verbindung zum Host wurde getrennt.“ – auch bei
+  einem harten Host-Absturz ohne `bye` (geprüft in der CI: `HOST_CRASH=60 tools/dev/net_test.sh … party`).
 * Host-Eintrag oder Raum-Meta verschwindet aus der Datenbank → ebenfalls Hinweis statt stillem Hängen.
 * Späte Beitritte in eine laufende Partie starten nicht mit, sondern bekommen eine Statusmeldung.
 

@@ -96,3 +96,23 @@ Taktik (auf dem Brett: Item-Planung, Wegwahl, Shop), nie durch Mogeln. Vergleich
   --dev-script=res://tools/dev/deco_audit.gd`.
 * **Steuerung = Anleitung:** Jede im Skript abgefragte Taste steht im `controls`-Text (Prüfung im 1.2.6-Audit;
   Schienen-Express ergänzt).
+
+## Überarbeitet in 1.2.7
+
+* **Minigolf-Duell – echte Rollphysik:** Höhenfeld mit Hügeln und Senken (Hangabtrieb einer rollenden Kugel),
+  Rollwiderstand, Banden- und Eckabpraller über den nächsten Punkt, elastische Ball-Stöße, federnde Pilz-Bumper,
+  Lochfang abhängig von Tempo und Trefferlage (Lippe). Steuerung: Stick links/rechts dreht, A lädt gleichmäßig bis
+  100 % (kein Pendel), loslassen = Schlag, B bricht ab; Leuchtpunkte zeigen den Startweg samt Abpraller. Die CPU
+  rechnet Kandidaten-Schläge mit derselben Physik vor (direkt, über Banden, mehrere Kräfte).
+* **Strand-Volley:** Netz als feste Feldgrenze (kein Durchrutschen), Stick zielt den Ball, Annahme hinten →
+  Zuspiel ans Netz → Schmetterball, Block am Netz, Abpraller bei schlecht angenommenen harten Bällen
+  (Stoßparameter statt Zufall), höchstens zwei Berührungen je Seite. CPUs teilen das Feld, spielen in Lücken und
+  blocken. Stufen-Vergleich (4 Spiele): Insane gegen Leicht 27:6.
+* **Bosse:** kompakte, halbtransparente Boss-Leiste (`BossBar`), die sich ausblendet, wenn der Boss dahinter
+  steht; Kameras zeigen den Boss unterhalb von Timer und Leiste. Der Mega-Summser wird durchscheinend, solange er
+  Spieler oder den Warnkreis verdeckt.
+* **CPUs entkleben (alle Spiele):** Kommt eine CPU trotz Laufwunsch ~0,8 s nicht vom Fleck, weicht sie seitlich
+  aus (bei Bedarf mit Sprung); überlappende Figuren halten sanften Abstand (`cpu_unstick`, `cpu_separation`).
+  Betäubungen laufen in Spielzeit. Der Sweep misst `festgefahren_s` und `verklumpt_s` je Spiel.
+* **Duell-Einleitungen:** Wolken-/Portal-Auftritte warteten im Duell auf die Animation der Bank-Spieler, die nie
+  lief – die Partie fror ein. Jetzt treten nur die Teilnehmer auf.

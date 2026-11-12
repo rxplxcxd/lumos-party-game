@@ -30,7 +30,7 @@ func _ready() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 5
 	add_child(layer)
-	_ui = UI.center_root(layer)
+	_ui = UI.hud_root(layer)
 	_ui.mouse_filter = Control.MOUSE_FILTER_PASS
 	Audio.music("menu")
 	InputHub.set_touch_profile("menu")
@@ -1266,11 +1266,11 @@ func _page_settings() -> Control:
 		Game.settings.quality = qkeys[i]
 		Game.save_settings())
 	v.add_child(_row("Grafik", q))
-	var hz := DisplayServer.screen_get_refresh_rate()
-	var fnames := ["60 FPS (stabil)", "120 FPS (High-Hz)", "Maximal (%s)" % (("%d Hz" % int(round(hz))) if hz > 0.0 else "Bildschirm")]
-	var fs := Stepper.new().setup(fnames, maxi(0, Gfx.FPS_MODES.find(String(Game.settings.get("fps_mode", "60")))), 300)
+	var hz := Gfx.display_hz()
+	var fnames := ["Automatisch (%s)" % Gfx.fps_mode_label(), "60 FPS (stabil)", "120 FPS (High-Hz)", "Maximal (%s)" % (("%d Hz" % int(round(hz))) if hz > 0.0 else "Bildschirm")]
+	var fs := Stepper.new().setup(fnames, maxi(0, Gfx.FPS_MODES.find(String(Game.settings.get("frame_rate", "auto")))), 360)
 	fs.changed.connect(func(i: int) -> void:
-		Game.settings.fps_mode = Gfx.FPS_MODES[i]
+		Game.settings.frame_rate = Gfx.FPS_MODES[i]
 		Game.save_settings()
 		Gfx.apply_fps())
 	v.add_child(_row("Bildrate", fs))

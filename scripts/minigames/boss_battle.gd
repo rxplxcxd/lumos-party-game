@@ -57,8 +57,7 @@ var _act_kind := ""
 var _say_text := ""
 var _say_until := 0.0
 var _say_label: Label
-var _hp_fill: ColorRect
-var _hp_label: Label
+var _bar: BossBar
 var _fog_rect: ColorRect
 var _sun: DirectionalLight3D
 var _water: Node3D
@@ -265,8 +264,10 @@ func _build_pads() -> void:
 
 
 func setup_camera(c: ArenaCamera) -> void:
-	c.fixed_center = Vector3(0, 0, 0.5)
-	c.offset = Vector3(0, 17.0, 15.5)
+	# Blick etwas weiter zum Boss hin und steiler von oben: Der Boss steht so unterhalb der HP-Leiste und des
+	# Timers im Bild statt dahinter, die Arena bleibt ganz sichtbar.
+	c.fixed_center = Vector3(0, 0, -0.8)
+	c.offset = Vector3(0, 20.5, 16.5)
 	c.min_dist = 1.0
 	c.max_dist = 1.0
 	c.follow = false
@@ -280,23 +281,8 @@ func _build_hud() -> void:
 	_fog_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fog_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_child(_fog_rect)
-	var name_l := UI.label(String(def.get("name", "Boss")), 26, Color.WHITE, true, 8)
-	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root.add_child(name_l)
-	UI.place(name_l, Control.PRESET_CENTER_TOP, Vector2(-300, 92), Vector2(600, 36))
-	var bg := ColorRect.new()
-	bg.color = Color(0.1, 0.05, 0.15, 0.8)
-	root.add_child(bg)
-	UI.place(bg, Control.PRESET_CENTER_TOP, Vector2(-260, 130), Vector2(520, 22))
-	_hp_fill = ColorRect.new()
-	_hp_fill.color = Color("#ff4d6d")
-	bg.add_child(_hp_fill)
-	_hp_fill.position = Vector2(3, 3)
-	_hp_fill.size = Vector2(514, 16)
-	_hp_label = UI.label("", 17, Color.WHITE, true, 5)
-	_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root.add_child(_hp_label)
-	UI.place(_hp_label, Control.PRESET_CENTER_TOP, Vector2(-300, 154), Vector2(600, 26))
+	# Kompakte, halbtransparente Boss-Leiste (blendet sich aus, wenn der Boss dahinter steht)
+	_bar = BossBar.new().setup(root, String(def.get("name", "Boss")), model)
 	_say_label = UI.label("", 34, UI.GOLD, true, 10)
 	_say_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_say_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1590,22 +1576,21 @@ func _set_night(on: bool) -> void:
 
 
 func _refresh_hp() -> void:
-	if _hp_fill:
-		_hp_fill.size.x = 514.0 * clampf(hp / max_hp, 0.0, 1.0)
-		_hp_fill.color = Color("#ff4d6d") if bphase < 3 else Color("#ff2a2a")
-	if _hp_label:
-		var tag := ""
-		if boss_id == "frostbart" and frost_armor:
-			tag = " · Frost-Rüstung (halber Schaden)"
-		elif boss_id == "grabstein" and _tombs_left() > 0:
-			tag = " · Unverwundbar: %d Grabsteine" % _tombs_left()
-		elif armor_t > 0.0:
-			tag = " · Gepanzert"
-		elif overclock_t > 0.0:
-			tag = " · Aus dem Takt – doppelter Schaden!"
-		elif boss_id == "noxumbra" and night:
-			tag = " · Im Schatten"
-		_hp_label.text = "%d / %d · Phase %d%s" % [int(ceil(hp)), int(max_hp), bphase, tag]
+	if _bar == null:
+		return
+	_bar.tracked = model
+	var tag := ""
+	if boss_id == "frostbart" and frost_armor:
+		tag = "Frost-Rüstung (halber Schaden)"
+	elif boss_id == "grabstein" and _tombs_left() > 0:
+		tag = "Unverwundbar: %d Grabsteine" % _tombs_left()
+	elif armor_t > 0.0:
+		tag = "Gepanzert"
+	elif overclock_t > 0.0:
+		tag = "Aus dem Takt – doppelter Schaden!"
+	elif boss_id == "noxumbra" and night:
+		tag = "Im Schatten"
+	_bar.set_hp(hp / max_hp, "%d / %d · Phase %d" % [int(ceil(hp)), int(max_hp), bphase], tag, Color("#ff4d6d") if bphase < 3 else Color("#ff2a2a"))
 
 
 # --- Online (Host-Modell) ---------------------------------------------------------------------------------------

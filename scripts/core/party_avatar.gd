@@ -31,8 +31,12 @@ var kill_y := -8.0
 var hazard := "lava"
 var shove_power := 11.0
 var net_remote := false
+## Spielfeldgrenzen (x/z), direkt nach jeder Bewegung erzwungen – z. B. die Netzseite im Volleyball. Anders als
+## eine Wand kann man hier weder durchrutschen noch beim Springen darüber, und es gibt kein Zittern.
+var bound_min := Vector2(-INF, -INF)
+var bound_max := Vector2(INF, INF)
 
-var _stun_until := 0
+var _stun_left := 0.0   # Spielzeit (nicht Wanduhr): Zeitlupe/Hitstop/niedrige Bildrate verlängern nichts falsch
 var _shove_cd := 0.0
 var _dash_t := 0.0
 var _knock := Vector3.ZERO
@@ -64,11 +68,11 @@ func setup(p: int, pos: Vector3, scl := 0.85) -> PartyAvatar:
 
 
 func is_stunned() -> bool:
-	return Time.get_ticks_msec() < _stun_until
+	return _stun_left > 0.0
 
 
 func stun(seconds: float) -> void:
-	_stun_until = maxi(_stun_until, Time.get_ticks_msec() + int(seconds * 1000.0))
+	_stun_left = maxf(_stun_left, seconds)
 
 
 func apply_knockback(dir: Vector3, strength: float, stun_time := 0.45, up := 4.0) -> void:
@@ -81,6 +85,8 @@ func apply_knockback(dir: Vector3, strength: float, stun_time := 0.45, up := 4.0
 
 
 func _physics_process(delta: float) -> void:
+	if _stun_left > 0.0:
+		_stun_left = maxf(0.0, _stun_left - delta)
 	if not alive:
 		return
 	var on_floor := is_on_floor()
@@ -130,6 +136,18 @@ func _physics_process(delta: float) -> void:
 
 	_prev_vy = velocity.y
 	move_and_slide()
+	if bound_min.x > -INF or bound_max.x < INF or bound_min.y > -INF or bound_max.y < INF:
+		var gp := global_position
+		var cx := clampf(gp.x, bound_min.x, bound_max.x)
+		var cz := clampf(gp.z, bound_min.y, bound_max.y)
+		if cx != gp.x or cz != gp.z:
+			global_position = Vector3(cx, gp.y, cz)
+			if cx != gp.x:
+				velocity.x = 0.0
+				_knock.x = 0.0
+			if cz != gp.z:
+				velocity.z = 0.0
+				_knock.z = 0.0
 
 	# Landung
 	var now_floor := is_on_floor()

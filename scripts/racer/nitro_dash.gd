@@ -1178,7 +1178,7 @@ func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 10
 	add_child(layer)
-	_hud = UI.center_root(layer)
+	_hud = UI.hud_root(layer)
 	var left := UI.vbox(-6)
 	_hud.add_child(left)
 	left.position = Vector2(24, 14)

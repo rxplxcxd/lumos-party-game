@@ -28,6 +28,8 @@ func run() -> void:
 		cs["solo"] = 0
 	elif cs.cat == "2v2":
 		cs["teams"] = [0, 1, 0, 1]
+	if args.has("boss"):
+		cs["boss"] = String(args.boss)   # Boss-Kampf: bestimmten Boss zeigen (--boss=ignis)
 	Game.minigame_setup = cs
 	tree.change_scene_to_file(String(m.scene))
 	var mg: MinigameBase = null

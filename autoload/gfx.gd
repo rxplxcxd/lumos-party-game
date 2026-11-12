@@ -45,17 +45,28 @@ func _ready() -> void:
 			get_viewport().scaling_3d_scale = cap)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_profile_hardware()
+	if OS.has_feature("web"):
+		# Bildschirmtakt messen: 240 Abstände zwischen Browser-Bildern, das 20.-Perzentil (lange Ladebilder zählen
+		# nicht), gerundet auf übliche Takte. Ergebnis landet in window.__lumosHz.
+		JavaScriptBridge.eval("""(function(){if(window.__lumosHzRun)return;window.__lumosHzRun=1;var t=[],l=0;
+			function f(n){if(l)t.push(n-l);l=n;if(t.length<240){requestAnimationFrame(f);return;}
+			t.sort(function(a,b){return a-b;});var hz=1000/t[Math.floor(t.length*0.2)],best=60;
+			[60,75,90,100,120,144,165,240].forEach(function(r){if(Math.abs(r-hz)<Math.abs(best-hz))best=r;});
+			window.__lumosHz=best;}requestAnimationFrame(f);})()""", true)
 	get_tree().node_added.connect(_on_node_added)
 	EventBus.settings_changed.connect(apply)
 	var layer := CanvasLayer.new()
 	layer.layer = 95
 	add_child(layer)
+	# FPS-Anzeige (Debug, bleibt immer verfügbar) innerhalb der sicheren Ränder – auf dem iPhone sonst von der
+	# abgerundeten Ecke bzw. der Dynamic Island angeschnitten
+	var safe := UI.hud_root(layer)
 	_fps_label = Label.new()
 	_fps_label.position = Vector2(8, 4)
 	_fps_label.add_theme_font_size_override("font_size", 16)
 	_fps_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	_fps_label.add_theme_constant_override("outline_size", 4)
-	layer.add_child(_fps_label)
+	safe.add_child(_fps_label)
 	apply.call_deferred()
 
 
@@ -149,28 +160,71 @@ func apply() -> void:
 		preset_changed.emit(active)
 
 
-# --- Bildrate (60 / 120 / Maximal) ----------------------------------------------------------------------------
-# Für Bildschirme über 60 Hz: Mit „120“ bzw. „Maximal“ rendert das Spiel entsprechend schneller UND die Physik
-# rechnet im selben Takt – sonst würden bewegte Figuren nur jedes zweite Bild weiterrücken (Mikroruckler).
-# Standard bleibt 60 (stabil, akkuschonend, ideal für schwächere Geräte).
-const FPS_MODES := ["60", "120", "max"]
+# --- Bildrate (Automatisch / 60 / 120 / Maximal) ------------------------------------------------------------
+# Standard „Automatisch“: 120 FPS auf Bildschirmen mit 100 Hz und mehr (Gaming-PCs, iPhone Pro, iPad Pro,
+# High-Hz-Android), sonst 60. Die Physik rechnet immer im selben Takt – sonst rückten bewegte Figuren nur jedes
+# zweite Bild weiter (Mikroruckler). Schafft ein Gerät die 120 nicht dauerhaft (⌀ unter 100 FPS über 5 s), fällt
+# es für die Sitzung auf stabile 60 FPS zurück, statt zwischen 70 und 110 zu springen. Notebooks/Handhelds im
+# Akkubetrieb bleiben bei 60 (Akku). Browser melden keinen Bildschirmtakt – dort wird er per requestAnimationFrame
+# gemessen (Safari auf dem iPhone liefert je nach Einstellung 60 oder 120).
+const FPS_MODES := ["auto", "60", "120", "max"]
+
+var _auto_cap := 0          # 0 = noch nicht entschieden
+var _auto_low := 0.0        # Sekunden unter dem Ziel (Automatik-Rückfall)
+var _auto_fallback := false
+var _web_hz := 0.0
+
+
+## Gemessener bzw. gemeldeter Bildschirmtakt (0 = unbekannt).
+func display_hz() -> float:
+	if OS.has_feature("web"):
+		if _web_hz <= 0.0:
+			var v = JavaScriptBridge.eval("window.__lumosHz||0", true)
+			if v is float or v is int:
+				_web_hz = float(v)
+		return _web_hz
+	return DisplayServer.screen_get_refresh_rate()
+
+
+## Ziel der Automatik: 120 bei ≥ 100 Hz, 90 bei 85–99 Hz, sonst 60.
+func auto_cap() -> int:
+	if _auto_fallback:
+		return 60
+	var hz := display_hz()
+	if on_battery and (not bool(hardware.get("mobile", false)) or Game.is_lumos_device):
+		return 60   # Notebook/Handheld (Lumos One) im Akkubetrieb: Akku schonen
+	if hz >= 100.0:
+		return 120
+	if hz >= 85.0:
+		return 90
+	return 60
 
 
 ## Ziel-Bildrate der aktuellen Einstellung (0 = unbegrenzt bzw. Bildschirmtakt).
 func fps_cap() -> int:
-	match String(Game.settings.get("fps_mode", "60")):
+	match String(Game.settings.get("frame_rate", "auto")):
+		"auto":
+			return auto_cap()
 		"120":
 			return 120
 		"max":
-			var hz := DisplayServer.screen_get_refresh_rate()
+			var hz := display_hz()
 			return clampi(int(round(hz)), 60, 240) if hz > 0.0 else 0
 	return 60
+
+
+func fps_mode_label() -> String:
+	var hz := display_hz()
+	var hz_s := ("%d Hz" % int(round(hz))) if hz > 0.0 else "Bildschirm"
+	return "%s · %s" % [hz_s, ("%d FPS" % auto_cap())]
 
 
 func apply_fps() -> void:
 	if DisplayServer.get_name() == "headless":
 		return   # Tests und Sweeps laufen immer mit 60 Physikschritten
 	var cap := fps_cap()
+	_auto_cap = cap
+	_auto_low = 0.0
 	Engine.max_fps = cap
 	var ticks := clampi(cap, 60, 240) if cap > 0 else 120   # Bildschirmtakt unbekannt (z. B. Browser): 120
 	Engine.physics_ticks_per_second = ticks
@@ -178,9 +232,33 @@ func apply_fps() -> void:
 	Engine.max_physics_steps_per_frame = maxi(4, ticks / 15)
 
 
+## Automatik: Bildschirmtakt nachträglich erkannt (Browser-Messung) oder Gerät schafft 120 nicht → neu setzen.
+func _auto_fps_tick() -> void:
+	if String(Game.settings.get("frame_rate", "auto")) != "auto" or DisplayServer.get_name() == "headless":
+		return
+	if auto_cap() != _auto_cap:
+		apply_fps()
+		return
+	if _auto_cap <= 60 or Router.busy or CutsceneManager.active:
+		_auto_low = 0.0
+		return
+	if _current_fps < _auto_cap * 0.83:
+		_auto_low += 1.0
+		if _auto_low >= 5.0:
+			_auto_fallback = true
+			print("[PERF] Bildrate: %d FPS nicht stabil (⌀ %d) – Rückfall auf 60 FPS" % [_auto_cap, int(_current_fps)])
+			apply_fps()
+			dynamic_scale = minf(float(preset().scale), _pixel_cap())
+			get_viewport().scaling_3d_scale = dynamic_scale
+	else:
+		_auto_low = maxf(0.0, _auto_low - 0.5)
+
+
 ## Zielwert der dynamischen Auflösung passend zur gewählten Bildrate.
 func _fps_target() -> float:
 	var cap := fps_cap()
+	if String(Game.settings.get("frame_rate", "auto")) == "auto":
+		return float(preset().fps_target)   # Automatik: 120 nur als Bonus – nie Auflösung dafür opfern (Rückfall auf 60 statt Unschärfe)
 	return float(preset().fps_target) * (maxf(1.0, cap / 60.0) if cap > 0 else 1.0)
 
 
@@ -366,7 +444,8 @@ func _process(delta: float) -> void:
 	_fps_acc = 0.0
 	_fps_frames = 0
 	if _fps_label.visible:
-		_fps_label.text = "%d FPS · %s · %d%%" % [int(_current_fps), preset().label, int(dynamic_scale * 100)]
+		_fps_label.text = "%d/%d FPS · %s · %d%%" % [int(_current_fps), _auto_cap if _auto_cap > 0 else Engine.max_fps, preset().label, int(dynamic_scale * 100)]
+	_auto_fps_tick()
 	if OS.has_feature("web"):
 		var b = JavaScriptBridge.eval("window.__lumosBattery?JSON.stringify(window.__lumosBattery):''", true)
 		if b is String and b != "":

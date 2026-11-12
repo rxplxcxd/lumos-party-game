@@ -680,7 +680,7 @@ func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 10
 	add_child(layer)
-	_ui = UI.center_root(layer)
+	_ui = UI.hud_root(layer)
 	_banner = UI.label("", 64, UI.GOLD, true, 14)
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ui.add_child(_banner)

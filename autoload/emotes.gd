@@ -40,11 +40,12 @@ func _ready() -> void:
 	layer = 60
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Net.message.connect(_on_net)
+	var safe := UI.hud_root(self)   # Ecken-Knopf und Hinweise innerhalb der sicheren Ränder (iPhone-Rundungen)
 	_toasts = VBoxContainer.new()
 	_toasts.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_toasts.position = Vector2(-300, 80)
 	_toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_toasts)
+	safe.add_child(_toasts)
 	_open_btn = Button.new()
 	_open_btn.icon = texture("freude", 40)
 	_open_btn.tooltip_text = "Emotes (Y / Q)"
@@ -54,7 +55,7 @@ func _ready() -> void:
 	_open_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_open_btn.position = Vector2(-66, 82)
 	_open_btn.pressed.connect(func() -> void: _open(_local_slot(), true))
-	add_child(_open_btn)
+	safe.add_child(_open_btn)
 	_open_btn.visible = false
 
 

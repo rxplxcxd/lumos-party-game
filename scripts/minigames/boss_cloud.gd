@@ -21,8 +21,7 @@ var orbs: Array[Dictionary] = []
 var clouds: Array[Dictionary] = []
 var carry: Array[bool] = [false, false, false, false]
 var _orb_t := 0.5
-var _hp_bar: ColorRect
-var _hp_bg: ColorRect
+var _bar: BossBar
 var defeated := false
 var _flash := 0.0
 
@@ -115,8 +114,9 @@ func _build_boss() -> void:
 
 
 func setup_camera(c: ArenaCamera) -> void:
-	c.fixed_center = Vector3(0, 0.5, 0)
-	c.offset = Vector3(0, 15, 14)
+	# etwas höher und weiter zum Drachen hin: er schwebt unterhalb von Timer und Leiste statt dahinter
+	c.fixed_center = Vector3(0, 0.5, -1.0)
+	c.offset = Vector3(0, 16.5, 14.5)
 	c.min_dist = 1.0
 	c.max_dist = 1.0
 	c.follow = false
@@ -124,19 +124,9 @@ func setup_camera(c: ArenaCamera) -> void:
 
 func _build_hud() -> void:
 	super._build_hud()
-	_hp_bg = ColorRect.new()
-	_hp_bg.color = Color(0.1, 0.05, 0.2, 0.7)
-	UI.place(_hp_bg, Control.PRESET_CENTER_TOP, Vector2(-260, 92), Vector2(520, 26))
-	_hud_root.add_child(_hp_bg)
-	_hp_bar = ColorRect.new()
-	_hp_bar.color = Color("#ff8fb8")
-	_hp_bar.position = Vector2(3, 3)
-	_hp_bar.size = Vector2(514, 20)
-	_hp_bg.add_child(_hp_bar)
-	var name_l := UI.label("Pustebacke, der Wolkendrache", 20, Color.WHITE, true, 6)
-	UI.place(name_l, Control.PRESET_CENTER_TOP, Vector2(-260, 64), Vector2(520, 28))
-	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hud_root.add_child(name_l)
+	_bar = BossBar.new().setup(_hud_root, "Pustebacke, der Wolkendrache", boss)
+	_bar.track_heights = [-1.0, 0.0, 1.2]   # schwebender Boss: Mitte des Körpers zählt
+	_bar.set_hp(1.0, "%d / %d" % [MAX_HP, MAX_HP], "", Color("#ff8fb8"))
 
 
 func on_start() -> void:
@@ -362,8 +352,8 @@ func _apply_boss_visuals(delta: float) -> void:
 	mouth.scale = Vector3.ONE * (1.8 if _attack == "wind" else 1.0)
 	_flash = maxf(0.0, _flash - delta)
 	_body.scale = Vector3.ONE * (1.0 + _flash * 0.4)
-	if _hp_bar:
-		_hp_bar.size.x = 514.0 * hp / MAX_HP
+	if _bar:
+		_bar.set_hp(float(hp) / MAX_HP, "%d / %d" % [int(ceil(hp)), MAX_HP])
 	boss.look_at(Vector3(boss.position.x * 0.3, boss.position.y, 9.0), Vector3.UP)
 
 

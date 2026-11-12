@@ -73,3 +73,27 @@ Jedes Minispiel überschreibt nur `build_arena()`, ggf. `spawn_players()`, `on_t
   Drehen-Hinweis, Vollbild, Lumos-OS-Erkennung über `window.LumosCloudSDK` / `?lumos=1`).
 * `tools/postexport_pwa.py` erzeugt den Service Worker (versionierter Precache, Network-First für die Seite,
   Cache-First für Engine/PCK), Manifest, Icons, Store-Metadaten und das ZIP.
+
+## Speicher & Langzeit-Stabilität (seit 1.2.7)
+
+Lange Sessions (11–15 Runden) haben im Browser – vor allem auf iPhones – den Tab neu laden lassen. Ursachen und
+Gegenmittel:
+
+* **Schrift-Glyphen:** Jede Schriftgröße × Konturstärke × Gewicht legt eigene Glyphen-Texturen an (gemessen:
+  ~3 MB je Größe mit Kontur), die die Engine nie freigibt. Angepasste Labels, schwebende Texte, Bossnamen …
+  erzeugen über eine Session hunderte Größen. `UI.clear_font_caches()` leert beim Szenenwechsel die Größen-Caches
+  (die Schriften bleiben gültig, Texte zeichnen weiter). Nachmessen: `tools/dev/font_mem.gd` (53 Größen: 163 MB →
+  8 MB).
+* **Deko-Ausrichtung:** Der Dreiecks-Cache von `PropSettler` hielt jedes Mesh jeder Szene fest – jetzt nur noch
+  während eines Laufs.
+* **Kart-Motoren:** eine Loop-Kopie je Sound statt je Kart (im Browser wird jeder neue Stream als Sample dekodiert
+  und nie freigegeben).
+* **Szenenwechsel:** alte Szene erst ganz freigeben, dann laden; Modell-Cache behält nur die letzten zwei Szenen.
+* **Messen:** `--log-scenes` (auch im Web als `?args=--log-scenes`) schreibt bei jedem Wechsel Speicher, Objekte,
+  Ressourcen, verwaiste Knoten, Textur-/Puffer-Speicher und Cache-Größen – einmal mit Szene, einmal ohne.
+* **Langzeit-Test:** `tools/dev/soak.gd` spielt eine CPU-Party über viele Runden im Schnellvorlauf und schlägt
+  fehl, wenn Speicher, Objekte oder (mit Rendering unter xvfb) Grafikspeicher von Runde zu Runde wachsen oder
+  eine Szene hängt. In der CI mit 12 Runden; lokal z. B. `--rounds=20`. Im Browser: `node tools/dev/web_soak.js
+  <url> <minuten>` (WASM-/JS-Heap, Browser-RAM).
+* **Schatten:** Kulisse weit außerhalb der Arena wirft keine Schatten (spart Zeichenaufrufe je Schattenkarte),
+  kleine Teile haben Sichtweiten, Statisten laufen mit Animations-LOD.

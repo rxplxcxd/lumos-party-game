@@ -275,7 +275,7 @@ func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 10
 	add_child(layer)
-	_hud = UI.center_root(layer)
+	_hud = UI.hud_root(layer)
 	_round_label = UI.label("Lumos-Athlon", 34, Color.WHITE, true, 10)
 	_hud.add_child(_round_label)
 	UI.place(_round_label, Control.PRESET_TOP_LEFT, Vector2(24, 18), Vector2(420, 48))

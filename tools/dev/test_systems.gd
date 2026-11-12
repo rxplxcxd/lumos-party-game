@@ -218,12 +218,103 @@ func run() -> void:
 	_ok(PropSettler.check(w, keep).is_empty(), "Deko-Absicherung: danach keine schwebenden Modelle mehr")
 	w.free()
 	# --- Bildrate ------------------------------------------------------------------------------------------------
-	var fm_old := String(Game.settings.get("fps_mode", "60"))
-	Game.settings.fps_mode = "120"
+	var fm_old := String(Game.settings.get("frame_rate", "auto"))
+	var fresh: Node = load("res://autoload/game_state.gd").new()
+	_ok(String(fresh.settings.get("frame_rate", "")) == "auto", "Bildrate: Standard ist die Automatik")
+	fresh.free()
+	Game.settings.frame_rate = "120"
 	_ok(Gfx.fps_cap() == 120, "Bildrate: 120-FPS-Modus")
-	Game.settings.fps_mode = "60"
-	_ok(Gfx.fps_cap() == 60, "Bildrate: Standard 60 FPS")
-	Game.settings.fps_mode = fm_old
+	Game.settings.frame_rate = "60"
+	_ok(Gfx.fps_cap() == 60, "Bildrate: 60-FPS-Modus")
+	Game.settings.frame_rate = "auto"
+	var hz_saved: float = Gfx._web_hz
+	_ok(Gfx.auto_cap() in [60, 90, 120], "Bildrate: Automatik wählt 60/90/120 (%d bei %.0f Hz)" % [Gfx.auto_cap(), Gfx.display_hz()])
+	Gfx._auto_fallback = true
+	_ok(Gfx.fps_cap() == 60, "Bildrate: Automatik fällt bei Überlast auf stabile 60 zurück")
+	Gfx._auto_fallback = false
+	Gfx._web_hz = hz_saved
+	# Umzug alter Einstellungen (1.2.6: fps_mode = "60" war Standard → wird Automatik, 120 bleibt 120)
+	var tmp := ConfigFile.new()
+	for pair in [["60", "auto"], ["120", "120"], ["max", "max"]]:
+		tmp.clear()
+		tmp.set_value("settings", "fps_mode", pair[0])
+		_ok(Game.migrate_frame_rate(tmp) == pair[1], "Bildrate: Umzug alter Einstellung %s → %s" % [pair[0], pair[1]])
+	tmp.set_value("settings", "frame_rate", "60")
+	_ok(Game.migrate_frame_rate(tmp) == "", "Bildrate: neue Einstellung wird nicht überschrieben")
+	Game.settings.frame_rate = fm_old
+	# --- Sichere Ränder (iPhone-Ecken/Dynamic Island) ----------------------------------------------------------
+	var saved_safe: Vector4 = InputHub._safe_cache
+	InputHub._safe_cache = Vector4(59, 0, 59, 21)   # iPhone quer: Insel/Rundung links+rechts, Home-Leiste unten
+	var sl := CanvasLayer.new()
+	add_child(sl)
+	var sroot := UI.hud_root(sl)
+	_ok(is_equal_approx(sroot.offset_left, 59.0) and is_equal_approx(sroot.offset_right, -59.0) and is_equal_approx(sroot.offset_bottom, -21.0), "Safe-Area: HUD rückt aus Notch und runden Ecken (%.0f/%.0f/%.0f)" % [sroot.offset_left, sroot.offset_right, sroot.offset_bottom])
+	var fps_lab: Label = Gfx._fps_label
+	var fps_root := fps_lab.get_parent() as Control
+	_ok(fps_root != null and fps_root.name == "SafeHud", "Safe-Area: FPS-Anzeige liegt in den sicheren Rändern (bleibt als Debug-Anzeige erhalten)")
+	sl.free()
+	InputHub._safe_cache = saved_safe
+	# --- Betäubung läuft in Spielzeit (nicht Wanduhr) ---------------------------------------------------------
+	var pav := PartyAvatar.new()
+	pav.alive = false   # nur die Zeitlogik prüfen
+	pav.stun(0.5)
+	pav._physics_process(0.3)
+	var st1 := pav.is_stunned()
+	pav._physics_process(0.3)
+	_ok(st1 and not pav.is_stunned(), "Betäubung: zählt Spielzeit herunter (Zeitlupe/Schnelllauf verfälschen nichts)")
+	pav.free()
+	# --- Minigolf-Physik --------------------------------------------------------------------------------------
+	var golf: Node = load("res://scripts/minigames/minigolf_duel.gd").new()
+	golf.set("blocks", [] as Array[Rect2])
+	golf.set("bumpers", [] as Array[Dictionary])
+	var g_start := Vector2(-7.5, 5.6)   # flacher Rand der Bahn
+	golf.set("_hole2", Vector2(-4.5, 5.6))
+	var slow: Dictionary = golf.call("sim_shot", g_start, Vector2(4.2, 0))
+	_ok(bool(slow.sunk), "Minigolf: sanfter Putt aufs Loch fällt hinein")
+	var fast: Dictionary = golf.call("sim_shot", g_start, Vector2(11.5, 0))
+	_ok(not bool(fast.sunk), "Minigolf: zu schneller Ball rollt über die Lochkante (Lippe)")
+	golf.set("_hole2", Vector2(50, 50))
+	var roll: Dictionary = golf.call("sim_shot", g_start, Vector2(5.0, 0), 12.0)
+	_ok(float(roll.t) < 12.0 and (roll.end as Vector2).x > g_start.x + 2.0, "Minigolf: Rollwiderstand bremst den Ball bis zum Stillstand (%.1f s, %.1f m)" % [float(roll.t), (roll.end as Vector2).x - g_start.x])
+	var wst: Array = [Vector2(8.2, 5.6), Vector2(6.0, 0.0), false, false]
+	var bounced := false
+	for k in 60:
+		wst = golf.call("_step", wst, 1.0 / 120.0, false)
+		if (wst[1] as Vector2).x < 0.0:
+			bounced = true
+	_ok(bounced and (wst[0] as Vector2).x < 9.0, "Minigolf: Bande wirft den Ball zurück")
+	golf.free()
+	# --- Boss-Leiste ------------------------------------------------------------------------------------------
+	var bl := CanvasLayer.new()
+	add_child(bl)
+	var broot := UI.hud_root(bl)
+	var bb := BossBar.new().setup(broot, "Testboss")
+	bb.set_hp(0.5, "48 / 96", "Gepanzert")
+	_ok(is_equal_approx(bb._fill.size.x, (BossBar.W - 6.0) * 0.5) and bb._tag.text == "Gepanzert", "Boss-Leiste: Füllstand und Zustand")
+	_ok(bb.get_child(0) is ColorRect and (bb.get_child(0) as ColorRect).color.a < 0.8, "Boss-Leiste: halbtransparent")
+	bl.free()
+	# --- Netz: Absender werden geprüft ------------------------------------------------------------------------
+	var was_host: bool = Net.is_host
+	var was_hid: String = Net.host_id
+	var rej0 := int(Net.debug_counts.get("abgelehnt", 0))
+	Net.is_host = false
+	Net.host_id = "hostX"
+	Net._receive("hostX", {"k": "bye", "f": "boeser_gast", "r": "gefälscht"})   # vom Host weitergeleitet, aber von einem Gast
+	Net.is_host = true
+	Net._receive("gast1", {"k": "bs", "f": "hostX", "st": {}})                   # Gast gibt sich als Host aus
+	_ok(int(Net.debug_counts.get("abgelehnt", 0)) - rej0 == 2, "Netz: gefälschte Host-Nachrichten werden verworfen")
+	Net.is_host = was_host
+	Net.host_id = was_hid
+	var gcfg: Dictionary = Net.game_cfg
+	Net.game_cfg = {"slots": {"hostX": 0, "gast1": 1}}
+	_ok(Net.may_speak_for("gast1", 1) and not Net.may_speak_for("gast1", 0), "Netz: Geräte sprechen nur für ihren eigenen Platz")
+	Net.game_cfg = gcfg
+	# --- Schrift-Glyphen-Caches -------------------------------------------------------------------------------
+	var tf: FontFile = load(Assets.FONT_TITLE)
+	tf.get_string_size("Glyphen-Test", HORIZONTAL_ALIGNMENT_LEFT, -1, 77)
+	var had := tf.get_size_cache_list(0).size() > 0
+	UI.clear_font_caches()
+	_ok(had and tf.get_size_cache_list(0).is_empty(), "Speicher: Glyphen-Caches werden beim Szenenwechsel geleert")
 	# --- Touch-Wischen ----------------------------------------------------------------------------------------
 	var layer := CanvasLayer.new()
 	add_child(layer)

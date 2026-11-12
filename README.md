@@ -1,7 +1,11 @@
 # Lumos Party & Nitro Dash
 
-Der zweite exklusive Titel für **Lumos OS**: ein chaotisches 3D-Party-Brettspiel mit 10 Minispielen
-(**Modus A – Lumos Party**) und ein High-Speed-Arcade-Racer (**Modus B – Nitro Dash**).
+Der zweite exklusive Titel für **Lumos OS** – zwei vollwertige Spiele in einem:
+
+* **Modus A – Lumos Party:** chaotisches 3D-Party-Brettspiel mit 10 Brettern, 69 Minispielen und 10 Bossen.
+* **Modus B – Nitro Dash:** High-Speed-Arcade-Kart-Racer mit 8 Strecken, 3 Cups, Items, Drift-Boost,
+  Split-Screen für bis zu vier Fahrer und Online-Rennen.
+
 Gebaut mit **Godot 4.7** (GL-Compatibility/WebGL2), läuft auf dem Lumos One Handheld (Download aus dem
 Lumos Store) und als installierbare **PWA** in jedem modernen Browser – mit Touch, Tastatur und bis zu
 vier Gamepads.
@@ -31,11 +35,11 @@ vier Gamepads.
 * **Regeln:** Klassisch · **Profi** (12 Runden, angekündigte Bonussterne, Minispiel-Abstimmung, begrenzter Laden,
   Stern-Duelle) · **Blitz** (5 Runden, Start mit 50 Münzen, Stern und Doppelwürfel) · **Team** (2 gegen 2,
   geteilte Münzen und Sterne).
-* **Minispiel-Ablauf wie im Vorbild:** Die Feldfarben bestimmen **Jeder gegen Jeden**, **1 gegen 3** oder
+* **Minispiel-Ablauf:** Die Feldfarben bestimmen **Jeder gegen Jeden**, **1 gegen 3** oder
   **2 gegen 2** (Farbrad für Ereignisfelder), Team-Intro-Cutscene, Roulette bzw. Abstimmung; dazu **Duelle**,
   **Glücks-** und **Münz-Minispiele**, eine **Boss-Runde** (Pustebacke, der Wolkendrache) zur Brettmitte und der
   **Showdown-Dreikampf** im Endspurt.
-* **38 Minispiele** (Kategorien siehe `docs/MINIGAMES.md`), alle auch einzeln in der **Minispiel-Arena** – neu:
+* **69 Minispiele** (Kategorien siehe `docs/MINIGAMES.md`), alle auch einzeln in der **Minispiel-Arena** – darunter:
   **Geister-Fotograf** (Taschenlampen-Intro, Geistervilla im Halbdunkel, langsam ladende Kamera, scharf/
   verwackelt/verzerrt je nach Timing), **Käse-Kloppe** (Mäuse auf wackelndem Federkäse, rollende Ball-Katzen,
   Packen & Werfen), **Pinguin-Curling** (3 Runden, Rammen erlaubt, Wischen), **Seifenblasen-Ballett**
@@ -44,6 +48,15 @@ vier Gamepads.
 * **Lebendige Ränder** überall: `CritterLife` setzt Themen-Tierchen (Hasen, Küken, Füchse, Krabben, Pinguine,
   Katzen …) an jede Spielfläche, die herumhoppeln, schnüffeln, zuschauen und am Ende mitjubeln, dazu
   Schmetterlinge, Glühwürmchen oder Fledermäuse.
+
+### Modus B – Nitro Dash
+* **8 Strecken** mit eigenem Thema: Lumos-Ring · Korallen-Kanal · Vulkan-Inselchen · Gewitter-Pass · Frostgipfel ·
+  Sternenstaub-Bahn · Stadt-Rallye · Wüsten-Canyon – Sprungschanzen, Abkürzungen, Gleiter-Abschnitte.
+* **Modi:** Einzelrennen · **Grand Prix** (Lumos-Cup, Sternen-Cup, Mega-Cup mit allen 8 Strecken; Punkte
+  15–12–10–8–6–4–2–1, Siegerehrung) · **Zeitfahren** mit Bestzeiten je Strecke.
+* **Fahrgefühl:** weiche Arcade-Lenkung mit Trägheit, Federung, Drift mit Mini-Turbo, Auto-Gas für Touch.
+* **Items:** Kuchendeckel, Homing-Kanonenkugel, Megafon-Schock, Piraten-Anker, Nitro – fair nach Platzierung verteilt.
+* **Bis zu 4 Fahrer lokal** (Split-Screen, auf Wunsch auf mehreren Monitoren) und **online** mit 8 Karts.
 
 ### Boss-Kämpfe (10 Bosse, je Brett einer)
 Zur Brettmitte erscheint der Boss des Bretts – als freier Echtzeit-Arenakampf: laufen, springen, themenpassende
@@ -84,7 +97,7 @@ Alle Boss-Modelle sind prozedural gebaut (`scripts/bosses/boss_model.gd`) und an
 * **Lumos-Athlon** (lokal 1–4 + CPUs, **online bis 20 Spieler**): Alle spielen gleichzeitig 12-Sekunden-Solo-
   Herausforderungen; jede Münze bringt ein Feld weiter, Glücks-/Pusteböen-/Sternenfelder, Pustebacke-Ereignis.
 
-### Musik & Sound („Nintendo-Layered Dynamic Audio“)
+### Musik & Sound (mehrschichtige, dynamische Musik)
 * **Minispiel-Soundtracks 1–4** mit Abschnitten *Normal*, *Hurry-Up* und *Outro*: Schnitt auf das gemessene
   Beat-Raster, Loops in ganzen Takten mit überblendeter Naht, Hurry-Up per tonhöhenerhaltendem Time-Stretch auf
   die Ziel-BPM (Track 1: 120→145, Track 2: 110→138, Track 3: 120→140, Track 4: 115→145).
@@ -255,5 +268,6 @@ Details zur Technik: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Asset-Nutzu
 
 ## Lizenzen
 
-3D-Modelle, Sounds und Icons: Kenney und KayKit (CC0). Schriften: Lilita One und Fredoka (SIL OFL 1.1,
-siehe `assets/fonts/`). Engine: Godot (MIT). Soundtrack und Cartoon-SFX sind prozedural erzeugt.
+Vollständige Übersicht mit Herkunft je Paket: **[LICENSES.md](LICENSES.md)**. Kurz: 3D-Modelle, Sounds und
+Icons von Kenney, KayKit und Quaternius (CC0); Schriften Lilita One und Fredoka (SIL OFL 1.1); Engine Godot
+(MIT); die Soundtracks stellt der Projektinhaber bereit.

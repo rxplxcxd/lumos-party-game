@@ -232,7 +232,7 @@ func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 10
 	add_child(layer)
-	var root := UI.center_root(layer)
+	var root := UI.hud_root(layer)
 	var box := UI.panel()
 	root.add_child(box)
 	var h := UI.hbox(10)

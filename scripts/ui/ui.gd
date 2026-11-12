@@ -84,6 +84,21 @@ static func bold_font() -> Font:
 	return _bold_font
 
 
+## Glyphen-Caches der Schriften leeren (beim Szenenwechsel). Jede Schriftgröße × Konturstärke × Gewicht legt eigene
+## Texturseiten im Grafikspeicher an (gemessen: ~3 MB je Größe mit Kontur) – und die Engine gibt sie nie frei.
+## Angepasste Labels, schwebende Texte, Bossnamen … erzeugen über eine lange Session hunderte Größen; auf
+## iPhones lief der Grafikspeicher so nach 10–15 Runden voll, Safari hat den Tab neu geladen. Die Glyphen der
+## neuen Szene werden beim ersten Zeichnen neu gerastert (während des Ladebildschirms).
+static func clear_font_caches() -> void:
+	for p in [Assets.FONT_TITLE, Assets.FONT_BODY]:
+		var f := load(p) as FontFile
+		if f == null:
+			continue
+		# nur die Größen-Caches (Glyphen-Texturen) – die Schrift selbst bleibt gültig, laufende Texte zeichnen weiter
+		for c in f.get_cache_count():
+			f.clear_size_cache(c)
+
+
 static func box(color: Color, radius := 22, border := 0, border_color := Color.TRANSPARENT, bottom := 0, shadow := 0) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = color
@@ -293,6 +308,30 @@ static func center_root(parent: Node) -> Control:
 	return c
 
 
+## Wie center_root, aber innerhalb der sicheren Bildschirmränder (Notch, runde Displayecken, Home-Leiste).
+## Für HUDs und Anzeigen an den Rändern; Hintergründe/Abdunklungen bleiben mit center_root randlos.
+static func hud_root(parent: Node) -> Control:
+	var c := center_root(parent)
+	c.name = "SafeHud"
+	var ref: WeakRef = weakref(c)   # schwach gebunden: verzögerte Aufrufe nach dem Freigeben laufen ins Leere statt in Fehler
+	c.resized.connect(_fit_safe.bind(ref), CONNECT_DEFERRED)   # erst nachdem InputHub die Ränder neu gemessen hat
+	c.tree_entered.connect(_fit_safe.bind(ref))
+	_fit_safe(ref)
+	return c
+
+
+static func _fit_safe(ref: WeakRef) -> void:
+	var c := ref.get_ref() as Control
+	if c == null:
+		return
+	var m := InputHub.safe_margins()
+	if not is_equal_approx(c.offset_left, m.x) or not is_equal_approx(c.offset_top, m.y) or not is_equal_approx(c.offset_right, -m.z) or not is_equal_approx(c.offset_bottom, -m.w):
+		c.offset_left = m.x
+		c.offset_top = m.y
+		c.offset_right = -m.z
+		c.offset_bottom = -m.w
+
+
 ## Hintergrund-Gradient (Party-Lila -> Pink) als fullscreen TextureRect.
 static func gradient_bg(parent: Node, top := Color("#3a2440"), bottom := Color("#f08c64")) -> TextureRect:
 	var g := Gradient.new()
@@ -354,6 +393,10 @@ const SVG_ICONS := {
 }
 
 static var _icon_cache := {}
+
+
+static func cache_size() -> int:
+	return _icon_cache.size() + _tex_cache.size()
 
 
 ## Gerastertes Vektor-Icon als Textur (gecacht).

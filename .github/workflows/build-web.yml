@@ -92,6 +92,13 @@ jobs:
           grep -q "TESTS OK" systems.log
           ! grep -q "SCRIPT ERROR" systems.log
 
+      - name: Langzeit-Test (Party über 12 Runden, Speicher-/Objekt-Lecks, Hänger)
+        run: |
+          timeout 900 $GODOT_BIN --headless --fixed-fps 60 --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/soak.gd --rounds=12 2>&1 | tee soak.log
+          grep "\[SOAK\]" soak.log | tail -5
+          grep -q "SOAK OK" soak.log
+          ! grep -q "SCRIPT ERROR" soak.log
+
       - name: Export-Liste erzeugen
         run: timeout 300 $GODOT_BIN --headless --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/export_list.gd
 
@@ -102,6 +109,10 @@ jobs:
           # Online-Brett mit 3 Geräten: verschiedene Figuren, ein bedienender Mensch-Gast – prüft Spielerliste,
           # eindeutige Plätze, Bedienung nur für den eigenen Platz und identischen Brettzustand
           HEADLESS=1 GODOT=$GODOT_BIN PORT=9125 CLIENTS=2 HUMAN=1 HEROES="knight ranger mage" DUR_PARTY=240 bash tools/dev/net_test.sh build/net-party party meadow
+          # Schlechte Verbindung: bis 300 ms Verzögerung, 5 % verlorene Anfragen – Rennen muss gleich enden
+          MOCK_DELAY_MS=300 MOCK_FAIL_PCT=5 HEADLESS=1 GODOT=$GODOT_BIN PORT=9126 bash tools/dev/net_test.sh build/net-lossy race lumos_ring
+          # Host-Absturz mitten im Brettspiel: Gäste müssen es bemerken und ohne Fehler zurück ins Menü
+          HOST_CRASH=60 HEADLESS=1 GODOT=$GODOT_BIN PORT=9127 CLIENTS=2 bash tools/dev/net_test.sh build/net-crash party meadow
 
       - name: Online-Test-Logs (bei Fehler)
         if: failure()

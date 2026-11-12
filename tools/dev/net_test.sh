@@ -9,6 +9,8 @@
 #   CLIENTS=2    Anzahl Gäste (Standard 1, höchstens 3)
 #   HUMAN=1      der erste Gast spielt als „Mensch“ (keine KI; drückt Knöpfe selbst, --net-autopress)
 #   HEROES="knight ranger mage"  Figur je Gerät (Host zuerst)
+#   HOST_CRASH=60  Host-Absturz simulieren: der Host wird nach 60 s hart beendet (kein „Tschüss“). Geprüft wird,
+#                  dass alle Gäste das bemerken, eine Meldung zeigen und ohne Skriptfehler ins Menü zurückkehren.
 # Prüft zusätzlich: identische Spielerliste (Plätze, Figuren, Mensch/CPU) auf allen Geräten, eindeutige Plätze
 # und dass Bedienelemente nur für den eigenen Platz erscheinen.
 G=${GODOT:-/home/user/tools/godot/Godot_v4.7.2-stable_linux.x86_64}
@@ -39,7 +41,9 @@ fi
 CLIENTS=${CLIENTS:-1}
 read -r -a HERO_LIST <<< "${HEROES:-}"
 hero_arg() { [ -n "${HERO_LIST[$1]:-}" ] && echo "--net-hero=${HERO_LIST[$1]}"; }
-LUMOS_NET_TEST_DEV=devHost LUMOS_NET_TEST_UID=hostA timeout $((DUR + 20)) bash -c "$RUN -- --net-test=host --net-autodrive --net-players=$((CLIENTS + 1)) --net-game=$GAME --track=$TRACK --net-board=$TRACK --net-rounds=5 --laps=1 --net-code-file=$CODE_FILE $(hero_arg 0) $SHOTS_H ${EXTRA:-} --quit=$DUR" > "$OUT/host.log" 2>&1 &
+HOST_T=$((DUR + 20)); HOST_SIG=TERM
+if [ -n "${HOST_CRASH:-}" ]; then HOST_T=$HOST_CRASH; HOST_SIG=KILL; DUR=$((HOST_CRASH + 100)); fi
+LUMOS_NET_TEST_DEV=devHost LUMOS_NET_TEST_UID=hostA timeout -s $HOST_SIG $HOST_T bash -c "$RUN -- --net-test=host --net-autodrive --net-players=$((CLIENTS + 1)) --net-game=$GAME --track=$TRACK --net-board=$TRACK --net-rounds=5 --laps=1 --net-code-file=$CODE_FILE $(hero_arg 0) $SHOTS_H ${EXTRA:-} --quit=$DUR" > "$OUT/host.log" 2>&1 &
 PIDS="$!"
 WHO="host"
 for K in $(seq 1 "$CLIENTS"); do
@@ -54,6 +58,19 @@ done
 wait $PIDS
 kill $MOCK 2>/dev/null
 FAIL=0
+if [ -n "${HOST_CRASH:-}" ]; then
+  for W in $WHO; do
+    [ "$W" = "host" ] && continue
+    E=$(grep -c "SCRIPT ERROR" "$OUT/$W.log")
+    N=$(grep -o "\[NET\] Hinweis: .*" "$OUT/$W.log" | head -1)
+    M=$(grep -c "\[SCENE\] MainMenu" "$OUT/$W.log")
+    echo "$W: ${N:-keine Meldung} · Skriptfehler $E"
+    [ -z "$N" ] && FAIL=1
+    [ "$E" != "0" ] && FAIL=1
+  done
+  [ "$FAIL" = "0" ] && echo "Host-Absturz: alle Gäste haben es bemerkt ✓"
+  exit $FAIL
+fi
 # --- Spielerliste: auf allen Geräten identisch, jeder Platz genau einmal -----------------------------------
 grep -o "\[NET\] Roster.*" "$OUT/host.log" | head -1 > "$OUT/host.roster"
 if [ -s "$OUT/host.roster" ]; then

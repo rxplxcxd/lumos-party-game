@@ -18,7 +18,11 @@ var _pos := Vector3(0, 5.5, -2)
 var _target := Vector3.ZERO
 var _orbit := 0.0
 var _warn: MeshInstance3D
-var _hp_fill: Node3D
+var _bar: BossBar
+var _bee_meshes: Array[MeshInstance3D] = []
+var _fade := 0.0
+var _fade_set := 0.0
+var _fade_mats := {}
 var _stomp_cd: Array[float] = [0, 0, 0, 0]
 var _buzz_t := 0.0
 var _hit_this: Array[bool] = [false, false, false, false]   # ein Treffer je Spieler und Festsitz-Phase
@@ -57,12 +61,71 @@ func build_arena() -> void:
 		_anim.play("Flying")
 	_warn = MgKit.warn_disc(world, Vector3(0, 0.04, 0), 2.4, Color(0.9, 0.2, 0.1, 0.55), 9999.0)
 	_warn.visible = false
-	# Lebensleiste über der Biene
-	var bar := Node3D.new()
-	_bee.add_child(bar)
-	bar.position = Vector3(0, 3.6, 0)
-	WorldKit.box(bar, Vector3(3.0, 0.3, 0.08), Vector3.ZERO, Color("#2b2236"), false)
-	_hp_fill = WorldKit.box(bar, Vector3(2.9, 0.22, 0.1), Vector3.ZERO, Color("#ffcc33"), false)
+	_bee_meshes.assign(model.find_children("*", "MeshInstance3D", true, false))
+
+
+func _build_hud() -> void:
+	super._build_hud()
+	# Lebensleiste als kompakte Boss-Leiste oben (die frühere 3D-Leiste über der Biene war meist verdeckt)
+	_bar = BossBar.new().setup(_hud_root, "Mega-Summser", _bee)
+	_bar.color = Color("#ffcc33")
+	_bar.set_hp(1.0, "%d / %d" % [HP_MAX, HP_MAX], "", Color("#ffcc33"))
+
+
+## Verdeckt die riesige Biene eine Figur (von der Kamera aus gesehen), wird sie durchscheinend – Spieler und
+## Warnkreis bleiben immer sichtbar.
+func _process(delta: float) -> void:
+	super._process(delta)
+	if _bee == null or _bee_meshes.is_empty():
+		return
+	var c := get_viewport().get_camera_3d()
+	if c == null:
+		return
+	var occl := false
+	var center := _bee.global_position + Vector3.UP * 1.0
+	if not c.is_position_behind(center):
+		var sc := c.unproject_position(center)
+		var rad := sc.distance_to(c.unproject_position(center + c.global_basis.x * 2.4 * SCALE / 3.2))
+		var bee_d := c.global_position.distance_to(center) - 0.8
+		for i in active_slots():
+			var a: Node3D = actors[i]
+			if a == null or occl:
+				continue
+			# im Bienenkörper (beim Draufspringen) oder dahinter
+			if Vector2(a.global_position.x - center.x, a.global_position.z - center.z).length() < 2.6 * SCALE / 3.2 and a.global_position.y < center.y + 2.0:
+				occl = true
+				continue
+			for h: float in [0.2, 1.0, 1.7]:   # Füße, Körper, Kopf
+				var hp := a.global_position + Vector3.UP * h
+				if c.global_position.distance_to(hp) > bee_d and c.unproject_position(hp).distance_to(sc) < rad:
+					occl = true
+		if _warn.visible and c.unproject_position(_warn.global_position).distance_to(sc) < rad:
+			occl = true
+	_fade = move_toward(_fade, 0.55 if occl else 0.0, delta * 3.0)
+	if absf(_fade - _fade_set) > 0.01:
+		_fade_set = _fade
+		_apply_fade(_fade)
+
+
+## Durchscheinen über eigene Alpha-Materialien (GeometryInstance3D.transparency wirkt im Compatibility-Renderer
+## nicht). Bei 0 werden die Originale wieder benutzt – kein Alpha-Aufwand, solange nichts verdeckt wird.
+func _apply_fade(f: float) -> void:
+	for m in _bee_meshes:
+		if not is_instance_valid(m) or m.mesh == null:
+			continue
+		for k in m.mesh.get_surface_count():
+			if f <= 0.01:
+				m.set_surface_override_material(k, null)
+				continue
+			var key := "%d_%d" % [m.get_instance_id(), k]
+			if not _fade_mats.has(key):
+				var src := m.get_active_material(k)
+				var dup: BaseMaterial3D = (src.duplicate() as BaseMaterial3D) if src is BaseMaterial3D else StandardMaterial3D.new()
+				dup.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+				_fade_mats[key] = dup
+			var fm: BaseMaterial3D = _fade_mats[key]
+			fm.albedo_color.a = 1.0 - f
+			m.set_surface_override_material(k, fm)
 
 
 func setup_camera(c: ArenaCamera) -> void:
@@ -137,8 +200,8 @@ func on_tick(delta: float) -> void:
 	var face := (_target - _pos) if _state in ["aim", "dive"] else Vector3(-sin(_orbit), 0, cos(_orbit))
 	if face.length() > 0.1:
 		_bee.rotation.y = lerp_angle(_bee.rotation.y, atan2(face.x, face.z), 0.1)
-	_hp_fill.scale.x = maxf(float(_hp) / HP_MAX, 0.01)
-	_hp_fill.position.x = -1.45 * (1.0 - float(_hp) / HP_MAX)
+	if _bar:
+		_bar.set_hp(float(_hp) / HP_MAX, "%d / %d" % [_hp, HP_MAX])
 	for i in active_slots():
 		_stomp_cd[i] = maxf(0.0, _stomp_cd[i] - delta)
 
@@ -229,8 +292,8 @@ func net_unpack(d: Dictionary) -> void:
 		_play("HitRecieve")
 	_hp = int(e[4])
 	_state = st
-	_hp_fill.scale.x = maxf(float(_hp) / HP_MAX, 0.01)
-	_hp_fill.position.x = -1.45 * (1.0 - float(_hp) / HP_MAX)
+	if _bar:
+		_bar.set_hp(float(_hp) / HP_MAX, "%d / %d" % [_hp, HP_MAX])
 
 
 # --- CPU --------------------------------------------------------------------------------------------------------
@@ -247,7 +310,9 @@ func cpu_think(slot: int, _delta: float) -> void:
 			if off.length() < 3.4:
 				mv = off.normalized() if off.length() > 0.05 else Vector2.RIGHT
 		"stuck":
-			var to := Vector2(_pos.x - p.x, _pos.z - p.z)
+			# jede CPU von einer eigenen Seite anlaufen (sonst drängen sich alle auf denselben Punkt)
+			var side := Vector2.RIGHT.rotated(slot * TAU / 4.0 + 0.4) * 0.7
+			var to := Vector2(_pos.x + side.x - p.x, _pos.z + side.y - p.z)
 			mv = to.normalized() * clampf(to.length(), 0.0, 1.0)
 			# Absprung kurz vor der Biene, damit man von oben auf ihr landet
 			if to.length() < Game.lv([2.2, 2.6, 2.9], level) and to.length() > 1.0 and av.is_on_floor() and randf() < Game.lv([0.2, 0.5, 0.9], level):

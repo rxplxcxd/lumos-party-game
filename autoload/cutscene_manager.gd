@@ -63,7 +63,7 @@ func _build_overlay() -> void:
 	_hint.position = Vector2(-300, -44)
 	_hint.size = Vector2(280, 32)
 	_hint.visible = false
-	root.add_child(_hint)
+	UI.hud_root(root).add_child(_hint)
 
 
 func _mk_bar(root: Control, top: bool) -> ColorRect:

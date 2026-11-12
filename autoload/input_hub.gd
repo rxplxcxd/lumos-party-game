@@ -91,6 +91,7 @@ func _ready() -> void:
 		_latch_phys.append({})
 		_latch_proc.append({})
 		_virtual.append({"move": Vector2.ZERO, "held": {}})
+	get_viewport().size_changed.connect(func() -> void: _safe_cache = Vector4(-1, -1, -1, -1))   # Drehen/Größe: neu messen
 	var tc_script: GDScript = load("res://scripts/ui/touch_controls.gd")
 	touch_controls = tc_script.new()
 	add_child(touch_controls)
@@ -272,19 +273,41 @@ func latch_touch_press(action: String) -> void:
 
 ## Sichere Ränder (Notch/Rundungen): x = links, y = rechts (Pixel im Viewport).
 func safe_insets() -> Vector2:
+	var m := safe_margins()
+	return Vector2(m.x, m.z)
+
+
+var _safe_cache := Vector4(-1, -1, -1, -1)
+
+
+## Sichere Ränder aller vier Seiten (links, oben, rechts, unten) in Viewport-Pixeln: Notch/Dynamic Island,
+## abgerundete Displayecken, Home-Leiste. Browser: CSS env(safe-area-inset-*) (Shell nutzt viewport-fit=cover);
+## nativ: DisplayServer-Safe-Area. Auf Touch-Geräten mindestens 14 px, damit runde Ecken nichts anschneiden,
+## auch wenn das System keine Ränder meldet (viele Android-Geräte).
+func safe_margins() -> Vector4:
+	if _safe_cache.x >= 0.0:
+		return _safe_cache
+	var m := Vector4.ZERO
+	var vp := get_viewport().get_visible_rect().size
 	if OS.has_feature("web"):
-		var v = JavaScriptBridge.eval("(function(){var d=document.createElement('div');d.style.cssText='position:fixed;left:env(safe-area-inset-left);right:env(safe-area-inset-right)';document.body.appendChild(d);var s=getComputedStyle(d);var r=[parseFloat(s.left)||0,parseFloat(s.right)||0,window.devicePixelRatio||1];d.remove();return JSON.stringify(r);})()", true)
+		var v = JavaScriptBridge.eval("(function(){var d=document.createElement('div');d.style.cssText='position:fixed;left:env(safe-area-inset-left);top:env(safe-area-inset-top);right:env(safe-area-inset-right);bottom:env(safe-area-inset-bottom)';document.body.appendChild(d);var s=getComputedStyle(d);var r=[parseFloat(s.left)||0,parseFloat(s.top)||0,parseFloat(s.right)||0,parseFloat(s.bottom)||0,window.devicePixelRatio||1];d.remove();return JSON.stringify(r);})()", true)
 		if v is String:
 			var arr = JSON.parse_string(v)
-			if arr is Array and arr.size() == 3:
-				var scale: float = get_viewport().get_visible_rect().size.x / maxf(1.0, float(DisplayServer.window_get_size().x) / float(arr[2]))
-				return Vector2(float(arr[0]), float(arr[1])) * scale
-		return Vector2.ZERO
-	var safe := DisplayServer.get_display_safe_area()
-	var full := DisplayServer.screen_get_size()
-	if safe.size.x <= 0 or full.x <= 0:
-		return Vector2.ZERO
-	return Vector2(safe.position.x, full.x - safe.end.x)
+			if arr is Array and arr.size() == 5:
+				var css_w := maxf(1.0, float(DisplayServer.window_get_size().x) / float(arr[4]))
+				var k: float = vp.x / css_w
+				m = Vector4(float(arr[0]), float(arr[1]), float(arr[2]), float(arr[3])) * k
+	elif DisplayServer.get_name() != "headless":
+		var safe := DisplayServer.get_display_safe_area()
+		var full := DisplayServer.screen_get_size()
+		var win := DisplayServer.window_get_size()
+		if safe.size.x > 0 and full.x > 0 and win.x > 0 and win == full:   # nur im Vollbild betreffen Bildschirmränder das Fenster
+			var k2: float = vp.x / float(win.x)
+			m = Vector4(safe.position.x, safe.position.y, full.x - safe.end.x, full.y - safe.end.y) * k2
+	if Game.is_touch_device or OS.has_feature("mobile") or OS.has_feature("web_ios") or OS.has_feature("web_android"):
+		m = Vector4(maxf(m.x, 14.0), maxf(m.y, 8.0), maxf(m.z, 14.0), maxf(m.w, 8.0))
+	_safe_cache = m
+	return m
 
 
 func set_touch_profile(profile: String) -> void:

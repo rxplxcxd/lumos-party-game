@@ -167,7 +167,25 @@ func _poll(tag: String) -> void:
 	p.last = now
 
 
+## REST-Anfrage mit Wiederholung: Bei Funklöchern/Serverfehlern (kein Ergebnis, 5xx, 429) bis zu dreimal neu
+## versuchen (0,4 s / 0,8 s / 1,6 s). Vorher ging eine gescheiterte Nachricht (Zug-Entscheidung, Spielstand)
+## einfach verloren – auf Mobilfunk führte das zu Wartezeiten bis zum 60-s-Timeout. Lesen (Abfragen) läuft ohnehin
+## im Takt und wird nicht wiederholt.
 func _rest(method: int, path: String, body: String) -> Dictionary:
+	var r := await _rest_once(method, path, body)
+	if method == HTTPClient.METHOD_GET:
+		return r
+	var wait := 0.4
+	for attempt in 3:
+		if r.ok or (int(r.code) >= 400 and int(r.code) < 500 and int(r.code) != 429):
+			return r   # Erfolg oder echter Client-Fehler (z. B. keine Berechtigung): nicht wiederholen
+		await get_tree().create_timer(wait, true, false, true).timeout
+		wait *= 2.0
+		r = await _rest_once(method, path, body)
+	return r
+
+
+func _rest_once(method: int, path: String, body: String) -> Dictionary:
 	var tok: String = await Account.fb_token()
 	var url := "%s/%s.json%s" % [db_url, path.trim_prefix("/"), ("?auth=" + tok) if tok != "" else ""]
 	var req := HTTPRequest.new()

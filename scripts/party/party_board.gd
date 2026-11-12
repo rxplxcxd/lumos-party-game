@@ -2537,7 +2537,7 @@ func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 10
 	add_child(layer)
-	_hud = UI.center_root(layer)
+	_hud = UI.hud_root(layer)
 	var corners := [Control.PRESET_TOP_LEFT, Control.PRESET_TOP_RIGHT, Control.PRESET_BOTTOM_LEFT, Control.PRESET_BOTTOM_RIGHT]
 	for i in 4:
 		var b := PlayerBadge.new()

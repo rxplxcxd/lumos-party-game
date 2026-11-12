@@ -127,7 +127,7 @@ func _on_solo_msg(_from: String, msg: Dictionary) -> void:
 	if String(msg.get("k", "")) != "hh" or net_owned(solo_slot):
 		return
 	_net_speed = float(msg.get("s", _net_speed))
-	if int(msg.get("f", 0)) == 1:
+	if int(msg.get("fl", 0)) == 1:
 		_net_flip = true
 		(avatars[solo_slot] as PartyAvatar).rig.play("interact", 0.05, 1.6, true)
 
@@ -156,7 +156,7 @@ func on_tick(delta: float) -> void:
 		_solo_net_t -= delta
 		if net_sync and (flipped or _solo_net_t <= 0.0):
 			_solo_net_t = 0.1
-			Net.send({"k": "hh", "s": snappedf(_speed, 0.01), "f": 1 if flipped else 0}, flipped)
+			Net.send({"k": "hh", "s": snappedf(_speed, 0.01), "fl": 1 if flipped else 0}, flipped)   # „f“ ist der Absender
 	if _flip_t <= 0.0:
 		_flip_t = rng.randf_range(6.0, 10.0)
 		_dir = -_dir

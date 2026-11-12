@@ -83,8 +83,8 @@ const MINIGAMES := [
 		"desc": "Schnipp den Stick genau im Takt in Pfeilrichtung oder drück A! PERFEKT gibt 3 Punkte, Serien geben Bonus.",
 		"controls": "Stick: Richtung schnippen · A: A-Note"},
 	{"id": "minigolf_duel", "name": "Minigolf-Duell", "scene": "res://scenes/minigames/MinigolfDuel.tscn", "kind": "score", "cats": ["ffa", "duel"],
-		"desc": "Alle putten gleichzeitig! Wer zuerst einlocht, kassiert 4 Punkte. Pilz-Bumper schleudern Bälle quer über die Bahn.",
-		"controls": "Stick: Zielen · A halten: Kraft laden · loslassen: Schlag"},
+		"desc": "Alle putten gleichzeitig – mit echter Rollphysik: Hügel lenken den Ball ab, Banden werfen ihn zurück, zu schnell rollt er über die Lochkante. Wer zuerst einlocht, kassiert 4 Punkte.",
+		"controls": "Stick links/rechts: Richtung drehen · A halten: Kraft laden (Punkte zeigen den Weg) · loslassen: Schlag · B: Laden abbrechen"},
 	{"id": "balloon_battle", "name": "Ballon-Kart-Battle", "scene": "res://scenes/minigames/BalloonBattle.tscn", "kind": "survival", "cats": ["ffa", "2v2"],
 		"desc": "Platze die Ballons der anderen per Turbo-Rempler und klau sie dir! Item-Boxen geben Torten-Kanonen.",
 		"controls": "Stick: Lenken · A: Gas · B: Turbo-Rempler · X: Torte"},
@@ -200,8 +200,8 @@ const MINIGAMES := [
 		"desc": "Zwanzig verdeckte Karten, zehn Paare: Deckt im Wechsel je zwei auf und merkt euch, wo Münze, Stern und Schlüssel liegen. Ein Treffer bringt einen Punkt – und ihr dürft gleich nochmal.",
 		"controls": "Stick: Rahmen bewegen · A: Karte umdrehen"},
 	{"id": "beach_volley", "name": "Strand-Volley", "scene": "res://scenes/minigames/BeachVolley.tscn", "kind": "score", "online": true, "cats": ["2v2"],
-		"desc": "Wasserball am Palmenstrand! Lauft unter den Ball – eine Berührung baggert ihn automatisch rüber. Springt hoch und drückt B für einen gemeinen Schmetterball. Sieben Punkte gewinnen.",
-		"controls": "Stick: Laufen · A: Springen · B (in der Luft): Schmetterball"},
+		"desc": "Wasserball am Palmenstrand! Lauft unter den Ball: Hinten angenommen, spielt ihr eurem Partner am Netz zu – der springt und schmettert. Der Stick bestimmt, wohin der Ball fliegt. Wer schlecht steht, lässt harte Bälle abprallen; am Netz kann man blocken. Sieben Punkte gewinnen.",
+		"controls": "Stick: Laufen & Zielen (nach vorne = direkt rüber) · A: Springen/Blocken · B (in der Luft am Netz): Schmetterball"},
 	{"id": "pedal_boat", "name": "Tretboot-Rennen", "scene": "res://scenes/minigames/PedalBoat.tscn", "kind": "race", "online": true, "cats": ["2v2"],
 		"desc": "Ab ins Tretboot! Tretet beide im Wechsel – A, B, A, B – und lenkt gemeinsam durch alle Bojen-Tore. Drei Runden um den See, Rempeln ausdrücklich erlaubt.",
 		"controls": "A/B abwechselnd: Treten · Stick: Gemeinsam lenken"},
@@ -268,7 +268,7 @@ var settings := {
 	"online_pool_off": [],   # Online-Lobby: abgewählte Minispiele (MinigamePicker)
 	"music": 0.7, "sfx": 0.9, "voice": 1.0,
 	"haptics": true, "touch_opacity": 0.8, "touch_scale": 1.0, "touch_layout": {},
-	"auto_accel": true, "steer_sens": 1.0, "screen_shake": 1.0, "quality": "auto", "show_fps": false, "dynamic_res": true, "fps_mode": "60",
+	"auto_accel": true, "steer_sens": 1.0, "screen_shake": 1.0, "quality": "auto", "show_fps": false, "dynamic_res": true, "frame_rate": "auto",
 	"color_saturation": 1.0, "color_strength": 1.0,
 		"split_screen": true, "multi_display": true,
 }
@@ -615,6 +615,18 @@ func load_settings() -> void:
 	for k in settings.keys():
 		if cfg.has_section_key("settings", k):
 			settings[k] = cfg.get_value("settings", k)
+	var fr := migrate_frame_rate(cfg)
+	if fr != "":
+		settings["frame_rate"] = fr
+
+
+## 1.2.6 hieß die Bildraten-Einstellung „fps_mode“ mit Standard 60. Ausdrücklich gewählte 120/Maximal bleiben,
+## der alte Standard wird zur neuen Automatik (120 auf High-Hz-Bildschirmen, sonst 60). "" = nichts umzuziehen.
+static func migrate_frame_rate(cfg: ConfigFile) -> String:
+	if cfg.has_section_key("settings", "frame_rate") or not cfg.has_section_key("settings", "fps_mode"):
+		return ""
+	var old := String(cfg.get_value("settings", "fps_mode"))
+	return old if old in ["120", "max"] else "auto"
 
 
 func save_settings() -> void:

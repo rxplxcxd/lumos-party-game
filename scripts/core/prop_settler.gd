@@ -23,14 +23,21 @@ const STRUCTURAL := ["floor", "wall", "block", "plat_", "rock_plat", "platform",
 static var _tri_cache := {}
 
 
+static func cache_size() -> int:
+	return _tri_cache.size()
+
+
 ## keep: Knoten, die nie verändert werden (z. B. alles, was das Spielskript selbst hält – siehe script_refs).
 static func settle(scene: Node, keep := {}) -> int:
-	return _run(scene, true, [], keep)
+	var n := _run(scene, true, [], keep)
+	_tri_cache.clear()   # hält sonst jedes Mesh der Szene (samt Grafikpuffern) über den Szenenwechsel hinaus fest
+	return n
 
 
 static func check(scene: Node, keep := {}) -> Array:
 	var out: Array = []
 	_run(scene, false, out, keep)
+	_tri_cache.clear()
 	return out
 
 

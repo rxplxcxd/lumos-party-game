@@ -575,9 +575,21 @@ func ping_text() -> String:
 var debug_counts: Dictionary = {}
 
 
+## Nur der Host darf diese Nachrichten erzeugen (Spielende, Zustandsabgleich, Sitzungsende …).
+const HOST_ONLY := ["bye", "sp_go", "bs", "end", "gs", "ath_start", "ath_round", "ath_res"]
+
+
 func _receive(from: String, msg: Dictionary) -> void:
 	var k := String(msg.get("k", ""))
 	debug_counts[k] = int(debug_counts.get(k, 0)) + 1
+	# Absender prüfen: Verlässlich ist der Transport-Absender (Datenbank-Regeln erzwingen from == Konto,
+	# Direktverbindungen sind je Gerät). Das Feld „f“ im Inhalt gilt nur, wenn der Host eine Nachricht eines
+	# anderen weiterleitet – sonst könnte sich ein Gerät als Host ausgeben (z. B. „Spiel beendet“ an alle).
+	if is_host or from != host_id:
+		msg["f"] = from
+	if k in HOST_ONLY and String(msg.get("f", "")) != host_id:
+		debug_counts["abgelehnt"] = int(debug_counts.get("abgelehnt", 0)) + 1
+		return
 	if k == "ping" and is_host:
 		_send_to(from, {"k": "pong", "t": msg.get("t", 0)}, int(msg.get("u", 0)) == 0)
 		return
@@ -984,6 +996,21 @@ func _show_notice(reason: String, to_menu: bool) -> void:
 
 
 ## Gehört ein Slot (bzw. eine CPU) zu diesem Gerät? Host simuliert alle CPUs.
+## Platz eines Geräts laut Spielkonfiguration (-1 = keiner, z. B. Zuschauer oder unbekannt).
+func slot_of(uid: String) -> int:
+	var slots: Dictionary = game_cfg.get("slots", {})
+	return int(slots[uid]) if slots.has(uid) else -1
+
+
+## Darf das Gerät „uid“ für diesen Platz sprechen? (eigener Platz; der Host zusätzlich für CPU-Plätze)
+func may_speak_for(uid: String, slot: int) -> bool:
+	if slot < 0 or slot > 3:
+		return false
+	if slot_of(uid) == slot:
+		return true
+	return uid == host_id and Game.players[slot].cpu
+
+
 func owns_slot(slot: int) -> bool:
 	if not online:
 		return true

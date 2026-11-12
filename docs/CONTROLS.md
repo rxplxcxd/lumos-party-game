@@ -38,8 +38,15 @@ Zeile und mit hoch/runter zwischen den Zeilen; A auf einem Pfeil ändert den Wer
 **Anleitung vor Minispielen:** Lokal bleibt sie stehen, bis jemand bestätigt (A, Leertaste, Klick oder Tippen).
 Online bestätigt jeder selbst („Bereit!“), spätestens nach 15 s geht es los.
 
-**Bildrate (Einstellungen → Grafik):** 60 FPS (Standard), 120 FPS (High-Hz) oder Maximal (Bildschirmtakt). Die Physik
-läuft im gleichen Takt mit.
+**Bildrate (Einstellungen → Grafik):** **Automatisch** (Standard seit 1.2.7: 120 FPS auf Bildschirmen ab 100 Hz wie
+iPhone/iPad Pro, Gaming-Monitoren und High-Hz-Android, sonst 60; im Browser wird der Bildschirmtakt gemessen),
+60 FPS, 120 FPS oder Maximal (Bildschirmtakt). Die Physik läuft im gleichen Takt mit. Schafft ein Gerät die 120
+nicht dauerhaft, fällt die Automatik für die Sitzung auf stabile 60 FPS zurück, statt die Auflösung zu opfern;
+Notebooks und Handhelds im Akkubetrieb bleiben bei 60.
+
+**Sichere Bildschirmränder:** HUDs, Boss-Leisten, Emote-Knopf, Cutscene-Hinweis und die FPS-Anzeige (Debug,
+Einstellungen → „FPS anzeigen“) liegen innerhalb der sicheren Ränder – auf dem iPhone nicht mehr von runden
+Ecken, Dynamic Island oder Home-Leiste angeschnitten (`InputHub.safe_margins()`, `UI.hud_root()`).
 
 ## Umsetzung im Code
 

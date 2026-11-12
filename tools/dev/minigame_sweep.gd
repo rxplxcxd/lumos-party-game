@@ -58,6 +58,8 @@ func run() -> void:
 	var fell := 0
 	var below := [false, false, false, false]
 	var inside := [0, 0, 0, 0]
+	var stuck := [0, 0, 0, 0]
+	var clump := 0
 	var limit := mg.time_limit
 	var ended := ""
 	var alive_start: Array = []
@@ -98,6 +100,16 @@ func run() -> void:
 				var pa := av as PartyAvatar
 				if not pa.is_inside_tree():
 					continue
+				# CPU will laufen, kommt aber nicht vom Fleck (festgefahren) / steckt in einer anderen Figur
+				var hv := Vector2(pa.velocity.x, pa.velocity.z).length()
+				if InputHub.move(i).length() > 0.2 and hv < 0.3 and pa.can_move and pa.is_physics_processing() and not pa.is_stunned():
+					stuck[i] += 1
+				for o in range(i + 1, 4):
+					var ao = mg.avatars[o]
+					if ao is PartyAvatar and mg.active[o] and mg.alive[o] and (ao as Node3D).is_inside_tree():
+						var dd := pa.global_position - (ao as Node3D).global_position
+						if Vector2(dd.x, dd.z).length() < 0.45 and absf(dd.y) < 1.0:
+							clump += 1
 				if pa.global_position.y < mg.kill_y - 4.0 and not below[i]:
 					below[i] = true
 					fell += 1
@@ -120,10 +132,12 @@ func run() -> void:
 			ended = "timeout_" + mg.state
 			break
 	var inside_s: Array = []
+	var stuck_s: Array = []
 	for i in 4:
 		inside_s.append(snappedf(inside[i] * dt, 0.1))
+		stuck_s.append(snappedf(stuck[i] * dt, 0.1))
 	print("SWEEP " + JSON.stringify({"id": id, "cat": cat, "end": ended, "play": snappedf(play_t, 0.1), "limit": limit,
-		"intro": snappedf(intro_t, 0.1), "alive_start": alive_start, "alive_end": mg.alive, "durchgefallen": fell, "in_geometrie_s": inside_s, "survival": mg.survival,
+		"intro": snappedf(intro_t, 0.1), "alive_start": alive_start, "alive_end": mg.alive, "durchgefallen": fell, "in_geometrie_s": inside_s, "festgefahren_s": stuck_s, "verklumpt_s": snappedf(clump * dt, 0.1), "survival": mg.survival,
 		"race": mg.race, "scores": mg.scores, "ueberlauf": _overflow}))
 	tree.quit()
 

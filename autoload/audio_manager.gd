@@ -353,6 +353,10 @@ func _play_path(path: String, fade: float, loop: bool, from_pos := 0.0) -> void:
 	_fade_out_all(minf(fade, 0.4))
 
 
+func cache_size() -> int:
+	return _cache.size()
+
+
 func _pick(id: String) -> AudioStream:
 	var list: Array = SFX.get(id, [])
 	if list.is_empty():
@@ -432,8 +436,14 @@ func make_loop(id: String, parent: Node3D, vol_db := -6.0) -> AudioStreamPlayer3
 	p.max_distance = 60.0
 	p.volume_db = vol_db
 	if st is AudioStreamOggVorbis:
-		st = st.duplicate()
-		(st as AudioStreamOggVorbis).loop = true
+		# Eine Loop-Kopie je Sound statt einer neuen je Kart: im Browser wird jeder neue Stream als Sample
+		# dekodiert und von der Engine nie wieder freigegeben (8 Karts × jedes Rennen = stetig mehr Speicher).
+		var key := "loop:" + st.resource_path
+		if not _cache.has(key):
+			var dup := st.duplicate() as AudioStreamOggVorbis
+			dup.loop = true
+			_cache[key] = dup
+		st = _cache[key]
 	p.stream = st
 	parent.add_child(p)
 	p.play()

@@ -102,6 +102,7 @@ func _ready() -> void:
 	var _moved := PropSettler.settle(world, PropSettler.script_refs(self))
 	if "--perf-log" in OS.get_cmdline_user_args():
 		print("[PERF] Deko-Ausrichtung %s: %d Modelle angepasst in %.1f ms" % [game_id, _moved, (Time.get_ticks_usec() - _st) / 1000.0])
+	_far_shadows_off()
 	spawn_players()
 	_bench_inactive()
 	_setup_camera()
@@ -294,6 +295,7 @@ func _physics_process(delta: float) -> void:
 		for i in 4:
 			if Game.players[i].cpu and active[i] and Net.owns_slot(i):
 				cpu_think(i, delta)
+				_cpu_unstick(i, delta)
 				_cpu_full_jump(i, delta)
 		if _is_host_model_client() and not Game.players[Net.my_slot].cpu:
 			var mv := InputHub.move(Net.my_slot)
@@ -305,9 +307,87 @@ func _physics_process(delta: float) -> void:
 		if _debug_ai and Engine.get_physics_frames() % 90 == 0:
 			for i in 4:
 				var a: Node3D = actors[i]
-				print("[AI] P%d pos=%s mv=%s score=%s alive=%s" % [i, a.global_position.snapped(Vector3.ONE * 0.1), InputHub.move(i).snapped(Vector2.ONE * 0.01), scores[i], alive[i]])
+				var extra := ""
+				if avatars[i] is PartyAvatar:
+					var pa := avatars[i] as PartyAvatar
+					extra = " v=%s stun=%s move=%s floor=%s" % [pa.velocity.snapped(Vector3.ONE * 0.1), pa.is_stunned(), pa.can_move, pa.is_on_floor()]
+				print("[AI] P%d pos=%s mv=%s score=%s alive=%s%s" % [i, a.global_position.snapped(Vector3.ONE * 0.1), InputHub.move(i).snapped(Vector2.ONE * 0.01), scores[i], alive[i], extra])
 	elif state != "setup":
 		InputHub.clear_virtual()
+
+
+## Gegen festgefahrene CPUs (alle Minispiele mit frei laufenden Figuren): Will eine CPU laufen, kommt aber
+## ~0,8 s lang kaum vom Fleck (Wand, Hindernis, andere Figur), weicht sie kurz seitlich aus – weg von der
+## nächsten Figur, bei Bedarf mit Sprung. Zusätzlich halten CPUs sanften Abstand, statt ineinander zu stehen
+## (sonst kleben mehrere CPUs am selben Zielpunkt). Spiele mit eigener Stellungslogik schalten das ab.
+var cpu_unstick := true
+var cpu_separation := 0.55       # Radius der sanften Abstoßung (0 = aus)
+var _stk: Array[Dictionary] = [{}, {}, {}, {}]
+
+
+func _cpu_unstick(i: int, delta: float) -> void:
+	var av = avatars[i]
+	if not cpu_unstick or not (av is PartyAvatar):
+		return
+	var pa := av as PartyAvatar
+	var st: Dictionary = _stk[i]
+	if not pa.alive or not pa.can_move or not pa.is_physics_processing() or pa.is_stunned() or not pa.is_inside_tree():
+		st.clear()
+		return
+	var v: Dictionary = InputHub._virtual[i]
+	var mv: Vector2 = v.move
+	var p := pa.global_position
+	if not st.has("p0"):
+		st.merge({"p0": p, "acc": 0.0, "want": 0.0, "t": 0.0, "dir": Vector2.ZERO})
+	# laufendes Ausweichmanöver
+	if float(st.t) > 0.0:
+		st.t = float(st.t) - delta
+		v.move = ((st.dir as Vector2) + mv * 0.25).limit_length(1.0)
+		if bool(st.get("jump", false)) and pa.is_on_floor():
+			InputHub.hold_virtual(i, "a")
+			st.jump = false
+		return
+	# sanfte Abstoßung von anderen Figuren (nur bei echter Überlappung, damit Schubs-/Fangspiele unberührt bleiben)
+	if cpu_separation > 0.0:
+		var push := Vector2.ZERO
+		for o in 4:
+			if o == i or not active[o] or not (avatars[o] is PartyAvatar):
+				continue
+			var po := (avatars[o] as PartyAvatar).global_position
+			var d := Vector2(p.x - po.x, p.z - po.z)
+			if d.length() < cpu_separation and absf(p.y - po.y) < 1.2:
+				var n := d.normalized() if d.length() > 0.01 else Vector2.RIGHT.rotated(i * 1.7)
+				push += n * (cpu_separation - d.length()) / cpu_separation
+		if push.length() > 0.0:
+			v.move = (mv + push * 0.8).limit_length(1.0)
+	# Fortschritt messen
+	st.acc = float(st.acc) + delta
+	if mv.length() > 0.2:   # auch leichtes Ziehen zählt (Feinpositionierung gegen ein Hindernis)
+		st.want = float(st.want) + delta
+	if float(st.acc) >= 0.8:
+		var p0: Vector3 = st.p0
+		var moved := Vector2(p.x - p0.x, p.z - p0.z).length()
+		if float(st.want) > 0.6 and moved < 0.25:
+			var perp := Vector2(-mv.y, mv.x).normalized()
+			# Seite weg von der nächsten Figur wählen
+			var best_d := INF
+			var away := Vector2.ZERO
+			for o in 4:
+				if o != i and active[o] and actors[o] != null:
+					var po2: Vector3 = (actors[o] as Node3D).global_position
+					var dd := Vector2(p.x - po2.x, p.z - po2.z)
+					if dd.length() < best_d:
+						best_d = dd.length()
+						away = dd
+			var side := 1.0 if perp.dot(away) >= 0.0 else -1.0
+			if best_d > 2.5:
+				side = 1.0 if (i + int(Engine.get_physics_frames() / 60)) % 2 == 0 else -1.0   # Hindernis: abwechselnd
+			st.dir = (perp * side - mv.normalized() * 0.25).normalized()
+			st.t = 0.55
+			st.jump = pa.can_jump and best_d > 1.2
+		st.acc = 0.0
+		st.want = 0.0
+		st.p0 = p
 
 
 ## Sprünge haben variable Höhe (A loslassen bremst). CPUs drücken A oft nur einen Frame lang – damit sie
@@ -606,6 +686,23 @@ func _alive_teams() -> Array:
 	return out
 
 
+## Kulisse weit außerhalb der Arena wirft keine Schatten mehr (Bäume, Felsen, Häuser am Horizont): Ihre Schatten
+## fallen nur auf Kulisse, kosten aber in jeder Schattenkarte Zeichenaufrufe. Arena und Rand bleiben unverändert.
+func _far_shadows_off() -> void:
+	var lim := arena_radius + 14.0
+	var n := 0
+	for mi in world.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if m.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
+			continue
+		var p := m.global_position
+		if Vector2(p.x - arena_center.x, p.z - arena_center.z).length() > lim:
+			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			n += 1
+	if "--perf-log" in OS.get_cmdline_user_args():
+		print("[PERF] Schatten aus für %d ferne Kulissenteile (%s)" % [n, game_id])
+
+
 ## Nicht teilnehmende Figuren (z. B. im Duell) aus dem Spiel nehmen.
 func _bench_inactive() -> void:
 	for i in 4:
@@ -667,12 +764,12 @@ func on_remote_score(_slot: int, _extra: Dictionary) -> void:
 	pass
 
 
-func _on_score_msg(_from: String, msg: Dictionary) -> void:
+func _on_score_msg(from: String, msg: Dictionary) -> void:
 	if String(msg.get("k", "")) != "sc":
 		return
 	var sl := int(msg.get("s", -1))
-	if sl < 0 or sl > 3 or Net.owns_slot(sl):
-		return
+	if sl < 0 or sl > 3 or Net.owns_slot(sl) or not Net.may_speak_for(from, sl):
+		return   # fremde Plätze darf niemand melden
 	scores[sl] = float(msg.get("v", 0.0))
 	var was := alive[sl]
 	alive[sl] = bool(msg.get("al", true))
@@ -694,13 +791,18 @@ func _remote_out(sl: int) -> void:
 	Audio.sfx("bong", null, -6.0)
 
 
-func _on_host_model_msg(_from: String, msg: Dictionary) -> void:
+func _on_host_model_msg(from: String, msg: Dictionary) -> void:
 	match String(msg.get("k", "")):
 		"in":
 			if Net.is_host:
 				var sl := int(msg.get("s", -1))
-				var m: Array = msg.get("m", [0, 0])
-				InputHub.set_net_input(sl, Vector2(float(m[0]), float(m[1])), msg.get("h", {}))
+				var m = msg.get("m", [])
+				var h = msg.get("h", {})
+				# nur Eingaben für den eigenen Platz, nur gültige Werte
+				if Net.slot_of(from) != sl or not (m is Array) or (m as Array).size() != 2 or not (h is Dictionary):
+					return
+				var mv := Vector2(float(m[0]), float(m[1])).limit_length(1.0)
+				InputHub.set_net_input(sl, mv, h)
 		"gs":
 			if not Net.is_host:
 				time_left = float(msg.get("tl", time_left))
@@ -800,7 +902,7 @@ func _build_hud() -> void:
 	hud = CanvasLayer.new()
 	hud.layer = 10
 	add_child(hud)
-	_hud_root = UI.center_root(hud)
+	_hud_root = UI.hud_root(hud)
 	var corners := [Control.PRESET_TOP_LEFT, Control.PRESET_TOP_RIGHT, Control.PRESET_BOTTOM_LEFT, Control.PRESET_BOTTOM_RIGHT]
 	for i in 4:
 		var b := PlayerBadge.new()

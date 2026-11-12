@@ -8,11 +8,21 @@ der Online-Logik (zwei native Instanzen ohne Internet).
 
 Aufruf: python3 tools/dev/rtdb_mock.py [port]
 Spiel:  LUMOS_RTDB_URL=http://127.0.0.1:PORT LUMOS_NET_TEST_UID=hostA godot … -- --net-test=host
+
+Schlechte Verbindungen simulieren (Netz-QA):
+  MOCK_DELAY_MS=300   jede Anfrage wartet zufällig 0…300 ms (Latenz + Jitter, auch Reihenfolge-Vertauschung)
+  MOCK_FAIL_PCT=5     5 % der Anfragen scheitern mit HTTP 503 (Paketverlust / Funkloch)
 """
 import json
+import os
+import random
 import sys
 import threading
 import time
+
+DELAY_MS = int(os.environ.get("MOCK_DELAY_MS", "0") or 0)
+FAIL_PCT = float(os.environ.get("MOCK_FAIL_PCT", "0") or 0)
+STATS = {"requests": 0, "failed": 0}
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 DATA: dict = {}
@@ -72,6 +82,24 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
+    def _bad_network(self) -> bool:
+        """Verzögert die Anfrage und lässt einen Teil scheitern (True = schon mit 503 beantwortet)."""
+        STATS["requests"] += 1
+        if DELAY_MS > 0:
+            time.sleep(random.uniform(0, DELAY_MS) / 1000.0)
+        if FAIL_PCT > 0 and random.uniform(0, 100) < FAIL_PCT:
+            STATS["failed"] += 1
+            n = int(self.headers.get("Content-Length") or 0)
+            if n:
+                self.rfile.read(n)
+            self.send_response(503)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            if STATS["failed"] % 50 == 1:
+                print(f"[MOCK] {STATS['failed']} von {STATS['requests']} Anfragen absichtlich gescheitert", flush=True)
+            return True
+        return False
+
     def _body(self):
         n = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(n) if n else b""
@@ -86,16 +114,22 @@ class H(BaseHTTPRequestHandler):
         self.wfile.write(b)
 
     def do_GET(self):
+        if self._bad_network():
+            return
         with LOCK:
             self._reply(_get(_parts(self.path)))
 
     def do_PUT(self):
+        if self._bad_network():
+            return
         v = _resolve(self._body())
         with LOCK:
             _set(_parts(self.path), v)
         self._reply(v)
 
     def do_PATCH(self):
+        if self._bad_network():
+            return
         v = _resolve(self._body()) or {}
         parts = _parts(self.path)
         with LOCK:
@@ -111,6 +145,8 @@ class H(BaseHTTPRequestHandler):
         self._reply(v)
 
     def do_POST(self):
+        if self._bad_network():
+            return
         v = _resolve(self._body())
         key = _push_key()
         with LOCK:
@@ -118,6 +154,8 @@ class H(BaseHTTPRequestHandler):
         self._reply({"name": key})
 
     def do_DELETE(self):
+        if self._bad_network():
+            return
         with LOCK:
             _set(_parts(self.path), None)
         self._reply(None)
@@ -125,5 +163,5 @@ class H(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 9123
-    print(f"RTDB-Mock auf http://127.0.0.1:{port}", flush=True)
+    print(f"RTDB-Mock auf http://127.0.0.1:{port} (Verzögerung bis {DELAY_MS} ms, Ausfall {FAIL_PCT} %)", flush=True)
     ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()

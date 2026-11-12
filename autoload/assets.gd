@@ -715,6 +715,10 @@ func icon(key: String) -> Texture2D:
 	return _cache[p]
 
 
+func cache_size() -> int:
+	return _cache.size()
+
+
 ## Beim Szenenwechsel: Modelle, die in den letzten zwei Szenen nicht gebraucht wurden, aus dem Cache werfen.
 ## Vorher blieb jedes jemals geladene Modell (Meshes + Texturen, im Browser auch im Grafikspeicher) für immer
 ## im Speicher – lange Sessions liefen voll, bis der Browser den Tab neu geladen hat.
