@@ -1,6 +1,6 @@
 extends Node
 ## Fahrtest für Nitro Dash: ein komplettes Rennen mit 8 CPU-Karts im Schnellvorlauf (headless, feste Bildrate).
-## Misst je Strecke Streckenlänge, Rundenzeiten, Gesamtdauer, Hängenbleiben, Bandenkontakte, Luftzeit, Drift-Anteil,
+## Misst je Strecke Streckenlänge, Rundenzeiten, Gesamtdauer, Hängenbleiben, Bandenkontakte, Luftzeit (ohne Gleiten), Gleitzeit, Drift-Anteil,
 ## Item-Einsätze und Treffer. Ausgabe: eine Zeile "RACE {json}", bei Problemen zusätzlich "RACE-WARN …".
 ##   godot --headless --fixed-fps 60 --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/race_test.gd --track=lumos_ring [--laps=3] [--level=1]
 ## Alle Strecken: tools/dev/race_sweep.sh
@@ -13,6 +13,9 @@ var _hit_kinds: Dictionary = {}
 var _got: Dictionary = {}
 var _use: Dictionary = {}
 var _held: Dictionary = {}
+var _air_kind: Dictionary = {}   # Racer-Index → Art des aktuellen Sprungs
+var _air_by: Dictionary = {}     # Art → Sekunden (alle Karts)
+var _air_n: Dictionary = {}      # Art → Anzahl Absprünge
 
 
 func run() -> void:
@@ -56,9 +59,11 @@ func run() -> void:
 	var drift := []
 	var stun_prev := []
 	var max_back := []
+	var glide := []
+	glide.resize(n)
 	stuck.resize(n); wall.resize(n); air.resize(n); drift.resize(n); stun_prev.resize(n); max_back.resize(n)
 	for i in n:
-		stuck[i] = 0.0; wall[i] = 0.0; air[i] = 0.0; drift[i] = 0.0; stun_prev[i] = 0.0; max_back[i] = 0.0
+		glide[i] = 0.0; stuck[i] = 0.0; wall[i] = 0.0; air[i] = 0.0; drift[i] = 0.0; stun_prev[i] = 0.0; max_back[i] = 0.0
 	var dt := 1.0 / 60.0
 	var t := 0.0
 	var race_t := 0.0
@@ -85,8 +90,17 @@ func run() -> void:
 				stuck[i] = float(stuck[i]) + dt
 			if absf(r.x) >= track.width * 0.5 - Racer.RADIUS - 0.02 and not r.gliding:
 				wall[i] = float(wall[i]) + dt
-			if r.airborne:
+			if r.gliding:
+				glide[i] = float(glide[i]) + dt
+			if r.airborne and not r.gliding:
 				air[i] = float(air[i]) + dt
+				if not _air_kind.has(i):
+					var k := "hop" if r.vh < 5.5 else ("knock" if r.vh < 8.0 else "ramp")
+					_air_kind[i] = k
+					_air_n[k] = int(_air_n.get(k, 0)) + 1
+				_air_by[_air_kind[i]] = float(_air_by.get(_air_kind[i], 0.0)) + dt
+			else:
+				_air_kind.erase(i)
 			if r.drift_dir != 0:
 				drift[i] = float(drift[i]) + dt
 			if r.stun_t > float(stun_prev[i]) + 0.2:
@@ -122,7 +136,7 @@ func run() -> void:
 	var res := {"track": track_id, "length_m": snappedf(track.length, 1.0), "laps": laps, "race_s": snappedf(race_t, 0.1),
 		"lap_best_s": snappedf(best, 0.1) if best < INF else 0.0, "lap_median_s": snappedf(med, 0.1), "finished": finished, "of": n,
 		"field_spread_s": snappedf(spread, 0.1),
-		"stuck_s": _r(stuck), "wall_s": _r(wall), "air_s": _r(air), "drift_s": _r(drift),
+		"stuck_s": _r(stuck), "wall_s": _r(wall), "air_s": _r(air), "glide_s": _r(glide), "air_by_kind_s": _air_by, "air_count": _air_n, "drift_s": _r(drift),
 		"items_used": _used, "hits": _hits, "got": _got, "used": _use}
 	print("RACE " + JSON.stringify(res))
 	for i in n:

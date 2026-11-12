@@ -92,6 +92,18 @@ jobs:
           grep -q "TESTS OK" systems.log
           ! grep -q "SCRIPT ERROR" systems.log
 
+      - name: Nitro Dash – Item-Regeln (Schutz, Spiegel, Donnerwolke, Aufholhilfe, Gefahren-Takt, Online-Zustand)
+        run: |
+          timeout 300 $GODOT_BIN --headless --fixed-fps 60 --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/race_items_test.gd 2>&1 | tee race_items.log
+          grep -q "RACE-ITEMS OK" race_items.log
+
+      - name: Nitro Dash – Fahrtest (Stichprobe 5 Strecken, je 1 Runde mit 8 CPU-Karts, alle im Ziel, keiner hängt fest)
+        run: |
+          for t in lumos_ring glow_forest candy_lane jungle_ruins falls_gorge; do
+            timeout 600 $GODOT_BIN --headless --fixed-fps 60 --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/race_test.gd --track=$t --laps=1 --max=300 2>&1 | tee -a race.log
+          done
+          ! grep -q "RACE-WARN\|SCRIPT ERROR" race.log
+
       - name: Trailer-Produktion vom Spiel getrennt (keine Verweise, nicht im Export, lauffähig)
         run: bash trailer/check_isolation.sh
 

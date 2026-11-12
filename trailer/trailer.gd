@@ -1598,7 +1598,7 @@ void fragment() {
 	return n
 
 
-## Nitro Dash: der echte Lumos-Ring aus dem Spiel (Streckenbaukasten, nur gelesen) mit Kulisse wie im Rennen –
+## Nitro Dash: der Lumos-Ring des Spiels (eingefrorene Trailer-Kopie, trailer_track.gd) mit Kulisse wie im Rennen –
 ## geschlossene Strecke, Banden, Tribünen, Zieltor, Horizont. Liegt im Ursprung (immer nur ein Set sichtbar).
 func _build_race() -> Node3D:
 	var s := Node3D.new()
@@ -1606,7 +1606,7 @@ func _build_race() -> Node3D:
 	add_child(s)
 	_track = RaceTrack.new()
 	s.add_child(_track)
-	_track.build(TrackDefs.get_def("lumos_ring"))
+	_track.build(preload("res://trailer/trailer_track.gd").lumos_ring())   # eingefrorener Stand (Kamerafahrten)
 	WorldKit.box(s, Vector3(700, 1, 700), Vector3(80, -0.8, 20), Color("#4c9a36"), false)
 	if not ("--no-bd" in OS.get_cmdline_user_args()):
 		WorldKit.backdrop(s, "meadow", Color("#4c9a36"), -0.85, Vector3(80, 0, 20))

@@ -602,8 +602,10 @@ func _donut(p: Vector3, r: float) -> void:
 func _build_river() -> void:
 	for g in track.glide_ranges:
 		var mid := track.frame((g.x + g.y) * 0.5)
-		var river := WorldKit.water(self, Vector2(30, g.y - g.x + 80.0), -0.6, Color(0.1, 0.38, 0.45), Color(0.3, 0.7, 0.7))
-		river.position = Vector3(mid.origin.x, -0.6, mid.origin.z)
+		# knapp über dem Boden (sonst verdeckt die Wiese den Fluss)
+		var gy := float(def.get("ground_y", -0.15)) + 0.06
+		var river := WorldKit.water(self, Vector2(30, g.y - g.x + 80.0), gy, Color(0.1, 0.38, 0.45), Color(0.3, 0.7, 0.7))
+		river.position = Vector3(mid.origin.x, gy, mid.origin.z)
 		river.rotation.y = mid.basis.get_euler().y
 		for side: float in [-1.0, 1.0]:
 			for k in 6:

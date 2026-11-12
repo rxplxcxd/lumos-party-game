@@ -461,23 +461,90 @@ func trick(dir := 0) -> void:
 		hero.squash(0.9, 1.12, 0.25)
 
 
-## Wurf-Bewegung des Fahrers: Ausholen (antizipieren) → Wurf → Nachschwingen. back = nach hinten fallen lassen.
-## Gibt die Zeit bis zum Loslassen zurück.
-func throw_anim(back := false) -> float:
-	if hero == null or hero.modifier == null:
-		return 0.0
-	var mod := hero.modifier
-	var tw := create_tween()
-	var wind := 0.14
-	if back:
-		tw.tween_property(mod, "arm_throw", 0.6, wind).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		tw.tween_property(mod, "arm_throw", -0.9, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	else:
-		tw.tween_property(mod, "arm_throw", -1.0, wind).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		tw.tween_property(mod, "arm_throw", 1.0, 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_property(mod, "arm_throw", 0.0, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_jolt_v.x += -1.2 if not back else 1.0
-	return wind + 0.06
+## Wurf mit Antizipation und Nachschwung: das Item erscheint in der Wurfhand, wird in einem Bogen über die Schulter
+## ausgeholt (Oberkörper dreht mit, Kart federt), schnellt nach vorn (bzw. bei back nach hinten über die Schulter),
+## verlässt die Hand im Rückgabe-Zeitpunkt (Sekunden) und der Arm schwingt nach, bevor er wieder ans Lenkrad greift.
+## Die Bewegung sitzt am ganzen Fahrer (nicht nur an Arm-Knochen) und ist so bei jedem Rig und jeder Kamera lesbar.
+func throw_anim(back := false, kind := "") -> float:
+	var wind := 0.17
+	var snap := 0.07
+	var k := kart_scale / 2.2
+	if kind != "":
+		_show_held(kind, back, wind, snap)
+	if hero != null:
+		var base_y := PI
+		var tw0 := hero.create_tween()
+		tw0.tween_property(hero, "rotation:y", base_y + (0.6 if back else -0.55), wind).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tw0.tween_property(hero, "rotation:y", base_y + (-0.7 if back else 0.4), snap).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw0.tween_property(hero, "rotation:y", base_y, 0.38).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		var p0 := hero.position
+		var tw1 := hero.create_tween()   # Ausholen: Fahrer richtet sich auf, beim Wurf nach vorn geworfen
+		tw1.tween_property(hero, "position", p0 + Vector3(0, 0.06, 0.05 if back else -0.04), wind).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tw1.tween_property(hero, "position", p0 + Vector3(0, -0.03, -0.06 if back else 0.07), snap)
+		tw1.tween_property(hero, "position", p0, 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		hero.squash(0.94, 1.08, wind + snap + 0.2)
+		if hero.modifier != null:
+			var mod := hero.modifier
+			var tw := create_tween()
+			if back:
+				tw.tween_property(mod, "arm_throw", 0.7, wind).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+				tw.tween_property(mod, "arm_throw", -1.0, snap).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			else:
+				tw.tween_property(mod, "arm_throw", -1.0, wind).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+				tw.tween_property(mod, "arm_throw", 1.0, snap).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			tw.tween_property(mod, "arm_throw", 0.0, 0.38).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_jolt_v.x += 1.0 if back else -1.4
+	# Rückstoß ins Fahrwerk, sobald das Item die Hand verlässt
+	var tw2 := create_tween()
+	tw2.tween_interval(wind + snap)
+	tw2.tween_callback(func() -> void: _jolt_v.x += -1.6 if back else 2.2)
+	return wind + snap
+
+
+var _held: Node3D
+
+
+## Das geworfene Item in der Hand: Bogen Griff → Ausholpunkt → Freigabe (quadratische Bézierkurve), dreht sich beim Wurf.
+func _show_held(kind: String, back: bool, wind: float, snap: float) -> void:
+	if is_instance_valid(_held):
+		_held.queue_free()
+	var k := kart_scale / 2.2
+	var m: Node3D
+	match kind:
+		"pie":
+			m = ItemModels.pie(0.4 * k)
+		"candy":
+			m = ItemModels.candy(Color("#ff5c9a"), 0.5 * k)
+		"homing":
+			m = ItemModels.cannonball(0.36 * k)
+		"anchor":
+			m = ItemModels.anchor(0.34 * k)
+		"honey":
+			m = ItemModels.honey_pot(0.42 * k)
+		_:
+			return
+	_held = m
+	body.add_child(m)
+	var grip := Vector3(0.5, 0.95, 0.0) * k
+	var top := (Vector3(0.45, 1.75, -0.4) if back else Vector3(0.6, 1.95, 0.75)) * k
+	var rel := (Vector3(0.25, 1.1, 1.15) if back else Vector3(0.4, 1.55, -0.95)) * k
+	m.position = grip
+	var full := m.scale
+	m.scale = full * 0.2
+	var held := m
+	var tw := m.create_tween()
+	tw.tween_property(m, "scale", full, wind * 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	var tw2 := m.create_tween()
+	tw2.tween_method(func(u: float) -> void:
+		if is_instance_valid(held):
+			held.position = grip.lerp(top, u).lerp(top.lerp(top + (top - grip) * 0.15, u), u)
+			held.rotation.x = (0.6 if back else -0.7) * u, 0.0, 1.0, wind).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw2.tween_method(func(u: float) -> void:
+		if is_instance_valid(held):
+			var c := top + Vector3(0, 0.35, 0) * k
+			held.position = top.lerp(c, u).lerp(c.lerp(rel, u), u)
+			held.rotation.x = (0.6 if back else -0.7) + (-5.0 if back else 6.0) * u, 0.0, 1.0, snap).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw2.tween_callback(held.queue_free)
 
 
 ## Sahne im Gesicht: ein weißer Klecks vorne am Kart, der nach ein paar Sekunden abtropft.
@@ -526,3 +593,5 @@ func set_shield(kind: String) -> void:
 	_shield.position = Vector3(0, 0.95, 0) * kart_scale / 2.2
 	_shield.scale = Vector3.ONE * 0.2
 	Juice.pop_in(_shield, 0.25)
+	if kind == "mirror":   # Spiegel kreisen ums Kart
+		_shield.create_tween().set_loops().tween_property(_shield, "rotation:y", TAU, 2.2).as_relative()

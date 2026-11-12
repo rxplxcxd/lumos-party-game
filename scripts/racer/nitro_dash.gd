@@ -1121,13 +1121,11 @@ func use_item(r: Racer, kind: String, from_net := false) -> void:
 					if o.hit(mk):
 						_net_hit(o, mk)
 						_maybe_closeup(o, r)
-					elif o.bubble_t <= 0.0 and o.invuln_t > 0.0:
-						pass
 		"pie", "candy", "homing", "anchor":
-			var release := r.visual.throw_anim(false)
+			var release := r.visual.throw_anim(false, kind)
 			_after(r, release, func() -> void: _launch_item(r, kind))
 		"honey":
-			var release2 := r.visual.throw_anim(true)
+			var release2 := r.visual.throw_anim(true, "honey")
 			_after(r, release2, func() -> void: _drop_honey(r))
 
 
@@ -1409,9 +1407,7 @@ func _thunder_strike(o: Racer, attacker: Racer) -> void:
 			_net_hit(o, "zap")
 			if o == focus:
 				_message("Bzzzt! Donnerwolke!", Color("#ffe14a"))
-				Juice.shake(0.25)
-		elif not o.remote and o.bubble_t <= 0.0 and o.invuln_t > 0.0:
-			pass)
+				Juice.shake(0.25))
 	tw.tween_interval(0.5)
 	tw.tween_property(cloud, "scale", Vector3.ONE * 0.05, 0.3)
 	tw.tween_callback(cloud.queue_free)
@@ -1425,11 +1421,11 @@ func _update_item_fx(_delta: float) -> void:
 		var core := r.get_node_or_null("SparkCore") as Node3D
 		if r.spark_t > 0.0:
 			if core == null:
-				core = ItemModels.spark_core(1.0)
+				core = ItemModels.spark_core(1.1)
 				core.name = "SparkCore"
 				r.add_child(core)
 			var a := race_time * 4.0 + r.idx
-			core.position = Vector3(cos(a) * 1.8, 2.2 + sin(a * 2.0) * 0.2, sin(a) * 1.8)
+			core.position = Vector3(cos(a) * 1.6, 1.7 + sin(a * 2.0) * 0.2, sin(a) * 1.6)
 			core.rotation.y = a * 2.0
 		elif core:
 			core.queue_free()
@@ -1462,7 +1458,8 @@ func _impact(r: Racer, p: Dictionary) -> void:
 			FX.confetti(pos + Vector3.UP * 1.2, 30)
 		"homing", "reflect":
 			FX.explosion(pos, 1.2)
-			Juice.hitstop(0.08)
+			if not Net.online:   # Treffer-Stopp hält die eigene Simulation an – online wäre das unfair
+				Juice.hitstop(0.08)
 			_maybe_closeup(r, owner)
 		"anchor":
 			Audio.sfx("metal_hit", pos)
@@ -1478,8 +1475,9 @@ func _impact(r: Racer, p: Dictionary) -> void:
 
 
 func _maybe_closeup(victim: Racer, attacker: Racer) -> void:
-	if _closeup_cd > 0.0 or CutsceneManager.active or not views.is_empty():
-		return   # im Split-Screen keine Zeitlupen-Nahaufnahme: jeder braucht seine Ansicht
+	if _closeup_cd > 0.0 or CutsceneManager.active or not views.is_empty() or Net.online:
+		return   # im Split-Screen keine Zeitlupen-Nahaufnahme (jeder braucht seine Ansicht), online auch nicht:
+		# Zeitlupe bremst nur die eigene Simulation – man verlöre Strecke und die Gefahren-Uhr liefe hinterher
 	if victim != focus and attacker != focus:
 		return
 	_closeup_cd = 6.0

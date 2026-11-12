@@ -539,7 +539,8 @@ func _apply_transform(delta: float) -> void:
 	var basis := fr.basis.rotated(up, -psi)
 	global_transform = Transform3D(basis, pos)
 	visual.update_visual(absf(v), steer_in, drift_dir, drift_level, boost_t > 0.0 or comet_t > 0.0, airborne, delta, slip, lat_acc, vh)
-	visual.visible = invuln_t <= 0.0 or comet_t > 0.0 or int(invuln_t * 14.0) % 2 == 0
+	# Blinken erst nach der Trefferreaktion: Dreher, Salto oder Überschlag bleiben voll sichtbar (lesbare Treffer)
+	visual.visible = invuln_t <= 0.0 or comet_t > 0.0 or stun_t > 0.0 or airborne or int(invuln_t * 14.0) % 2 == 0
 	visual.set_shield("bubble" if bubble_t > 0.0 else ("mirror" if mirror_t > 0.0 else ""))
 
 
@@ -595,6 +596,7 @@ func hit(kind: String) -> bool:
 			visual.spin_out(0.5, 0.6)
 		"honey":   # klebrig: halbes Tempo für kurze Zeit, kein Kontrollverlust
 			honey_t = 1.4
+			invuln_t = 0.7   # dieselbe Pfütze trifft nicht zweimal hintereinander
 			v *= 0.7
 			visual.wobble(0.2, 1.2)
 			visual.hero.modifier_pulse("frustrated", 1.4, 0.8)

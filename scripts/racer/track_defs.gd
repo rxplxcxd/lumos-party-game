@@ -332,7 +332,7 @@ static func _desert() -> Dictionary:
 
 ## Glühwald-Pfad – Nachtfahrt durch den Zauberwald: Leuchtpilze als Sprungfedern, hohler Baumtunnel, nasser Bachlauf.
 static func _glow() -> Dictionary:
-	var d := _base("glow_forest", "Glühwald-Pfad", "forest_night", "forest", 15.0)
+	var d := _base("glow_forest", "Glühwald-Pfad", "forest_dusk", "forest", 15.0)
 	var t := build_path(d, [
 		["T", "start"], ["S", 50], ["T", "b1"], ["S", 40], ["R", 30, 70], ["T", "i1"], ["S", 20], ["T", "bo1"],
 		["S", 30], ["L", 24, 70], ["R", 24, 70], ["T", "tun0"], ["S", 60], ["T", "tun1"], ["R", 18, 160],

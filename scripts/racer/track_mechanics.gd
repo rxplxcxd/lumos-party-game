@@ -15,6 +15,8 @@ var theme := ""
 var on_hit: Callable          # (Racer, String) → void
 var _hz_nodes: Array[Dictionary] = []
 var _rng := RandomNumberGenerator.new()
+var _falls_s: Array[float] = []
+var _prev_s: Dictionary = {}   # Racer-Index → s im letzten Takt (Durchfahrt durch den Wasserfall)
 
 
 func build(t: RaceTrack, d: Dictionary) -> void:
@@ -105,24 +107,35 @@ func _build_bounces() -> void:
 		match theme:
 			"forest":   # Leuchtpilz
 				var col: Color = [Color("#d9a8ff"), Color("#8fe8ff"), Color("#ffb3e6")][_rng.randi() % 3]
+				# Pilzhut (Halbkugel) auf dunklem Sockelring, helle Punkte – Leuchtkraft < 1, damit die Farbe erhalten bleibt
+				var base := MeshInstance3D.new()
+				var bm := CylinderMesh.new()
+				bm.top_radius = w * 0.5
+				bm.bottom_radius = w * 0.52
+				bm.height = 0.12
+				bm.material = _mat(col.darkened(0.55), 0.8)
+				base.mesh = bm
+				base.position.y = 0.06
+				n.add_child(base)
 				var capm := MeshInstance3D.new()
 				var sm := SphereMesh.new()
-				sm.radius = w * 0.5
-				sm.height = w * 0.5
-				sm.material = _mat(col, 0.4, 1.4)
+				sm.radius = w * 0.47
+				sm.height = w * 0.3
+				sm.is_hemisphere = true
+				sm.material = _mat(col, 0.45, 0.6)
 				capm.mesh = sm
-				capm.position.y = 0.15
-				capm.scale = Vector3(1, 0.5, 1)
+				capm.position.y = 0.1
 				n.add_child(capm)
-				for k in 5:
+				for k in 6:
 					var dot := MeshInstance3D.new()
 					var ds := SphereMesh.new()
-					ds.radius = 0.18
-					ds.height = 0.2
-					ds.material = _mat(Color(1, 1, 1), 0.5, 0.8)
+					ds.radius = w * 0.06
+					ds.height = w * 0.05
+					ds.material = _mat(Color("#fff8ee"), 0.5, 0.35)
 					dot.mesh = ds
-					var a := TAU * k / 5.0
-					dot.position = Vector3(cos(a) * w * 0.25, 0.38, sin(a) * w * 0.25)
+					var a := TAU * k / 6.0 + 0.4
+					var rr := w * (0.24 if k % 2 == 0 else 0.33)
+					dot.position = Vector3(cos(a) * rr, 0.1 + w * 0.3 * sqrt(maxf(1.0 - pow(rr / (w * 0.47), 2.0), 0.0)), sin(a) * rr)
 					n.add_child(dot)
 				var l := OmniLight3D.new()
 				l.light_color = col
@@ -261,6 +274,15 @@ func _build_hazards() -> void:
 
 ## Pro Physik-Schritt: Gefahren animieren und eigene Karts treffen.
 func tick(race_t: float, racers: Array) -> void:
+	if not _falls_s.is_empty():   # Durchfahrt durch den Wasserfall: Platsch und Gischt (rein optisch, für alle Karts)
+		for r in racers:
+			var rr := r as Racer
+			var ps := float(_prev_s.get(rr.idx, rr.s))
+			_prev_s[rr.idx] = rr.s
+			for fs in _falls_s:
+				if ps < fs and rr.s >= fs and rr.s - ps < 5.0:
+					FX.splash(rr.global_position + Vector3.UP * 1.2, 1.3)
+					Audio.sfx("splash", rr.global_position, -6.0 if rr.is_cpu else 0.0, 1.1)
 	for e in _hz_nodes:
 		var h: Dictionary = e.h
 		var ph := RaceTrack.hazard_phase(h, race_t)
@@ -359,19 +381,59 @@ func _build_tunnel(s0: float, s1: float) -> void:
 
 
 func _build_falls(s: float) -> void:
+	_falls_s.append(s)
 	var fr := _xf(s, 0.0, 0.0)
-	var side := fr.basis.x * -(track.width * 0.5 + 3.5)
-	var curtain := WorldKit.water(self, Vector2(12.0, 22.0), 0.0, Color(0.45, 0.72, 0.95), Color(0.9, 0.97, 1.0))
-	curtain.global_transform = Transform3D(fr.basis * Basis(Vector3.RIGHT, PI * 0.5) * Basis(Vector3.FORWARD, PI * 0.5), fr.origin + side + Vector3.UP * 11.0)
-	var cliff := WorldKit.box(self, Vector3(4, 24, 18), Vector3.ZERO, Color("#5c6a70"), false)
-	cliff.global_transform = Transform3D(fr.basis, fr.origin + side * 1.45 + Vector3.UP * 11.0)
-	var mist := FX.emitter({"amount": 80, "life": 2.4, "one_shot": false, "explosive": 0.0, "spread": 70.0, "dir": fr.basis.x, "vel_min": 1.0,
-		"vel_max": 3.0, "gravity": Vector3(0, -0.6, 0), "size": 0.9, "color": Color(1, 1, 1, 0.35), "box": Vector3(3, 2, 12)})
-	add_child(mist)
-	mist.global_position = fr.origin + side * 0.8 + Vector3.UP * 1.2
-	mist.emitting = true
+	var hw := track.width * 0.5
+	var left := -fr.basis.x
+	var rock := Color("#6a767c")
+	# Felswand links, Überhang quer über die Fahrbahn, Stützfels rechts – daraus stürzt der Wasserfall auf die Straße
+	var cliff := WorldKit.box(self, Vector3(5, 26, 22), Vector3.ZERO, rock, false)
+	cliff.global_transform = Transform3D(fr.basis, fr.origin + left * (hw + 4.5) + Vector3.UP * 12.0)
+	var ledge := WorldKit.box(self, Vector3(track.width + 9.0, 2.2, 5.0), Vector3.ZERO, rock.darkened(0.1), false)
+	ledge.global_transform = Transform3D(fr.basis, fr.origin + left * 1.5 + Vector3.UP * 8.6)
+	var pillar := WorldKit.box(self, Vector3(3.2, 9.5, 4.2), Vector3.ZERO, rock.lightened(0.08), false)
+	pillar.global_transform = Transform3D(fr.basis, fr.origin - left * (hw + 2.2) + Vector3.UP * 4.0)
+	for k in 3:   # Moos und Büsche auf dem Überhang
+		var bp := fr.origin + fr.basis.x * lerpf(-hw, hw, k / 2.0) + Vector3.UP * 9.8
+		WorldKit.place(self, "nat/bush", bp, _rng.randf() * 360.0, 4.5, false, false)
+	# Vorhang quer über der Fahrbahn (zum Durchfahren) und der hohe Fall an der Felswand
+	# durchscheinend (der Wasser-Shader ist deckend – dahinter muss man Karts und Items sehen können)
+	var across := MeshInstance3D.new()
+	var qm := QuadMesh.new()
+	qm.size = Vector2(track.width + 2.0, 7.6)
+	across.mesh = qm
+	across.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var cm := StandardMaterial3D.new()
+	cm.albedo_color = Color(0.78, 0.92, 1.0, 0.42)
+	cm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	cm.cull_mode = BaseMaterial3D.CULL_DISABLED
+	cm.roughness = 0.1
+	cm.emission_enabled = true
+	cm.emission = Color(0.55, 0.75, 0.95)
+	cm.emission_energy_multiplier = 0.35
+	var nt := NoiseTexture2D.new()
+	nt.width = 64
+	nt.height = 128
+	nt.seamless = true
+	var fn := FastNoiseLite.new()
+	fn.frequency = 0.06
+	nt.noise = fn
+	cm.albedo_texture = nt
+	cm.uv1_scale = Vector3(7.0, 0.7, 1.0)   # senkrechte Schlieren
+	across.material_override = cm
+	add_child(across)
+	across.global_transform = Transform3D(fr.basis, fr.origin + Vector3.UP * 3.8)
+	across.create_tween().set_loops().tween_property(cm, "uv1_offset:y", -1.0, 0.9).as_relative()
+	var side := WorldKit.water(self, Vector2(10.0, 22.0), 0.0, Color(0.45, 0.72, 0.95), Color(0.9, 0.97, 1.0))
+	side.global_transform = Transform3D(fr.basis * Basis(Vector3.RIGHT, PI * 0.5) * Basis(Vector3.FORWARD, PI * 0.5), fr.origin + left * (hw + 1.8) + Vector3.UP * 11.0)
+	for sd: float in [-1.0, 1.0]:   # Gischt am Boden vor und hinter dem Vorhang
+		var mist := FX.emitter({"amount": 60, "life": 1.8, "one_shot": false, "explosive": 0.0, "spread": 80.0, "dir": Vector3.UP, "vel_min": 1.0,
+			"vel_max": 3.0, "gravity": Vector3(0, -1.2, 0), "size": 0.9, "color": Color(1, 1, 1, 0.3), "box": Vector3(hw, 0.5, 1.5)})
+		add_child(mist)
+		mist.global_transform = Transform3D(fr.basis, fr.origin + fr.basis.z * sd * 1.6 + Vector3.UP * 0.6)
+		mist.emitting = true
 	var pool := WorldKit.water(self, Vector2(10.0, 22.0), 0.0, Color(0.2, 0.45, 0.7), Color(0.6, 0.88, 1.0))
-	pool.global_position = fr.origin + side * 1.2 + Vector3.UP * -0.2
+	pool.global_position = fr.origin + left * (hw + 3.5) + Vector3.UP * -0.2
 
 
 func _build_puddles(s0: float, s1: float) -> void:

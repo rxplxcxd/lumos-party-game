@@ -224,40 +224,73 @@ static func thunder_cloud(scale := 1.0) -> Node3D:
 	return n
 
 
-## Kometenritt: glühender Stern vor dem Kart (Rammbock) – sichtbar für alle.
+## Kometenritt: glühender Stern vor dem Kart (Rammbock) – sichtbar für alle. Räumliche Zacken (von jeder Seite ein
+## Stern), schwache Aura und nach hinten gezogene Flammenzungen. Leuchtkraft ≤ 1.2, damit die Farbe nicht weiß ausbrennt.
 static func comet(scale := 1.0) -> Node3D:
 	var n := Node3D.new()
-	var glow := _m(Color("#ffd23f"), 0.3, 0.0, 2.2)
-	var pm := PrismMesh.new()
-	pm.size = Vector3(0.9, 0.9, 0.35)
-	pm.material = glow
+	var core := _m(Color("#ffc21a"), 0.3, 0.0, 1.1)
+	var tip := _m(Color("#ff8a1f"), 0.35, 0.0, 1.0)
+	_sphere(n, 0.55, Vector3.ZERO, core, Vector3.ONE, 14)
+	var cone := CylinderMesh.new()
+	cone.top_radius = 0.0
+	cone.bottom_radius = 0.24
+	cone.height = 0.7
+	cone.radial_segments = 8
+	cone.material = tip
 	for k in 5:
+		var a := TAU * k / 5.0
 		var spike := MeshInstance3D.new()
-		spike.mesh = pm
-		spike.rotation.z = TAU * k / 5.0
-		spike.position = Vector3(sin(TAU * k / 5.0), cos(TAU * k / 5.0), 0) * -0.45
+		spike.mesh = cone
+		spike.rotation.z = -a
+		spike.position = Vector3(sin(a), cos(a), 0) * 0.72
+		spike.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		n.add_child(spike)
-	_sphere(n, 0.5, Vector3.ZERO, glow, Vector3(1, 1, 0.6), 12)
-	var aura := _m(Color(1.0, 0.8, 0.3, 0.28), 0.5, 0.0, 1.5)
-	_sphere(n, 1.4, Vector3.ZERO, aura, Vector3(1, 1, 1.6), 14)
+	var aura := _m(Color(1.0, 0.75, 0.3, 0.18), 0.5, 0.0, 0.8)
+	_sphere(n, 1.05, Vector3.ZERO, aura, Vector3(1, 1, 1.25), 14).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var flame := _m(Color(1.0, 0.45, 0.12, 0.38), 0.5, 0.0, 1.0)
+	for e in [[Vector3(0, 0.25, 1.3), 0.42], [Vector3(-0.35, -0.15, 1.15), 0.3], [Vector3(0.35, -0.15, 1.15), 0.3]]:
+		var fm := CylinderMesh.new()
+		fm.top_radius = float(e[1])
+		fm.bottom_radius = 0.0
+		fm.height = 2.2
+		fm.radial_segments = 8
+		fm.material = flame
+		var f := MeshInstance3D.new()
+		f.mesh = fm
+		f.rotation.x = -PI * 0.5   # Spitze zeigt nach hinten (+Z)
+		f.position = e[0] + Vector3(0, 0, 0.4)
+		f.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		n.add_child(f)
 	n.scale = Vector3.ONE * scale
 	return n
 
 
-## Funkenkern: kleiner, leuchtender Kristall, der um das Kart kreist.
+## Funkenkern: kleiner, blau leuchtender Kristall mit Energiering, der um das Kart kreist.
 static func spark_core(scale := 1.0) -> Node3D:
 	var n := Node3D.new()
 	var gem := MeshInstance3D.new()
 	var sm := SphereMesh.new()
-	sm.radius = 0.32
-	sm.height = 0.64
-	sm.radial_segments = 4
+	sm.radius = 0.2
+	sm.height = 0.4
+	sm.radial_segments = 6
 	sm.rings = 2
-	sm.material = _m(Color("#7fd6ff"), 0.15, 0.2, 2.0)
+	sm.material = _m(Color("#3fb8ff"), 0.15, 0.2, 1.0)
 	sm.set_meta("gfx_tuned", true)
 	gem.mesh = sm
-	gem.scale = Vector3(1, 1.5, 1)
+	gem.scale = Vector3(1, 1.6, 1)
+	gem.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	n.add_child(gem)
+	var ring := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 0.3
+	tm.outer_radius = 0.35
+	tm.rings = 16
+	tm.ring_segments = 4
+	tm.material = _m(Color(0.75, 0.95, 1.0, 0.7), 0.2, 0.0, 1.2)
+	ring.mesh = tm
+	ring.rotation.x = 1.1
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	n.add_child(ring)
 	n.scale = Vector3.ONE * scale
 	return n
 
@@ -268,20 +301,49 @@ static func shield(kind: String, kart_scale := 2.2) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	if kind == "mirror":
-		var cm := CylinderMesh.new()
-		cm.top_radius = 2.0 * k
-		cm.bottom_radius = 2.0 * k
-		cm.height = 1.9 * k
-		cm.radial_segments = 6
-		cm.rings = 1
-		cm.cap_top = false
-		cm.cap_bottom = false
-		var m := _m(Color(0.75, 0.85, 1.0, 0.42), 0.04, 1.0)
-		m.rim_enabled = true
-		m.rim = 1.0
-		cm.material = m
-		cm.set_meta("gfx_tuned", true)
-		mi.mesh = cm
+		# Spiegelschild: sechs schwebende Sechseck-Spiegel auf einem Leuchtring (kreisen ums Kart, siehe KartVisual)
+		var ring := TorusMesh.new()
+		ring.inner_radius = 1.86 * k
+		ring.outer_radius = 1.94 * k
+		ring.rings = 24
+		ring.ring_segments = 6
+		var rm := _m(Color(0.6, 0.85, 1.0, 0.55), 0.2, 0.0, 1.2)
+		ring.material = rm
+		ring.set_meta("gfx_tuned", true)
+		mi.mesh = ring
+		var pm := _m(Color(0.86, 0.94, 1.0), 0.1, 0.3, 0.45)
+		pm.rim_enabled = true
+		pm.rim = 0.8
+		pm.emission = Color(0.55, 0.8, 1.0)
+		var fm := _m(Color(0.95, 0.8, 0.35), 0.3, 0.8)
+		for a in 6:
+			var ang := TAU * a / 6.0
+			var pivot := Node3D.new()
+			pivot.rotation.y = ang
+			mi.add_child(pivot)
+			var plate := MeshInstance3D.new()
+			var hm := CylinderMesh.new()
+			hm.top_radius = 0.44 * k
+			hm.bottom_radius = 0.44 * k
+			hm.height = 0.05 * k
+			hm.radial_segments = 6
+			hm.rings = 1
+			hm.material = pm
+			plate.mesh = hm
+			plate.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			plate.position = Vector3(0, 0.22 * k * (1.0 if a % 2 == 0 else -1.0), -1.9 * k)
+			plate.rotation.x = PI * 0.5   # Spiegelfläche zeigt nach außen
+			pivot.add_child(plate)
+			var frame := MeshInstance3D.new()   # goldener Rand
+			var fr := TorusMesh.new()
+			fr.inner_radius = 0.4 * k
+			fr.outer_radius = 0.47 * k
+			fr.rings = 6
+			fr.ring_segments = 4
+			fr.material = fm
+			frame.mesh = fr
+			frame.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			plate.add_child(frame)
 	else:
 		var sm := SphereMesh.new()
 		sm.radius = 2.1 * k
