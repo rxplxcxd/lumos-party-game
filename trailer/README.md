@@ -2,8 +2,13 @@
 
 Eigenständige Produktionsumgebung für den Trailer. Sie ist vollständig vom Spiel getrennt:
 
-* Alles liegt in diesem Ordner: Szene (`Trailer.tscn`), Regie-Skript (`trailer.gd`), Render-Skript (`render.sh`),
-  Video-Prüfung (`qa.py`) und Trennungs-Prüfung (`check_isolation.sh`).
+* Alles liegt in diesem Ordner: Szene (`Trailer.tscn`), Regie-Skript (`trailer.gd`), eingefrorene Rennstrecke
+  (`trailer_track.gd`), Render-Skript (`render.sh`), Video-Prüfung (`qa.py`) und Trennungs-Prüfung
+  (`check_isolation.sh`).
+* Die Nitro-Dash-Szene fährt auf einer eigenen Kopie des Lumos-Rings im Stand von Spiel 1.3.0
+  (`trailer_track.gd`). Das Spiel hat seine Strecken in 1.4.0 neu entworfen. Die Kamerafahrten des Trailers sind
+  auf den alten Verlauf choreografiert und bleiben so gültig (Bildvergleich gegen 1.3.0: gleiche Einstellungen).
+  Die Karts selbst zeigen die aktuelle Spieloptik.
 * Das Spiel kennt den Ordner nicht. Kein Menüpunkt, keine Szene und kein Skript des Spiels verweist hierher.
   Der Ordner ist auch nicht im Web- oder Linux-Export enthalten (`tools/export_list.gd` exportiert nur
   `autoload/`, `scripts/`, `scenes/` und die Asset-Ordner).
