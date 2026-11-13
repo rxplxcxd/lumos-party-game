@@ -2,8 +2,8 @@
 
 Eigenständige Produktionsumgebung für den Trailer. Sie ist vollständig vom Spiel getrennt:
 
-* Alles liegt in diesem Ordner: Szene (`Trailer.tscn`), Regie-Skript (`trailer.gd`), eingefrorene Rennstrecke (`trailer_track.gd`), Render-Skript (`render.sh`), Video-Prüfung (`qa.py`) und Trennungs-Prüfung
-  (`check_isolation.sh`).
+* Alles liegt in diesem Ordner: Szene (`Trailer.tscn`), Regie-Skript (`trailer.gd`), eingefrorene Rennstrecke (`trailer_track.gd`), Render-Skript (`render.sh`), Video-Prüfung (`qa.py`), Durchdringungs-Prüfung
+  (`ClearanceProbe.tscn`) und Trennungs-Prüfung (`check_isolation.sh`).
 * Die Nitro-Dash-Szene fährt auf einer eigenen Kopie des Lumos-Rings im Stand von Spiel 1.3.0
   (`trailer_track.gd`). Das Spiel hat seine Strecken in 1.4.0 neu entworfen. Die Kamerafahrten des Trailers sind
   auf den alten Verlauf choreografiert und bleiben so gültig (Bildvergleich gegen 1.3.0: gleiche Einstellungen).
@@ -21,7 +21,8 @@ Eigenständige Produktionsumgebung für den Trailer. Sie ist vollständig vom Sp
   auf dieselben Dateien). Die `project.godot` des Spiels bleibt unverändert.
 
 `bash trailer/check_isolation.sh` prüft die Trennung automatisch, auch in der CI: keine Verweise aus dem Spiel,
-nicht im Export, Trailer läuft fehlerfrei.
+nicht im Export, die Trailer-Skripte sind fehlerfrei (eigene Skriptprüfung `Check.tscn -- --check-dirs=res://trailer`;
+die Prüfung des Spiels schaut seit 1.5.2 nicht mehr in diesen Ordner), Trailer läuft fehlerfrei.
 
 ## Video rendern
 
@@ -43,7 +44,10 @@ einer echten GPU geht es deutlich schneller.
 
 Ansehen im Fenster (Esc beendet): `godot --path . res://trailer/Trailer.tscn`. Weitere Optionen nach `--`:
 
-* `--trailer-from=X` startet ab Sekunde X (Vorschau, Ereignisse davor werden sofort ausgeführt)
+* `--trailer-from=X` startet ab Sekunde X (Vorschau, Ereignisse davor werden sofort ausgeführt – länger laufende
+  Effekte von davor, etwa Sternchen, starten dann erst hier)
+* `--trailer-to=Y` beendet bei Sekunde Y (zusammen mit `--trailer-from`: einzelner Beat zur Sichtprüfung, als Video
+  mit `--write-movie`)
 * `--trailer-msaa=0..3`: Kantenglättung (0 aus, 1 = 2×, 2 = 4×, 3 = 8×)
 * `--trailer-shadow=N`: Schattenauflösung
 * `--trailer-marks=datei.json`: Schnittliste schreiben
@@ -61,6 +65,31 @@ Bild für Bild (Analyse in 192×108) und für den Ton in 50-ms-Fenstern:
 * **Ton:** Aussetzer (kurzes Wegbrechen mitten in lauter Musik), Stille, Übersteuerung, True Peak und Lautheit.
   Gewollt ist nur die Pause vor dem BOOM (65,0–65,4 s).
 
+## Durchdringungs-Prüfung (`ClearanceProbe.tscn`)
+
+```bash
+./godot --headless --fixed-fps 60 --path . res://trailer/ClearanceProbe.tscn -- --detail
+```
+
+Spielt den Trailer ohne Grafik ab und misst in jedem Bild für alle sichtbaren Figurenpaare (< 2,5 m) den kleinsten
+Abstand der festen Körperteile (Köpfe mit Helm/Kapuze, Rümpfe; `LumosActor.clearance`). Ausgabe: jede Zeitspanne
+unter −30 mm (Toleranz der Ellipsoid-Näherung) mit Paar, tiefstem Wert und – mit `--detail` – dem engsten Teilpaar
+(Art, Mitte, Radien). Ende: `CLEARANCE OK` / `CLEARANCE FEHLER: n Spannen` und der kleinste Abstand im ganzen
+Trailer mit Zeit und Paar. `--watch=von-bis` zeigt je Bild alle nahen Paare mit Kopflage relativ zur Wurzel,
+Ausweichen, Haltungszusätzen und dem Abstand der Hände (prüft, ob Berührungen wirklich ankommen).
+
+Stand 1.5.2: **CLEARANCE OK, kleinster Abstand +23 mm** (55,98 s, Held/Magierin beim An-die-Hand-nehmen) – vorher
+20 Spannen bis −392 mm. Der Trailer ist bildgenau wiederholbar (eigener und globaler Zufall gesetzt); zwei Läufe
+liefern identische Werte.
+
+Behobene Stellen (Inszenierung, je eine Kopfbreite Luft – die Köpfe der Figuren sind breiter als ihre Arme lang):
+Abklatschen (35 s, Treffpunkt knapp über Schulterhöhe) · Auflaufen im Wald (37–40 s) · Schulterklopfen beim keuchenden Barbaren (45 s, Platz neben ihm, Weg *um* die
+Magierin herum) · An-die-Hand-nehmen an der Riesenblume (55–57 s, sanfteres Ankommen, sie läuft neben ihm statt
+dahinter – die Hände bleiben zusammen) · Laufwege am Strand (getrennte Spuren) · Knuff im Laufen (61 s, an den Oberarm statt an die Schulter) · Boss (64 s) ·
+Sumo-Hintergrund (74 s, Kräftemessen Handfläche an Handfläche statt Griff an die Schultern) · Sumo-Stoß (Anlauf
+endet vor dem Gegner, dann setzt er nach) · Lagerfeuer (Sitzplätze eine Kopfbreite auseinander, der Träumer nickt
+ein und sinkt zur Seite). Dazu im Framework: vorausschauendes Ausweichen bei schneller Annäherung.
+
 ## Aufbau des Trailers (97 s)
 
 | Zeit | Akt | Inhalt |
@@ -70,7 +99,7 @@ Bild für Bild (Analyse in 192×108) und für den Ton in 50-ms-Fenstern:
 | 35–58 s | 3 · Gemeinsam unterwegs | Abklatschen (die Hände treffen sich) · Schmetterling auf der Nase, die Magierin läuft auf (Hände im Rücken) · der Barbar kommt keuchend ins Bild, Hände auf den Knien, Schulterklopfen · der Träumer auf dem Stein bemerkt es zu spät · Weltenwechsel hinter dem Baumstamm (Wald → Wiese) · Riesenblume im Gegenschuss, der Held nimmt die Hand der Magierin und zieht sie mit · Kamerafahrt hinter dem Wasserfall-Tor (Wiese → Bucht) |
 | 58–65 s | 4 · Das Abenteuer eskaliert | Bucht im Abendlicht, Sand wird zu Vulkangestein, Knuffen im Laufen · der Boss erhebt sich: die Magierin klammert sich an den Helden, der Träumer duckt sich hinter den Barbaren · Stille … BOOM |
 | 65–84,5 s | Montage | auf dem Takt (138 BPM): das echte Spielbrett „Wuschel-Wiesen“ aus der Luft, Würfelblock, Sprung dagegen (2 Takte) · Zug über vier Felder, +3 Münzen · der Stern schwebt herab · Minispiel Sumo-Ring (Schubser ins Wasser) · Zielsprint · Boss-Ausweichen · Nitro Dash auf dem Lumos-Ring (Start, Drift, Überholen, Ziel) |
-| 84,5–97 s | 5 · Wieder zusammen | Alle nebeneinander auf der Bank am Feuer: Hände wärmen, der Träumer schläft an der Schulter, die Magierin zeigt in die Sterne · Nahaufnahme: Blick zum Keks, Bettelblick, der Barbar reicht ihn hinüber, die Hand nimmt ihn, beide lachen leise · Funke steigt auf, Blick zur aufsteigenden Kamera, Logo, Slogans |
+| 84,5–97 s | 5 · Wieder zusammen | Alle nebeneinander auf der Bank am Feuer: Hände wärmen, der Träumer nickt ein und sinkt zur Seite, die Magierin zeigt in die Sterne · Nahaufnahme: Blick zum Keks, Bettelblick, der Barbar reicht ihn hinüber, die Hand nimmt ihn, beide lachen leise · Funke steigt auf, Blick zur aufsteigenden Kamera, Logo, Slogans |
 
 Kein Dialog. Musik: Glühwald-Thema (Akte 1–4 und 5), Hurry-Up-Thema (Montage), dazu Effekte aus der
 Sound-Bibliothek des Spiels.
@@ -84,7 +113,8 @@ Licht, Brennweite und Staffelung im Raum.
 
 * **Figuren = Character Framework des Spiels** (`scripts/actor/`, siehe `docs/CHARACTER_FRAMEWORK.md`). Seit 1.5.2
   sind die Darsteller volle `LumosActor` (Gefühlszustand, Mikroleben, Gewicht, Zubehör-Federn, Sozialverhalten) mit
-  `scripted = true`, `autonomy = 0.35` und festen Zufallsstartwerten (`cfg.seed`) – jeder Render ist gleich.
+  `scripted = true`, `autonomy = 0.35` und festen Zufallsstartwerten (`cfg.seed`, dazu `seed()` für den globalen
+  Zufall von Effekten und Kamerawackeln) – jeder Render ist gleich.
   Weitere Einstellungen: `ground_mask = 0` (Boden = Standhöhe), `lod = false`, `attention = 0.42`.
   * Regie-Schicht je Bild: `script_look()` (ungeglättetes Ziel: die Augen springen, der Kopf folgt), `script_hand()`
     (Hände mit Handhaltung), `script_laugh()` (Lach-Hüllkurve). `expr()` setzt Stimmungen (`feel`), `breath()` die

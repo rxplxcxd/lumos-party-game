@@ -115,12 +115,23 @@ var _tgt := {}
 var _tau := 0.1
 var _m := {}              # Vermessung: eye_c (Array), eye_r (Vector2), mouth (Vector3), u (Kopfbreite), grid …
 var _im: ImmediateMesh
+var _cur_n := Vector3.INF       # zuletzt gesetzte Normale der offenen Fläche
+var _nv := 0                    # Punkte in der offenen Fläche
+var _u := 1.0                   # Kopfbreite (aus _m.u, beim Zeichnen gesetzt)
+var _tilt := 0.0                # Lidneigung (aus _cur.tilt, beim Zeichnen gesetzt)
+var draws := 0                  # Neuzeichnungen (Messung: wie ereignisgesteuert das Gesicht arbeitet)
+var _inp := PackedFloat32Array()  # Eingänge des Zeichnens in diesem Bild …
+var _drawn := PackedFloat32Array()  # … und beim letzten Neuzeichnen
+var _drawn_mask := -1             # Schaltpunkte beim letzten Neuzeichnen
+## Sichtbarkeitsschwelle des Neuzeichnens in Bildpunkten (0 = bei jeder Änderung, wie vor 1.5.2 – Referenz für den
+## Bildvergleich im Performance-Labor).
+static var vis_px := 0.25
+static var expr_rev := 0          ## Zähler für Änderungen an Ausdrücken zur Laufzeit
 var _mat := {}
 var _blink_t := 2.0
 var _blink := 0.0
 var _flash := 0.0
 var _t := 0.0
-var _last_sig := 0.0
 var _lod_acc := 0.0
 var paused := false              # LOD: außerhalb des Bildes nicht aktualisieren
 var blinks := 0                  # Zähler (Tests)
@@ -187,7 +198,7 @@ func setup(rig: CharacterRig) -> bool:
 			m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		_mat[e[0]] = m
 	set_expression("neutral", 0.0)
-	_blink_t = randf_range(1.0, 4.0)
+	_blink_t = rng.randf_range(1.0, 4.0)   # eigener, geseedeter Zufall: bildgenau wiederholbar
 	return true
 
 
@@ -492,6 +503,7 @@ func set_expr(name: String, secs := 0.16) -> void:
 
 func add_expression(name: String, params: Dictionary) -> void:
 	expressions[name] = params
+	expr_rev += 1   # zwischengespeicherte Mischwerte (LumosEmotion) neu aufbauen
 
 
 func param(key: String) -> float:
@@ -511,6 +523,8 @@ func metrics() -> Dictionary:
 func _process(delta: float) -> void:
 	if _im == null or paused:
 		return
+	var prof := LumosProf.on
+	var p0 := Time.get_ticks_usec() if prof else 0
 	delta *= dt_scale
 	_t += delta
 	var f := 1.0 - exp(-delta / _tau)
@@ -545,27 +559,94 @@ func _process(delta: float) -> void:
 		_syl = _syl.lerp(_syl_to, 1.0 - exp(-delta / 0.045))
 	else:
 		_syl = _syl.lerp(Vector3(0, 0, 1), 1.0 - exp(-delta / 0.06))
-	# nur neu zeichnen, wenn sich etwas sichtbar ändert
-	var sig := bl * 7.0 + laugh * 3.1 + sin(laugh_phase) * laugh + chew * sin(_t * 9.0) + gaze.x * 1.7 + gaze.y * 2.3 + _flash * 5.0 + feature_scale \
-		+ _syl.x * 4.1 + _syl.y * 1.9 + (_act_t * 13.0 if _act != "" else 0.0) + (sin(_t * 40.0) * float(_cur.tremble) if float(_cur.tremble) > 0.01 else 0.0) \
-		+ (_t * 3.0 if float(_cur.tear) > 0.05 else 0.0)
+	# Neu zeichnen nur bei sichtbarer Änderung: obere Schranke der Verschiebung eines Punkts der Gesichtszüge seit
+	# dem zuletzt gezeichneten Stand (in Kopfbreiten je Einheit: Blick 0,035, jeder andere Eingang 0,35 – größer als
+	# jeder Faktor in _draw) × Bildgröße des Kopfs in Pixeln. Bleibt sie unter vis_px (¼ Pixel), ist der Unterschied
+	# nicht sichtbar und das Gesicht bleibt stehen. Lachen, Kauen und Zittern gehen mit ihren Schwingungen ein (ein
+	# ausklingendes Lachen hört auf zu zeichnen, sobald es unsichtbar wird); Mundaktionen und Tränen (Wellen, fallende
+	# Tropfen) zeichnen jedes Bild. Ohne Kamera: bei jeder Änderung.
+	var trem := float(_cur.tremble)
+	var n_in := KEYS.size() + 15
+	if _inp.size() != n_in:
+		_inp.resize(n_in)
+		_drawn.resize(n_in)
+		_drawn.fill(INF)
+	_inp[0] = gaze.x
+	_inp[1] = gaze.y
+	_inp[2] = bl
+	_inp[3] = laugh
+	_inp[4] = _flash
+	_inp[5] = feature_scale
+	_inp[6] = _syl.x * talk
+	_inp[7] = _syl.y * talk
+	_inp[8] = (_syl.z - 1.0) * talk
+	_inp[9] = sin(laugh_phase) * laugh
+	_inp[10] = chew
+	_inp[11] = sin(_t * 9.0) * chew
+	_inp[12] = sin(_t * 38.0) * trem * 0.0115   # Zittern der Augen (0,004 Kopfbreiten) …
+	_inp[13] = sin(_t * 33.0) * trem * 0.08     # … der Mundwinkel …
+	_inp[14] = sin(_t * 41.0) * trem * 0.0145   # … und der Unterlippe
 	for ki in KEYS.size():
-		sig += float(_cur[KEYS[ki]]) * (ki + 1.3)
+		_inp[15 + ki] = float(_cur[KEYS[ki]])
+	var dmax := maxf(absf(_inp[0] - _drawn[0]), absf(_inp[1] - _drawn[1])) * 0.1
+	for i in range(2, n_in):
+		dmax = maxf(dmax, absf(_inp[i] - _drawn[i]))
+	var anim := _act != "" or float(_cur.tear) > 0.05
+	# Schaltpunkte in _draw (Element erscheint/verschwindet sprunghaft): jeder Wechsel zeichnet sofort neu
+	var mask := _mask(bl, trem)
 	_lod_acc += delta
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 	var period := 0.0
+	var head_px := INF
 	if cam:
-		var dist := cam.global_position.distance_to(global_position) / maxf(float(_m.u) * global_basis.get_scale().x, 0.01)
+		var hw := maxf(float(_m.u) * global_basis.get_scale().x, 0.01)
+		var dist := cam.global_position.distance_to(global_position) / hw
 		period = 0.0 if dist < 14.0 else (0.05 if dist < 40.0 else 0.2)   # nah: jedes Bild · mittel: 20 Hz · fern: 5 Hz
-	if absf(sig - _last_sig) > 0.0005 and _lod_acc >= period:
+		var vh := get_viewport().get_visible_rect().size.y
+		if cam.projection == Camera3D.PROJECTION_ORTHOGONAL:
+			head_px = vh * hw / maxf(cam.size, 0.001)
+		else:
+			head_px = vh / (2.0 * tan(deg_to_rad(cam.fov) * 0.5) * maxf(dist, 0.01))
+	var visible_change := mask != _drawn_mask or (dmax > 0.0 and (dmax * 0.35 * head_px > vis_px or vis_px <= 0.0))
+	if (anim or visible_change) and _lod_acc >= period:
 		_lod_acc = 0.0
-		_last_sig = sig
+		_drawn_mask = mask
+		var sw := _drawn
+		_drawn = _inp
+		_inp = sw
+		var q := Time.get_ticks_usec() if prof else 0
 		_draw(bl)
+		if prof: LumosProf.add(&"face.draw", q)
+	if prof: LumosProf.add(&"face", p0)
+
+
+## Schaltpunkte von _draw als Bitmaske (gleiche Formeln wie dort): weiße Augen, Glanzpunkte, doppelter Glanz,
+## Wangenröte, Backen, Zähne/Zunge, Grimasse, Schmolllippe.
+func _mask(bl: float, trem: float) -> int:
+	var scl := maxf(float(_cur.sclera), float(_cur.cross) * 0.85)
+	var lid := clampf(maxf(float(_cur.lid), bl), 0.0, 1.0)
+	var squint := clampf(float(_cur.squint) + laugh * 0.4, 0.0, 1.0)
+	var pup := clampf(float(_cur.pupil), 0.3, 1.6)
+	var cheek := float(_cur.cheek)
+	var open := clampf(float(_cur.open) + laugh * (0.2 + 0.3 * (0.5 + 0.5 * sin(laugh_phase))) + _syl.x * talk * 0.55, 0.0, 1.0)
+	var press := float(_cur.press)
+	if cheek > 0.05:
+		press = maxf(press, cheek)
+	open *= 1.0 - press
+	if chew > 0.0:
+		open = maxf(open * (1.0 - chew), 0.0)
+	var curve := float(_cur.curve) + sin(_t * 33.0) * 0.08 * trem
+	return int(scl > 0.02) | int(lid < 0.5 and squint < 0.55) << 1 | int(pup > 1.15 and scl > 0.3) << 2 \
+		| int(float(_cur.blush) + laugh * 0.3 > 0.03) << 3 | int(cheek > 0.05) << 4 | int(open > 0.2) << 5 \
+		| int(curve < 0.0 and open > 0.05) << 6 | int(float(_cur.pout) > 0.1) << 7
 
 
 func _draw(bl: float) -> void:
 	_im.clear_surfaces()
+	draws += 1
 	var u: float = _m.u
+	_u = u
+	_tilt = float(_cur.tilt)
 	var fs := feature_scale
 	var eye_c: Array = _m.eye_c
 	var er: Vector2 = _m.eye_r * 1.12 * fs
@@ -582,7 +663,7 @@ func _draw(bl: float) -> void:
 	var gz := Vector2(gaze.x * 0.012, gaze.y * 0.008) * u * (1.0 - scl)   # mit Lederhaut wandert nur die Pupille
 	# --- Augen ---
 	var eyes: Array = []
-	_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.white if scl > 0.02 else _mat.eye)
+	_sb(_mat.white if scl > 0.02 else _mat.eye)
 	for sd in 2:
 		var c: Vector3 = eye_c[sd]
 		var cx := c.x + gz.x + shake
@@ -599,11 +680,11 @@ func _draw(bl: float) -> void:
 			var b0 := _eye_bot(x0, b, ld, squint, t0, u)
 			var b1 := _eye_bot(x1, b, ld, squint, t1, u)
 			_quad_s(pe, cx + x0 * a, cy + t0, cx + x1 * a, cy + t1, cx + x1 * a, cy + b1, cx + x0 * a, cy + b0, 0.004)
-	_im.surface_end()
+	_se()
 	var hl_c := []   # Mittelpunkte der Glanzpunkte
 	if scl > 0.02:
 		# Pupille im weißen Auge: klein vor Schreck, groß beim Bettelblick, wandert mit dem Blick und beim Schielen zur Nase
-		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.eye)
+		_sb(_mat.eye)
 		for sd in 2:
 			var e: Array = eyes[sd]
 			var ecx: float = e[0]
@@ -630,14 +711,14 @@ func _draw(bl: float) -> void:
 				var bt1 := maxf(py - pb * sqrt(maxf(1.0 - q1 * q1, 0.0)), ecy + _eye_bot(xe1, b, eld, squint, et1, u))
 				if tp0 > bt0 and tp1 > bt1:
 					_quad_s(e[3], ax0, tp0, ax1, tp1, ax1, bt1, ax0, bt0, 0.0055)
-		_im.surface_end()
+		_se()
 	else:
 		for sd in 2:
 			var e2: Array = eyes[sd]
 			hl_c.append(Vector3(float(e2[0]) - a * 0.28 + gaze.x * a * 0.2, float(e2[1]) + b * 0.38 - lid * b * 0.5, a))
 	# --- Glanzpunkte (nur bei offenen Augen; beim Bettelblick groß und doppelt) ---
 	if lid < 0.5 and squint < 0.55:
-		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.white if scl <= 0.02 else _mat.white)
+		_sb(_mat.white if scl <= 0.02 else _mat.white)
 		for sd in 2:
 			var h: Vector3 = hl_c[sd]
 			var r := (0.011 + 0.004 * wide) * u * fs * (lerpf(1.0, pup * 1.15, scl) if scl > 0.02 else 1.0)
@@ -653,11 +734,11 @@ func _draw(bl: float) -> void:
 					var a0 := TAU * k / 8.0
 					var a1 := TAU * (k + 1) / 8.0
 					_tri_s(ph, Vector2(hx, hy), Vector2(hx + cos(a0) * rr, hy + sin(a0) * rr), Vector2(hx + cos(a1) * rr, hy + sin(a1) * rr), 0.0075)
-		_im.surface_end()
+		_se()
 	# --- Tränen: feuchter Lidrand, Bäche über die Wangen, fallende Tropfen ---
 	var tear := float(_cur.tear)
 	if tear > 0.05:
-		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.tear)
+		_sb(_mat.tear)
 		for sd in 2:
 			var e3: Array = eyes[sd]
 			var tx: float = float(e3[0]) - float(e3[4]) * a * 0.55
@@ -677,12 +758,12 @@ func _draw(bl: float) -> void:
 				var a4 := TAU * k / 8.0
 				var a5 := TAU * (k + 1) / 8.0
 				_tri_s(pt, Vector2(tx, dy), Vector2(tx + cos(a4) * dr, dy + sin(a4) * dr * 1.3), Vector2(tx + cos(a5) * dr, dy + sin(a5) * dr * 1.3), 0.0085)
-		_im.surface_end()
+		_se()
 	# --- Wangenröte (Freude, Verlegenheit) ---
 	var blush := float(_cur.blush) + laugh * 0.3
 	if blush > 0.03:
 		(_mat.blush as StandardMaterial3D).albedo_color.a = clampf(blush, 0.0, 1.0) * 0.55
-		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.blush)
+		_sb(_mat.blush)
 		for sd in 2:
 			var c3: Vector3 = eye_c[sd]
 			var bx := c3.x + (-0.075 if sd == 0 else 0.075) * u
@@ -694,11 +775,11 @@ func _draw(bl: float) -> void:
 				var a2 := TAU * k / 12.0
 				var a3 := TAU * (k + 1) / 12.0
 				_tri_s(pb, Vector2(bx, by), Vector2(bx + cos(a2) * rx, by + sin(a2) * ry), Vector2(bx + cos(a3) * rx, by + sin(a3) * ry), 0.003)
-		_im.surface_end()
+		_se()
 	# --- aufgeblasene Backen (Wut, Trotz) ---
 	var cheek := float(_cur.cheek)
 	if cheek > 0.05:
-		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.cheek)
+		_sb(_mat.cheek)
 		var mcp: Vector3 = _m.mouth
 		for sd in 2:
 			var cxp := mcp.x + (-0.115 if sd == 0 else 0.115) * u
@@ -710,10 +791,10 @@ func _draw(bl: float) -> void:
 				var a6 := TAU * k / 14.0
 				var a7 := TAU * (k + 1) / 14.0
 				_tri_s(pc, Vector2(cxp, cyp), Vector2(cxp + cos(a6) * rxp, cyp + sin(a6) * ryp), Vector2(cxp + cos(a7) * rxp, cyp + sin(a7) * ryp), 0.0095 + 0.01 * cheek)
-		_im.surface_end()
+		_se()
 	# --- Brauen (nur wenn die Original-Brauen ersetzt wurden) ---
 	if has_own_brows:
-		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.brow)
+		_sb(_mat.brow)
 		for sd in 2:
 			var s := -1.0 if sd == 0 else 1.0
 			var c4: Vector3 = eye_c[sd]
@@ -732,7 +813,7 @@ func _draw(bl: float) -> void:
 			for k in 6:
 				var thk := th * (1.0 - 0.35 * absf(-1.0 + 2.0 * (k + 0.5) / 6.0))
 				_quad_s(pw, pts[k].x, pts[k].y + thk, pts[k + 1].x, pts[k + 1].y + thk, pts[k + 1].x, pts[k + 1].y - thk, pts[k].x, pts[k].y - thk, 0.006)
-		_im.surface_end()
+		_se()
 	# --- Mund: groß und rund, damit Gefühle auch von weitem lesbar sind ---
 	var open := clampf(float(_cur.open) + laugh * (0.2 + 0.3 * (0.5 + 0.5 * sin(laugh_phase))) + _syl.x * talk * 0.55, 0.0, 1.0)
 	var curve := float(_cur.curve)
@@ -795,37 +876,37 @@ func _draw(bl: float) -> void:
 		top.append(Vector2(mc.x + x * w, mc.y + yc + hu * bell))
 		bot.append(Vector2(mc.x + x * w, mc.y + yc - hl2 * bell))
 	var pm := _plane(mc.x, mc.y - (hl2 - hu) * 0.5, maxf(w, 0.02 * u))
-	_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.cavity)
+	_sb(_mat.cavity)
 	for k in SEG:
 		var m0 := (top[k] + bot[k]) * 0.5
 		var m1 := (top[k + 1] + bot[k + 1]) * 0.5
 		_quad_s(pm, top[k].x, top[k].y, top[k + 1].x, top[k + 1].y, m1.x, m1.y, m0.x, m0.y, 0.005)
 		_quad_s(pm, m0.x, m0.y, m1.x, m1.y, bot[k + 1].x, bot[k + 1].y, bot[k].x, bot[k].y, 0.005)
-	_im.surface_end()
+	_se()
 	if pout > 0.1:   # Schmollen: vorgeschobene Unterlippe
-		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.lip)
+		_sb(_mat.lip)
 		var lth := 0.016 * u * fs * pout
 		for k in range(1, SEG - 1):
 			_quad_s(pm, bot[k].x, bot[k].y, bot[k + 1].x, bot[k + 1].y, bot[k + 1].x, bot[k + 1].y - lth, bot[k].x, bot[k].y - lth, 0.0075)
-		_im.surface_end()
+		_se()
 	if open > 0.2 or _act == "chatter":
-		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.teeth)
+		_sb(_mat.teeth)
 		for k in range(2, SEG - 2):
 			var d0 := (top[k] - bot[k]) * 0.24
 			var d1 := (top[k + 1] - bot[k + 1]) * 0.24
 			_quad_s(pm, top[k].x, top[k].y, top[k + 1].x, top[k + 1].y, top[k + 1].x - d1.x, top[k + 1].y - d1.y, top[k].x - d0.x, top[k].y - d0.y, 0.008)
-		_im.surface_end()
-		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.tongue)
+		_se()
+		_sb(_mat.tongue)
 		for k in range(3, SEG - 3):
 			var e0 := (top[k] - bot[k]) * 0.38
 			var e1 := (top[k + 1] - bot[k + 1]) * 0.38
 			_quad_s(pm, bot[k].x + e0.x, bot[k].y + e0.y, bot[k + 1].x + e1.x, bot[k + 1].y + e1.y, bot[k + 1].x, bot[k + 1].y, bot[k].x, bot[k].y, 0.008)
-		_im.surface_end()
+		_se()
 
 
 ## Oberkante des Auges: Bogen, vom Oberlid gekappt; tilt stellt das Lid schräg (besorgt > 0, grimmig < 0).
 func _eye_top(x: float, b: float, lid: float, xi: float) -> float:
-	var tl := float(_cur.tilt)
+	var tl := _tilt
 	var cap := b * (1.0 - 1.15 * lid - 0.3 * absf(tl) + 0.55 * tl * xi)
 	return minf(b * sqrt(maxf(1.0 - x * x, 0.0)), cap)
 
@@ -838,16 +919,71 @@ func _eye_bot(x: float, b: float, lid: float, squint: float, top: float, u: floa
 
 
 ## Viereck auf der Haut (Ecken als x/y-Paare) über der Fläche pl, off = Abstand darüber (Anteil der Kopfbreite).
+## Gleiche Punkte wie zwei Dreiecke (p0 p1 p2, p0 p2 p3) – die vier Ecken werden nur einmal auf die Haut gelegt.
 func _quad_s(pl: Array, x0: float, y0: float, x1: float, y1: float, x2: float, y2: float, x3: float, y3: float, off: float) -> void:
-	_tri_s(pl, Vector2(x0, y0), Vector2(x1, y1), Vector2(x2, y2), off)
-	_tri_s(pl, Vector2(x0, y0), Vector2(x2, y2), Vector2(x3, y3), off)
+	var n: Vector3 = pl[6]
+	if n != _cur_n:
+		_im.surface_set_normal(n)
+		_cur_n = n
+	var o := off * _u
+	var px: float = pl[0]
+	var py: float = pl[1]
+	var pz: float = pl[2]
+	var sx: float = pl[3]
+	var sy: float = pl[4]
+	var k := 0.5 * float(pl[5])
+	var dx := x0 - px
+	var v0 := Vector3(x0, y0, pz + sx * dx + sy * (y0 - py) + k * dx * dx + o)
+	dx = x1 - px
+	var v1 := Vector3(x1, y1, pz + sx * dx + sy * (y1 - py) + k * dx * dx + o)
+	dx = x2 - px
+	var v2 := Vector3(x2, y2, pz + sx * dx + sy * (y2 - py) + k * dx * dx + o)
+	dx = x3 - px
+	var v3 := Vector3(x3, y3, pz + sx * dx + sy * (y3 - py) + k * dx * dx + o)
+	_im.surface_add_vertex(v0)
+	_im.surface_add_vertex(v1)
+	_im.surface_add_vertex(v2)
+	_im.surface_add_vertex(v0)
+	_im.surface_add_vertex(v2)
+	_im.surface_add_vertex(v3)
+	_nv += 6
 
 
+## Dreieck auf der Haut. Heißester Pfad des Gesichts (je Neuzeichnen einige hundert Aufrufe): Ebene einmal entpacken,
+## Normale nur bei Wechsel setzen (ImmediateMesh behält sie für folgende Punkte), keine Zwischen-Arrays.
 func _tri_s(pl: Array, p0: Vector2, p1: Vector2, p2: Vector2, off: float) -> void:
 	var n: Vector3 = pl[6]
-	var o := off * float(_m.u)
-	for p: Vector2 in [p0, p1, p2]:
-		var dx: float = p.x - float(pl[0])
-		var z: float = float(pl[2]) + float(pl[3]) * dx + float(pl[4]) * (p.y - float(pl[1])) + 0.5 * float(pl[5]) * dx * dx
+	if n != _cur_n:
 		_im.surface_set_normal(n)
-		_im.surface_add_vertex(Vector3(p.x, p.y, z + o))
+		_cur_n = n
+	var o := off * _u
+	var px: float = pl[0]
+	var py: float = pl[1]
+	var pz: float = pl[2]
+	var sx: float = pl[3]
+	var sy: float = pl[4]
+	var k := 0.5 * float(pl[5])
+	var dx := p0.x - px
+	_im.surface_add_vertex(Vector3(p0.x, p0.y, pz + sx * dx + sy * (p0.y - py) + k * dx * dx + o))
+	dx = p1.x - px
+	_im.surface_add_vertex(Vector3(p1.x, p1.y, pz + sx * dx + sy * (p1.y - py) + k * dx * dx + o))
+	dx = p2.x - px
+	_im.surface_add_vertex(Vector3(p2.x, p2.y, pz + sx * dx + sy * (p2.y - py) + k * dx * dx + o))
+	_nv += 3
+
+
+## Fläche beginnen/beenden. Eine Fläche ohne Punkte (z. B. Pupille, während das Lid geschlossen ist) bekommt ein
+## unsichtbares Null-Dreieck: ImmediateMesh ließe sie sonst offen, und die folgenden Gesichtsteile landeten für
+## dieses Bild im Material der leeren Fläche.
+func _sb(mat: Material) -> void:
+	_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, mat)
+	_cur_n = Vector3.INF
+	_nv = 0
+
+
+func _se() -> void:
+	if _nv == 0:
+		_im.surface_set_normal(Vector3.BACK)
+		for i in 3:
+			_im.surface_add_vertex(Vector3.ZERO)
+	_im.surface_end()

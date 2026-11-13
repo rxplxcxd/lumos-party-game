@@ -294,7 +294,9 @@ func _tick_gesture(d: float) -> void:
 func update(d: float) -> void:
 	if not enabled:
 		return
+	var p0 := Time.get_ticks_usec() if LumosProf.on else 0
 	_tick_gesture(d)
+	if p0 > 0: LumosProf.add(&"actor.gesture", p0)
 	var p := actor.personality
 	var em := actor.emotion
 	var gz := String(em.mods.gaze) if em else ""

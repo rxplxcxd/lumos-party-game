@@ -5,7 +5,7 @@ extends Node3D
 ## eskaliert · Wieder zusammen. Alles ist eine zeitgenaue Regie (Zeitleiste in Sekunden), dadurch bildgenau
 ## wiederholbar – im Spiel ansehbar und als Video renderbar (Movie Maker):
 ##   godot --path . --write-movie trailer.avi --fixed-fps 30 --resolution 1920x1080 res://scenes/trailer/Trailer.tscn
-## Vorschau ab Sekunde X: … -- --trailer-from=42
+## Vorschau ab Sekunde X: … -- --trailer-from=42   (bis Sekunde Y: --trailer-to=48 – ein einzelner Beat zur Sichtprüfung)
 ##
 ## Animationsregie (Figuren bleiben Low-Poly, bewegen sich aber filmisch):
 ##  * Bewegung über Segmente mit weichem Anfahren/Abbremsen (Smootherstep) – Gehen/Laufen folgt der echten
@@ -25,6 +25,7 @@ const MONTAGE_T0 := 65.4   # BOOM – Montage im 4-Schläge-Raster (1,74 s je Bi
 
 var t := 0.0
 var _from := 0.0
+var _to := 0.0
 var cam: Camera3D
 var heroes: Array[CharacterRig] = []      # 0 Ritter (Held) · 1 Magierin (winkt) · 2 Barbar (keucht hinterher) · 3 Waldläufer (Träumer)
 var _ev: Array = []                       # [Zeit, Callable] – einmalige Ereignisse
@@ -104,10 +105,13 @@ var _shadow := 4096
 
 func _ready() -> void:
 	_rng.seed = 20261112
+	seed(20261112)   # auch der globale Zufall (Effekte, Kamerawackeln): jeder Lauf ist bildgenau gleich
 	_movie = OS.has_feature("movie") or "--write-movie" in OS.get_cmdline_args()
 	for a in OS.get_cmdline_user_args():
 		if String(a).begins_with("--trailer-from="):
 			_from = String(a).substr(15).to_float()
+		if String(a).begins_with("--trailer-to="):
+			_to = String(a).substr(13).to_float()
 	for a in OS.get_cmdline_user_args():
 		if String(a).begins_with("--trailer-faces="):
 			_face_test = String(a).substr(16)
@@ -196,7 +200,7 @@ func _process(delta: float) -> void:
 	_fill.light_energy = lerpf(_fill.light_energy, (1.15 if (_set_now == "forest" and t > 7.6 and t < 84.0) else (1.7 if (t > 54.5 and t < 56.96) else 0.0)), 1.0 - exp(-delta / 0.6))
 	_drive_music()
 	_animate_props(delta)
-	if t >= DUR:
+	if t >= DUR or (_to > 0.0 and t >= _to):
 		set_process(false)
 		_write_marks()
 		get_tree().quit()   # eigenständige Produktion: nach dem Abspann ist Schluss
@@ -320,8 +324,8 @@ func laugh(i: int, time: float, dur := 1.4, strength := 1.0, then := "smile") ->
 ## Hand an einen Punkt führen: t0→t1 hin, bis t2 halten, bis t3 zurück. Ziel: Vector3 (Set-Koordinaten) oder
 ## Callable → Weltposition (z. B. die Schulter eines Freundes, die sich bewegt). orient: Handhaltung
 ## [Fingerrichtung, Handflächen-Normale] (Welt) oder Callable → Array; leer = Hand bleibt, wie die Animation sie hält.
-func reach(i: int, side: String, t0: float, t1: float, t2: float, t3: float, target: Variant, orient: Variant = []) -> void:
-	(_reach[i] as Array).append([side, t0, t1, t2, t3, target, orient])
+func reach(i: int, side: String, t0: float, t1: float, t2: float, t3: float, target: Variant, orient: Variant = [], assist := 0.6) -> void:
+	(_reach[i] as Array).append([side, t0, t1, t2, t3, target, orient, assist])
 
 
 ## Gegenstand liegt von t0 bis t1 in der Hand der Figur.
@@ -553,6 +557,7 @@ func _drive_actor(i: int) -> void:
 	var hw := {"l": 0.0, "r": 0.0}
 	var ht := {"l": Vector3.ZERO, "r": Vector3.ZERO}
 	var hd := {"l": [], "r": []}
+	var ha := {"l": 0.6, "r": 0.6}
 	for rc in _reach[i]:
 		if t < float(rc[1]) or t > float(rc[4]):
 			continue
@@ -564,8 +569,9 @@ func _drive_actor(i: int) -> void:
 			ht[sd] = (tg as Callable).call() if tg is Callable else _origin + (tg as Vector3)
 			var o: Variant = rc[6]
 			hd[sd] = (o as Callable).call() if o is Callable else o
-	for sd2 in ["l", "r"]:
-		ac.script_hand(sd2, float(hw[sd2]), ht[sd2], hd[sd2], 0.6)   # zu ferne Ziele: etwas hinlehnen, die Köpfe bleiben frei
+			ha[sd] = float(rc[7]) if rc.size() > 7 else 0.6
+	for sd2 in ["l", "r"]:   # zu ferne Ziele: etwas hinlehnen; das Ausweichen hält die Köpfe frei
+		ac.script_hand(sd2, float(hw[sd2]), ht[sd2], hd[sd2], float(ha[sd2]))
 
 
 func _drive_carry() -> void:
@@ -1201,6 +1207,14 @@ func _near_shoulder(j: int, i: int) -> Vector3:
 	return l if l.distance_to(p) < r.distance_to(p) else r
 
 
+## Oberarm von j auf der Seite zu i (zwischen Schulter und Ellbogen): dort erreicht eine Hand den anderen, ohne
+## dass sich die großen Köpfe berühren – die Schulter selbst liegt direkt unter dem Kopf.
+func _near_upper_arm(j: int, i: int) -> Vector3:
+	var p := heroes[i].global_position + Vector3.UP
+	var sd := "l" if _bone(j, "upperarm.l").distance_to(p) < _bone(j, "upperarm.r").distance_to(p) else "r"
+	return _bone(j, "upperarm." + sd).lerp(_bone(j, "elbow." + sd), 0.4)
+
+
 func _build_cast() -> void:
 	for k in ["hero/knight", "hero/mage", "hero/barbarian", "hero/ranger"]:
 		var r := CharacterRig.new()
@@ -1552,7 +1566,7 @@ func _act2() -> void:
 	at(33.5, func() -> void:
 		_hold[B] = false
 		heroes[B].play("idle", 0.3))
-	go(B, 33.9, 34.6, Vector3(22.5, _hill_y, -1.6), Vector3(22.15, 0, -0.35), 0.35)
+	go(B, 33.9, 34.6, Vector3(22.5, _hill_y, -1.6), Vector3(22.38, 0, -0.46), 0.35)   # Kopfbreite Abstand zum Helden
 
 
 # --- Akt 3 – Gemeinsam unterwegs (35–58 s) --------------------------------------------------------------------
@@ -1571,7 +1585,8 @@ func _act3() -> void:
 		var d := heroes[B].global_position - heroes[A].global_position
 		d.y = 0.0
 		return d.normalized()
-	var clap := func() -> Vector3: return (bodies[A].rest_pos("shoulder.r") + bodies[B].rest_pos("shoulder.l")) * 0.5 + Vector3.UP * 0.2
+	# Treffpunkt in Schulterhöhe zwischen beiden: darüber beginnen die großen Köpfe (sonst landet die Hand am Kinn)
+	var clap := func() -> Vector3: return (bodies[A].rest_pos("shoulder.r") + bodies[B].rest_pos("shoulder.l")) * 0.5 + Vector3.UP * 0.03
 	at(34.82, func() -> void:
 		heroes[A].anticipate(0.22, 0.06)
 		heroes[B].anticipate(0.22, 0.06))
@@ -1595,8 +1610,10 @@ func _act3() -> void:
 	laugh(B, 35.82, 1.2, 0.9)
 	key(36.7, Vector3(22.0, 1.5, 3.6), Vector3(21.8, 1.32, -0.2), 36.0)
 	# gemeinsam weiter – ein Schmetterling landet auf der Nase des Helden; er bremst, sie schaut dem Falter nach …
-	go(A, 37.0, 38.9, Vector3(21.3, 0, 0.1), Vector3(24.6, 0, 0.2))
-	go(B, 37.15, 39.05, Vector3(22.15, 0, -0.35), Vector3(23.72, 0, 0.1))
+	go(A, 37.25, 38.9, Vector3(21.3, 0, 0.1), Vector3(24.64, 0, 0.2))
+	go(B, 37.0, 37.6, Vector3(22.38, 0, -0.46), Vector3(22.6, 0, -1.25))     # weicht auf ihre Spur aus, er überholt
+	go(B, 37.6, 38.55, Vector3(22.6, 0, -1.25), Vector3(23.1, 0, -1.2))
+	go(B, 38.55, 39.05, Vector3(23.1, 0, -1.2), Vector3(23.3, 0, 0.04))      # läuft auf: eine Kopfbreite hinter ihm
 	look(A, 37.0, null)
 	look(B, 37.0, null)
 	key(37.0, Vector3(24.4, 1.6, 4.6), Vector3(22.7, 1.25, -0.2), 42.0)
@@ -1618,8 +1635,8 @@ func _act3() -> void:
 		Audio.sfx("hit_soft", heroes[A].global_position, -4.0, 1.2, 0.0))
 	expr(A, 39.05, "ouch", 0.08)
 	expr(B, 39.05, "ouch", 0.08)
-	go(A, 39.06, 39.6, Vector3(24.6, 0, 0.2), Vector3(25.3, 0, 0.2), 0.14)
-	go(B, 39.06, 39.6, Vector3(23.72, 0, 0.1), Vector3(23.4, 0, -0.5))
+	go(A, 39.06, 39.6, Vector3(24.64, 0, 0.2), Vector3(25.3, 0, 0.2), 0.14)
+	go(B, 39.06, 39.6, Vector3(23.3, 0, 0.04), Vector3(22.75, 0, -1.15))   # prallt zurück
 	face(A, 39.7, Vector3(-1, 0, 0.7))
 	face(B, 39.7, Vector3(1, 0, 0.8))
 	look(A, 39.7, B)
@@ -1646,8 +1663,9 @@ func _act3() -> void:
 	look(C, 44.6, Vector3(24.6, 0.2, 0.9))
 	key(42.6, Vector3(25.4, 1.6, 5.6), Vector3(23.9, 1.2, 0.3), 44.0)
 	# Der Held geht hin und klopft ihm auf die Schulter – die Hand kommt an
-	go(A, 44.3, 45.0, Vector3(25.3, 0, 0.2), Vector3(24.55, 0, 0.5))
-	face(A, 45.0, Vector3(-1, 0, 0.45))
+	go(A, 44.3, 44.7, Vector3(25.3, 0, 0.2), Vector3(24.45, 0, -0.5))   # außen um den vorgebeugten Kopf herum …
+	go(A, 44.7, 45.05, Vector3(24.45, 0, -0.5), Vector3(23.76, 0, -0.24))   # … neben ihn, Schulter an Schulter
+	face(A, 45.0, Vector3(1, 0, 0.12))
 	reach(A, "r", 45.05, 45.42, 46.3, 46.8, func() -> Vector3: return _near_shoulder(C, A) + Vector3(0, 0.1 + 0.05 * sin(t * 12.0), 0),
 		func() -> Array: return [_fwd(A), Vector3.DOWN])
 	for pt in [45.42, 45.94]:   # Tiefpunkte des Klopfens: die Schulter gibt nach
@@ -1664,9 +1682,9 @@ func _act3() -> void:
 	expr(C, 46.9, "grin", 0.4)
 	key(47.0, Vector3(25.4, 1.6, 5.0), Vector3(24.7, 1.2, 0.4), 42.0)
 	# Alle weiter – vorbei am Träumer auf dem Stein, der es zu spät bemerkt
-	go(A, 47.2, 49.6, Vector3(24.55, 0, 0.5), Vector3(29.4, 0, 0.2))
-	go(B, 47.3, 49.6, Vector3(23.4, 0, -0.5), Vector3(28.5, 0, -0.7))
-	go(C, 47.5, 49.4, Vector3(23.7, 0, 0.9), Vector3(27.4, 0, 1.0))
+	go(A, 47.2, 49.6, Vector3(23.76, 0, -0.24), Vector3(29.4, 0, 0.2))
+	go(B, 47.3, 49.6, Vector3(22.75, 0, -1.15), Vector3(28.5, 0, -0.7))
+	go(C, 47.5, 49.4, Vector3(23.7, 0, 0.9), Vector3(27.4, 0, 1.3))
 	for k in [A, B, C]:
 		look(k, 47.2, null)
 		expr(k, 47.4, "smile", 0.4)
@@ -1685,7 +1703,7 @@ func _act3() -> void:
 	# Gemeinsam los – Weltenwechsel 1: hinter dem riesigen Baumstamm
 	go(A, 49.6, 53.2, Vector3(29.4, 0, 0.2), Vector3(38.0, 0, 0.2))
 	go(B, 49.6, 53.2, Vector3(28.5, 0, -0.7), Vector3(37.0, 0, -0.7))
-	go(C, 49.4, 53.2, Vector3(27.4, 0, 1.0), Vector3(39.6, 0, 1.0))      # Barbar und Träumer ziehen vorbei
+	go(C, 49.4, 53.2, Vector3(27.4, 0, 1.3), Vector3(39.6, 0, 1.3))      # Barbar und Träumer ziehen vorbei
 	go(D, 49.95, 53.2, Vector3(31.4, 0, -1.2), Vector3(40.4, 0, -1.25))
 	for k in 4:
 		look(k, 50.8, null)
@@ -1699,7 +1717,7 @@ func _act3() -> void:
 	# und zieht sie mit (sie wird wirklich gezogen: Arm gestreckt, ein Ruck, dann läuft sie hinterher)
 	go(A, 53.2, 54.8, Vector3(38.0, 0, 0.2), Vector3(42.0, 0, 0.2))
 	go(B, 53.2, 54.6, Vector3(37.0, 0, -0.7), Vector3(40.6, 0, -0.9))
-	go(C, 53.2, 57.6, Vector3(39.6, 0, 1.0), Vector3(49.6, 0, 1.0))
+	go(C, 53.2, 57.6, Vector3(39.6, 0, 1.3), Vector3(49.6, 0, 1.3))
 	go(D, 53.2, 57.6, Vector3(40.4, 0, -1.25), Vector3(48.8, 0, -1.25))
 	face(B, 54.6, Vector3(0.75, 0, -1))
 	look(B, 54.4, Vector3(43.2, 2.6, -2.8))
@@ -1708,26 +1726,26 @@ func _act3() -> void:
 	tilt(B, 54.8, Vector3(-0.1, 0, 0.15))
 	look(A, 54.7, B)
 	expr(A, 54.9, "smile", 0.3)
-	go(A, 55.0, 55.7, Vector3(42.0, 0, 0.2), Vector3(41.1, 0, 0.3))   # stellt sich neben sie – beide Gesichter frei
-	var hands := func() -> Vector3: return (bodies[A].rest_pos("shoulder.l") + bodies[B].rest_pos("shoulder.r")) * 0.5 + Vector3(0, -0.22, 0)
+	go(A, 54.9, 55.7, Vector3(42.0, 0, 0.2), Vector3(41.15, 0, 0.36))   # stellt sich neben sie – beide Gesichter frei
+	var hands := func() -> Vector3: return (bodies[A].rest_pos("shoulder.l") + bodies[B].rest_pos("shoulder.r")) * 0.5 + Vector3(0, -0.15, 0)
 	var d_ba := func() -> Vector3:
 		var d := heroes[A].global_position - heroes[B].global_position
 		d.y = 0.0
 		return d.normalized()
 	reach(A, "l", 55.65, 55.98, 57.35, 57.8, func() -> Vector3: return (hands.call() as Vector3) + (d_ba.call() as Vector3) * 0.03,
-		func() -> Array: return [(_fwd(A) * 0.5 + Vector3.DOWN).normalized(), -(d_ba.call() as Vector3)])
+		func() -> Array: return [(_fwd(A) * 0.5 + Vector3.DOWN).normalized(), -(d_ba.call() as Vector3)], 0.25)
 	reach(B, "r", 55.75, 56.02, 57.35, 57.8, func() -> Vector3: return (hands.call() as Vector3) - (d_ba.call() as Vector3) * 0.03,
-		func() -> Array: return [(_fwd(B) * 0.5 + Vector3.DOWN).normalized(), d_ba.call()])
+		func() -> Array: return [(_fwd(B) * 0.5 + Vector3.DOWN).normalized(), d_ba.call()], 0.25)
 	at(55.98, func() -> void: Audio.sfx("plop", null, -8.0, 1.3, 0.0))
 	look(B, 56.0, A)
 	expr(B, 56.0, "surprised", 0.15)
 	tilt(B, 56.0, Vector3.ZERO)
-	go(A, 56.1, 57.9, Vector3(41.1, 0, 0.3), Vector3(46.6, 0, 0.1))
+	go(A, 56.1, 57.9, Vector3(41.15, 0, 0.36), Vector3(46.6, 0, 0.1))
 	at(56.24, func() -> void:
 		heroes[B].squash(0.94, 1.07, 0.3)   # der Ruck: ihr Oberkörper wird mitgerissen
 		bodies[B].push((d_ba.call() as Vector3) * 2.4)
 		bodies[A].push(-(d_ba.call() as Vector3) * 0.9))
-	go(B, 56.26, 57.9, Vector3(40.6, 0, -0.9), Vector3(45.4, 0, -0.5))
+	go(B, 56.2, 57.9, Vector3(40.6, 0, -0.9), Vector3(46.35, 0, -1.05))   # holt auf und läuft an seiner Hand neben ihm
 	expr(B, 56.6, "laugh", 0.3)
 	expr(A, 56.3, "grin", 0.3)
 	look(A, 56.6, null)
@@ -1752,9 +1770,9 @@ func _act4() -> void:
 	var D := 3
 	# Bucht im Abendlicht: die vier laufen den Strand entlang, der Sand wird zu Vulkangestein
 	go(A, 57.9, 60.4, Vector3(46.6, 0, 0.1), Vector3(53.0, 0, 0.1))
-	go(B, 57.9, 60.4, Vector3(45.4, 0, -0.5), Vector3(52.0, 0, -0.6))
-	go(C, 57.6, 60.4, Vector3(49.6, 0, 1.0), Vector3(54.4, 0, 1.0))
-	go(D, 57.6, 60.4, Vector3(48.8, 0, -1.25), Vector3(53.8, 0, -1.25))
+	go(B, 57.9, 60.4, Vector3(46.35, 0, -1.05), Vector3(52.0, 0, -0.6))
+	go(C, 57.6, 60.4, Vector3(49.6, 0, 1.3), Vector3(54.4, 0, 1.3))
+	go(D, 57.6, 60.4, Vector3(48.8, 0, -1.25), Vector3(53.8, 0, -2.0))
 	for k in 4:
 		expr(k, 58.3 + k * 0.12, "awe", 0.4)
 		look(k, 58.3 + k * 0.1, Vector3(60.0, 4.0, -40.0))   # das Meer, der glühende Berg
@@ -1762,25 +1780,25 @@ func _act4() -> void:
 		look(k, 60.0, null)
 	go(A, 60.4, 63.2, Vector3(53.0, 0, 0.1), Vector3(60.6, 0, 0.2))
 	go(B, 60.4, 63.2, Vector3(52.0, 0, -0.6), Vector3(59.6, 0, -0.8))
-	go(C, 60.4, 63.2, Vector3(54.4, 0, 1.0), Vector3(59.2, 0, 1.1))
-	go(D, 60.4, 63.2, Vector3(53.8, 0, -1.25), Vector3(58.4, 0, -1.3))
+	go(C, 60.4, 63.2, Vector3(54.4, 0, 1.3), Vector3(59.2, 0, 1.35))
+	go(D, 60.4, 63.2, Vector3(53.8, 0, -2.0), Vector3(58.4, 0, -2.05))
 	key(60.4, Vector3(54.6, 1.8, 6.2), Vector3(52.8, 1.2, -0.4), 44.0)
 	key(63.2, Vector3(62.6, 2.0, 7.0), Vector3(60.4, 1.3, -1.0), 46.0)
-	# Der Barbar knufft den Träumer im Laufen mit dem Ellbogen – der lacht und weicht aus
-	reach(C, "l", 61.3, 61.55, 61.7, 62.05, func() -> Vector3: return _near_shoulder(D, C))
-	look(C, 61.2, D)
+	# Der Barbar knufft seinen Nebenmann, den Helden, im Laufen mit dem Ellbogen – der lacht und weicht aus
+	reach(C, "l", 61.3, 61.55, 61.7, 62.05, func() -> Vector3: return _near_upper_arm(A, C), [], 0.35)
+	look(C, 61.2, A)
 	expr(C, 61.2, "grin", 0.2)
 	at(61.58, func() -> void:
-		heroes[D].squash(1.1, 0.92, 0.25)
-		var d := heroes[D].global_position - heroes[C].global_position
+		heroes[A].squash(1.1, 0.92, 0.25)
+		var d := heroes[A].global_position - heroes[C].global_position
 		d.y = 0.0
-		bodies[D].push(d.normalized() * 2.0)   # der Knuff schiebt ihn seitlich weg
+		bodies[A].push(d.normalized() * 2.0)   # der Knuff schiebt ihn seitlich weg
 		Audio.sfx("hit_soft", null, -8.0, 1.4, 0.0))
-	laugh(D, 61.75, 0.9, 0.7)
-	look(D, 61.6, C)
-	expr(D, 61.6, "laugh", 0.2)
+	laugh(A, 61.75, 0.9, 0.7)
+	look(A, 61.6, C)
+	expr(A, 61.6, "laugh", 0.2)
 	look(C, 62.2, null)
-	look(D, 62.3, null)
+	look(A, 62.3, null)
 	# Die Magierin zeigt nach vorn zum Berg
 	reach(B, "r", 62.0, 62.4, 63.0, 63.4, func() -> Vector3: return _rel(B, 0.25, 1.5, 0.75))
 	# Der Boss taucht auf – alle bleiben stehen und schauen hinauf
@@ -1800,8 +1818,8 @@ func _act4() -> void:
 	# Die Magierin klammert sich an den Arm des Helden, der Träumer duckt sich hinter den Barbaren –
 	# und der stellt sich breitbeinig vor ihn
 	reach(B, "l", 63.9, 64.3, 65.5, 65.6, func() -> Vector3: return _near_shoulder(A, B) + Vector3(0, -0.12, 0))
-	go(B, 63.75, 64.3, Vector3(59.6, 0, -0.8), Vector3(60.05, 0, -0.35))
-	go(D, 63.8, 64.5, Vector3(58.4, 0, -1.3), Vector3(58.3, 0, 1.35))
+	go(B, 63.75, 64.3, Vector3(59.6, 0, -0.8), Vector3(59.9, 0, -0.7))
+	go(D, 63.8, 64.7, Vector3(58.4, 0, -2.05), Vector3(58.0, 0, 1.8))   # hinter den breiten Rücken (außen um die Gruppe)
 	expr(C, 64.5, "determined", 0.3)
 	at(64.55, func() -> void: actors[D].cartoon("shiver", 0.7))   # der Träumer zittert hinter dem breiten Rücken
 	# Tief hinter der Gruppe: die vier klein im unteren Bilddrittel, der Boss türmt sich darüber auf
@@ -1987,7 +2005,7 @@ func _montage() -> void:
 		_board.star_node.position = _bp[21] + Vector3.UP * 2.5)
 	cast.call([A, B, C, D], s[5])
 	var top := 0.6
-	go(C, s[5], s[5] + 0.5, Vector3(-1.5, top, 0.2), Vector3(-0.25, top, 0.2))
+	go(C, s[5], s[5] + 0.5, Vector3(-1.5, top, 0.2), Vector3(-0.78, top, 0.2))
 	go(D, s[5], s[5] + 0.01, Vector3(0.55, top, 0.2), Vector3(0.55, top, 0.2))
 	face(D, s[5], Vector3(-1, 0, 0))
 	look(C, s[5], D)
@@ -1995,12 +2013,12 @@ func _montage() -> void:
 	expr(C, s[5], "determined", 0.0)
 	expr(D, s[5], "surprised", 0.0)
 	var chest_d := func() -> Vector3: return _bone(D, "chest") + Vector3(0, 0.05, 0)
-	reach(C, "l", s[5] + 0.3, s[5] + 0.5, s[5] + 0.95, s[5] + 1.2, chest_d)
-	reach(C, "r", s[5] + 0.3, s[5] + 0.5, s[5] + 0.95, s[5] + 1.2, chest_d)
+	reach(C, "l", s[5] + 0.3, s[5] + 0.5, s[5] + 0.95, s[5] + 1.2, chest_d, [], 0.3)
+	reach(C, "r", s[5] + 0.3, s[5] + 0.5, s[5] + 0.95, s[5] + 1.2, chest_d, [], 0.3)
 	at(s[5] + 0.5, func() -> void:
 		Audio.sfx("hit_soft", null, -2.0, 1.0, 0.0)
 		heroes[D].squash(1.1, 0.92, 0.3))
-	go(C, s[5] + 0.5, s[5] + 0.95, Vector3(-0.25, top, 0.2), Vector3(1.9, top, 0.2))
+	go(C, s[5] + 0.53, s[5] + 0.95, Vector3(-0.78, top, 0.2), Vector3(0.3, top, 0.2))
 	go(D, s[5] + 0.5, s[5] + 0.95, Vector3(0.55, top, 0.2), Vector3(2.75, top, 0.2))
 	expr(D, s[5] + 0.55, "scared", 0.1)
 	reach(D, "l", s[5] + 0.6, s[5] + 0.85, s[5] + 1.2, s[5] + 1.5, func() -> Vector3: return _rel(D, -0.6, 1.8, 0.1))
@@ -2010,16 +2028,28 @@ func _montage() -> void:
 		FX.splash(_origin + Vector3(5.3, -0.3, 0.4), 1.7)
 		Audio.sfx("splash", null, 0.0, 1.0, 0.0))
 	expr(C, s[5] + 1.1, "laugh", 0.2)
-	# im Hintergrund ringen der Held und die Magierin, Hände an den Schultern
-	go(A, s[5], s[5] + 0.01, Vector3(-1.2, top, -1.9), Vector3(-1.2, top, -1.9))
-	go(B, s[5], s[5] + 0.01, Vector3(-0.3, top, -2.1), Vector3(-0.3, top, -2.1))
-	face(A, s[5], Vector3(1, 0, -0.2))
-	face(B, s[5], Vector3(-1, 0, 0.2))
+	# im Hintergrund messen der Held und die Magierin ihre Kräfte: Handfläche an Handfläche, mal drückt er, mal sie
+	# (Griffe an die Schultern gingen nicht: die Köpfe sind breiter als die Arme lang)
+	go(A, s[5], s[5] + 0.01, Vector3(-1.42, top, -1.95), Vector3(-1.42, top, -1.95))
+	go(B, s[5], s[5] + 0.01, Vector3(-0.15, top, -2.1), Vector3(-0.15, top, -2.1))
+	face(A, s[5], Vector3(1, 0, -0.12))
+	face(B, s[5], Vector3(-1, 0, 0.12))
 	look(A, s[5], B)
 	look(B, s[5], A)
+	var n_ab := func() -> Vector3:
+		var d := heroes[B].global_position - heroes[A].global_position
+		d.y = 0.0
+		return d.normalized()
+	var palms := func(sd: float) -> Vector3:   # sd +1: rechte Hand des Helden / linke der Magierin
+		var n: Vector3 = n_ab.call()
+		var m := (bodies[A].rest_pos("shoulder.l") + bodies[A].rest_pos("shoulder.r") + bodies[B].rest_pos("shoulder.l") + bodies[B].rest_pos("shoulder.r")) * 0.25
+		return m + n.cross(Vector3.UP) * sd * 0.22 + n * sin((t - float(s[5])) * 5.0) * 0.05 - Vector3(0, 0.04, 0)
 	for hs in ["l", "r"]:
-		reach(A, hs, s[5], s[5] + 0.05, s[6], s[6], func() -> Vector3: return _bone(B, "upperarm." + ("r" if hs == "l" else "l")))
-		reach(B, hs, s[5], s[5] + 0.05, s[6], s[6], func() -> Vector3: return _bone(A, "upperarm." + ("r" if hs == "l" else "l")))
+		var sd := 1.0 if hs == "r" else -1.0
+		reach(A, hs, s[5], s[5] + 0.05, s[6], s[6], func() -> Vector3: return (palms.call(sd) as Vector3) - (n_ab.call() as Vector3) * 0.025,
+			func() -> Array: return [Vector3.UP, n_ab.call()], 0.3)
+		reach(B, hs, s[5], s[5] + 0.05, s[6], s[6], func() -> Vector3: return (palms.call(-sd) as Vector3) + (n_ab.call() as Vector3) * 0.025,
+			func() -> Array: return [Vector3.UP, -(n_ab.call() as Vector3)], 0.3)
 	expr(A, s[5], "determined", 0.0)
 	expr(B, s[5], "grin", 0.0)
 	key(s[5], Vector3(-2.2, 2.3, 7.6), Vector3(0.6, 1.3, 0.0), 44.0, true)
@@ -2066,9 +2096,9 @@ func _act5() -> void:
 	var fire := Vector3(-6.0, 0.6, -18.0)
 	# Alle auf einer Bank aus Stämmen, dem Feuer zugewandt: Träumer (schläft, lehnt am Helden) · Held · Barbar (isst);
 	# die Magierin liegt daneben im Gras und zeigt in die Sterne
-	var pd := Vector3(-7.32, 0.42, -20.0)
+	var pd := Vector3(-7.44, 0.42, -20.0)
 	var pa := Vector3(-6.5, 0.42, -20.0)
-	var pc := Vector3(-5.45, 0.42, -20.0)
+	var pc := Vector3(-5.3, 0.42, -20.0)
 	var pb := Vector3(-2.7, 0.05, -21.0)
 	at(t0, func() -> void:
 		_use_set("forest", "forest_night")
@@ -2092,12 +2122,12 @@ func _act5() -> void:
 	for k in [A, C, D]:
 		face(k, t0, Vector3(0, 0, 1))
 	face(B, t0, Vector3(1, 0, 0))
-	at(t0 + 0.02, func() -> void:
+	at(t0, func() -> void:
 		for k in [A, C, D]:
 			heroes[k].face_now(Vector3(0, 0, 1))
 		heroes[B].face_now(Vector3(1, 0, 0))
-		heroes[D].rotation.z = deg_to_rad(-13.0)   # lehnt sich an den Freund
-		bodies[D].head_add = Vector3(0.12, 0, -0.3)
+		heroes[D].rotation.z = deg_to_rad(-11.5)   # nickt ein und sinkt zur Seite
+		bodies[D].head_add = Vector3(0.12, 0, -0.26)
 		actors[D].set_breath(0.9, 0.75)
 		bodies[A].chest_add = Vector3(0.16, 0, 0)
 		faces[C].chew = 1.0)
@@ -2117,13 +2147,13 @@ func _act5() -> void:
 	reach(B, "r", t0 + 0.6, t0 + 1.3, t0 + 5.4, t0 + 6.2, func() -> Vector3: return _rel(B, 0.25, 1.25, 0.1))
 	# Der Barbar hält den Keks in der Hand: abbeißen, kauen
 	var bite := func(u: float) -> float: return smoothstep(0.0, 0.3, u) * (1.0 - smoothstep(0.45, 0.8, u))
-	var mid := Vector3(-5.98, 1.08, -19.72)
+	var mid := Vector3(-5.9, 1.08, -19.72)
 	var c_hand := func() -> Vector3:
 		var rest := _rel(C, 0.2, 0.8, 0.34)
 		var mouth := _bone(C, "head") + _fwd(C) * 0.36 + Vector3(0, 0.08, 0)
 		var give := smoothstep(t0 + 4.05, t0 + 4.5, t) * (1.0 - smoothstep(t0 + 4.85, t0 + 5.3, t))
 		return rest.lerp(mouth, bite.call(t - (t0 + 0.5))).lerp(_origin + mid, give)
-	reach(C, "r", t0 - 0.1, t0, t0 + 5.3, t0 + 5.8, c_hand, func() -> Array: return [_fwd(C), Vector3.UP])   # Keks auf der Handfläche
+	reach(C, "r", t0 - 0.1, t0, t0 + 5.3, t0 + 5.8, c_hand, func() -> Array: return [_fwd(C), Vector3.UP], 0.3)   # Keks auf der Handfläche
 	carry(_snack, C, "r", t0, t0 + 4.74)
 	at(t0 + 0.82, func() -> void: Audio.sfx("plop", null, -12.0, 1.7, 0.0))
 	# Die kleine Pointe, nah: Der Held schielt auf den Keks · der Barbar merkt es, zieht die Braue hoch · der Held
@@ -2181,8 +2211,8 @@ func _act5() -> void:
 	key(t0, Vector3(-4.6, 1.9, -12.4), Vector3(-5.9, 0.9, -19.4), 40.0, true)
 	key(t0 + 2.49, Vector3(-4.8, 1.95, -12.8), Vector3(-5.9, 0.9, -19.4), 40.0)
 	# nah dran: Held und Barbar nebeneinander, das Feuer flackert unscharf im Vordergrund
-	key(t0 + 2.5, Vector3(-4.75, 1.3, -17.0), Vector3(-5.98, 1.2, -20.0), 38.0, true)
-	key(t0 + 6.19, Vector3(-5.0, 1.3, -17.3), Vector3(-5.98, 1.2, -20.0), 35.0)
+	key(t0 + 2.5, Vector3(-4.7, 1.3, -17.0), Vector3(-5.92, 1.2, -20.0), 38.0, true)
+	key(t0 + 6.19, Vector3(-4.95, 1.3, -17.3), Vector3(-5.92, 1.2, -20.0), 35.0)
 	key(t0 + 6.2, Vector3(-4.8, 2.0, -12.9), Vector3(-5.9, 0.95, -19.4), 41.0, true)
 	key(t0 + 11.8, Vector3(8.0, 17.0, 6.0), Vector3(-6.0, 0.0, -18.0), 56.0)
 	# Die Kamera steigt – der Held und der Barbar schauen uns nach

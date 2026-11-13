@@ -36,18 +36,42 @@ func run(p_lab: Variant) -> void:
 			(n as CharacterRig).process_mode = Node.PROCESS_MODE_DISABLED
 	_cam(Vector3(0, 2.4, 8.0), Vector3(0, 1.1, 0))
 	var nodes0: int = lab.get_tree().get_node_count()
-	await _b1()
-	await _b2()
-	await _b3()
-	await _b4()
-	await _b5_b6()
-	await _b7_b8()
-	await _b13()
-	await _b14()
-	await _b15()
-	await _b16()
-	await _b17()
-	await _b18_b19()
+	if _want(1):
+		await _b1()
+	if _want(2):
+		await _b2()
+	if _want(3):
+		await _b3()
+	if _want(4):
+		await _b4()
+	if _want(5) or _want(6):
+		await _b5_b6()
+	if _want(7) or _want(8):
+		await _b7_b8()
+	if _want(13):
+		await _b13()
+	if _want(14):
+		await _b14()
+	if _want(15):
+		await _b15()
+	if _want(16):
+		await _b16()
+	if _want(17):
+		await _b17()
+	if _want(18) or _want(19):
+		await _b18_b19()
+	if _want(21):
+		await _b21()
+	if _want(22):
+		await _b22()
+	if _want(23):
+		await _b23()
+	if _want(24):
+		await _b24()
+	if _want(25):
+		await _b25()
+	if _want(26):
+		await _b26()
 	_clear()
 	await _w(1.2)
 	var nodes1: int = lab.get_tree().get_node_count()
@@ -55,6 +79,14 @@ func run(p_lab: Variant) -> void:
 
 
 # --- Hilfen ------------------------------------------------------------------------------------------------------
+
+## Nur ausgewählte Bereiche laufen lassen (Entwicklung): -- --lab-behavior --lab-only=21,22
+func _want(n: int) -> bool:
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--lab-only="):
+			return str(n) in String(a).get_slice("=", 1).split(",")
+	return true
+
 
 func _cam(pos: Vector3, look: Vector3) -> void:
 	var c: Camera3D = lab.cam
@@ -530,11 +562,13 @@ func _b15() -> void:
 	var touch := [INF]
 	var relief := [0.0]
 	var n := [0]
-	await _w(6.5, func() -> void:
+	await _w(9.0, func() -> void:   # Hingehen mit echten Schritten (um die Weinende herum, falls nötig)
 		n[0] += 1
-		if friend.body and sad.body:
+		if friend.body and sad.body:   # Kontakt am nahen Oberarm (Mitte Schulter → Ellbogen, Außenseite)
 			for sd in ["l", "r"]:
-				touch[0] = minf(touch[0], friend.hand_pos("r").distance_to(sad.body.joint_pos("shoulder." + sd)))
+				var arm := sad.body.joint_pos("shoulder." + sd).lerp(sad.body.joint_pos("elbow." + sd), 0.4)
+				for hd in ["l", "r"]:   # die zugewandte Hand tröstet (neben ihr stehend: je nach Seite links oder rechts)
+					touch[0] = minf(touch[0], friend.hand_pos(hd).distance_to(arm))
 		relief[0] = maxf(relief[0], sad.emotion.intensity_of("relief"))
 		if n[0] == 150:
 			lab._shot("b15_troesten"))
@@ -542,7 +576,7 @@ func _b15() -> void:
 	for r: Array in friend.mind.reactions:
 		went = went or String(r[2]) == "comfort"
 	lab._ok(went and float(touch[0]) < 0.16 and float(relief[0]) > 0.3 and sad.emotion.intensity_of("cry") < 0.1,
-		"B15 Trösten: Freund geht von selbst hin, Hand auf der Schulter (%.0f mm), Weinen → Erleichterung (%.2f)" % [float(touch[0]) * 1000.0, float(relief[0])])
+		"B15 Trösten: Freund geht von selbst hin, Hand am Oberarm (%.0f mm), Weinen → Erleichterung (%.2f)" % [float(touch[0]) * 1000.0, float(relief[0])])
 	_clear()
 
 
@@ -689,3 +723,443 @@ func _b18_b19() -> void:
 	lab._ok(tail != null and float(ry[1]) - float(ry[0]) > 0.3 and absf(tuck) > 0.25 and float(lr[1]) - float(lr[0]) > 0.15 and pet.mind.reactions.size() > before,
 		"B19 Haustier: wedelt vor Freude (%.2f rad), zieht bei Angst den Schwanz ein (%.2f rad), Beine laufen mit (%.2f rad), reagiert auf Lachen (%d)" % [float(ry[1]) - float(ry[0]), tuck, float(lr[1]) - float(lr[0]), pet.mind.reactions.size() - before])
 	_clear()
+
+
+# --- B21–B25 Stresstests mit mehreren Figuren (1.5.2) -----------------------------------------------------------------
+# Keine Choreografie: Der Test löst nur das Ausgangsereignis aus (ein Sturz, Anfragen, Wiederholungen) und prüft, was
+# aus Wahrnehmung, Persönlichkeit, Gefühlszustand und Interaktionslogik entsteht.
+
+## Missgeschick: eine Figur stolpert und fällt; Beobachtung über 12 s. Rückgabe: was geschah (Rollen, Zeiten, Kontakt).
+func _mishap(fallen: LumosActor, cast: Array[LumosActor], dir: Vector3, shot := "") -> Dictionary:
+	var obs := {"fall": fallen.fall(dir, 1.0), "sat": false, "mood": "", "mood_t": -1.0, "self_t": -1.0, "stood_t": -1.0,
+		"helper": null, "help_t": -1.0, "contact": INF, "max_ia": 0, "laugh_ev": [], "shot": false}
+	var hub := fallen.social
+	var t0 := fallen.clock()
+	var on_ev := func(kind: String, src: LumosActor, _data: Dictionary) -> void:
+		if kind == "laugh" and is_instance_valid(src):
+			(obs.laugh_ev as Array).append([fallen.clock() - t0, src])
+	hub.event.connect(on_ev)
+	await _w(12.0, func() -> void:
+		var t := fallen.clock() - t0
+		obs.sat = bool(obs.sat) or String(fallen.rig.current) == "sit"
+		var dom := fallen.emotion.dominant()
+		if String(obs.mood) == "" and dom in ["frustrated", "embarrassed"]:
+			obs.mood = dom
+			obs.mood_t = t
+		if float(obs.self_t) < 0.0 and String(obs.mood) != "" and fallen.is_laughing():
+			obs.self_t = t
+		if float(obs.stood_t) < 0.0 and t > 0.5 and not fallen.fallen:
+			obs.stood_t = t
+		var n_ia := 0
+		for x in cast:
+			n_ia += 1 if x.in_interaction() else 0
+		obs.max_ia = maxi(int(obs.max_ia), n_ia)
+		var it: RefCounted = hub.interaction_of(fallen)
+		if it != null and String(it.get("kind")) == "help_up":
+			var h: LumosActor = it.get("a")
+			if obs.helper == null:
+				obs.helper = h
+				obs.help_t = t
+			if String(it.get("phase")) in ["grip", "pull", "steady"]:
+				obs.contact = minf(float(obs.contact), h.hand_pos("r").distance_to(fallen.hand_pos("r")))
+				if shot != "" and not bool(obs.shot) and String(it.get("phase")) == "pull":
+					obs.shot = true
+					lab._shot(shot))
+	hub.event.disconnect(on_ev)
+	# Rollen aus den Reaktionsprotokollen (was jede Figur selbst entschieden hat)
+	var roles := {}
+	var delays: Array[float] = []
+	for x in cast:
+		var mine: Array[String] = []
+		for r: Array in x.mind.reactions:
+			if String(r[1]) == "fall":
+				mine.append(String(r[2]))
+				if String(r[2]) == "look":
+					delays.append(float(r[3]))
+		roles[x] = mine
+	obs["roles"] = roles
+	obs["delays"] = delays
+	return obs
+
+
+func _preset_of(x: LumosActor) -> String:
+	var p := x.personality.to_dict()
+	for k: String in LumosPersonality.PRESETS:
+		var q := LumosPersonality.preset(k).to_dict()
+		if q == p:
+			return k
+	return "?"
+
+
+func _who(obs: Dictionary, role: String) -> Array[LumosActor]:
+	var out: Array[LumosActor] = []
+	for x: LumosActor in obs.roles:
+		if role in (obs.roles[x] as Array):
+			out.append(x)
+	return out
+
+
+func _spread(v: Array[float]) -> float:
+	if v.size() < 2:
+		return 0.0
+	var lo := INF
+	var hi := -INF
+	for x in v:
+		lo = minf(lo, x)
+		hi = maxf(hi, x)
+	return hi - lo
+
+
+## Danach ruhig: keine Interaktion, kein Sturz, keine Reste von Interaktion/Regie/Greifen auf den Kanälen, endliche
+## Gelenke. Kleine Leerlauf-Gesten (Besitzer „g:…“) und von selbst endende Cartoon-Reaktionen sind gewolltes Leben.
+func _calm(cast: Array[LumosActor]) -> bool:
+	var ok := true
+	for x in cast:
+		var rest := false
+		for c: String in x.layers.owners():
+			var o := String(x.layers.owners()[c])
+			rest = rest or o.begins_with("ia:") or o == "fall" or o.begins_with("script:") or o.begins_with("api:")
+		var good: bool = not x.in_interaction() and not rest and lab._finite(x) and not x.fallen
+		if not good:
+			print("[LAB]   nicht ruhig: %s · Interaktion %s · Kanäle %s · am Boden %s · offen %d" % [x.rig.model_key,
+				x.in_interaction(), x.layers.owners(), x.fallen, x.mind.pending()])
+		ok = ok and good
+	return ok
+
+
+func _b21() -> void:
+	# Variante 1: die Magierin (neugierig) fällt. Ringsum: Ritter (mutig), Barbar (ausgelassen), Waldläuferin
+	# (verträumt), eine Ruhige, ein Schüchterner – alle in unterschiedlicher Entfernung.
+	var fallen := _spawn("hero/mage", Vector3(0, 0, 0), "curious")
+	var cast: Array[LumosActor] = [_spawn("hero/knight", Vector3(-2.2, 0, 0.9), "brave"),
+		_spawn("hero/barbarian", Vector3(2.0, 0, 1.0), "boisterous"), _spawn("hero/ranger", Vector3(0.4, 0, 2.6), "dreamy"),
+		_spawn("hero/knight", Vector3(-1.6, 0, -2.2), "calm"), _spawn("hero/ranger", Vector3(2.5, 0, -1.6), "shy")]
+	for x in cast:
+		_face(x, fallen)
+	_face(fallen, cast[2])
+	_cam(Vector3(0, 3.2, 7.8), Vector3(0, 0.7, 0))
+	await _w(0.8)
+	var o := await _mishap(fallen, cast, Vector3(0.3, 0, 1.0), "b21_aufhelfen")
+	for x: LumosActor in o.roles:
+		print("[LAB]   B21 %s (%s): %s" % [x.rig.model_key, _preset_of(x), o.roles[x]])
+	var scared := _who(o, "fright")
+	var mockers := _who(o, "laugh_at")
+	var helpers := _who(o, "help")
+	var h: LumosActor = o.helper
+	var all := cast.duplicate()
+	all.append(fallen)
+	lab._ok(bool(o.fall) and bool(o.sat) and float(o.stood_t) > 0.0,
+		"B21 Sturz: stolpert, sitzt am Boden, steht nach %.1f s wieder" % float(o.stood_t))
+	lab._ok(scared.size() >= 1 and mockers.size() >= 1 and helpers.size() == 1 and h == helpers[0],
+		"B21 Rollen entstehen aus der Persönlichkeit: %d erschrickt, %d lacht, genau einer hilft (%s)" % [scared.size(), mockers.size(),
+			h.personality.resource_name if h and h.personality.resource_name != "" else (h.rig.model_key if h else "–")])
+	var fit := true
+	for x in scared:
+		fit = fit and x.personality.confidence <= 0.5
+	for x in mockers:
+		fit = fit and x.personality.humor >= 0.6
+	fit = fit and h != null and h.personality.friendliness >= 0.6
+	lab._ok(fit, "B21 passend: Erschrockene unsicher, Lacher mit Humor, Helfer freundlich und selbstsicher")
+	lab._ok(String(o.mood) == "frustrated" and float(o.mood_t) < 1.6 and float(o.self_t) > float(o.mood_t) + 0.5,
+		"B21 die Gestürzte ärgert sich zuerst (%.1f s), lacht dann selbst darüber (%.1f s)" % [float(o.mood_t), float(o.self_t)])
+	var glared := false
+	for r: Array in fallen.mind.reactions:
+		glared = glared or String(r[2]) == "glare"
+	var sheepish := false
+	for x in mockers:
+		for r: Array in x.mind.reactions:
+			sheepish = sheepish or String(r[1]) == "glare"
+	lab._ok(glared and sheepish, "B21 Auslachen bringt einen bösen Blick, der Lacher reagiert darauf")
+	var joined := 0
+	for e: Array in o.laugh_ev:
+		if float(e[0]) > float(o.self_t) and e[1] != fallen:
+			joined += 1
+	var later := 0
+	for x in cast:
+		for r: Array in x.mind.reactions:
+			if String(r[1]) == "laugh" and String(r[2]) in ["laugh", "smile", "look"]:
+				later += 1
+	lab._ok(later >= 2, "B21 die anderen reagieren zeitversetzt auf ihr Lachen (%d Reaktionen)" % later)
+	lab._ok(float(o.contact) < 0.06, "B21 Aufhelfen: Hände verbunden beim Hochziehen (%.0f mm)" % (float(o.contact) * 1000.0))
+	lab._ok(_spread(o.delays) > 0.1 and int(o.max_ia) <= 1, "B21 nicht alle gleichzeitig (Reaktionszeiten streuen %.2f s), höchstens eine Interaktion" % _spread(o.delays))
+	await _w(2.0)
+	lab._ok(_calm(all), "B21 danach ruhig: keine Interaktion, alle Kanäle frei, Gelenke endlich")
+	_clear()
+	# Variante 2: der Barbar (Spaßvogel) fällt – niemand lacht ihn aus, er lacht früh über sich selbst, die anderen
+	# lachen mit. Dieselben Regeln, andere Rollen.
+	var b := _spawn("hero/barbarian", Vector3(0, 0, 0), "boisterous")
+	var cast2: Array[LumosActor] = [_spawn("hero/knight", Vector3(-2.0, 0, 1.0), "brave"),
+		_spawn("hero/mage", Vector3(2.1, 0, 0.8), "curious"), _spawn("hero/ranger", Vector3(0.3, 0, 2.5), "dreamy")]
+	for x in cast2:
+		_face(x, b)
+	await _w(0.8)
+	var o2 := await _mishap(b, cast2, Vector3(-0.4, 0, 1.0))
+	var joined2 := 0
+	for e: Array in o2.laugh_ev:
+		if float(e[0]) > float(o2.self_t) and e[1] != b:
+			joined2 += 1
+	var mock2 := _who(o2, "laugh_at").size()
+	lab._ok(mock2 == 0 and float(o2.self_t) > 0.0 and float(o2.self_t) < float(o.self_t) and o2.helper != null,
+		"B21 andere Rollen beim Spaßvogel: niemand lacht ihn aus, er lacht früher über sich (%.1f s), %s hilft" % [float(o2.self_t),
+			(o2.helper as LumosActor).rig.model_key if o2.helper else "niemand"])
+	await _w(2.0)
+	var all2 := cast2.duplicate()
+	all2.append(b)
+	lab._ok(_calm(all2), "B21 Variante 2 danach ruhig")
+	_clear()
+
+
+func _b22() -> void:
+	# Unterbrechungen: ein Schreck-Reflex des Helfers mitten im Aufhelfen; Regie greift während einer Umarmung zum Arm.
+	var a := _spawn("hero/knight", Vector3(-1.3, 0, 0), "brave", 0.0)
+	var b := _spawn("hero/mage", Vector3(0.6, 0, 0), "curious", 0.0)
+	_face(a, b)
+	_face(b, a)
+	await _w(0.5)
+	var fell := b.fall(Vector3(1, 0, 0), 0.8)
+	await _w(1.2)
+	var it := LumosInteraction.start("help_up", a, b)
+	var t := 0.0
+	while it != null and not it.done and not (it.phase in ["grip", "pull"]) and t < 6.0:
+		await lab.get_tree().process_frame
+		t += lab.get_process_delta_time()
+	var at := it.phase if it else "–"
+	var jumped := LumosCartoon.react(a, "jump_back", 0.8, {"force": true, "from": b.rig.global_position})
+	await _w(0.9)
+	var released := not a.hand_owner("r").begins_with("ia:") and not a.hand_owner("l").begins_with("ia:") \
+		and not b.hand_owner("r").begins_with("ia:")   # die Hände gehören jetzt dem Reflex, nicht mehr der Interaktion
+	var b_sits := b.fallen and b.layers.owner_of("legs") == "fall"
+	print("[LAB]   B22: gestürzt %s · Interaktion %s · Reflex %s · beendet %s/%s · Hände %s/%s · sitzt %s (Beine: %s)" % [fell,
+		it != null, jumped, it.done if it else false, it.ok if it else false, a.hand_owner("l"), a.hand_owner("r"), b.fallen,
+		b.layers.owner_of("legs")])
+	lab._ok(fell and it != null and jumped and it.done and not it.ok and released and b_sits,
+		"B22 Unterbrechung beim %s: Reflex verdrängt das Aufhelfen sauber, Hände frei, die Gestürzte sitzt weiter" % at)
+	await _w(6.0)
+	lab._ok(not b.fallen and not b.in_interaction() and b.layers.owners().is_empty(),
+		"B22 ohne Hilfe steht sie nach ihrer Geduld allein auf, alle Kanäle frei")
+	# Regie übernimmt den Arm während einer Umarmung → die Interaktion endet vollständig (beide Figuren frei)
+	var hug := LumosInteraction.start("hug", a, b)
+	await _w(0.8)
+	a.script_hand("r", 1.0, a.rel(0.3, 1.2, 0.3))
+	await _w(0.6)
+	var ia_free := true
+	for x in [a, b]:
+		for c: String in (x as LumosActor).layers.owners():
+			ia_free = ia_free and not String((x as LumosActor).layers.owners()[c]).begins_with("ia:")
+	lab._ok(hug != null and hug.done and ia_free and b.hand_weight("l") < 0.05 and b.hand_weight("r") < 0.05,
+		"B22 Regie greift ein: Umarmung endet für beide, keine Reste der Interaktion")
+	a.script_hand("r", 0.0)
+	_clear()
+
+
+func _b23() -> void:
+	# Drei wollen gleichzeitig mit derselben Figur: genau eine Interaktion beginnt, die anderen kommen nacheinander dran.
+	var tgt := _spawn("hero/mage", Vector3(0, 0, 0), "curious", 0.0)
+	var ask: Array[LumosActor] = [_spawn("hero/knight", Vector3(-1.3, 0, 0.7), "brave", 0.0),
+		_spawn("hero/barbarian", Vector3(1.3, 0, 0.7), "boisterous", 0.0), _spawn("hero/ranger", Vector3(0, 0, 1.5), "dreamy", 0.0)]
+	for x in ask:
+		_face(x, tgt)
+	await _w(0.5)
+	var kinds := ["high_five", "handshake", "hug"]
+	var first := 0
+	for i in 3:
+		first += 1 if LumosInteraction.start(kinds[i], ask[i], tgt) != null else 0
+	var owners := {}
+	for c: String in tgt.layers.owners():
+		owners[tgt.layers.owners()[c]] = true
+	var done := [0]
+	var conc := [0]
+	await _w(12.0, func() -> void:
+		var n := 0
+		for x in ask:
+			n += 1 if x.in_interaction() else 0
+		conc[0] = maxi(int(conc[0]), n)
+		if not tgt.in_interaction():
+			for i in 3:
+				if not ask[i].has_meta("b23") and LumosInteraction.start(kinds[i], ask[i], tgt) != null:
+					ask[i].set_meta("b23", true)
+					done[0] += 1
+					break)
+	lab._ok(first == 1 and owners.size() == 1 and int(conc[0]) <= 1 and int(done[0]) >= 2,
+		"B23 drei gleichzeitige Anfragen: eine beginnt (%d), die anderen nacheinander (%d weitere), nie zwei zugleich" % [first, int(done[0])])
+	# Alle drei sprechen die Figur gleichzeitig an (Winken, Reden): sie schaut nacheinander hin, ohne Flackern
+	var wait := 0.0
+	while tgt.in_interaction() and wait < 6.0:
+		await lab.get_tree().process_frame
+		wait += lab.get_process_delta_time()
+	tgt.cfg.autonomy = 1.0
+	tgt.look_at_target(null)
+	await _w(1.0)
+	var s0 := tgt.soc_switches
+	var looks: Array = []
+	for x in ask:
+		x.emit_social("wave", {"target": tgt})
+		x.say(1.2)
+	var last: Array = [null]   # Lambdas kopieren erfasste Variablen – veränderlicher Zustand in einem Array
+	await _w(3.0, func() -> void:
+		var f: Variant = tgt.look_focus()
+		if f != null and not is_same(f, last[0]):
+			looks.append([tgt.clock(), f])
+		last[0] = f)
+	var min_hold := INF   # nur ganze Blicke: der erste Eintrag ist der Zustand bei Beobachtungsbeginn (schon vorher begonnen)
+	for i in range(2, looks.size()):
+		min_hold = minf(min_hold, float(looks[i][0]) - float(looks[i - 1][0]))
+	var seen := {}
+	for e: Array in looks:
+		seen[e[1]] = true
+	var waves := 0
+	var rx: Array = []
+	for r: Array in tgt.mind.reactions:
+		waves += 1 if String(r[2]) == "wave_back" else 0
+		rx.append("%s:%s" % [r[1], r[2]])
+	print("[LAB]   B23 Blicke %s · Reaktionen %s" % [looks.map(func(e: Array) -> String: return "%.2f %s" % [float(e[0]), (e[1] as LumosActor).rig.model_key if e[1] is LumosActor else str(e[1])]), rx.slice(-12)])
+	lab._ok(seen.size() >= 2 and (looks.size() < 3 or min_hold >= LumosActor.SOC_DWELL - 0.02) and waves <= 1,
+		"B23 von drei angesprochen: schaut %d an, %s, winkt einmal zurück (%d)" % [seen.size(),
+			("jeder ganze Blick hält ≥ %.2f s" % min_hold) if looks.size() > 2 else "nur ein Blickwechsel (kein Hin und Her)", waves])
+	_clear()
+
+
+func _b24() -> void:
+	# Wiederholte Ereignisse: 30 Witze in 3 s und Lachen im Takt – Abklingzeiten begrenzen die Reaktionen, angesteckte
+	# Lacher stecken niemanden weiter an, die Gruppe beruhigt sich wieder.
+	var src := _spawn("hero/barbarian", Vector3(0, 0, -0.9), "boisterous")
+	var grp: Array[LumosActor] = [_spawn("hero/knight", Vector3(-1.7, 0, 0.6), "brave"), _spawn("hero/mage", Vector3(1.7, 0, 0.6), "curious"),
+		_spawn("hero/ranger", Vector3(0, 0, 1.9), "dreamy"), _spawn("hero/knight", Vector3(-2.6, 0, -1.4), "calm")]
+	for x in grp:
+		_face(x, src)
+	await _w(0.6)
+	var by_others := [0]
+	var on_ev := func(kind: String, s2: LumosActor, _d: Dictionary) -> void:
+		if kind == "laugh" and s2 != src:
+			by_others[0] += 1
+	src.social.event.connect(on_ev)
+	var n0 := 0
+	for x in grp:
+		n0 += x.mind.reactions.size()
+	var k := [0]
+	await _w(3.0, func() -> void:
+		k[0] += 1
+		if k[0] % 6 == 0:
+			src.emit_social("joke")
+		if k[0] % 30 == 0:
+			src.laugh(0.6, 0.8))
+	var laughs := 0
+	var n1 := 0
+	for x in grp:
+		n1 += x.mind.reactions.size()
+		for r: Array in x.mind.reactions:
+			laughs += 1 if String(r[2]) == "laugh" else 0
+	await _w(4.0)
+	src.social.event.disconnect(on_ev)
+	var pending := 0
+	var still := 0
+	for x in grp:
+		pending += x.mind.pending()
+		still += 1 if x.is_laughing() else 0
+		if x.mind.pending() > 0 or x.is_laughing():
+			var todo: Array = []
+			for e: Array in x.mind._todo:
+				todo.append(e[2])
+			print("[LAB]   B24 %s: lacht %s · offen %s" % [x.rig.model_key, x.is_laughing(), todo])
+	lab._ok(laughs <= grp.size() * 3 and int(by_others[0]) == 0 and n1 - n0 <= grp.size() * 30,
+		"B24 30 Witze in 3 s: %d Lacher in der Gruppe (Abklingzeit), keine Kettenreaktion (%d weitergegebene Lacher), %d Reaktionen" % [
+			laughs, int(by_others[0]), n1 - n0])
+	lab._ok(pending == 0 and still == 0, "B24 danach Ruhe: keine offenen Reaktionen, niemand lacht mehr")
+	_clear()
+
+
+func _b25() -> void:
+	# Zwei fallen gleichzeitig: je höchstens ein Helfer, niemand hilft zweien zugleich, beide stehen wieder, kein Hängen.
+	var f1 := _spawn("hero/mage", Vector3(-1.2, 0, 0), "curious")
+	var f2 := _spawn("hero/ranger", Vector3(1.4, 0, 0.2), "dreamy")
+	var cast: Array[LumosActor] = [_spawn("hero/knight", Vector3(0, 0, 2.0), "brave"), _spawn("hero/barbarian", Vector3(0.2, 0, -2.0), "boisterous"),
+		_spawn("hero/knight", Vector3(-2.8, 0, 1.4), "curious")]
+	for x in cast:
+		_face(x, f1)
+	await _w(0.6)
+	f1.fall(Vector3(0, 0, 1), 1.0)
+	f2.fall(Vector3(0, 0, -1), 1.0)
+	var helpers := {}
+	var dbl := [false]
+	await _w(14.0, func() -> void:
+		var busy := {}
+		for f in [f1, f2]:
+			var it: RefCounted = f1.social.interaction_of(f)
+			if it != null and String(it.get("kind")) == "help_up":
+				var h: LumosActor = it.get("a")
+				helpers[f] = h
+				if busy.has(h):
+					dbl[0] = true
+				busy[h] = true)
+	var all := cast.duplicate()
+	all.append_array([f1, f2])
+	var hs: Array = []
+	for f: LumosActor in helpers:
+		hs.append((helpers[f] as LumosActor).rig.model_key)
+	print("[LAB]   B25: Helfer %s · am Boden %s/%s" % [hs, f1.fallen, f2.fallen])
+	lab._ok(not f1.fallen and not f2.fallen and not dbl[0] and helpers.size() >= 1 and _calm(all),
+		"B25 zwei Stürze zugleich: %d Helfer, keiner hilft zweien, beide stehen wieder, danach ruhig" % helpers.size())
+	_clear()
+
+
+## Durchdringung: jede Interaktion zwischen zwei Heldenpaaren – feste Körperteile (Köpfe mit Helm/Kapuze, Rümpfe)
+## dürfen sich berühren, aber nicht ineinanderstecken. Gemessen wird der kleinste Abstand über die ganze Interaktion.
+const B26_TOL := -0.03
+
+
+func _b26() -> void:
+	var phase_min := {}
+	var worst := {}
+	var bad: Array[String] = []
+	for kind: String in LumosInteraction.KINDS:
+		for pr: Array in [["hero/knight", "hero/mage"], ["hero/barbarian", "hero/ranger"]]:
+			var a := _spawn(String(pr[0]), Vector3(-0.8, 0, 0), "brave", 0.0)
+			var b := _spawn(String(pr[1]), Vector3(0.8, 0, 0), "curious", 0.0)
+			_face(a, b)
+			_face(b, a)
+			var item: MeshInstance3D = null
+			var opts := {}
+			if kind == "give":
+				item = MeshInstance3D.new()
+				item.mesh = (lab.ball as MeshInstance3D).mesh
+				lab.add_child(item)
+				a.interact.held["r"] = item
+				a.reach("r", a.interact.carry_point.bind("r"), 0.2, func() -> Array: return [a.forward(), Vector3.UP])
+				opts = {"hand": "r", "to_hand": "l"}
+			await _w(0.5)
+			if kind == "help_up":
+				b.fall(Vector3(1, 0, 0), 0.8)
+				await _w(1.4)
+			var it := LumosInteraction.start(kind, a, b, opts)
+			var mn := [INF]
+			var t := 0.0
+			var shot_at := INF
+			while it != null and not it.done and t < 12.0:
+				await lab.get_tree().process_frame
+				t += lab.get_process_delta_time()
+				var c := LumosActor.clearance(a, b)
+				if OS.has_environment("LUMOS_DBG_B26") and kind == OS.get_environment("LUMOS_DBG_B26"):
+					var ph := String(it.phase)
+					phase_min[ph] = minf(float(phase_min.get(ph, INF)), c)
+				if c < float(mn[0]) - 0.02 and c < B26_TOL and pr == [["hero/knight", "hero/mage"], ["hero/barbarian", "hero/ranger"]][0]:
+					shot_at = t
+				mn[0] = minf(float(mn[0]), c)
+				if absf(t - shot_at - 0.0) < 0.001 and c < B26_TOL - 0.1:
+					await lab._shot("b26_%s_%.1f" % [kind, t])
+			if not phase_min.is_empty():
+				print("[LAB]   B26 %s %s je Phase (mm): %s · Ausweichen aktiv %d/%d Bilder" % [kind, String(pr[0]).get_file(), str(phase_min), a.avoid_hits, b.avoid_hits])
+				phase_min.clear()
+			var key := "%s %s/%s" % [kind, String(pr[0]).get_file(), String(pr[1]).get_file()]
+			worst[key] = float(mn[0]) if it != null else NAN
+			if it == null or float(mn[0]) < B26_TOL:
+				bad.append("%s %s" % [key, "nicht gestartet" if it == null else "%.0f mm" % (float(mn[0]) * 1000.0)])
+			if item:
+				item.queue_free()
+			_clear()
+			await _w(0.2)
+	var line := ""
+	for k: String in worst:
+		line += " %s %.0f ·" % [k, float(worst[k]) * 1000.0]
+	print("[LAB]   B26 kleinster Abstand fester Körperteile je Interaktion (mm):" + line)
+	lab._ok(bad.is_empty(), "B26 keine Durchdringung in %d Interaktionen (Toleranz %.0f mm)%s" % [worst.size(), B26_TOL * 1000.0,
+		"" if bad.is_empty() else " – " + ", ".join(bad)])

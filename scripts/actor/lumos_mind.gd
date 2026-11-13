@@ -12,6 +12,12 @@ extends RefCounted
 ##   Richtung schauen, kurz erschrecken · wave → zurückwinken · joke/tease/hit → lachen, schmunzeln oder ungläubig
 ##   den Kopf schütteln · win/lose → freuen, bewundern, gespielt enttäuscht, Schadenfreude · dance → mittanzen oder
 ##   mitwippen · sulk → Mitgefühl oder necken · point → dem Zeigen folgen · talk → zuhören (hinschauen, nicken)
+##   fall → hinschauen, dann nach Persönlichkeit und Entfernung: aufhelfen gehen (freundlich, selbstsicher – nur einer),
+##   auslachen (Humor, Verspieltheit), erschrecken (unsicher, schüchtern, gefühlvoll) oder Mitgefühl · glare (böser
+##   Blick des Ausgelachten) → verlegen oder frech grinsen
+## Selbst hingefallen (on_fell): Schmerz, dann Ärger (selbstsicher/impulsiv) oder Verlegenheit; Auslachen bringt
+## einen bösen Blick statt Mitlachen; mit Humor lacht die Figur später über sich selbst (steckt die anderen an); hilft
+## niemand, steht sie nach ihrer Geduld allein auf.
 
 var actor: LumosActor
 var reactions: Array = []        # Protokoll (Tests): [Zeit, Ereignis, Reaktion, Verzögerung]
@@ -26,6 +32,9 @@ var _last_dom := ""
 var _pant_t := 0.0
 var _peak_t := 0.0
 var _peak_id := ""
+var _fell_t := -99.0
+var _fell_mood := "frustrated"
+var _self_laughed := true
 
 
 func setup(a: LumosActor) -> void:
@@ -58,11 +67,70 @@ func pending() -> int:
 	return _todo.size()
 
 
+## Geplante Reaktionen verwerfen (die Lambdas halten den Mind fest – beim Entfernen der Figur aufrufen).
+func reset() -> void:
+	_todo.clear()
+	_inbox.clear()
+
+
 func _later(ev_kind: String, name: String, delay: float, f: Callable) -> void:
 	_todo.append([_t + delay, f, name])
 	reactions.append([_t, ev_kind, name, delay])
 	if reactions.size() > 80:
 		reactions.pop_front()
+
+
+## Selbst hingefallen (LumosActor.fall): der eigene Gefühlsverlauf entsteht aus der Persönlichkeit.
+func on_fell(strength: float) -> void:
+	var p := actor.personality
+	var rng := actor.rng
+	_fell_t = _t
+	_self_laughed = false
+	_fell_mood = "frustrated" if p.confidence >= 0.5 or p.impulsivity >= 0.6 else "embarrassed"
+	_later("fall", _fell_mood, rng.randf_range(0.7, 1.0), actor.emotion.trigger.bind(_fell_mood,
+		clampf(0.55 + 0.35 * strength, 0.0, 1.0), lerpf(2.2, 4.0, 1.0 - p.humor), -1.0, -1.0, actor))
+	if p.humor >= 0.3:   # über sich selbst lachen – früh mit viel Humor, spät mit wenig
+		_later("fall", "self_laugh", lerpf(5.5, 1.8, p.humor) * rng.randf_range(0.85, 1.25), _self_laugh)
+	_later("fall", "patience", lerpf(2.4, 5.0, 1.0 - p.energy) * rng.randf_range(0.9, 1.2) + 1.0, _get_up_alone)
+
+
+func _self_laugh() -> void:
+	_self_laughed = true
+	var p := actor.personality
+	actor.emotion.clear(_fell_mood)
+	actor.emotion.trigger("embarrassed" if p.shyness > 0.5 else "grin", 0.6, 1.4)
+	actor.laugh(actor.rng.randf_range(1.4, 2.0), clampf(0.55 + 0.4 * p.humor, 0.5, 1.0), "smile", true)
+
+
+## Geduld zu Ende: allein aufstehen – außer jemand ist schon auf dem Weg (dann noch etwas warten).
+func _get_up_alone() -> void:
+	if not actor.fallen or actor.is_rising():
+		return
+	if actor.social and actor.social.helper_for(actor) != null and _t - _fell_t < 9.0:
+		_todo.append([_t + 1.0, _get_up_alone, "wait_help"])
+		return
+	if actor.in_interaction():   # gerade beschäftigt (z. B. ein Aufhelfen läuft): später noch einmal
+		_todo.append([_t + 1.0, _get_up_alone, "patience"])
+		return
+	actor.get_up(lerpf(0.8, 1.15, actor.personality.energy))
+
+
+## Aufhelfen gehen – wer zuerst entscheidet, hilft; die anderen bleiben beim Mitgefühl.
+func _help_up(src: LumosActor) -> void:
+	if not is_instance_valid(src) or not src.fallen or src.is_rising() or actor.in_interaction() \
+			or actor.social == null or actor.social.helper_for(src) != null:
+		if is_instance_valid(src) and src.fallen:
+			actor.emotion.trigger("compassion", 0.55, 1.2, -1.0, -1.0, src)
+		return
+	actor.social.claim_help(src, actor)
+	var it := LumosInteraction.start("help_up", actor, src)
+	if it == null:
+		actor.social.claim_help(src, null)
+		return
+	var hub := actor.social
+	it.finished.connect(func(_ok: bool) -> void:
+		if is_instance_valid(hub):
+			hub.claim_help(src, null))
 
 
 func _cool_ok(tag: String, secs: float) -> bool:
@@ -86,6 +154,15 @@ func _react(ev: Dictionary, dist: float) -> void:
 		return
 	match kind:
 		"laugh":
+			if src != null and not _self_laughed and (actor.fallen or _t - _fell_t < 4.0):
+				# am Boden ausgelacht: erst Ärger und ein böser Blick – kein Mitlachen, bis man selbst darüber lacht
+				if actor.autonomy_gate(0.35) and _cool_ok("glare", 3.0):
+					_later(kind, "glare", delay * 0.8, func() -> void:
+						if is_instance_valid(src):
+							actor.look_social(src, 1.6)
+							actor.emotion.trigger(_fell_mood, 0.85, 1.5, -1.0, -1.0, src)
+							actor.emit_social("glare", {"target": src}))
+				return
 			if not actor.autonomy_gate(0.2) or src == null or actor.is_laughing() or not _cool_ok("laugh", 2.4):
 				return
 			_later(kind, "look", delay * 0.6, actor.look_social.bind(src, 1.6))
@@ -115,7 +192,10 @@ func _react(ev: Dictionary, dist: float) -> void:
 					if it == null:
 						actor.social.claim_comfort(src, null)
 					else:
-						it.finished.connect(func(_ok: bool) -> void: actor.social.claim_comfort(src, null)))
+						var hub := actor.social
+						it.finished.connect(func(_ok: bool) -> void:   # Figuren können inzwischen entfernt sein
+							if is_instance_valid(hub):
+								hub.claim_comfort(src, null)))
 		"fright", "scream", "boo":
 			if not actor.autonomy_gate(0.2) or data.get("target") == actor:
 				return
@@ -189,6 +269,46 @@ func _react(ev: Dictionary, dist: float) -> void:
 			_later(kind, "follow_point", delay, actor.look_social.bind(tp, 2.0))
 			if actor.autonomy_gate(0.35) and p.curiosity > 0.45:
 				_later(kind, "curious", delay + 0.2, em.trigger.bind("curious", 0.6, 1.4))
+		"fall":
+			if src == null or not actor.autonomy_gate(0.2):
+				return
+			_later(kind, "look", delay * 0.5, actor.look_social.bind(src, 3.0))
+			if not actor.autonomy_gate(0.35):
+				return
+			var sev := clampf(i, 0.2, 1.0)
+			# Neigungen aus der Persönlichkeit (helfen nimmt mit der Entfernung ab); die stärkste über ihrer Schwelle gewinnt
+			var help := p.friendliness * 0.55 + p.confidence * 0.35 + p.sociability * 0.1 - p.shyness * 0.35 - p.playfulness * 0.12 \
+				- dist * 0.02 + rng.randf_range(-0.03, 0.03)   # Spaßvögel lachen eher, als dass sie helfen
+			var fun := p.humor * 0.6 + p.playfulness * 0.4 - p.friendliness * 0.15 + rng.randf_range(-0.04, 0.04) \
+				- (0.3 if i > 1.2 else 0.0)   # ein harter Sturz (Stärke > 1,2) ist nicht lustig
+			var scare := (1.0 - p.confidence) * 0.55 + p.shyness * 0.35 + p.emotionality * 0.3 + rng.randf_range(-0.04, 0.04)
+			var can_help := actor.autonomy_gate(0.75) and actor.social.helper_for(src) == null
+			var m_help := help - 0.56 if can_help else -1.0
+			var m_fun := fun - 0.68
+			var m_scare := scare - 0.6
+			if m_help > 0.0 and m_help >= m_fun and m_help >= m_scare and _cool_ok("help", 6.0):
+				_later(kind, "worried", delay, em.trigger.bind("worried", 0.6, 0.8, -1.0, -1.0, src))
+				_later(kind, "help", delay + 0.35, _help_up.bind(src))
+			elif m_fun > 0.0 and m_fun >= m_scare:
+				var ls := rng.randf_range(1.2, 1.8)
+				var li := clampf(fun + 0.1, 0.5, 1.0)
+				_later(kind, "amused", delay, em.trigger.bind("playful", 0.7, 1.6, -1.0, -1.0, src))
+				_later(kind, "laugh_at", delay + rng.randf_range(0.1, 0.4), func() -> void:
+					if not actor.in_interaction() and not actor.is_laughing():
+						actor.laugh(ls, li, "smile", true))
+			elif m_scare > 0.0:
+				_later(kind, "fright", delay * 0.7, em.trigger.bind("scared", clampf(0.5 + 0.4 * sev, 0.0, 1.0), 1.0, -1.0, -1.0, src))
+				if actor.autonomy_gate(0.6) and p.emotionality > 0.5:
+					_later(kind, "startle", delay * 0.7, func() -> void:
+						LumosCartoon.react(actor, "big_surprise", 0.55 + 0.3 * sev, {"target": src}))
+				_later(kind, "worried", delay + 1.0, em.trigger.bind("worried", 0.6, 1.4, -1.0, -1.0, src))
+			else:
+				_later(kind, "compassion", delay, em.trigger.bind("compassion", 0.6, 1.4, -1.0, -1.0, src))
+		"glare":
+			if data.get("target") != actor or src == null or not actor.autonomy_gate(0.35):
+				return
+			var e5 := "bashful" if p.friendliness >= 0.5 else "teasing"
+			_later(kind, e5, delay, em.trigger.bind(e5, 0.65, 1.4, -1.0, -1.0, src))
 		"talk":
 			if not actor.autonomy_gate(0.2) or src == null:
 				return
@@ -214,7 +334,7 @@ func _periodic() -> void:
 	if c != "" and _peak_t >= 0.4 and actor.autonomy_gate(0.6) and (dom != _emo_c or _t - _emo_c_t > 9.0) and not actor.in_interaction():
 		_emo_c = dom
 		_emo_c_t = _t
-		if actor.rng.randf() < 0.3 + 0.5 * p.cartoon_bias() and LumosCartoon.react(actor, c, di):
+		if actor.rng.randf() < 0.3 + 0.5 * p.cartoon_bias() and LumosCartoon.react(actor, c, di, {"emit": false}):
 			reactions.append([_t, "emotion:" + dom, "cartoon:" + c, 0.0])
 	var m := String(em.mods.mouth)
 	if actor.face and m != "":

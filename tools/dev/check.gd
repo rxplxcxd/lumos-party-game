@@ -1,9 +1,15 @@
 extends Node
 ## Lädt alle Skripte und Szenen des Projekts, um Parse-/Ladefehler zu finden.
+## Andere Ordner (z. B. eigenständige Produktionen, die das Spiel nicht kennen darf) prüft man mit
+##   -- --check-dirs=res://ordner[,res://weiterer]   (ersetzt die Standardliste)
 func _ready() -> void:
 	var bad := 0
 	var files: Array[String] = []
-	for d in ["res://autoload", "res://scripts", "res://scenes", "res://tools/charlab", "res://trailer"]:
+	var dirs: Array[String] = ["res://autoload", "res://scripts", "res://scenes", "res://tools/charlab"]
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--check-dirs="):
+			dirs.assign(a.trim_prefix("--check-dirs=").split(",", false))
+	for d in dirs:
 		_collect(d, files)
 	for f in files:
 		var r = load(f)

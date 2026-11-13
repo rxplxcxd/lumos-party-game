@@ -102,6 +102,18 @@ var mood_id := "neutral"
 var _act: Array = []
 var _dom := "neutral"
 var _base := {}
+var mixes := 0                   # Zahl der Mischungen (Messung: gemischt wird nur bei messbarer Änderung)
+# Mischung über Zahlenfelder statt Wörterbücher: Werte je Schlüssel in der Reihenfolge von keys
+var _basev := PackedFloat64Array()
+var _maxv := PackedByteArray()   # 1 = Schlüssel mischt per Maximum (Röte, Tränen …)
+var _exv := {}                   # Ausdruck → PackedFloat64Array (fehlender Schlüssel = Grundwert), bei Bedarf gefüllt
+var _exv_rev := -1
+var _accv := PackedFloat64Array()
+var _mxv := PackedFloat64Array()
+var _mixed_n := -1               # Stand beim letzten Mischen: Zahl der Einträge, Verstärkung, Haltung der Persönlichkeit
+var _mix_gain := -1.0
+var _mix_post := Vector4(INF, 0, 0, 0)
+const MIX_EPS := 0.0002          ## Stärkeänderung, ab der neu gemischt wird (darunter < 0,0003 je Gesichtswert: unsichtbar)
 
 
 func setup(p: LumosPersonality, exprs: Dictionary, posts: Dictionary, face_keys: Array) -> void:
@@ -113,7 +125,34 @@ func setup(p: LumosPersonality, exprs: Dictionary, posts: Dictionary, face_keys:
 	for k: String in keys:
 		_base[k] = float(n.get(k, 1.0 if k in ["width", "pupil"] else 0.0))
 	face_out = _base.duplicate()
+	var nk := keys.size()
+	_basev.resize(nk)
+	_maxv.resize(nk)
+	_accv.resize(nk)
+	_mxv.resize(nk)
+	for j in nk:
+		_basev[j] = float(_base[keys[j]])
+		_maxv[j] = 1 if _MAXSET.has(keys[j]) else 0
 	set_mood("neutral", 1.0, 0.0)
+
+
+## Abweichungen eines Ausdrucks vom Grundwert: [Schlüssel-Indizes, Wert − Grundwert]. Schlüssel ohne Abweichung
+## tragen zur Mischung nichts bei und werden übersprungen (fehlender Schlüssel = Grundwert wie im Gesicht).
+func _ex(id: String) -> Array:
+	if _exv.has(id):
+		return _exv[id]
+	var ex: Dictionary = expressions.get(id, {})
+	var idx := PackedInt32Array()
+	var dv := PackedFloat64Array()
+	for j in _basev.size():
+		var k: String = keys[j]
+		var dlt := float(ex.get(k, 1.0 if _ONESET.has(k) else 0.0)) - _basev[j]
+		if dlt != 0.0:
+			idx.append(j)
+			dv.append(dlt)
+	var r := [idx, dv]
+	_exv[id] = r
+	return r
 
 
 static func meta(id: String) -> Dictionary:
@@ -200,9 +239,13 @@ func active() -> Array:
 
 
 func update(dt: float) -> void:
-	# Hüllkurven
+	# Hüllkurven; ausgeklungene Einträge fallen heraus. Gemischt wird nur, wenn sich eine Stärke seit dem letzten
+	# Mischen um mehr als MIX_EPS geändert hat, Einträge hinzukamen/wegfielen oder sich die Persönlichkeit änderte.
 	var spawn: Array = []
-	for e in _act:
+	var dirty := false
+	var i := 0
+	while i < _act.size():
+		var e: Dictionary = _act[i]
 		e.t = float(e.t) + dt
 		match String(e.phase):
 			"att":
@@ -220,19 +263,33 @@ func update(dt: float) -> void:
 						spawn.append([String(m.after), float(e.peak) * float(m.get("ai", 0.5)), e.src])
 			"rel":
 				e.i = float(e.i) * exp(-dt / float(e.rel))
-	_act = _act.filter(func(x: Dictionary) -> bool: return String(x.phase) != "rel" or float(x.i) > 0.015)
+				if float(e.i) <= 0.015:
+					_act.remove_at(i)
+					dirty = true
+					continue
+		if absf(float(e.i) - float(e.get("mi", -1.0))) > MIX_EPS:
+			dirty = true
+		i += 1
 	for s in spawn:   # Nachwirkung blendet über, während das alte Gefühl abklingt
 		trigger(String(s[0]), float(s[1]) / maxf(personality.intensity_scale(), 0.01), -1.0, 0.6, 1.2, s[2])
-	_mix()
+		dirty = true
+	if dirty or _act.size() != _mixed_n or personality.expressiveness() != _mix_gain or personality.posture() != _mix_post:
+		_mix()
 
 
 func _mix() -> void:
 	var gain := personality.expressiveness()
-	var acc := {}
-	var mx := {}
-	for k: String in keys:
-		acc[k] = 0.0
-		mx[k] = float(_base[k])
+	_mix_gain = gain
+	_mix_post = personality.posture()
+	_mixed_n = _act.size()
+	mixes += 1
+	if _exv_rev != LumosFace.expr_rev:   # Ausdrücke wurden zur Laufzeit geändert (add_expression)
+		_exv.clear()
+		_exv_rev = LumosFace.expr_rev
+	var nk := _basev.size()
+	_accv.fill(0.0)
+	for j in nk:
+		_mxv[j] = _basev[j]
 	var wsum := 0.0
 	var post := Vector4.ZERO
 	var blink := 0.0
@@ -246,20 +303,22 @@ func _mix() -> void:
 	# Mischung: gewichteter Mittelwert der nach Stärke skalierten Ausschläge – ein Gefühl allein wirkt mit seiner
 	# Stärke, mehrere teilen sich das Gesicht (Reaktionen wiegen 1,6-fach gegen die Stimmung). „neutral“ ist die
 	# Abwesenheit von Gefühl und verdünnt nichts.
-	for e in _act:
+	for e: Dictionary in _act:
 		var i := float(e.i)
+		e.mi = i
 		var id := String(e.id)
 		if i < 0.01 or id == "neutral":
 			continue
 		var w := i * (1.0 if bool(e.sus) else 1.6)
-		var ex: Dictionary = expressions.get(id, {})
-		for k: String in keys:
-			var b := float(_base[k])
-			var v := float(ex.get(k, 1.0 if _ONESET.has(k) else 0.0))   # fehlender Schlüssel = Grundwert (wie im Gesicht)
-			if _MAXSET.has(k):
-				mx[k] = maxf(float(mx[k]), b + (v - b) * i * gain)
+		var ev := _ex(id)
+		var idx: PackedInt32Array = ev[0]
+		var dv: PackedFloat64Array = ev[1]
+		for q in idx.size():
+			var j := idx[q]
+			if _maxv[j] == 1:
+				_mxv[j] = maxf(_mxv[j], _basev[j] + dv[q] * i * gain)
 			else:
-				acc[k] = float(acc[k]) + (v - b) * i * w
+				_accv[j] += dv[q] * i * w
 		var p: Array = postures.get(id, postures.get("neutral", [0.0, 0.0, 0.0, 0.0]))
 		post += Vector4(float(p[0]), float(p[1]), float(p[2]), float(p[3])) * i * w
 		var m := meta(id)
@@ -279,11 +338,8 @@ func _mix() -> void:
 			br_w = bri
 			breath = m.br
 	var n := maxf(wsum, 0.0001)
-	for k: String in keys:
-		if _MAXSET.has(k):
-			face_out[k] = float(mx[k])
-		else:
-			face_out[k] = float(_base[k]) + float(acc[k]) / n * gain
+	for j in nk:
+		face_out[keys[j]] = _mxv[j] if _maxv[j] == 1 else _basev[j] + _accv[j] / n * gain
 	posture_out = post / n * gain + personality.posture()
 	var dm := meta(best)
 	mods.blink = blink / wsum if wsum > 0.0 else 1.0

@@ -5,6 +5,45 @@ Ab 1.5.1 wieder in kleinen Schritten: 1.5.1, 1.5.2 … bis 1.9.9 (keine Sprünge
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
 ## 1.5.2 – Universelles Mehrschicht-System: Gefühl, Mikroleben, Gewicht, Sozialverhalten, Cartoon
+
+### 1.5.2 Finalisierung – Profiling, Optimierung, Durchdringungsschutz, Stresstests, Release-Validierung
+Auf dem Entwicklungsbranch; `main` bleibt unverändert bis zur Freigabe.
+* **Performance-Labor (`tools/charlab/PerfLab.tscn`, `LumosProf`):** misst jedes Teilsystem getrennt (Fassade,
+  Mind, Mikroleben, Gesten, Hutkrempe, Ausweichen, Gefühl, Blick, Hände, Wahrnehmung, sozialer Knoten,
+  Interaktionen, Gesicht/Neuzeichnen, Körper mit Gewicht/Haltung/Füßen/Armen/Zubehör, Lokomotion) in den Szenarien
+  0A/0B (ohne Framework), A–F, G1/G2 mit 1/4/8/16 Figuren; Mittel, p95, p99, Spitze; Wiederholungslauf; JSON + Markdown.
+* **Optimiert ohne sichtbaren Unterschied** (A/B-Bildvergleich, alle Prüfungen grün), 16 Figuren, Bildzeit Ø vorher
+  (`d9cccd8a`) → nachher: Stehen 7,16 → 3,74 ms, Bewegung 7,80 → 5,13, Interaktionen 10,63 → 6,34, Gefühle 12,12 →
+  7,95, Cartoon-Worst-Case 12,31 → 7,40, alles zugleich 11,24 → 7,43, außerhalb des Bildes 3,28 → 1,73, weit weg
+  5,84 → 3,95. Gesicht neu zeichnen nur bei sichtbarer Änderung (≥ 0,25 px), Gefühle als gepackte Felder mit
+  Änderungserkennung, Wahrnehmung einmal je Figur und Bild, Hutkrempe ohne volle Wahrnehmung, ruhende Gefühle
+  außerhalb des Bildes. Objekte nach allen Läufen 1114 → 181 (Lambda-Zyklen aufgelöst).
+* **Körpervolumen und Durchdringungsschutz:** feste Körperteile als Ellipsoide (Kopf mit Helm/Kapuze, Rumpf) aus den
+  Mesh-Grenzen; `clearance()`, `fit_distance()` für Aufstellungen; Kopf und Oberkörper weichen nahen Körpern aus –
+  **vorausschauend** bei schneller Annäherung (0,1 s); billige Hüllkugel-Schranke vor der genauen Rechnung.
+* **Stürze und Aufhelfen:** `fall()`/`get_up()`, Interaktion `help_up` (Hand reichen, greifen, hochziehen, stützen);
+  Reaktionen der anderen entstehen aus der Persönlichkeit (erschrecken, lachen, genau einer hilft); die Gestürzte
+  ärgert oder schämt sich und lacht später selbst darüber; Auslachen bringt einen bösen Blick.
+* **Stresstests B21–B26:** Stolper-Szenario mit 4 Figuren (2 Varianten), Unterbrechungen (Reflex mitten im Griff,
+  Regie-Abbruch), konkurrierende Anfragen, 30 Witze in 3 s ohne Kettenreaktion, zwei Stürze zugleich, keine
+  Durchdringung in allen 14 Interaktionen × 2 Paaren.
+* **Behoben:** Figuren, die im selben Bild entstanden, nahmen sich nie wahr (sozialer Knoten doppelt angelegt –
+  betraf den Trailer); `volumes()` nutzte die Pose vor der Modifikation; Gesicht erzeugte leere Flächen
+  (38 Fehlermeldungen); Lachanfall löste sich selbst wieder aus; Geduld der Gestürzten wurde während einer
+  Interaktion nie neu geprüft; Blick-Verweilen wurde durch wiederholte Reize zurückgesetzt; Wege führten durch die
+  Zielfigur hindurch; unseeded Zufall (Lidschlag-Takt, Atemphase) – Abläufe sind jetzt wiederholbar.
+* **Geänderte Interaktionsformen (Chibi-Geometrie: Kopf breiter als Arm lang), Prüfungen entsprechend angepasst:**
+  Umarmung seitlich Schulter an Schulter (Test 11 prüft Schulterabstand und innere Hand statt Umarmung von vorn);
+  Trösten mit der Hand am Oberarm (B15 prüft den Oberarm statt der Schulter); beim Loslassen der Umarmung ein
+  kleiner Schritt auseinander; High-Five 2 cm näher mit mehr Rumpf-Unterstützung (63 mm statt grenzwertig 96–105 mm).
+* **Trailer ohne Durchdringung:** Prüfprogramm `trailer/ClearanceProbe.tscn` (jedes Bild, alle Paare) – vorher
+  20 Spannen bis −392 mm, jetzt keine; kleinster Abstand im ganzen Trailer +23 mm. Inszenierung an zehn Stellen
+  korrigiert (Abklatschen, Auflaufen, Schulterklopfen, An-die-Hand-nehmen, Strand-Laufwege, Knuff, Boss,
+  Sumo-Hintergrund, Sumo-Stoß, Lagerfeuer); bildgenau
+  wiederholbar; Vorschau einzelner Beats mit `--trailer-to`. Trennungsprüfung: Skriptprüfung des Trailers separat
+  (`Check.tscn -- --check-dirs=res://trailer`), die Prüfung des Spiels liest den Trailer-Ordner nicht mehr.
+* **Grenzen:** nicht im Spiel eingebaut; GPU-/Render-/Web-Kosten nicht gemessen (nur CPU headless); Ausweichen
+  kostet im Gedränge ≈ 32 µs je Figur; Hand-in-Hand beim Loslaufen 20–28 cm Handgelenkabstand.
 Baut auf 1.5.1 auf (Rückfall: Commit `76e50fce`), ohne funktionierende Systeme zu ersetzen. Spielabläufe unverändert;
 der Trailer nutzt den vollen Stack. Doku mit Architektur, Schnittstellen, Profilen, Leistung, Grenzen und
 Migrationsanleitung: `docs/CHARACTER_FRAMEWORK.md`.
@@ -38,8 +77,8 @@ Migrationsanleitung: `docs/CHARACTER_FRAMEWORK.md`.
 * **Trailer:** volle Akteure mit Regie-Schicht; dazwischen leben die Figuren selbst; neue Momente (Staunen mit
   Erstarren, Kopfkratzen, Schielen, Rotwerden, Herzen, Zittern, Sternchen, Bettelblick, Schlucken, Lächeln im
   Schlaf). Neu gerendert in 1920×1080 bei 60 fps.
-* **Grenzen:** nicht im Spiel eingebaut; keine Finger; große Hutkrempen können noch in Köpfe ragen; Umhänge starr am
-  Oberkörper; GPU/Web-Leistung nicht gemessen; eigene Avatare ungeprüft.
+* **Grenzen:** nicht im Spiel eingebaut; keine Finger; große Hutkrempen weichen über eine eigene Feder aus (zählen
+  nicht als festes Volumen); Umhänge starr am Oberkörper; GPU/Web-Leistung nicht gemessen; eigene Avatare ungeprüft.
 
 ## 1.5.1 – Framework gehärtet, Trailer nutzt es, Neu-Render 1080p60
 Eine zentrale Umsetzung: Der Trailer nutzt jetzt das Character Framework, die alten Kopien `trailer/trailer_face.gd`

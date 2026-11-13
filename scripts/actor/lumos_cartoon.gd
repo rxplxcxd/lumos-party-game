@@ -52,7 +52,8 @@ static func available() -> Array:
 
 ## Reaktion auslösen. opts: force (Abklingzeit/Budget ignorieren), target (LumosActor/Vector3 – wohin geschaut
 ## wird), from (Vector3 – woher der Schreck kommt), behind (LumosActor – hinter wem man sich versteckt), move (false =
-## die Figur wird nicht versetzt), dur. true = läuft.
+## die Figur wird nicht versetzt), dur, emit (false = ein Lachanfall ist selbst Reaktion und steckt andere nicht an).
+## true = läuft.
 static func react(actor: LumosActor, id: String, intensity := 0.7, opts := {}) -> bool:
 	if actor == null or not REACTIONS.has(id) or actor.cfg.cartoon <= 0.0:
 		return false
@@ -249,7 +250,7 @@ static func _start(actor: LumosActor, run: Dictionary, opts: Dictionary) -> void
 			if b:
 				b.crouch = 0.12 * i
 		"laugh_fit":
-			actor.laugh(dur + 0.3, 1.0)
+			actor.laugh(dur + 0.3, 1.0, "smile", bool(opts.get("emit", true)))   # automatisch aus einem Gefühl: steckt nicht weiter an
 			em.trigger("laugh", 1.0, dur, 0.1)
 			if actor.face:
 				actor.face.set_params({"tear": 0.5 * i})

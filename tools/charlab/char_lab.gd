@@ -293,6 +293,8 @@ func _behavior_only() -> void:
 
 func _auto() -> void:
 	label.visible = false
+	for a in actors + others:   # Mechanik-Tests 0–14: keine sozialen Reaktionen auf die Prüf-Ereignisse (Treffer, Lachen …)
+		a.cfg.autonomy = 0.0
 	var m := {"lo": INF, "hi": -INF, "gap": 0.0, "min_d": INF, "w": 0.0, "wa": 0.0, "min_h": INF, "pd": 1.0, "peak": 0.0, "head": INF, "pat": 0}
 	await _wait(0.6)
 	# 0 – Kompatibilität: jedes Rig startet, Fähigkeiten passen zum Skelett, Grundfunktionen laufen fehlerfrei
@@ -323,7 +325,11 @@ func _auto() -> void:
 		m.lo = minf(m.lo, y)
 		m.hi = maxf(m.hi, y)
 		for a in actors:
-			m.gap = maxf(m.gap, absf(minf(a.body.joint_pos("foot.l").y, a.body.joint_pos("foot.r").y) - a.cfg.ankle_height - a.rig.global_position.y))
+			var g := absf(minf(a.body.joint_pos("foot.l").y, a.body.joint_pos("foot.r").y) - a.cfg.ankle_height - a.rig.global_position.y)
+			if g > m.gap and g > 0.07:
+				print("[LAB]   1: %s Fuß %.0f mm · Clip %s · Geste %s · Cartoon %s · Reaktionen %s" % [a.rig.model_key, g * 1000.0, a.rig.current,
+					a.micro.gesture, LumosCartoon.running(a), a.mind.reactions.slice(-3)])
+			m.gap = maxf(m.gap, g)
 	await _wait(2.6, samp)
 	_ok(m.hi - m.lo > 0.002 and m.hi - m.lo < 0.08, "1 Atmung sichtbar und dezent (Schulter hebt sich %.1f mm)" % ((m.hi - m.lo) * 1000.0))
 	_ok(m.gap < 0.07, "1 Füße am Boden im Stand (größte Abweichung %.0f mm)" % (m.gap * 1000.0))
@@ -487,8 +493,22 @@ func _auto() -> void:
 		min_c[0] = minf(min_c[0], actors[1].body.joint_pos("chest").distance_to(actors[2].body.joint_pos("chest")))
 		min_hd[0] = minf(min_hd[0], actors[1].body.joint_pos("head").distance_to(actors[2].body.joint_pos("head"))))
 	await _shot("11_umarmung")
-	var arm_on := actors[1].hand_pos("l").distance_to(actors[2].body.joint_pos("shoulder.r")) < 0.35 and actors[1].hand_weight("l") > 0.9
-	_ok(min_c[0] < 1.0 and arm_on and _finite(actors[1]) and _finite(actors[2]), "11 Umarmung: Körper nähern sich (Brust %.2f m), Arme liegen an den Schultern" % min_c[0])
+	# Seitumarmung (Chibi-Proportionen): je eine innere Hand liegt an der nahen Schulter des anderen
+	var arm_d := INF
+	for pr: Array in [[actors[1], actors[2]], [actors[2], actors[1]]]:
+		var best := INF
+		for hd in ["l", "r"]:
+			if (pr[0] as LumosActor).hand_weight(hd) > 0.9:
+				for sd in ["l", "r"]:
+					best = minf(best, (pr[0] as LumosActor).hand_pos(hd).distance_to((pr[1] as LumosActor).body.joint_pos("shoulder." + sd)))
+		arm_d = best if arm_d == INF else maxf(arm_d, best)
+	var arm_on := arm_d < 0.25
+	var sh_d := INF   # Seitumarmung: Schulter an Schulter
+	for s1 in ["l", "r"]:
+		for s2 in ["l", "r"]:
+			sh_d = minf(sh_d, actors[1].body.joint_pos("shoulder." + s1).distance_to(actors[2].body.joint_pos("shoulder." + s2)))
+	_ok(sh_d < 0.62 and arm_on and _finite(actors[1]) and _finite(actors[2]), "11 Umarmung (seitlich): Schulter an Schulter (%.0f mm, Brust %.2f m), je ein Arm an der Schulter des anderen (Hand %.0f mm)" % [
+		sh_d * 1000.0, min_c[0], arm_d * 1000.0])
 	_ok(min_hd[0] > actors[1].head_radius() * 1.1, "11 Köpfe seitlich versetzt statt ineinander (Abstand %.2f m)" % min_hd[0])
 	await _wait(1.6)
 	_ok(actors[1].rig.global_position.distance_to(p0) < 0.02 and actors[1].hand_weight("l") < 0.05, "11 danach gelöst und zurückgetreten")
@@ -522,7 +542,9 @@ func _auto() -> void:
 	_ok(sl2.x < 0.08 and _finite(a2), "14 Kombination: Standfuß bleibt verankert (Ø %.3f m/s)" % sl2.x)
 	await _shot("14_kombination")
 	_combo = false
-	# 15 – Leistung: 16 Figuren gehen, tragen, schauen, lachen; 4 Paare interagieren gleichzeitig
+	# 15 – Leistung: 16 Figuren gehen, tragen, schauen, lachen; 4 Paare interagieren gleichzeitig (mit vollem Verhalten)
+	for a in actors + others:
+		a.cfg.autonomy = 1.0
 	var extra: Array[LumosActor] = []
 	for i in 12:
 		var e := _spawn(KEYS[i % 4], Vector3(-5.5 + i, 0, -7.0))

@@ -68,6 +68,9 @@ var micro_head := Vector3.ZERO      # Kopf-Zusatz aus Mikrobewegung/Cartoon (get
 var micro_chest := Vector3.ZERO
 var tremble := 0.0                  # Zittern (Angst, Kälte, Schluchzen)
 var hat_avoid := Vector3.ZERO       # Welt-Richtung zu einem nahen Kopf (Länge 0..1): die Hutkrempe weicht nach hinten aus
+var avoid := Vector3.ZERO           # Ausweichen vor nahen Körpern (nicken, drehen, schief) rad – Kopf ganz, Brust anteilig
+var _xf := {}                       # Knochen → Welt-Transformation nach der Modifikation (nur angefragte Knochen)
+var _avoid := Vector3.ZERO
 var traits := {"mass": 1.0, "agility": 1.0, "bounce": 0.5}
 
 var _b := {}
@@ -91,6 +94,11 @@ var _last_root := Vector3.INF
 var _pos := {}                      # Gelenk → Weltposition nach der Modifikation
 var _hand_basis := {}               # Seite → Welt-Basis des Handgelenks nach der Modifikation
 var _t := 0.0
+## Startphase der Eigenbewegung (Atmen, Wiegen) – vom LumosActor aus dessen geseedetem Zufall gesetzt.
+var phase := 0.0:
+	set(v):
+		phase = v
+		_t = v
 var _arm_len := 0.5
 var _reach_len := 0.5            # Schulter → Handgelenk (IK-Kette bei ausgerichteter Hand)
 var _hand_q := {}                 # Seite → geglättete Handdrehung (Quaternion, Skelett-Raum)
@@ -137,7 +145,7 @@ func bind(skel: Skeleton3D, config: LumosActorConfig = null) -> bool:
 			+ skel.get_bone_global_rest(int(_b["arm1.l"])).origin.distance_to(skel.get_bone_global_rest(int(_b["wrist.l"]) if int(_b["wrist.l"]) >= 0 else int(_b["arm2.l"])).origin)
 	if has_legs():
 		_leg_len = skel.get_bone_global_rest(int(_b["leg0.l"])).origin.distance_to(skel.get_bone_global_rest(int(_b["leg2.l"])).origin)
-	_t = randf() * 10.0
+	_t = phase
 	traits = {"mass": cfg.mass, "agility": cfg.agility, "bounce": cfg.bounce}
 	if cfg.jiggle:
 		_setup_jiggle(skel)
@@ -292,6 +300,9 @@ func _process_modification() -> void:
 	var sk := get_skeleton()
 	if sk == null or _b.is_empty():
 		return
+	var prof := LumosProf.on
+	var p0 := Time.get_ticks_usec() if prof else 0
+	var pq := p0
 	_t += dt
 	laugh_phase += dt * 17.0
 	var f := 1.0 - exp(-dt / 0.12)
@@ -303,14 +314,18 @@ func _process_modification() -> void:
 	_imp += _imp_v * dt
 	_imp = _imp.limit_length(1.2)
 	_dynamics(sk)
+	if prof: pq = LumosProf.lap(&"body.dyn", pq)
 	var br := sin(_t * breath_rate * TAU / 2.6) * breath
 	var sway := sin(_t * 0.55) * 0.035 * cfg.idle_sway * clampf(1.0 - _lean.length() * 6.0, 0.0, 1.0)
 	var trem := sin(_t * 47.0) * 0.022 * tremble
 	var chest_pitch := _chest.x + _post.x - br * 0.03 + _lean.x + _imp.z * 0.45 + _iner.x + micro_chest.x - 0.16 * load
 	var chest_roll := _chest.z + _lean.y + _imp.x * 0.45 + sway * 0.5 + _iner.y + micro_chest.z + trem
 	var shoulder := br * 0.035 + _post.z - 0.05 * load + absf(trem) * 0.6
-	var head_pitch := _head.x + _post.y + br * 0.012 - _imp.z * 0.3 - _lean.x * 0.4 + _iner.z + micro_head.x + sin(_t * 53.0) * 0.016 * tremble
-	var head_roll := _head.z + _post.w - _imp.x * 0.3 - sway * 0.4 + _iner.w + micro_head.z
+	_avoid = _avoid.lerp(avoid, 1.0 - exp(-dt / 0.05))
+	chest_pitch += _avoid.x * 0.6   # Ausweichen aus der Hüfte: der hoch sitzende Kopf wandert weit, die Schulter wenig
+	chest_roll += _avoid.z * 0.6
+	var head_pitch := _head.x + _post.y + br * 0.012 - _imp.z * 0.3 - _lean.x * 0.4 + _iner.z + micro_head.x + sin(_t * 53.0) * 0.016 * tremble + _avoid.x
+	var head_roll := _head.z + _post.w - _imp.x * 0.3 - sway * 0.4 + _iner.w + micro_head.z + _avoid.z
 	if laugh > 0.001:
 		var s := sin(laugh_phase)
 		chest_pitch += (s * 0.07 - 0.09) * laugh
@@ -348,8 +363,10 @@ func _process_modification() -> void:
 			_foot[sd].w = 0.0
 	_last_root = root
 	foot_w = move_toward(foot_w, 1.0 if grounded and not lite and hop_lift < 0.02 else 0.0, dt / 0.12)
+	if prof: pq = LumosProf.lap(&"body.pose", pq)
 	if cfg.foot_ik and has_legs() and foot_w > 0.001:
 		_feet(sk)
+	if prof: pq = LumosProf.lap(&"body.feet", pq)
 	# Kontrapost: die Schultern kippen gegen das Becken, der Kopf bleibt fast waagerecht
 	if absf(_ws) > 0.002:
 		_rot(sk, "chest", Vector3.FORWARD, _ws * 0.1 * foot_w)
@@ -402,8 +419,10 @@ func _process_modification() -> void:
 				_set_hand_basis(sk, sd, ik_b[sd], w)
 		elif mode == "aim":
 			_aim(sk, int(_b["arm0." + sd]), ik_t[sd], w)
+	if prof: pq = LumosProf.lap(&"body.arms", pq)
 	if not _jig.is_empty():
 		_update_jiggle(sk)
+	if prof: pq = LumosProf.lap(&"body.jiggle", pq)
 	# Gelenk-Positionen nach der Modifikation merken
 	var gx := sk.global_transform
 	for k in _b:
@@ -417,6 +436,11 @@ func _process_modification() -> void:
 		var wi: int = _b.get("wrist." + sd, -1)
 		if wi >= 0:
 			_hand_basis[sd] = gx.basis * sk.get_bone_global_pose(wi).basis
+	for bi: int in _xf:   # Knochen-Transformationen nach der Modifikation (Körpervolumen, Durchdringungsprüfung)
+		_xf[bi] = gx * sk.get_bone_global_pose(bi)
+	if prof:
+		pq = LumosProf.lap(&"body.cache", pq)
+		LumosProf.add(&"body", p0)
 
 
 ## Gewicht und Trägheit je Bild: Wurzel-Beschleunigung und Gierrate aus der Bewegung der Figur → Federn für
@@ -642,6 +666,15 @@ func _update_jiggle(sk: Skeleton3D) -> void:
 
 
 ## Größter Hut-Radius (Welt, waagerecht) – für den Abstand der Krempe zu anderen Köpfen; 0 = kein Hut.
+## Welt-Transformation eines Knochens nach der Modifikation dieses Bilds (IK, Neigungen, Ausweichen); der Knochen wird
+## ab dem ersten Aufruf je Bild mitgeführt.
+func bone_xform(bone: int) -> Transform3D:
+	if not _xf.has(bone):
+		var sk := get_skeleton()
+		_xf[bone] = sk.global_transform * sk.get_bone_global_pose(bone) if sk else Transform3D()
+	return _xf[bone]
+
+
 func hat_radius() -> float:
 	var r := 0.0
 	var sk := get_skeleton()
@@ -747,14 +780,21 @@ func _aim(sk: Skeleton3D, bone: int, tg: Vector3, w: float) -> void:
 
 
 ## Bodenhöhe unter einem Weltpunkt: Callable, sonst Raycast (Kollisionsmaske), sonst Höhe der Figur.
+var _rq: PhysicsRayQueryParameters3D
+
+
 func _ground_y(p: Vector3, fallback: float) -> float:
 	if ground.is_valid():
 		return float(ground.call(p))
 	if cfg.ground_mask != 0 and is_inside_tree():
 		var space := get_viewport().world_3d.direct_space_state if get_viewport() else null
 		if space:
-			var q := PhysicsRayQueryParameters3D.create(p + Vector3.UP * 0.6, p + Vector3.DOWN * 0.9, cfg.ground_mask)
-			var hit := space.intersect_ray(q)
+			if _rq == null:   # eine Abfrage je Figur wiederverwenden (gleiche Werte wie create(), keine Neuanlage je Fuß und Bild)
+				_rq = PhysicsRayQueryParameters3D.new()
+			_rq.from = p + Vector3.UP * 0.6
+			_rq.to = p + Vector3.DOWN * 0.9
+			_rq.collision_mask = cfg.ground_mask
+			var hit := space.intersect_ray(_rq)
 			if not hit.is_empty():
 				return (hit.position as Vector3).y
 	return fallback

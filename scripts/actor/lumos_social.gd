@@ -11,7 +11,7 @@ extends Node
 ##  * Beziehungen: relation(a, b) 0..1 (Standard 0,75 = befreundet), set_relation().
 ##  * Laufende Interaktionen (LumosInteraction) werden hier getaktet.
 
-const AUDIBLE := ["laugh", "cry", "fright", "scream", "talk", "joke", "cheer", "hit", "win", "lose", "boo"]
+const AUDIBLE := ["laugh", "cry", "fright", "scream", "talk", "joke", "cheer", "hit", "win", "lose", "boo", "fall"]
 const RANGE := 14.0
 
 var actors: Array[LumosActor] = []
@@ -21,7 +21,10 @@ var log: Array = []                    # letzte Ereignisse (Tests): [t, kind, qu
 var t := 0.0
 var _rel := {}
 var _perc := {}                        # Figur → [Bild, Ergebnis]
+var _pub := {}                         # Figur → [Bild, öffentlicher Zustand, Blickziel, Geschwindigkeit]
 var _frame := 0
+var _root_frame := -1
+var _roots := PackedVector3Array()     # Wurzel je Eintrag in actors (INF = unsichtbar/ohne Körper), einmal je Bild
 
 
 static func of(n: Node) -> LumosSocial:
@@ -29,12 +32,16 @@ static func of(n: Node) -> LumosSocial:
 		return null
 	var root := n.get_tree().root
 	var h := root.get_node_or_null("LumosSocial") as LumosSocial
+	if h == null and root.has_meta("lumos_social"):   # schon angelegt, aber noch nicht eingehängt (gleiches Bild)
+		var m: Variant = root.get_meta("lumos_social")
+		if m is LumosSocial and is_instance_valid(m):
+			h = m
 	if h == null:
 		h = LumosSocial.new()
 		h.name = "LumosSocial"
 		root.add_child.call_deferred(h)
 		root.set_meta("lumos_social", h)
-	return h if h else root.get_meta("lumos_social", null) as LumosSocial
+	return h
 
 
 static func find(n: Node) -> LumosSocial:
@@ -54,11 +61,31 @@ func _ready() -> void:
 func register(a: LumosActor) -> void:
 	if not (a in actors):
 		actors.append(a)
+		_root_frame = -1
 
 
 func unregister(a: LumosActor) -> void:
 	actors.erase(a)
+	_root_frame = -1
 	_perc.erase(a)
+	_pub.erase(a)
+	_help.erase(a)
+	_comfort.erase(a)
+
+
+## Wurzelpositionen aller Figuren (Index wie actors), einmal je Bild ermittelt: Nachbarschaftsabfragen (Ausweichen
+## bei Nähe) prüfen Abstände in einem gepackten Feld statt je Paar mehrere Objekt-Eigenschaften. Unsichtbare oder
+## körperlose Figuren stehen auf INF.
+func roots() -> PackedVector3Array:
+	var fr := Engine.get_process_frames()
+	if fr != _root_frame or _roots.size() != actors.size():
+		_root_frame = fr
+		_roots.resize(actors.size())
+		for i in actors.size():
+			var o := actors[i]
+			var ok := is_instance_valid(o) and o.body != null and o.rig.visible and o.rig.is_inside_tree()
+			_roots[i] = o.rig.global_position if ok else Vector3(INF, INF, INF)
+	return _roots
 
 
 func add_poi(node: Node3D, salience := 1.0, kind := "thing") -> void:
@@ -80,12 +107,16 @@ func _key(a: LumosActor, b: LumosActor) -> String:
 
 
 ## Ereignis aussenden. data: pos (Vector3), target (LumosActor), intensity (0..1), dir … beliebig erweiterbar.
+signal event(kind: String, src: LumosActor, data: Dictionary)   ## jedes soziale Ereignis (Werkzeuge, Tests)
+
+
 func emit(kind: String, src: LumosActor, data := {}) -> void:
 	var pos: Vector3 = data.get("pos", src.rig.global_position if src else Vector3.ZERO)
 	var ev := {"kind": kind, "src": src, "pos": pos, "t": t, "data": data, "intensity": float(data.get("intensity", 1.0))}
 	log.append([t, kind, src])
 	if log.size() > 64:
 		log.pop_front()
+	event.emit(kind, src, data)
 	var audible := kind in AUDIBLE
 	for a in actors:
 		if a == src or not is_instance_valid(a) or a.mind == null or not a.rig.visible:
@@ -106,6 +137,7 @@ func perceive(a: LumosActor) -> Array:
 	var c: Array = _perc.get(a, [])
 	if not c.is_empty() and int(c[0]) == _frame:
 		return c[1]
+	var p0 := Time.get_ticks_usec() if LumosProf.on else 0
 	var out: Array = []
 	var me := a.rig.global_position
 	for o in actors:
@@ -117,15 +149,34 @@ func perceive(a: LumosActor) -> Array:
 			continue
 		var flat := Vector3(to.x, 0.0, to.z)
 		var dir := flat.normalized() if flat.length() > 0.01 else a.forward()
-		var ov := o.velocity()
-		var em := o.emotion
-		out.append({"a": o, "d": d, "dir": dir, "looks_at_me": o.look_focus() == a, "approach": -ov.dot(dir),
-			"emo": em.dominant() if em else "neutral", "emo_i": em.dominant_intensity() if em else 0.0,
-			"valence": float(em.mods.valence) if em else 0.0, "arousal": float(em.mods.arousal) if em else 0.2,
-			"laughing": o.is_laughing(), "crying": em != null and (em.intensity_of("cry") > 0.3 or em.intensity_of("sad") > 0.6),
-			"talking": o.face != null and o.face.talk > 0.1, "holding": o.interact != null and (o.interact.held.l != null or o.interact.held.r != null)})
+		var pub := _public(o)
+		var e: Dictionary = (pub[1] as Dictionary).duplicate()
+		e.d = d
+		e.dir = dir
+		e.looks_at_me = pub[2] == a
+		e.approach = -(pub[3] as Vector3).dot(dir)
+		out.append(e)
 	_perc[a] = [_frame, out]
+	if p0 > 0: LumosProf.add(&"social.perceive", p0)
 	return out
+
+
+## Was andere an einer Figur wahrnehmen können (Gefühl, Lachen, Weinen, Sprechen, Halten, Blickziel, Bewegung):
+## einmal je Bild und Figur ermittelt – eine Momentaufnahme, gleich für alle Beobachter und unabhängig davon, in
+## welcher Reihenfolge die Figuren verarbeitet werden. Die Einträge je Beobachter ergänzen nur Abstand und Richtung.
+func _public(o: LumosActor) -> Array:
+	var c: Array = _pub.get(o, [])
+	if not c.is_empty() and int(c[0]) == _frame:
+		return c
+	var em := o.emotion
+	var st := {"a": o, "d": 0.0, "dir": Vector3.ZERO, "looks_at_me": false, "approach": 0.0,
+		"emo": em.dominant() if em else "neutral", "emo_i": em.dominant_intensity() if em else 0.0,
+		"valence": float(em.mods.valence) if em else 0.0, "arousal": float(em.mods.arousal) if em else 0.2,
+		"laughing": o.is_laughing(), "crying": em != null and (em.intensity_of("cry") > 0.3 or em.intensity_of("sad") > 0.6),
+		"talking": o.face != null and o.face.talk > 0.1, "holding": o.interact != null and (o.interact.held.l != null or o.interact.held.r != null)}
+	c = [_frame, st, o.look_focus(), o.velocity()]
+	_pub[o] = c
+	return c
 
 
 var _comfort := {}
@@ -144,6 +195,22 @@ func claim_comfort(a: LumosActor, by: LumosActor) -> void:
 		_comfort[a] = by
 
 
+var _help := {}
+
+
+## Wer hilft gerade dieser Figur auf? (nur einer geht hin)
+func helper_for(a: LumosActor) -> LumosActor:
+	var c: Variant = _help.get(a)
+	return c if c is LumosActor and is_instance_valid(c) else null
+
+
+func claim_help(a: LumosActor, by: LumosActor) -> void:
+	if by == null:
+		_help.erase(a)
+	else:
+		_help[a] = by
+
+
 func add_interaction(it: RefCounted) -> void:
 	interactions.append(it)
 
@@ -157,9 +224,13 @@ func interaction_of(a: LumosActor) -> RefCounted:
 
 
 func _process(delta: float) -> void:
+	var p0 := Time.get_ticks_usec() if LumosProf.on else 0
 	t += delta
 	_frame += 1
 	actors = actors.filter(func(x: LumosActor) -> bool: return is_instance_valid(x))
 	for it in interactions.duplicate():
+		var q := Time.get_ticks_usec() if p0 > 0 else 0
 		it.call("tick", delta)
+		if q > 0: LumosProf.add(&"interaction", q)
 	interactions = interactions.filter(func(x: RefCounted) -> bool: return not bool(x.get("done")))
+	if p0 > 0: LumosProf.add(&"social.hub", p0)

@@ -51,6 +51,16 @@ var _off_t := 0.0
 var _look: Variant = null      # Vector3 | Node3D | LumosActor | null
 var _soc_look: Variant = null
 var _soc_until := 0.0
+var _soc_start := -99.0
+var _focus_last: Variant = null   # zuletzt gemeldetes Blickziel (look_focus) und seit wann
+var _focus_since := -99.0
+var _shown: Variant = null        # gezeigtes automatisches Blickziel (sozial/Mikro) und seit wann
+var _shown_since := -99.0
+var _auto_prev := false
+var _soc_next: Variant = null
+var _soc_next_secs := 0.0
+var soc_switches := 0             # Zahl der sozialen Blickwechsel (Messung)
+const SOC_DWELL := 0.45           ## kürzeste soziale Blickdauer, bevor ein neuer Reiz den Blick wegzieht
 var _s_look := Vector3.ZERO
 var _s_look_w := 0.0
 var _s_hands := {}
@@ -114,6 +124,7 @@ func _ready() -> void:
 		rig.skel.add_child(body)
 		if not body.bind(rig.skel, cfg):
 			push_warning("LumosActor: %s – Skelett ohne Kopfknochen, Körper-Ebene eingeschränkt" % rig.model_key)
+		body.phase = float(absi(rng.seed) % 10000) * 0.001   # Atem-/Wiegephase je Figur, ohne globalen Zufall
 	if cfg.face_enabled:
 		var f := LumosFace.new()
 		f.feature_scale = cfg.feature_scale
@@ -141,9 +152,18 @@ func _ready() -> void:
 		_find_pet_parts()
 
 
+var _emo_stale := false
+var fallen := false               ## sitzt nach einem Sturz am Boden, bis get_up() (selbst oder mit Hilfe)
+var fall_t := -99.0
+var _rising := false
+var _rise_end := 0.0
+
+
 func _exit_tree() -> void:
 	if interact:
 		interact.cancel_all()
+	if mind:
+		mind.reset()
 	if social and is_instance_valid(social):
 		social.unregister(self)
 
@@ -219,7 +239,9 @@ func move(wish_velocity: Vector3, grounded := true, delta := -1.0) -> void:
 ## Nur animieren (die Figur wird vom Spiel selbst bewegt): echte Geschwindigkeit übergeben.
 func animate(velocity_in: Vector3, grounded := true, delta := -1.0) -> void:
 	var d := (delta if delta > 0.0 else get_process_delta_time()) * time_scale
+	var p0 := Time.get_ticks_usec() if LumosProf.on else 0
 	loco.update(velocity_in, grounded, d)
+	if p0 > 0: LumosProf.add(&"loco", p0)
 	var lean := Vector2(clampf(loco.accel_local.z * -cfg.lean_accel + velocity_in.length() * 0.012, -0.3, 0.35),
 		clampf(-loco.turn_speed * cfg.lean_turn * minf(velocity_in.length() / 3.0, 1.0), -0.25, 0.25))
 	if body:
@@ -255,6 +277,336 @@ func stumble(world_dir: Vector3, strength := 1.0) -> void:
 	else:
 		nudge(world_dir * 3.0 * strength)
 	emotion.trigger("surprise", 0.5 * strength, 0.4)
+
+
+# --- Körpervolumen (Durchdringungsprüfung) ------------------------------------------------------------------
+
+## Feste Körperteile als Ellipsoide relativ zu ihrem Knochen: Kopf mit festem Kopfschmuck (Helm, Visier, Kapuze –
+## breite Hutkrempen weichen über hat_avoid aus und zählen nicht) und Rumpf. Einmal je Figur aus den Mesh-Grenzen der
+## Ruhepose vermessen; volumes() liefert sie in Weltkoordinaten der aktuellen Pose.
+var _vols: Array = []   # [Knochen, Mitte (Knochenraum), Halbachsen, Art]
+var _vols_done := false
+var _vol_cache: Array = []
+var _vol_frame := -1
+
+
+func _measure_volumes() -> void:
+	_vols_done = true
+	_vols.clear()
+	var sk := rig.skel
+	if sk == null or rig.model == null:
+		return
+	var hb := sk.find_bone(cfg.bone_head)
+	var cb := sk.find_bone(cfg.bone_chest)
+	if hb < 0:
+		return
+	var head_w := 0.0
+	var parts: Array = []
+	for n in Assets.find_meshes(rig.model):
+		var mi := n as MeshInstance3D
+		if mi.mesh == null or mi.get_parent() is LumosFace:
+			continue
+		var nm := String(mi.name).to_lower()
+		var kind := ""
+		if nm.contains("visor"):
+			continue   # dünne Platte über dem Helm: ihr Hüllkörper wäre viel zu groß, der Helm umschließt den Kopf
+		if nm.contains("head") or nm.contains("helmet") or nm.contains("hat") or nm.contains("hood"):
+			kind = "head"
+		elif nm.ends_with("_body") or nm == "body" or nm.contains("torso"):
+			kind = "body"
+		if kind == "":
+			continue
+		var bone := hb if kind == "head" or cb < 0 else cb
+		# Ellipsoid in den eigenen Achsen des Meshs (dort liegen die Grenzen eng an), Lage relativ zum Knochen
+		var m := (sk.global_transform * sk.get_bone_global_rest(bone)).affine_inverse() * mi.global_transform
+		var ab := mi.mesh.get_aabb()
+		parts.append([bone, ab, kind, nm, m])
+		if nm.contains("head") and kind == "head":
+			head_w = maxf(head_w, ab.size.x)
+	for q: Array in parts:
+		var ab: AABB = q[1]
+		if String(q[2]) == "head" and head_w > 0.0 and ab.size.x > head_w * 1.45 and ab.size.y < ab.size.x * 0.8:
+			continue   # breite Krempe (Magierhut)
+		var m: Transform3D = q[4]
+		_vols.append([q[0], m * ab.get_center(), ab.size * 0.5, q[2], m.basis])
+
+
+## [[Mitte (Welt), Basis (Welt, Drehung × Maßstab), Halbachsen, Art, Hüllkugel-Radius], …] der festen Körperteile in
+## der aktuellen Pose (der Radius umschließt das Ellipsoid – für die billige Vorprüfung clearance_bound).
+func volumes() -> Array:
+	if not _vols_done:
+		_measure_volumes()
+	var fr := Engine.get_process_frames()
+	if fr == _vol_frame:   # je Bild einmal (Ausweichen und Aufstellungen fragen oft)
+		return _vol_cache
+	_vol_frame = fr
+	var out: Array = []
+	_vol_cache = out
+	var sk := rig.skel
+	if sk == null:
+		return out
+	for v: Array in _vols:
+		var x := body.bone_xform(int(v[0])) if body else sk.global_transform * sk.get_bone_global_pose(int(v[0]))
+		var bs := x.basis * (v[4] as Basis)
+		var h: Vector3 = v[2]
+		var sc := bs.get_scale()
+		out.append([x * (v[1] as Vector3), bs, h, v[3], maxf(maxf(h.x, h.y), h.z) * maxf(maxf(sc.x, sc.y), sc.z)])
+	return out
+
+
+## Untere Schranke für clearance(a, b) über die Hüllkugeln der Teile – billig. Ist sie groß, kann die genaue
+## Rechnung nichts anderes ergeben als „weit genug“ (der Radius entlang jeder Richtung ist ≤ Hüllkugel-Radius).
+static func clearance_bound(a: LumosActor, b: LumosActor) -> float:
+	var best := INF
+	for va: Array in a.volumes():
+		for vb: Array in b.volumes():
+			best = minf(best, ((vb[0] as Vector3) - (va[0] as Vector3)).length() - float(va[4]) - float(vb[4]))
+	return best
+
+
+## Kleinster Abstand der festen Körperteile zweier Figuren (m, negativ = Durchdringung). Näherung: Abstand der
+## Mittelpunkte minus Radien beider Ellipsoide entlang der Verbindungslinie (für die fast runden Köpfe genau genug).
+static func clearance(a: LumosActor, b: LumosActor) -> float:
+	var best := INF
+	for va: Array in a.volumes():
+		for vb: Array in b.volumes():
+			var d: Vector3 = (vb[0] as Vector3) - (va[0] as Vector3)
+			var l := d.length()
+			if l < 0.0001:
+				return -1.0
+			var u := d / l
+			best = minf(best, l - _radius_along(va, u) - _radius_along(vb, -u))
+	return best
+
+
+## Wie clearance(), dazu die waagerechte Richtung vom engsten Teil von b zum engsten Teil von a: [Abstand, Richtung].
+static func clearance_dir(a: LumosActor, b: LumosActor) -> Array:
+	var best := INF
+	var dir := Vector3.ZERO
+	for va: Array in a.volumes():
+		for vb: Array in b.volumes():
+			var d: Vector3 = (va[0] as Vector3) - (vb[0] as Vector3)
+			var l := d.length()
+			var c := -1.0 if l < 0.0001 else l - _radius_along(va, -d / l) - _radius_along(vb, d / l)
+			if c < best:
+				best = c
+				dir = Vector3(d.x, 0.0, d.z)
+	return [best, dir.normalized() if dir.length() > 0.001 else Vector3.ZERO]
+
+
+static func clear_of(wa: Array, wb: Array) -> float:
+	var best := INF
+	for va: Array in wa:
+		for vb: Array in wb:
+			var d: Vector3 = (vb[0] as Vector3) - (va[0] as Vector3)
+			var l := d.length()
+			if l < 0.0001:
+				return -1.0
+			var u := d / l
+			best = minf(best, l - _radius_along(va, u) - _radius_along(vb, -u))
+	return best
+
+
+## Volumen relativ zur Wurzel der Figur (für gedachte Aufstellungen). rest = in der Ruhepose (Kopf in
+## Körperrichtung) – für die Planung von Interaktionen, deren Endhaltung die Interaktion selbst bestimmt.
+func local_volumes(rest := false) -> Array:
+	var out: Array = []
+	if rest:
+		if not _vols_done:
+			_measure_volumes()
+		var sk := rig.skel
+		if sk == null:
+			return out
+		for v: Array in _vols:
+			var x := sk.get_bone_global_rest(int(v[0]))   # Skelett-Raum = Wurzelraum der Figur (bis auf den Rig-Maßstab)
+			var rs := rig.global_basis.get_scale()
+			var sx := Transform3D(Basis.from_scale(rs), Vector3.ZERO) * (rig.global_transform.affine_inverse() * sk.global_transform)
+			out.append([sx * (x * (v[1] as Vector3)), sx.basis * x.basis * (v[4] as Basis), v[2], v[3]])
+		return out
+	var inv := rig.global_transform.affine_inverse()
+	for v: Array in volumes():
+		out.append([inv * (v[0] as Vector3), inv.basis * (v[1] as Basis), v[2], v[3]])
+	return out
+
+
+static func root_xf(x: LumosActor, pos: Vector3, face: Vector3) -> Transform3D:
+	var f := x.forward()
+	var w := Vector3(face.x, 0.0, face.z)
+	var ang := 0.0
+	if w.length() > 0.01 and Vector3(f.x, 0.0, f.z).length() > 0.01:
+		ang = Vector3(f.x, 0.0, f.z).normalized().signed_angle_to(w.normalized(), Vector3.UP)
+	return Transform3D(Basis(Vector3.UP, ang) * x.rig.global_basis, Vector3(pos.x, x.rig.global_position.y, pos.z))
+
+
+static func place_volumes(vols: Array, xf: Transform3D) -> Array:
+	var out: Array = []
+	for v: Array in vols:
+		out.append([xf * (v[0] as Vector3), xf.basis * (v[1] as Basis), v[2], v[3]])
+	return out
+
+
+## Kleinster Abstand (m), in dem b – von a aus in Richtung dir (waagerecht) und um lateral versetzt, a mit Blick a_face,
+## b mit Blick b_face, beide in ihrer aktuellen Haltung – mit mindestens margin Luft neben a stehen kann. Für die
+## Aufstellung von Interaktionen: niemand steht in jemandem.
+static func fit_distance(a: LumosActor, b: LumosActor, dir: Vector3, a_face: Vector3, b_face: Vector3, margin := 0.03,
+		lateral := Vector3.ZERO, rest := false) -> float:
+	var n := Vector3(dir.x, 0.0, dir.z).normalized()
+	var wa := place_volumes(a.local_volumes(rest), root_xf(a, a.rig.global_position, a_face))
+	var vb := b.local_volumes(rest)
+	if wa.is_empty() or vb.is_empty():
+		return 0.0
+	for k in range(20, 262, 2):
+		var dd := k * 0.01
+		if clear_of(wa, place_volumes(vb, root_xf(b, a.rig.global_position + n * dd + lateral, b_face))) >= margin:
+			return dd
+	return 2.6
+
+
+## Ausweichen bei Nähe: kommen feste Körperteile einer anderen Figur näher als AVOID_MARGIN, neigen sich Kopf und
+## Oberkörper so weit davon weg wie nötig (höchstens ~26°) – wie Menschen im Gedränge oder Wange an Wange beim
+## Umarmen; mit Luft geht die Neigung langsam zurück. Sicherheitsnetz für alles, was Figuren eng zusammenbringt.
+## Vorausschauend: schließt sich der Abstand schnell (Auflaufen, Abbremsen mit Schwung, Drehen), zählt der für
+## AVOID_LOOKAHEAD vorausberechnete Abstand – der Kopf weicht schon vor der Berührung aus, nicht erst danach.
+const AVOID_MARGIN := 0.03
+const AVOID_LOOKAHEAD := 0.1          # s
+var _avoid_t := Vector3.ZERO
+var _avoid_yaw := 0.0
+var avoid_hits := 0                   # Bilder mit aktivem Ausweichen (Messung)
+var _c_prev := {}                     # Figur (instance id) → [Bild, Abstand] für die Annäherungsgeschwindigkeit
+
+
+func _keep_apart(d: float) -> void:
+	if body == null or social == null:
+		return
+	var p := rig.global_position
+	var push := Vector3.ZERO
+	var c_min := INF
+	var fr := Engine.get_process_frames()
+	if _c_prev.size() > 48:   # Figuren kommen und gehen: alte Einträge verwerfen
+		_c_prev.clear()
+	var roots := social.roots()
+	var n := mini(roots.size(), social.actors.size())
+	for i in n:
+		var to := p - roots[i]
+		to.y = 0.0
+		if not (to.length_squared() <= 2.89):   # weiter als 1,7 m (oder unsichtbar: INF) kann nichts überlappen
+			continue
+		var o := social.actors[i]
+		if o == self or not is_instance_valid(o):
+			continue
+		var oid := o.get_instance_id()
+		var lb := clearance_bound(self, o)
+		if lb > AVOID_MARGIN + 0.16:   # sicher frei, auch mit Vorausschau (≤ 0,1 m) und Rückstell-Schwelle (+0,05 m): dasselbe Ergebnis
+			_c_prev[oid] = [fr, lb]
+			c_min = minf(c_min, lb)
+			continue
+		var cd := clearance_dir(self, o)
+		var c := float(cd[0])
+		var pv: Array = _c_prev.get(oid, [])
+		_c_prev[oid] = [fr, c]
+		if pv.size() == 2 and int(pv[0]) == fr - 1 and d > 0.0:
+			var rate := (c - float(pv[1])) / d   # m/s, negativ = man kommt sich näher
+			c += maxf(minf(rate, 0.0) * AVOID_LOOKAHEAD, -0.1)
+		c_min = minf(c_min, c)
+		if c < AVOID_MARGIN:   # weg vom engsten Teil (Kopf an Kopf: seitlich, Kopf an Rumpf: zurück)
+			var away: Vector3 = cd[1] if (cd[1] as Vector3).length() > 0.5 else (to.normalized() if to.length() > 0.01 else -forward())
+			push += away * (AVOID_MARGIN - c)
+	if c_min < AVOID_MARGIN and push.length() > 0.0001:
+		avoid_hits += 1
+		var loc := rig.global_basis.orthonormalized().inverse() * push.normalized()
+		var step := Vector3(-loc.z, 0.0, -loc.x) * minf(AVOID_MARGIN - c_min, 0.3) * 1.2
+		_avoid_t = (_avoid_t + step).limit_length(0.45)
+		# vorstehende Teile (Schnauze, Visier) schwenken beim Hinschauen in den anderen: Kopf von ihm wegdrehen
+		_avoid_yaw = clampf(_avoid_yaw + signf(loc.x if absf(loc.x) > 0.05 else 0.0001) * minf(AVOID_MARGIN - c_min, 0.3) * 0.8, -0.5, 0.5)
+	elif c_min > AVOID_MARGIN + 0.05:
+		_avoid_t = _avoid_t.move_toward(Vector3.ZERO, d * 0.5)
+		_avoid_yaw = move_toward(_avoid_yaw, 0.0, d * 0.5)
+	body.avoid = _avoid_t
+
+
+static func _radius_along(v: Array, u: Vector3) -> float:
+	var bs: Basis = v[1]
+	var sc := bs.get_scale()
+	var lu := bs.orthonormalized().transposed() * u
+	var h: Vector3 = v[2]
+	var k := Vector3(lu.x / maxf(h.x, 0.001), lu.y / maxf(h.y, 0.001), lu.z / maxf(h.z, 0.001)).length()
+	return (1.0 / maxf(k, 0.0001)) * (sc.x + sc.y + sc.z) / 3.0
+
+
+## Hinfallen: Stolpern mit rudernden Armen, dann auf den Hosenboden – die Figur sitzt, bis sie aufsteht (allein
+## nach eigener Geduld oder mit Hilfe, Interaktion „help_up“). Andere hören und sehen es (Ereignis „fall“) und
+## reagieren nach Persönlichkeit; die Figur selbst ärgert oder schämt sich und lacht mit Humor später darüber
+## (LumosMind.on_fell). Schichten: Sturz als Reflex, Sitzen danach als Gefühlsebene (Interaktion/Regie übernehmen).
+func fall(world_dir: Vector3, strength := 1.0) -> bool:
+	if fallen or body == null or not rig.has_clip("sit_down") or not rig.has_clip("sit"):
+		return false
+	if not layers.claim("fall", ["root", "legs", "torso"], LumosLayers.P_REFLEX, _fall_preempted):
+		return false
+	fallen = true
+	_rising = false
+	fall_t = _t
+	micro.stop()
+	for id: String in LumosCartoon.running(self):
+		LumosCartoon.stop(self, id)
+	stumble(world_dir, strength)
+	var sp := 2.1   # Hinsetz-Clip beschleunigt: plumpst statt sich zu setzen
+	var tw := create_tween()
+	tw.tween_interval(0.22)
+	tw.tween_callback(func() -> void:
+		if fallen and not _rising:
+			body.grounded = false   # kein Fußanker im Sitzen
+			loco.play_action("fall", "sit_down", 0.0, 0.08, sp))
+	tw.tween_interval(maxf(rig.clip_length("sit_down") / sp - 0.06, 0.1))
+	tw.tween_callback(func() -> void:
+		if fallen and not _rising:
+			loco.play_action("fallen", "sit", INF, 0.18)
+			land(0.6 * strength)
+			reclaim_fall())
+	emotion.trigger("ouch", 0.8, 0.5, 0.04, 0.4)
+	emit_social("fall", {"intensity": strength})
+	if mind:
+		mind.on_fell(strength)
+	return true
+
+
+## Aufstehen nach einem Sturz (Clip „sit_up“); speed > 1 = schwungvoll (hochgezogen). Rückgabe: Dauer in s.
+func get_up(speed := 1.0) -> float:
+	if not fallen:
+		return 0.0
+	if _rising:
+		return maxf(_rise_end - _t, 0.0)
+	_rising = true
+	var has := rig.has_clip("sit_up")
+	var dur := rig.clip_length("sit_up") / maxf(speed, 0.1) if has else 0.3
+	_rise_end = _t + dur
+	if has:
+		loco.play_action("get_up", "sit_up", dur, 0.14, speed)
+	var tw := create_tween()
+	tw.tween_interval(dur)
+	tw.tween_callback(func() -> void:
+		fallen = false
+		_rising = false
+		if body:
+			body.grounded = true
+		loco.stop_action()
+		rig.play("idle", 0.3)
+		layers.release("fall"))
+	return dur
+
+
+func is_rising() -> bool:
+	return _rising
+
+
+## Sitzen am Boden: Kanäle auf Gefühlsebene halten (Interaktionen und Regie dürfen übernehmen, Mikrogesten nicht).
+func reclaim_fall() -> void:
+	if fallen and not _rising:
+		layers.claim("fall", ["root", "legs", "torso"], LumosLayers.P_EMOTE, _fall_preempted)
+
+
+func _fall_preempted() -> void:   # eine stärkere Handlung übernimmt den Körper: zügig aufstehen
+	if fallen:
+		get_up(1.4)
 
 
 # --- Gefühl, Gesicht, Blick, Lachen ----------------------------------------------------------------------
@@ -316,9 +668,21 @@ func look_target() -> Variant:
 
 
 ## Kurzes Hinschauen aus dem Sozialverhalten (unter look_at_target und Regie, über dem Mikroleben).
+## Hinschauen auf einen sozialen Reiz. Kommen mehrere gleichzeitig (drei sprechen dieselbe Figur an), bleibt der Blick
+## mindestens SOC_DWELL beim ersten und wechselt dann zum zuletzt angefragten – kein Hin- und Herflackern.
 func look_social(target: Variant, secs := 1.5) -> void:
+	if _soc_look != null and _t < _soc_until and is_same(target, _soc_look):   # derselbe Reiz noch einmal: länger hinschauen
+		_soc_until = maxf(_soc_until, _t + secs)
+		return
+	if _t - _focus_since < SOC_DWELL and not is_same(target, look_focus()):   # der Blick hat gerade erst gewechselt
+		_soc_next = target
+		_soc_next_secs = secs
+		return
 	_soc_look = target
+	_soc_start = _t
 	_soc_until = _t + secs
+	_soc_next = null
+	soc_switches += 1
 	face_saccade(target)
 
 
@@ -326,10 +690,8 @@ func look_social(target: Variant, secs := 1.5) -> void:
 func look_focus() -> LumosActor:
 	if _look is LumosActor:
 		return _look
-	if _soc_look is LumosActor and _t < _soc_until:
-		return _soc_look
-	if _s_look_w < 0.05 and micro and micro.look_target is LumosActor:
-		return micro.look_target
+	if _s_look_w < 0.05 and _shown is LumosActor and is_instance_valid(_shown):
+		return _shown
 	return null
 
 
@@ -532,6 +894,9 @@ func _update_lod(d: float) -> void:
 
 
 func _process(delta: float) -> void:
+	var prof := LumosProf.on
+	var p0 := Time.get_ticks_usec() if prof else 0
+	var q := p0
 	var d := delta * time_scale
 	_t += d
 	_update_lod(d)
@@ -545,19 +910,31 @@ func _process(delta: float) -> void:
 		body.hop_lift = rig.pivot.position.y if rig.pivot else 0.0
 	if face:
 		face.dt_scale = time_scale
+	if prof: q = LumosProf.lap(&"actor.base", q)
 	if lod < 2:
 		mind.update(d)
+		if prof: q = LumosProf.lap(&"actor.mind", q)
 		micro.update(d)
+		if prof: q = LumosProf.lap(&"actor.micro", q)
 		_hat_clearance()
+		if prof: q = LumosProf.lap(&"actor.hat", q)
+		_keep_apart(d)
+		if prof: q = LumosProf.lap(&"actor.apart", q)
 	emotion.update(d)
 	_apply_emotion(d)
+	if prof: q = LumosProf.lap(&"actor.emotion", q)
 	_update_gaze(d)
+	if prof: q = LumosProf.lap(&"actor.gaze", q)
 	var lv := _update_laugh(d)
 	_update_hands(d)
+	if prof: q = LumosProf.lap(&"actor.hands", q)
 	if interact:
 		interact.tick(d)
+	if prof: q = LumosProf.lap(&"actor.interact", q)
 	if body == null:
 		_rigid_body(d, lv)
+		if prof: q = LumosProf.lap(&"actor.rigid", q)
+	if prof: LumosProf.add(&"actor", p0)
 
 
 ## Breite Hutkrempe: kommt ein anderer Kopf in ihren Bereich, weicht der Hut nach hinten aus.
@@ -568,10 +945,12 @@ func _hat_clearance() -> void:
 	if hr <= 0.0:
 		return
 	var me := body.joint_pos("head")
+	var pos := rig.global_position
 	var push := Vector3.ZERO
-	for pc: Dictionary in social.perceive(self):
-		var o: LumosActor = pc.a
-		if float(pc.d) > hr + 1.2:
+	for o: LumosActor in social.actors:   # nur Nachbarn in Hutweite – ohne die vollständige Wahrnehmung je Bild
+		if o == self or not is_instance_valid(o) or not o.rig.visible or not o.rig.is_inside_tree():
+			continue
+		if (o.rig.global_position - pos).length() > hr + 1.2:
 			continue
 		var oh := o.body.joint_pos("head") if o.body else o.head_top()
 		var to := oh - me
@@ -583,20 +962,25 @@ func _hat_clearance() -> void:
 
 
 func _apply_emotion(d: float) -> void:
+	if lod >= 2 and body:   # außerhalb des Bildes ruhen Gesicht und Körper – beim Wiedereintritt sofort übernehmen
+		_emo_stale = true
+		return
+	var snap := _emo_stale
+	_emo_stale = false
 	if face:
-		face.set_params(emotion.face_out, 0.05)
+		face.set_params(emotion.face_out, 0.0 if snap else 0.05)
 		face.blink_mult = float(emotion.mods.blink)
 		face.blink_slow = 1.7 if emotion.dominant() in ["exhausted", "sleepy", "content", "dreamy", "relief"] else 1.0
 	var po := emotion.posture_out
 	if body:
-		body.set_posture_vec(po, 0.3)
+		body.set_posture_vec(po, 0.0 if snap else 0.3)
 		body.micro_head += cartoon_head
 		if not _breath_over:
 			var br: Array = emotion.mods.breath
 			var ta := cfg.breath if br.is_empty() else lerpf(cfg.breath, float(br[0]), clampf(emotion.dominant_intensity(), 0.0, 1.0))
 			var tr := cfg.breath_rate if br.is_empty() else lerpf(cfg.breath_rate, float(br[1]), clampf(emotion.dominant_intensity(), 0.0, 1.0))
-			body.breath = lerpf(body.breath, ta, 1.0 - exp(-d / 0.8))
-			body.breath_rate = lerpf(body.breath_rate, tr, 1.0 - exp(-d / 0.8))
+			body.breath = ta if snap else lerpf(body.breath, ta, 1.0 - exp(-d / 0.8))
+			body.breath_rate = tr if snap else lerpf(body.breath_rate, tr, 1.0 - exp(-d / 0.8))
 	else:
 		_rig_post_t = Vector2(po.x + po.y * 0.5, po.w) * cfg.posture_scale
 
@@ -604,10 +988,21 @@ func _apply_emotion(d: float) -> void:
 ## Blick: Augen springen schnell zum Ziel (Sakkade), der Kopf folgt verzögert und nur teilweise, der Oberkörper
 ## dreht mit. Vorrang: Regie > ausdrückliches Ziel > soziales Hinschauen > Mikroleben.
 func _update_gaze(d: float) -> void:
+	var fc: Variant = look_focus()
+	if not is_same(fc, _focus_last):
+		_focus_last = fc
+		_focus_since = _t
+	if _soc_next != null and _t - _focus_since >= SOC_DWELL:
+		var nx: Variant = _soc_next
+		_soc_next = null
+		if not (nx is Object) or is_instance_valid(nx):
+			look_social(nx, _soc_next_secs)
 	var want := Vector3.INF
 	var w := 0.0
 	var follow := 0.85
 	var tau_h := lerpf(0.34, 0.16, personality.impulsivity)
+	if _s_look_w > 0.02 or _look != null:
+		_auto_prev = false
 	if _s_look_w > 0.02:   # Regie: Ziel ungeglättet – Augen springen, der Kopf folgt in ~0,15 s fast ganz
 		want = _s_look
 		w = _s_look_w
@@ -617,14 +1012,25 @@ func _update_gaze(d: float) -> void:
 		want = _resolve(_look)
 		w = 1.0
 		follow = 0.8
-	elif _soc_look != null and _t < _soc_until:
-		want = _resolve(_soc_look)
-		w = 0.9
-		follow = 0.75
-	elif micro.look_target != null:
-		want = _resolve(micro.look_target)
-		w = 0.75
-		follow = micro.look_head * 0.8
+	else:
+		# automatische Blicke (sozial, Mikroleben): das gezeigte Ziel wechselt frühestens nach SOC_DWELL – kein Flackern,
+		# wenn mehrere Reize zugleich kommen; Regie und ausdrückliche Ziele (oben) gelten sofort
+		if not _auto_prev:   # ein übergeordneter Blick (Regie, ausdrücklich) ist gerade zu Ende: ab jetzt zählt die Dauer
+			_shown_since = _t
+		_auto_prev = true
+		var cand: Variant = null
+		var soc := _soc_look != null and _t < _soc_until
+		if soc:
+			cand = _soc_look
+		elif micro.look_target != null:
+			cand = micro.look_target
+		if not is_same(cand, _shown) and (_shown == null or _t - _shown_since >= SOC_DWELL or (_shown is Object and not is_instance_valid(_shown))):
+			_shown = cand
+			_shown_since = _t
+		if _shown != null and not (_shown is Object and not is_instance_valid(_shown)):
+			want = _resolve(_shown)
+			w = 0.9 if soc else 0.75
+			follow = 0.75 if soc else micro.look_head * 0.8
 	if want == Vector3.INF:
 		w = 0.0
 	if w > 0.0:
@@ -632,11 +1038,15 @@ func _update_gaze(d: float) -> void:
 		_gaze = want if _gaze_w < 0.02 else _gaze.lerp(want, 1.0 - exp(-d / tau_h))
 	_eye_w = lerpf(_eye_w, w, 1.0 - exp(-d / 0.08))
 	_gaze_w = lerpf(_gaze_w, w * follow, 1.0 - exp(-d / 0.2))
+	var head_tgt := _gaze
+	if absf(_avoid_yaw) > 0.001 and body:   # sehr nah: der Kopf dreht etwas weg, die Augen bleiben am Ziel
+		var hp := body.joint_pos("head")
+		head_tgt = hp + (_gaze - hp).rotated(Vector3.UP, _avoid_yaw)
 	if rig.modifier:
-		rig.modifier.look_target = _gaze
+		rig.modifier.look_target = head_tgt
 		rig.modifier.look_weight = _gaze_w
 	if body:
-		body.attend_target = _gaze
+		body.attend_target = head_tgt
 		body.attend_w = _gaze_w
 	if face:
 		var loc: Vector3 = face.global_transform.affine_inverse() * _eye
