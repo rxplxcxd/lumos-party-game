@@ -89,6 +89,7 @@ var _shroom_lights: Array[OmniLight3D] = []
 var _hill_y := 0.25
 var _stone_y := 0.6
 var _fall_mat: ShaderMaterial
+var _fill: OmniLight3D
 var _board: BoardBuilder
 var _bp: Array[Vector3] = []              # Standpunkte auf den Brettfeldern (Set-Koordinaten)
 var _dice: Node3D
@@ -192,6 +193,7 @@ func _process(delta: float) -> void:
 		_trunk.global_position = _origin + _trunk_local
 	if _curtain.visible:
 		_curtain.global_position = _origin + _curtain_local
+	_fill.light_energy = lerpf(_fill.light_energy, (1.15 if (_set_now == "forest" and t > 9.5 and t < 84.0) else (1.7 if (t > 54.5 and t < 56.96) else 0.0)), 1.0 - exp(-delta / 0.6))
 	_drive_music()
 	_animate_props(delta)
 	if t >= DUR:
@@ -752,6 +754,14 @@ func _build_sets() -> void:
 	cam.far = 260.0
 	add_child(cam)
 	cam.make_current()
+	_fill = OmniLight3D.new()   # weiches Fülllicht von der Kamera: Gesichter bleiben im Nachtwald lesbar
+	_fill.light_color = Color(0.82, 0.88, 1.0)
+	_fill.light_energy = 0.0
+	_fill.omni_range = 11.0
+	_fill.omni_attenuation = 0.6
+	_fill.shadow_enabled = false
+	cam.add_child(_fill)
+	_fill.position = Vector3(0.6, 0.5, 0.2)
 	_trunk = MeshInstance3D.new()
 	var tm := CylinderMesh.new()
 	tm.top_radius = 1.35
@@ -867,7 +877,7 @@ func _build_forest(o: Vector3) -> Node3D:
 	for k in 16:
 		var x := -12.0 + k * 4.4
 		_glow_mushroom(s, Vector3(x, 0, -3.6 - (k % 3) * 1.2), [Color("#d9a8ff"), Color("#8fe8ff"), Color("#ffb3e6")][k % 3])
-	_fireflies(s, Vector3(20, 2.0, -3), Vector3(52, 2.5, 10))
+	_fireflies(s, Vector3(20, 2.0, -8), Vector3(52, 2.5, 5.5))   # nur hinter dem Weg – nie direkt vor der Linse
 	# Wasserfall am Weg (Akt 2): Felswand, Wasser mit eigenem Fließ-Shader (keine Wellen-Verformung → kein
 	# Flimmern vor der Wand), Becken, Gischt und Nebel
 	WorldKit.box(s, Vector3(12.0, 10.6, 2.4), Vector3(14.0, 5.3, -9.9), Color("#3d4b52"), false)
@@ -882,6 +892,10 @@ func _build_forest(o: Vector3) -> Node3D:
 	wf.position = Vector3(14.0, 5.2, -8.3)
 	for p in [Vector3(11.2, 0, -8.6), Vector3(16.8, 0, -8.4), Vector3(14, 9.6, -8.9)]:
 		WorldKit.place(s, "nat/rock_large", p, _rng.randf() * 360.0, 2.6)
+	for e in [[Vector3(9.4, 0, -8.9), 3.4], [Vector3(18.7, 0, -8.8), 3.6], [Vector3(10.4, 4.4, -9.0), 2.6], [Vector3(17.9, 5.0, -9.0), 2.8], [Vector3(11.0, 8.2, -9.1), 2.2], [Vector3(17.2, 8.6, -9.1), 2.2], [Vector3(8.6, 0, -10.6), 4.2], [Vector3(19.6, 0, -10.6), 4.2]]:
+		WorldKit.place(s, "nat/rock_tall", e[0], _rng.randf() * 360.0, float(e[1]))   # die Wand ist Fels, kein glatter Block
+	for p in [Vector3(12.0, 10.9, -9.4), Vector3(15.6, 10.9, -9.6), Vector3(9.6, 10.9, -10.0)]:
+		WorldKit.place(s, "nat/bush", p, _rng.randf() * 360.0, 2.2)
 	for p in [Vector3(10.6, 0, -6.4), Vector3(17.4, 0, -6.6), Vector3(12.0, 0, -4.3), Vector3(16.2, 0, -4.2)]:
 		WorldKit.place(s, "nat/bush", p, _rng.randf() * 360.0, 1.5)
 	WorldKit.water(s, Vector2(6.6, 3.6), 0.05, Color(0.1, 0.35, 0.55), Color(0.55, 0.85, 1.0)).position = Vector3(14.0, 0.05, -6.3)
@@ -948,7 +962,7 @@ func _build_forest(o: Vector3) -> Node3D:
 	fire.position = Vector3(-6.0, 0.6, -18.0)
 	fire.emitting = true
 	_scatter(s, ["nat/tree_oak", "nat/tree_fat", "nat/tree_pine"], 26, -30, 18, -36, -25, Vector2(2.8, 4.0))
-	_fireflies(s, Vector3(-6, 3.0, -24.5), Vector3(20, 3, 5), 24)
+	_fireflies(s, Vector3(-6, 3.4, -27.5), Vector3(20, 2.6, 3.5), 24)   # hinter der Bank zwischen den Bäumen, nicht vor den Gesichtern
 	# Stern für den Weg (wird von Akt 1 benutzt, Ursprung)
 	_star = Assets.spawn("kp/star", self, o + Vector3(1.2, 1.55, 0), 0.0, 0.0)
 	_star.visible = false
@@ -970,23 +984,22 @@ func _build_meadow(o: Vector3) -> Node3D:
 	s.name = "Meadow"
 	add_child(s)
 	s.position = o
-	_avoid = [[Vector3(44.0, 0, -2.8), 2.8]]
+	_avoid = [[Vector3(43.2, 0, -2.8), 2.8]]
 	_strip(s, Color("#6fbf55"), Color("#d8c48a"), 16, 72)
 	_scatter(s, ["nat/tree_oak", "nat/tree_default", "plat/tree", "nat/tree_fat"], 28, 10, 62, -40, -8, Vector2(2.4, 3.6))
 	_scatter(s, ["nat/flower_yellow", "nat/flower_purple", "nat/flower_red", "nat/bush"], 110, 22, 60, -9, 8, Vector2(1.2, 2.0))
 	_scatter(s, ["nat/mushroom", "nat/stump"], 8, 30, 40, -9, 8, Vector2(1.2, 1.8))   # der Wald klingt noch nach
 	# Riesenblume, vor der die Magierin staunend stehen bleibt
-	var flower := WorldKit.place(s, "nat/flower_purple", Vector3(44.0, 0, -2.8), 0.0, 10.0)
+	var flower := WorldKit.place(s, "nat/flower_purple", Vector3(43.2, 0, -2.8), 0.0, 10.0)
 	flower.name = "GiantFlower"
 	var bf := FX.emitter({"amount": 18, "life": 4.0, "one_shot": false, "explosive": 0.0, "spread": 180.0, "vel_min": 0.2, "vel_max": 0.6,
 		"gravity": Vector3.ZERO, "size": 0.25, "color": Color(1.0, 0.7, 0.9, 0.95), "box": Vector3(5, 2, 3)})
 	s.add_child(bf)
-	bf.position = Vector3(44.0, 1.8, -2.8)
+	bf.position = Vector3(43.2, 1.8, -2.8)
 	bf.emitting = true
 	# Übergang zum Strand: der Boden wird sandig, die ersten Palmen stehen schon am Ende der Wiese
-	for k in 14:
-		var x := 49.0 + k * 1.3
-		WorldKit.box(s, Vector3(1.35, 0.06, 30.0), Vector3(x, 0.04, -3.0), Color("#6fbf55").lerp(Color("#e9cf96"), clampf(k / 9.0, 0.0, 1.0)), false)
+	_gradient_floor(s, 47.0, 58.0, 0.075, Color("#6fbf55"), Color("#e9cf96"))
+	WorldKit.box(s, Vector3(40.0, 0.06, 60.0), Vector3(78.0, 0.045, -8.0), Color("#e9cf96"), false)
 	for p in [Vector3(53.0, 0, -7.5), Vector3(57.5, 0, -9.0), Vector3(60.0, 0, -6.5)]:
 		WorldKit.place(s, "pirate/palm", p, _rng.randf() * 360.0, 1.0)
 	_avoid = []
@@ -1000,11 +1013,8 @@ func _build_beach(o: Vector3) -> Node3D:
 	s.position = o
 	# Sand geht allmählich in dunkles Vulkangestein über (Landschaftswechsel ohne Schnitt)
 	WorldKit.box(s, Vector3(170, 1, 120), Vector3(75, -0.5, -20), Color("#e9cf96"), false)
-	for k in 28:
-		var x := 50.0 + k * 1.2
-		var u := clampf((x - 53.0) / 8.0, 0.0, 1.0)
-		WorldKit.box(s, Vector3(1.25, 0.06, 26.0), Vector3(x, 0.02, -3.0), Color("#e9cf96").lerp(Color("#3a2f33"), u), false)
-	WorldKit.box(s, Vector3(70, 0.06, 26.0), Vector3(118.0, 0.02, -3.0), Color("#3a2f33"), false)
+	_gradient_floor(s, 52.0, 62.0, 0.05, Color("#e9cf96"), Color("#3a2f33"))
+	WorldKit.box(s, Vector3(90, 0.06, 60.0), Vector3(107.0, 0.02, -8.0), Color("#3a2f33"), false)
 	WorldKit.water(s, Vector2(170, 70), -0.25, Color(0.08, 0.38, 0.6), Color(0.45, 0.85, 0.9)).position = Vector3(70, -0.25, -60)
 	_scatter(s, ["pirate/palm", "pirate/palm_bend"], 14, 34, 56, -26, -6, Vector2(0.9, 1.2))
 	_scatter(s, ["nat/bush", "nat/flower_yellow"], 12, 40, 50, -9, 8, Vector2(1.2, 1.8))   # letzte Wiesenblumen im Sand
@@ -1110,6 +1120,26 @@ func _build_board(o: Vector3) -> Node3D:
 	return s
 
 
+## Weicher Farbverlauf im Boden entlang x (ein Mesh mit Eckfarben – keine sichtbaren Streifen).
+func _gradient_floor(s: Node3D, x0: float, x1: float, y: float, c0: Color, c1: Color) -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var pts := [[x0, -38.0, c0], [x1, -38.0, c1], [x1, 22.0, c1], [x0, 22.0, c0]]
+	for idx in [0, 1, 2, 0, 2, 3]:
+		st.set_color(pts[idx][2])
+		st.set_normal(Vector3.UP)
+		st.add_vertex(Vector3(float(pts[idx][0]), y, float(pts[idx][1])))
+	var m := StandardMaterial3D.new()
+	m.vertex_color_use_as_albedo = true
+	m.roughness = 0.9
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	s.add_child(mi)
+
+
 ## Fließendes Wasser für Wasserfälle (ein gemeinsames Material): laufende Schlieren, deckend, ohne Verformung.
 func _fall_material() -> ShaderMaterial:
 	if _fall_mat == null:
@@ -1122,9 +1152,9 @@ void fragment() {
 	float a = sin(x + sin(y * 2.0 + x * 0.31) * 1.3) * 0.5 + 0.5;
 	float b = sin(x * 2.7 + y * 5.0) * 0.5 + 0.5;
 	float f = smoothstep(0.5, 1.0, a * 0.7 + b * 0.3);
-	vec3 deep = vec3(0.36, 0.62, 0.86);
-	vec3 foam = vec3(0.9, 0.96, 1.0);
-	ALBEDO = mix(deep, foam, clamp(f * 0.75 + smoothstep(0.86, 1.0, UV.y) * 0.5, 0.0, 1.0));
+	vec3 deep = mix(vec3(0.13, 0.38, 0.66), vec3(0.24, 0.55, 0.82), UV.y);
+	vec3 foam = vec3(0.78, 0.92, 1.0);
+	ALBEDO = mix(deep, foam, clamp(f * 0.6 + smoothstep(0.88, 1.0, UV.y) * 0.5, 0.0, 1.0));
 }"""
 		_fall_mat = ShaderMaterial.new()
 		_fall_mat.shader = sh
@@ -1183,17 +1213,33 @@ func _build_cast() -> void:
 	_firefly = _glowbug(Color(1.0, 0.95, 0.5), 0.09)
 	_butterfly = Node3D.new()
 	add_child(_butterfly)
+	var wing_m := WorldKit.mat(Color("#6fc8f0"), 0.5, 0.35)
+	wing_m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	for sd in [-1.0, 1.0]:
-		var w := MeshInstance3D.new()
-		var q := QuadMesh.new()
-		q.size = Vector2(0.18, 0.14)
-		var m := WorldKit.mat(Color("#8fe8ff"), 0.4, 2.0)
-		m.cull_mode = BaseMaterial3D.CULL_DISABLED
-		q.material = m
-		w.mesh = q
-		w.position = Vector3(sd * 0.09, 0, 0)
-		w.name = "WingL" if sd < 0 else "WingR"
-		_butterfly.add_child(w)
+		var hinge := Node3D.new()
+		hinge.name = "WingL" if sd < 0 else "WingR"
+		_butterfly.add_child(hinge)
+		for part in [[0.07, Vector3(0.065, 0, -0.02)], [0.05, Vector3(0.05, 0, 0.06)]]:   # Vorder- und Hinterflügel
+			var w := MeshInstance3D.new()
+			var sp := SphereMesh.new()
+			sp.radius = float(part[0])
+			sp.height = float(part[0]) * 2.0
+			sp.radial_segments = 10
+			sp.rings = 5
+			sp.material = wing_m
+			w.mesh = sp
+			w.scale = Vector3(1.0, 0.06, 0.8)
+			w.position = (part[1] as Vector3) * Vector3(sd, 1, 1)
+			w.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			hinge.add_child(w)
+	var body_m := MeshInstance3D.new()
+	var cap := CapsuleMesh.new()
+	cap.radius = 0.012
+	cap.height = 0.11
+	cap.material = WorldKit.mat(Color("#2b2233"), 0.8)
+	body_m.mesh = cap
+	body_m.rotation.x = PI * 0.5
+	_butterfly.add_child(body_m)
 	_butterfly.visible = false
 
 
@@ -1462,7 +1508,7 @@ func _act2() -> void:
 	expr(A, 31.6, "smile", 0.4)
 	look(A, 31.6, B)
 	key(31.5, Vector3(13.2, 1.6, 5.4), Vector3(13.2, 1.2, 0.0), 44.0)
-	key(34.6, Vector3(23.3, 1.55, 3.8), Vector3(21.8, 1.3, -0.2), 40.0)
+	key(34.6, Vector3(22.3, 1.5, 4.0), Vector3(21.8, 1.3, -0.2), 38.0)
 	at(33.5, func() -> void:
 		_hold[B] = false
 		heroes[B].play("idle", 0.3))
@@ -1476,12 +1522,12 @@ func _act3() -> void:
 	var C := 2
 	var D := 3
 	# Abklatschen: beide holen aus, die Hände treffen sich wirklich in der Mitte
-	face(A, 34.6, Vector3(1, 0, -0.55))
-	face(B, 34.6, Vector3(-1, 0, 0.55))
+	face(A, 34.6, Vector3(1, 0, 0.45))    # leicht zur Kamera geöffnet: beide Gesichter sind zu sehen
+	face(B, 34.6, Vector3(-1, 0, 0.75))
 	look(A, 34.6, B)
 	look(B, 34.6, A)
 	expr(A, 34.6, "grin", 0.3)
-	var clap := Vector3(21.8, 1.42, -0.2)
+	var clap := Vector3(21.8, 1.42, 0.05)
 	at(34.82, func() -> void:
 		heroes[A].anticipate(0.22, 0.06)
 		heroes[B].anticipate(0.22, 0.06))
@@ -1494,10 +1540,10 @@ func _act3() -> void:
 		heroes[B].squash(1.06, 0.95, 0.25))
 	laugh(A, 35.6, 1.25, 0.8)
 	laugh(B, 35.82, 1.2, 0.9)
-	key(36.7, Vector3(23.0, 1.55, 3.5), Vector3(21.9, 1.32, -0.2), 38.0)
+	key(36.7, Vector3(22.0, 1.5, 3.6), Vector3(21.8, 1.32, -0.2), 36.0)
 	# gemeinsam weiter – ein Schmetterling landet auf der Nase des Helden; er bremst, sie schaut dem Falter nach …
 	go(A, 37.0, 38.9, Vector3(21.3, 0, 0.1), Vector3(24.6, 0, 0.2))
-	go(B, 37.15, 39.05, Vector3(22.3, 0, -0.5), Vector3(23.95, 0, 0.1))
+	go(B, 37.15, 39.05, Vector3(22.3, 0, -0.5), Vector3(23.72, 0, 0.1))
 	look(A, 37.0, null)
 	look(B, 37.0, null)
 	key(37.0, Vector3(24.4, 1.6, 4.6), Vector3(22.7, 1.25, -0.2), 42.0)
@@ -1518,8 +1564,9 @@ func _act3() -> void:
 	expr(A, 39.05, "ouch", 0.08)
 	expr(B, 39.05, "ouch", 0.08)
 	go(A, 39.06, 39.6, Vector3(24.6, 0, 0.2), Vector3(25.3, 0, 0.2), 0.14)
-	go(B, 39.06, 39.6, Vector3(23.95, 0, 0.1), Vector3(23.5, 0, -0.5))
-	face(A, 39.7, Vector3(-1, 0, -0.4))
+	go(B, 39.06, 39.6, Vector3(23.72, 0, 0.1), Vector3(23.4, 0, -0.5))
+	face(A, 39.7, Vector3(-1, 0, 0.7))
+	face(B, 39.7, Vector3(1, 0, 0.8))
 	look(A, 39.7, B)
 	look(B, 39.7, A)
 	expr(A, 39.7, "surprised", 0.2)
@@ -1546,17 +1593,17 @@ func _act3() -> void:
 	go(A, 44.3, 45.0, Vector3(25.3, 0, 0.2), Vector3(24.55, 0, 0.5))
 	face(A, 45.0, Vector3(-1, 0, 0.45))
 	reach(A, "r", 45.05, 45.42, 46.3, 46.8, func() -> Vector3: return _near_shoulder(C, A) + Vector3(0, 0.1 + 0.05 * sin(t * 12.0), 0))
-	key(45.2, Vector3(25.7, 1.5, 3.7), Vector3(24.1, 1.22, 0.7), 38.0)
+	key(45.2, Vector3(23.6, 1.45, 4.4), Vector3(24.15, 1.15, 0.7), 38.0)
 	look(C, 45.7, A)
 	expr(C, 45.8, "smile", 0.4)
 	laugh(B, 45.7, 1.0, 0.5)
 	at(46.7, func() -> void: bodies[C].chest_add = Vector3.ZERO)
 	breath(C, 46.9, 0.6, 2.0)
 	expr(C, 46.9, "grin", 0.4)
-	key(47.0, Vector3(26.6, 1.6, 4.7), Vector3(24.7, 1.2, 0.4), 42.0)
+	key(47.0, Vector3(25.4, 1.6, 5.0), Vector3(24.7, 1.2, 0.4), 42.0)
 	# Alle weiter – vorbei am Träumer auf dem Stein, der es zu spät bemerkt
 	go(A, 47.2, 49.6, Vector3(24.55, 0, 0.5), Vector3(29.4, 0, 0.2))
-	go(B, 47.3, 49.6, Vector3(23.5, 0, -0.5), Vector3(28.5, 0, -0.7))
+	go(B, 47.3, 49.6, Vector3(23.4, 0, -0.5), Vector3(28.5, 0, -0.7))
 	go(C, 47.5, 49.4, Vector3(23.7, 0, 0.9), Vector3(27.4, 0, 1.0))
 	for k in [A, B, C]:
 		look(k, 47.2, null)
@@ -1576,10 +1623,10 @@ func _act3() -> void:
 	expr(A, 49.3, "grin", 0.3)
 	reach(A, "l", 49.3, 49.65, 50.3, 50.7, func() -> Vector3: return _rel(A, -0.45, 1.9 + sin(t * 12.0) * 0.07, -0.1))
 	# Gemeinsam los – Weltenwechsel 1: hinter dem riesigen Baumstamm
-	go(A, 49.6, 53.2, Vector3(29.4, 0, 0.2), Vector3(38.6, 0, 0.2))
-	go(B, 49.6, 53.2, Vector3(28.5, 0, -0.7), Vector3(37.6, 0, -0.7))
-	go(C, 49.4, 53.2, Vector3(27.4, 0, 1.0), Vector3(36.6, 0, 1.0))
-	go(D, 49.95, 53.2, Vector3(31.4, 0, -1.2), Vector3(37.0, 0, -1.25))
+	go(A, 49.6, 53.2, Vector3(29.4, 0, 0.2), Vector3(38.0, 0, 0.2))
+	go(B, 49.6, 53.2, Vector3(28.5, 0, -0.7), Vector3(37.0, 0, -0.7))
+	go(C, 49.4, 53.2, Vector3(27.4, 0, 1.0), Vector3(39.6, 0, 1.0))      # Barbar und Träumer ziehen vorbei
+	go(D, 49.95, 53.2, Vector3(31.4, 0, -1.2), Vector3(40.4, 0, -1.25))
 	for k in 4:
 		look(k, 50.8, null)
 	key(50.6, Vector3(34.6, 1.7, 6.6), Vector3(32.6, 1.15, -0.3), 46.0)
@@ -1590,17 +1637,17 @@ func _act3() -> void:
 	at(55.2, func() -> void: _trunk.visible = false)
 	# Wiese: Die Magierin bleibt staunend vor der Riesenblume stehen – der Held kommt zurück, nimmt ihre Hand
 	# und zieht sie mit (sie wird wirklich gezogen: Arm gestreckt, ein Ruck, dann läuft sie hinterher)
-	go(A, 53.2, 54.8, Vector3(38.6, 0, 0.2), Vector3(42.9, 0, 0.2))
-	go(B, 53.2, 54.6, Vector3(37.6, 0, -0.7), Vector3(41.4, 0, -0.9))
-	go(C, 53.2, 57.6, Vector3(36.6, 0, 1.0), Vector3(47.2, 0, 1.0))
-	go(D, 53.2, 57.6, Vector3(37.0, 0, -1.25), Vector3(46.4, 0, -1.25))
-	face(B, 54.6, Vector3(0.6, 0, -1))
-	look(B, 54.4, Vector3(44.0, 2.6, -2.8))
+	go(A, 53.2, 54.8, Vector3(38.0, 0, 0.2), Vector3(42.0, 0, 0.2))
+	go(B, 53.2, 54.6, Vector3(37.0, 0, -0.7), Vector3(40.6, 0, -0.9))
+	go(C, 53.2, 57.6, Vector3(39.6, 0, 1.0), Vector3(49.6, 0, 1.0))
+	go(D, 53.2, 57.6, Vector3(40.4, 0, -1.25), Vector3(48.8, 0, -1.25))
+	face(B, 54.6, Vector3(0.75, 0, -1))
+	look(B, 54.4, Vector3(43.2, 2.6, -2.8))
 	expr(B, 54.5, "awe", 0.3)
 	tilt(B, 54.8, Vector3(-0.1, 0, 0.15))
 	look(A, 54.7, B)
 	expr(A, 54.9, "smile", 0.3)
-	go(A, 55.0, 55.7, Vector3(42.9, 0, 0.2), Vector3(42.05, 0, -0.5))
+	go(A, 55.0, 55.7, Vector3(42.0, 0, 0.2), Vector3(41.1, 0, 0.3))   # stellt sich neben sie – beide Gesichter frei
 	var hands := func() -> Vector3: return (_bone(A, "upperarm.l") + _bone(B, "upperarm.r")) * 0.5 + Vector3(0, -0.22, 0)
 	reach(A, "l", 55.65, 55.98, 57.35, 57.8, hands)
 	reach(B, "r", 55.75, 56.02, 57.35, 57.8, hands)
@@ -1608,15 +1655,17 @@ func _act3() -> void:
 	look(B, 56.0, A)
 	expr(B, 56.0, "surprised", 0.15)
 	tilt(B, 56.0, Vector3.ZERO)
-	go(A, 56.1, 57.9, Vector3(42.05, 0, -0.5), Vector3(46.6, 0, 0.1))
+	go(A, 56.1, 57.9, Vector3(41.1, 0, 0.3), Vector3(46.6, 0, 0.1))
 	at(56.24, func() -> void: heroes[B].squash(0.94, 1.07, 0.3))   # der Ruck
-	go(B, 56.26, 57.9, Vector3(41.4, 0, -0.9), Vector3(45.75, 0, -0.5))
+	go(B, 56.26, 57.9, Vector3(40.6, 0, -0.9), Vector3(45.4, 0, -0.5))
 	expr(B, 56.6, "laugh", 0.3)
 	expr(A, 56.3, "grin", 0.3)
 	look(A, 56.6, null)
 	look(B, 57.3, null)
-	key(55.4, Vector3(43.7, 1.6, 4.2), Vector3(42.0, 1.4, -0.9), 40.0)
-	key(57.2, Vector3(46.6, 1.7, 5.6), Vector3(45.2, 1.2, -0.2), 44.0)
+	# Gegenschuss von der Blüte aus: das staunende Gesicht, der Held kommt zurück und nimmt ihre Hand
+	key(54.55, Vector3(42.9, 1.45, -2.5), Vector3(40.9, 1.38, -0.75), 40.0, true)
+	key(56.95, Vector3(43.3, 1.5, -2.2), Vector3(42.2, 1.3, -0.5), 42.0)
+	key(56.96, Vector3(45.4, 1.7, 5.7), Vector3(44.0, 1.2, -0.2), 44.0, true)
 	key(58.4, Vector3(50.0, 1.9, 6.6), Vector3(48.6, 1.2, 0.0), 46.0)
 	# Weltenwechsel 2: Die Kamera fährt hinter dem Wasserfall-Tor hindurch – dahinter liegt die Bucht
 	at(53.0, func() -> void: _curtain.visible = true)
@@ -1633,9 +1682,9 @@ func _act4() -> void:
 	var D := 3
 	# Bucht im Abendlicht: die vier laufen den Strand entlang, der Sand wird zu Vulkangestein
 	go(A, 57.9, 60.4, Vector3(46.6, 0, 0.1), Vector3(53.0, 0, 0.1))
-	go(B, 57.9, 60.4, Vector3(45.75, 0, -0.5), Vector3(52.0, 0, -0.6))
-	go(C, 57.6, 60.4, Vector3(47.2, 0, 1.0), Vector3(53.6, 0, 1.0))
-	go(D, 57.6, 60.4, Vector3(46.4, 0, -1.25), Vector3(51.4, 0, -1.25))
+	go(B, 57.9, 60.4, Vector3(45.4, 0, -0.5), Vector3(52.0, 0, -0.6))
+	go(C, 57.6, 60.4, Vector3(49.6, 0, 1.0), Vector3(54.4, 0, 1.0))
+	go(D, 57.6, 60.4, Vector3(48.8, 0, -1.25), Vector3(53.8, 0, -1.25))
 	for k in 4:
 		expr(k, 58.3 + k * 0.12, "awe", 0.4)
 		look(k, 58.3 + k * 0.1, Vector3(60.0, 4.0, -40.0))   # das Meer, der glühende Berg
@@ -1643,8 +1692,8 @@ func _act4() -> void:
 		look(k, 60.0, null)
 	go(A, 60.4, 63.2, Vector3(53.0, 0, 0.1), Vector3(60.6, 0, 0.2))
 	go(B, 60.4, 63.2, Vector3(52.0, 0, -0.6), Vector3(59.6, 0, -0.8))
-	go(C, 60.4, 63.2, Vector3(53.6, 0, 1.0), Vector3(59.2, 0, 1.1))
-	go(D, 60.4, 63.2, Vector3(51.4, 0, -1.25), Vector3(58.4, 0, -1.3))
+	go(C, 60.4, 63.2, Vector3(54.4, 0, 1.0), Vector3(59.2, 0, 1.1))
+	go(D, 60.4, 63.2, Vector3(53.8, 0, -1.25), Vector3(58.4, 0, -1.3))
 	key(60.4, Vector3(54.6, 1.8, 6.2), Vector3(52.8, 1.2, -0.4), 44.0)
 	key(63.2, Vector3(62.6, 2.0, 7.0), Vector3(60.4, 1.3, -1.0), 46.0)
 	# Der Barbar knufft den Träumer im Laufen mit dem Ellbogen – der lacht und weicht aus
@@ -1678,11 +1727,11 @@ func _act4() -> void:
 	# und der stellt sich breitbeinig vor ihn
 	reach(B, "l", 63.9, 64.3, 65.5, 65.6, func() -> Vector3: return _near_shoulder(A, B) + Vector3(0, -0.12, 0))
 	go(B, 63.75, 64.3, Vector3(59.6, 0, -0.8), Vector3(60.05, 0, -0.35))
-	go(D, 63.8, 64.5, Vector3(58.4, 0, -1.3), Vector3(58.75, 0, 1.75))
+	go(D, 63.8, 64.5, Vector3(58.4, 0, -1.3), Vector3(58.3, 0, 1.35))
 	expr(C, 64.5, "determined", 0.3)
 	# Tief hinter der Gruppe: die vier klein im unteren Bilddrittel, der Boss türmt sich darüber auf
-	key(63.45, Vector3(56.6, 1.3, 6.6), Vector3(67.0, 6.8, -9.5), 56.0, true)
-	key(65.3, Vector3(57.8, 1.2, 5.4), Vector3(68.0, 8.0, -10.5), 50.0)
+	key(63.45, Vector3(55.0, 1.25, 9.4), Vector3(67.0, 6.4, -9.5), 54.0, true)
+	key(65.3, Vector3(56.0, 1.15, 8.2), Vector3(68.0, 7.4, -10.5), 50.0)
 	at(64.5, func() -> void: _boss.act("slam"))   # hebt den Arm …
 	# … die Musik stoppt einen Moment … BOOM!
 	at(MONTAGE_T0, func() -> void:
@@ -1775,19 +1824,18 @@ func _montage() -> void:
 	at(s[2] + 1.56, func() -> void:
 		Audio.sfx("coin", null, 0.0, 1.0, 0.0)
 		Juice.float_text(self, _origin + pe + Vector3.UP * 2.4, "+3", UI.GOLD, 100))
-	key(s[2], pa + Vector3(-1.0, 1.7, 7.4), pa + Vector3(-1.8, 1.0, 0), 44.0, true)
-	key(s[3] - 0.01, pe + Vector3(0.6, 1.6, 6.2), pe + Vector3(0, 1.1, 0), 42.0)
+	key(s[2], pa + Vector3(-2.0, 5.2, 5.4), pa + Vector3(-2.4, 0.9, 0), 46.0, true)
+	key(s[3] - 0.01, pe + Vector3(0.4, 4.4, 4.8), pe + Vector3(0, 1.0, 0), 42.0)
 	# --- 3: Der Stern schwebt herab in die erhobenen Hände – die Freunde jubeln von ihren Feldern
-	var star_p := func() -> Vector3: return _board.star_node.global_position + Vector3(0, -0.35, 0)
 	face(A, s[3], (_bp[i0 + 5] - pe).normalized() + side * 1.2)
 	look(A, s[3], _board.star_node)
 	expr(A, s[3], "awe", 0.15)
 	at(s[3] + 0.15, func() -> void:
 		var tw := _board.star_node.create_tween()
-		tw.tween_property(_board.star_node, "position", pe + Vector3(0, 2.25, 0.15), 0.75).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tw.tween_property(_board.star_node, "position", pe + Vector3(0, 2.75, 0.0), 0.75).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		Audio.sfx("sparkle_up", null, -4.0, 1.0, 0.0))
-	reach(A, "l", s[3] + 0.35, s[3] + 0.85, s[4], s[4], star_p)
-	reach(A, "r", s[3] + 0.4, s[3] + 0.85, s[4], s[4], star_p)
+	reach(A, "l", s[3] + 0.35, s[3] + 0.85, s[4], s[4], func() -> Vector3: return _rel(A, -0.5, 2.1, 0.12))
+	reach(A, "r", s[3] + 0.4, s[3] + 0.85, s[4], s[4], func() -> Vector3: return _rel(A, 0.5, 2.1, 0.12))
 	at(s[3] + 0.92, func() -> void:
 		Audio.sfx("star", null, 0.0, 1.0, 0.0)
 		FX.confetti(_origin + pe + Vector3.UP * 3.0, 60)
@@ -1796,8 +1844,8 @@ func _montage() -> void:
 	for k in [B, C, D]:
 		react(k, s[3] + 1.0 + 0.06 * k, "cheer")
 		expr(k, s[3] + 1.0, "laugh", 0.2)
-	key(s[3], pe + Vector3(-2.6, 1.15, 4.4), pe + Vector3(0.2, 2.0, 0), 46.0, true)
-	key(s[4] - 0.01, pe + Vector3(-2.0, 1.2, 3.7), pe + Vector3(0.1, 2.0, 0), 42.0)
+	key(s[3], pe + Vector3(-1.6, 1.5, 5.0), pe + Vector3(0.1, 2.0, 0), 46.0, true)
+	key(s[4] - 0.01, pe + Vector3(-1.2, 1.5, 4.2), pe + Vector3(0.0, 2.0, 0), 42.0)
 	# --- 4: Minispiel „Sumo-Ring“ – der Barbar schiebt den Träumer mit beiden Händen von der Plattform
 	at(s[4], func() -> void:
 		_use_set("montage", "day")
@@ -1842,8 +1890,8 @@ func _montage() -> void:
 	key(s[4], Vector3(-2.2, 2.3, 7.6), Vector3(0.6, 1.3, 0.0), 44.0, true)
 	key(s[5] - 0.01, Vector3(0.6, 2.0, 7.0), Vector3(2.6, 0.9, 0.2), 42.0)
 	# --- 5: Minispiel „Zielsprint“ – Kopf an Kopf über die Linie
-	cast.call([A, B, C, D], s[5])
-	var lanes := [[B, -0.75, 56.0, 60.9, 1.22], [A, 0.75, 55.9, 60.5, 1.26], [C, 2.25, 55.2, 59.3, 1.3], [D, -2.25, 55.4, 59.6, 1.3]]
+	cast.call([A, B, C], s[5])
+	var lanes := [[B, -0.75, 56.0, 60.9, 1.22], [A, 0.75, 55.9, 60.5, 1.26], [C, -2.25, 55.2, 59.4, 1.3]]
 	for ln in lanes:
 		var k: int = ln[0]
 		go(k, s[5], s[5] + float(ln[4]), Vector3(float(ln[2]), 0, float(ln[1])), Vector3(float(ln[3]), 0, float(ln[1])))
@@ -1857,8 +1905,8 @@ func _montage() -> void:
 		_flash.modulate.a = 0.45
 		_fade(_flash, 0.0, 0.25)
 		Audio.sfx("whistle_up", null, -4.0, 1.2, 0.0))
-	key(s[5], Vector3(62.6, 1.0, 3.9), Vector3(57.5, 1.1, 0.0), 38.0, true)
-	key(s[6] - 0.01, Vector3(62.3, 1.1, 3.5), Vector3(59.2, 1.1, 0.0), 36.0)
+	key(s[5], Vector3(63.4, 1.0, 4.8), Vector3(57.6, 1.1, -0.4), 38.0, true)
+	key(s[6] - 0.01, Vector3(63.1, 1.1, 4.5), Vector3(59.4, 1.1, -0.4), 36.0)
 	# --- 6: Bosskampf – dem Schlag gerade noch ausgewichen
 	cast.call([D], s[6])
 	at(s[6], func() -> void:
@@ -1904,7 +1952,7 @@ func _act5() -> void:
 	var pd := Vector3(-7.32, 0.42, -20.0)
 	var pa := Vector3(-6.5, 0.42, -20.0)
 	var pc := Vector3(-5.45, 0.42, -20.0)
-	var pb := Vector3(-3.5, 0.05, -18.9)
+	var pb := Vector3(-2.7, 0.05, -21.0)
 	at(t0, func() -> void:
 		_use_set("forest", "forest_night")
 		for k in 4:
@@ -1934,7 +1982,7 @@ func _act5() -> void:
 		bodies[D].head_add = Vector3(0.12, 0, -0.3)
 		bodies[D].breath = 0.9
 		bodies[D].breath_rate = 0.75
-		bodies[A].chest_add = Vector3(0.22, 0, 0)
+		bodies[A].chest_add = Vector3(0.16, 0, 0)
 		faces[C].chew = 1.0)
 	expr(D, t0, "asleep", 0.0)
 	expr(A, t0, "smile", 0.0)
@@ -1963,7 +2011,8 @@ func _act5() -> void:
 	at(t0 + 0.82, func() -> void: Audio.sfx("plop", null, -12.0, 1.7, 0.0))
 	# Die kleine Pointe, nah: Der Held schielt auf den Keks · der Barbar merkt es, zieht die Braue hoch · der Held
 	# setzt den Bettelblick auf · der Barbar seufzt, grinst und reicht ihn hinüber · Hand nimmt Keks · beide lachen leise
-	look(A, t0 + 2.7, _snack)
+	at(t0 + 2.45, func() -> void: bodies[A].chest_add = Vector3.ZERO)   # aufgerichtet: das Gesicht bleibt zu sehen
+	look(A, t0 + 2.7, Vector3(-5.6, 1.25, -19.6))   # schielt zum Keks hinüber (die Augen wandern, der Kopf kaum)
 	expr(A, t0 + 2.75, "curious", 0.25)
 	tilt(A, t0 + 2.8, Vector3(0, 0, 0.14))
 	look(C, t0 + 3.2, A)
@@ -1974,7 +2023,7 @@ func _act5() -> void:
 	look(C, t0 + 4.0, _snack)
 	expr(C, t0 + 4.0, "smile", 0.3)
 	at(t0 + 4.02, func() -> void: heroes[C].squash(1.03, 0.97, 0.4))   # das Seufzen
-	look(A, t0 + 4.3, _snack)
+	look(A, t0 + 4.3, Vector3(-5.9, 1.2, -19.5))
 	expr(A, t0 + 4.3, "awe", 0.2)
 	reach(A, "l", t0 + 4.3, t0 + 4.72, t0 + 4.8, t0 + 5.0, mid)
 	at(t0 + 4.74, func() -> void: Audio.sfx("plop", null, -10.0, 1.5, 0.0))
@@ -2004,8 +2053,8 @@ func _act5() -> void:
 	key(t0, Vector3(-4.6, 1.9, -12.4), Vector3(-5.9, 0.9, -19.4), 40.0, true)
 	key(t0 + 2.49, Vector3(-4.8, 1.95, -12.8), Vector3(-5.9, 0.9, -19.4), 40.0)
 	# nah dran: Held und Barbar nebeneinander, das Feuer flackert unscharf im Vordergrund
-	key(t0 + 2.5, Vector3(-5.6, 1.3, -16.5), Vector3(-5.98, 1.22, -20.0), 40.0, true)
-	key(t0 + 6.19, Vector3(-5.9, 1.3, -16.9), Vector3(-5.98, 1.22, -20.0), 37.0)
+	key(t0 + 2.5, Vector3(-4.75, 1.3, -17.0), Vector3(-5.98, 1.2, -20.0), 38.0, true)
+	key(t0 + 6.19, Vector3(-5.0, 1.3, -17.3), Vector3(-5.98, 1.2, -20.0), 35.0)
 	key(t0 + 6.2, Vector3(-4.8, 2.0, -12.9), Vector3(-5.9, 0.95, -19.4), 41.0, true)
 	key(t0 + 11.8, Vector3(8.0, 17.0, 6.0), Vector3(-6.0, 0.0, -18.0), 56.0)
 	# Die Kamera steigt – der Held und der Barbar schauen uns nach
@@ -2037,8 +2086,8 @@ func _animate_props(delta: float) -> void:
 		var tb := t - BUTTERFLY_T
 		var nose := a2.global_position + Vector3.UP * 1.56 + _fwd(0) * 0.5
 		var flap := sin(t * 40.0) * 0.9
-		(_butterfly.get_node("WingL") as Node3D).rotation.y = flap
-		(_butterfly.get_node("WingR") as Node3D).rotation.y = -flap
+		(_butterfly.get_node("WingL") as Node3D).rotation.z = -flap
+		(_butterfly.get_node("WingR") as Node3D).rotation.z = flap
 		if tb < 0.8:
 			_butterfly.global_position = nose + Vector3(1.4 - tb * 1.75, 0.6 - tb * 0.75, 0.6 - tb * 0.75)
 		elif tb < 1.06:
@@ -2080,20 +2129,20 @@ func _build_curtain() -> Node3D:
 	n.visible = false
 	add_child(n)
 	var q := QuadMesh.new()
-	q.size = Vector2(4.6, 7.4)
+	q.size = Vector2(4.0, 7.4)
 	q.material = _fall_material()
 	var mi := MeshInstance3D.new()
 	mi.mesh = q
 	mi.position = Vector3(0, 3.7, 0)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	n.add_child(mi)
-	for sx: float in [-3.1, 3.1]:
-		WorldKit.place(n, "nat/rock_tall", Vector3(sx, 0, -0.4), 40.0 * sx, 3.6)
-	WorldKit.box(n, Vector3(9.0, 1.8, 2.6), Vector3(0, 8.2, -0.5), Color("#4a565c"), false)
-	WorldKit.box(n, Vector3(9.4, 0.5, 3.0), Vector3(0, 9.3, -0.5), Color("#4f8a4a"), false)
+	for sx: float in [-3.0, 3.0]:
+		Assets.tint(WorldKit.place(n, "nat/rock_tall", Vector3(sx, 0, -2.2), 40.0 * sx, 3.2), Color(0.62, 0.7, 0.62))   # dunkler, bemooster Fels
+	WorldKit.box(n, Vector3(8.4, 1.8, 3.6), Vector3(0, 8.2, -1.6), Color("#4a565c"), false)
+	WorldKit.box(n, Vector3(8.8, 0.5, 4.0), Vector3(0, 9.3, -1.6), Color("#4f8a4a"), false)
 	WorldKit.cylinder(n, 2.6, 0.08, Vector3(0, 0.03, -0.2), Color("#5fa6d8"), false)
 	var spray := FX.emitter({"amount": 60, "life": 1.1, "one_shot": false, "explosive": 0.0, "spread": 50.0, "dir": Vector3.UP, "vel_min": 0.6,
-		"vel_max": 1.6, "gravity": Vector3(0, -2.5, 0), "size": 0.22, "color": Color(1, 1, 1, 0.55), "box": Vector3(4.2, 0.2, 0.4)})
+		"vel_max": 1.6, "gravity": Vector3(0, -2.5, 0), "size": 0.22, "color": Color(1, 1, 1, 0.55), "box": Vector3(1.9, 0.2, 0.4)})
 	n.add_child(spray)
 	spray.position = Vector3(0, 0.25, -0.2)
 	spray.emitting = true
