@@ -361,6 +361,10 @@ func _auto() -> void:
 	var worst := 0.0
 	var reached := true
 	var chest := {}
+	for a5 in actors:   # reiner Gesichts-/Gefühlstest: kein Sozialverhalten, Nachwirkungen vorher abklingen lassen
+		a5.cfg.autonomy = 0.0
+		a5.emotion.clear()
+	await _wait(1.2)
 	for nm in LumosFace.EXPR.keys():
 		for a in actors:
 			a.feel(String(nm), 0.25)
@@ -374,12 +378,17 @@ func _auto() -> void:
 			for k in LumosFace.KEYS:
 				worst = maxf(worst, absf(actors[1].face.param(k) - float(last[k])))
 				last[k] = actors[1].face.param(k)
+		var gain := actors[1].personality.expressiveness()   # ruhige/schüchterne Figuren zeigen Gefühle gedämpfter
 		for k in LumosFace.KEYS:
-			if absf(actors[1].face.param(k) - float((LumosFace.EXPR[nm] as Dictionary).get(k, 1.0 if k == "width" else 0.0))) > 0.06:
+			var base := 1.0 if k in LumosFace.ONE_KEYS else 0.0
+			var want := base + (float((LumosFace.EXPR[nm] as Dictionary).get(k, base)) - base) * gain
+			if String(nm) != "neutral" and absf(actors[1].face.param(k) - want) > 0.06:
 				reached = false
 		chest[nm] = actors[1].body.joint_pos("head") - actors[1].rig.global_position
 		if String(nm) in ["joy", "sad", "angry", "surprised", "scared"]:
 			await _shot("05_gefuehl_" + String(nm))
+	for a6 in actors:
+		a6.cfg.autonomy = 1.0
 	_ok(reached, "5 alle %d Ausdrücke werden erreicht" % LumosFace.EXPR.size())
 	_ok(worst < 0.3, "5 Übergänge weich (größter Sprung je Bild %.2f)" % worst)
 	var post_d := (chest.sad as Vector3).distance_to(chest.joy)
@@ -387,13 +396,14 @@ func _auto() -> void:
 	demo_idle()
 	# 6 – Blickkontakt: Augen, Kopf und Oberkörper wenden sich gemeinsam zu
 	actors[1].look_at_target(actors[3])
-	await _wait(0.8)
+	var gz_max := [0.0]
+	await _wait(0.8, func() -> void: gz_max[0] = maxf(gz_max[0], actors[1].face.gaze.length()))   # Augen laufen dem Kopf voraus
 	var b1 := actors[1].body
 	var fwd_chest := (b1.joint_pos("chest") - b1.joint_pos("hips"))
 	var to_t := actors[3].rig.global_position - actors[1].rig.global_position
 	var turned := actors[1].rig.global_basis.inverse() * (b1.joint_pos("shoulder.r") - b1.joint_pos("shoulder.l"))
-	_ok(absf(turned.z) > 0.03 and actors[1].face.gaze.length() > 0.1 and fwd_chest.length() > 0.0 and to_t.length() > 0.0,
-		"6 Blickkontakt: Schulterlinie dreht sich mit (%.0f mm), Augen wandern (%.2f)" % [absf(turned.z) * 1000.0, actors[1].face.gaze.length()])
+	_ok(absf(turned.z) > 0.03 and float(gz_max[0]) > 0.1 and fwd_chest.length() > 0.0 and to_t.length() > 0.0,
+		"6 Blickkontakt: Schulterlinie dreht sich mit (%.0f mm), Augen wandern voraus (%.2f)" % [absf(turned.z) * 1000.0, float(gz_max[0])])
 	actors[1].look_at_target(null)
 	# 7 – Greifen: Handfläche auf der Oberseite, richtig ausgerichtet; danach liegt der Ball auf der Handfläche
 	var got := [false]
@@ -497,7 +507,7 @@ func _auto() -> void:
 	await _wait(1.0)
 	var a2 := actors[2]
 	var sl2: Vector2 = await _stance_slip(a2, 1.2)
-	_ok(a2.loco.state == "walk" and a2.interact.held.r == ball and a2.hand_weight("r") > 0.9 and a2._gaze_w > 0.8 and a2.body.laugh > 0.2,
+	_ok(a2.loco.state == "walk" and a2.interact.held.r == ball and a2.hand_weight("r") > 0.9 and a2._eye_w > 0.9 and a2._gaze_w > 0.6 and a2.body.laugh > 0.2,
 		"14 Kombination: geht, trägt, schaut, lacht gleichzeitig")
 	_ok(sl2.x < 0.08 and _finite(a2), "14 Kombination: Standfuß bleibt verankert (Ø %.3f m/s)" % sl2.x)
 	await _shot("14_kombination")

@@ -38,8 +38,57 @@ const EXPR := {
 	"smug": {"lid": 0.35, "curve": 0.75, "asym": 1.0, "brow": 0.2, "blush": 0.2},
 	"dreamy": {"lid": 0.3, "curve": 0.6, "brow": 0.3, "blush": 0.5},
 	"plead": {"wide": 0.8, "brow": 0.7, "tilt": 0.9, "curve": 0.35, "blush": 0.6},
+	# — 1.5.2: erweitertes Gefühlsspektrum (Verhalten in LumosEmotion.META, Haltung in LumosBody.POSTURE) —
+	"delight": {"curve": 1.0, "open": 0.62, "wide": 0.5, "brow": 0.8, "squint": 0.15, "blush": 0.5},
+	"euphoria": {"curve": 1.0, "open": 0.85, "squint": 0.8, "brow": 1.0, "blush": 0.9, "width": 1.15},
+	"pride": {"curve": 0.6, "smirk": 0.35, "lid": 0.22, "brow": 0.25, "asym": 0.2},
+	"relief": {"curve": 0.45, "lid": 0.4, "brow": 0.3, "tilt": 0.35, "open": 0.18, "round": 0.3},
+	"content": {"curve": 0.55, "lid": 0.28, "squint": 0.2, "blush": 0.15},
+	"affection": {"curve": 0.7, "squint": 0.4, "blush": 0.65, "tilt": 0.3, "lid": 0.15},
+	"tender": {"curve": 0.6, "lid": 0.22, "tilt": 0.45, "blush": 0.3, "brow": 0.2},
+	"playful": {"curve": 0.85, "smirk": 0.45, "asym": 0.5, "squint": 0.3, "brow": 0.5, "open": 0.12},
+	"gloat": {"curve": 0.85, "smirk": 0.85, "lid": 0.38, "asym": 0.7, "tilt": -0.25, "open": 0.22, "squint": 0.2},
+	"bashful": {"curve": 0.55, "blush": 1.0, "lid": 0.32, "tilt": 0.45, "smirk": 0.2, "press": 0.2},
+	"disappointed": {"curve": -0.65, "lid": 0.38, "tilt": 0.6, "brow": 0.1, "pout": 0.35},
+	"fear": {"wide": 0.9, "sclera": 0.8, "pupil": 0.62, "brow": 0.8, "tilt": 0.9, "open": 0.35, "curve": -0.5, "tremble": 0.35},
+	"panic": {"wide": 1.0, "sclera": 1.0, "pupil": 0.45, "brow": 1.0, "tilt": 1.0, "open": 0.92, "round": 0.45, "curve": -0.7,
+		"width": 1.2, "tremble": 0.5},
+	"anger": {"tilt": -1.0, "brow": -0.6, "curve": -0.6, "lid": 0.2, "open": 0.42, "width": 1.25, "cheek": 0.15},
+	"frustrated": {"tilt": -0.65, "brow": -0.45, "press": 0.75, "curve": -0.45, "lid": 0.22, "cheek": 0.2},
+	"jealous": {"lid": 0.38, "tilt": -0.3, "pout": 0.6, "asym": 0.5, "curve": -0.35},
+	"shame": {"lid": 0.5, "tilt": 0.75, "curve": -0.45, "blush": 0.75, "press": 0.35},
+	"insecure": {"tilt": 0.55, "brow": 0.3, "press": 0.45, "curve": -0.2, "lid": 0.1},
+	"lonely": {"tilt": 0.75, "lid": 0.32, "curve": -0.55, "brow": 0.2, "tear": 0.15},
+	"exhausted": {"lid": 0.55, "open": 0.45, "round": 0.3, "curve": -0.25, "tilt": 0.45},
+	"surprise": {"wide": 1.0, "brow": 1.0, "open": 0.72, "round": 0.95, "curve": 0.0, "sclera": 0.55, "pupil": 0.8},
+	"disbelief": {"wide": 0.5, "brow": 0.75, "asym": 0.65, "open": 0.28, "round": 0.5, "curve": -0.12, "lid": 0.1},
+	"suspicious": {"lid": 0.45, "squint": 0.35, "tilt": -0.5, "asym": 0.7, "press": 0.5, "curve": -0.2},
+	"embarrassed": {"blush": 1.0, "curve": 0.12, "press": 0.3, "tilt": 0.5, "lid": 0.3},
+	"nervous": {"tilt": 0.6, "brow": 0.4, "press": 0.3, "curve": -0.12, "wide": 0.3, "sclera": 0.25, "tremble": 0.2},
+	"compassion": {"tilt": 0.85, "brow": 0.45, "curve": 0.18, "lid": 0.15, "open": 0.06},
+	"admiration": {"wide": 0.6, "brow": 0.7, "curve": 0.6, "open": 0.28, "round": 0.4, "blush": 0.35, "sclera": 0.3},
+	"defiant": {"tilt": -0.5, "pout": 0.5, "lid": 0.22, "brow": -0.2, "curve": -0.3},
+	"impatient": {"tilt": -0.3, "press": 0.55, "lid": 0.15, "curve": -0.22, "asym": 0.3},
+	"focus": {"lid": 0.3, "squint": 0.25, "tilt": -0.4, "press": 0.6, "brow": -0.3},
+	"pensive": {"lid": 0.25, "asym": 0.4, "press": 0.3, "curve": 0.0, "brow": 0.2},
+	"teasing": {"curve": 0.85, "smirk": 0.75, "asym": 0.8, "brow": 0.5, "squint": 0.3, "open": 0.2},
+	# — Cartoon-Gesichter —
+	"cry": {"lid": 0.7, "squint": 0.6, "tilt": 1.0, "open": 0.9, "round": 0.2, "curve": -1.0, "width": 1.25, "tear": 1.0,
+		"tremble": 0.6, "blush": 0.4},
+	"love": {"curve": 0.8, "squint": 0.55, "blush": 1.0, "lid": 0.2, "tilt": 0.3},
+	"puppy": {"wide": 0.9, "brow": 0.75, "tilt": 0.95, "curve": 0.3, "sclera": 0.7, "pupil": 1.35, "tear": 0.3, "pout": 0.3},
+	"sulk": {"pout": 0.8, "tilt": -0.3, "lid": 0.3, "curve": -0.4, "cheek": 0.25},
+	"puffed": {"cheek": 1.0, "tilt": -0.9, "brow": -0.6, "lid": 0.2, "press": 0.8, "blush": 0.6},
+	"dizzy": {"lid": 0.3, "asym": 0.6, "open": 0.35, "round": 0.5, "curve": -0.1, "cross": 0.5},
+	"cross_eyed": {"cross": 1.0, "wide": 0.4, "open": 0.2, "round": 0.6},
+	"sleep_smile": {"lid": 1.0, "curve": 0.5, "open": 0.05},
 }
-const KEYS := ["lid", "squint", "wide", "brow", "tilt", "asym", "open", "curve", "width", "round", "blush"]
+const KEYS := ["lid", "squint", "wide", "brow", "tilt", "asym", "open", "curve", "width", "round", "blush",
+	"pout", "press", "tremble", "cheek", "sclera", "pupil", "tear", "smirk", "cross"]
+const ONE_KEYS := ["width", "pupil"]   ## Grundwert 1 statt 0
+## Mundaktionen (kurze Hüllkurven über dem Ausdruck): Dauer in s
+const MOUTH_ACTIONS := {"yawn": 2.2, "sigh": 1.1, "swallow": 0.45, "gasp": 0.7, "sob": 1.6, "snicker": 1.2, "smack": 0.5,
+	"chatter": 1.2, "pant": 2.0, "press": 0.8}
 const SEG := 14
 const GRID := 0.025          ## Rasterweite des Tiefenrasters (Anteil der Kopfbreite)
 
@@ -55,6 +104,11 @@ var chew := 0.0           # 0..1 – Kaubewegung
 var gaze := Vector2.ZERO  # Blickrichtung der Augen (−1..1)
 var blink_on := true
 var feature_scale := 1.0  # Gesamtgröße der Züge (1 = Standard; größer = von weitem besser lesbar)
+var gaze_target := Vector2(INF, INF)   # gesetzt = Augen springen schnell dorthin (Sakkade), sonst gilt gaze direkt
+var talk := 0.0           # 0..1 – Lippen bewegen sich silbenweise (Sprechen ohne Ton, später Dialog-System)
+var blink_mult := 1.0     # Lidschlag-Häufigkeit (Gefühl: nervös > 1, konzentriert < 1)
+var blink_slow := 1.0     # Lidschlag-Dauer (müde > 1)
+var rng := RandomNumberGenerator.new()
 
 var _cur := {}
 var _tgt := {}
@@ -69,6 +123,15 @@ var _t := 0.0
 var _last_sig := 0.0
 var _lod_acc := 0.0
 var paused := false              # LOD: außerhalb des Bildes nicht aktualisieren
+var blinks := 0                  # Zähler (Tests)
+var _blink_dur := 0.16
+var _blink2 := -1.0              # zweiter Lidschlag (Doppelblinzeln)
+var _act := ""                   # laufende Mundaktion
+var _act_t := 0.0
+var _act_d := 1.0
+var _syl_t := 0.0                # Sprech-Silben
+var _syl := Vector3.ZERO         # aktuelle Silbe: (Öffnung, Rundung, Breite)
+var _syl_to := Vector3.ZERO
 
 
 ## Baut die Ebene. false = Modell ungeeignet (kein Kopf-Mesh, keine erkennbaren Augen) – die Figur bleibt unverändert.
@@ -76,8 +139,9 @@ func setup(rig: CharacterRig) -> bool:
 	if rig == null or rig.model == null:
 		return false
 	for k in KEYS:
-		_cur[k] = 1.0 if k == "width" else 0.0
+		_cur[k] = 1.0 if k in ONE_KEYS else 0.0
 		_tgt[k] = _cur[k]
+	_blink_t = rng.randf_range(0.6, 3.0)
 	var head := _find_head_mesh(rig)
 	if head == null:
 		push_warning("LumosFace: kein Kopf-Mesh gefunden (%s) – Gesicht übersprungen" % rig.model_key)
@@ -111,7 +175,8 @@ func setup(rig: CharacterRig) -> bool:
 	add_child(mi)
 	for e in [["eye", Color("#14181c"), 0.25, 1.0], ["white", Color("#ffffff"), 0.4, 1.0], ["cavity", Color("#3a1216"), 0.9, 1.0],
 			["teeth", Color("#f6f1e6"), 0.6, 1.0], ["tongue", Color("#e0707a"), 0.7, 1.0], ["brow", _m.brow_col, 0.9, 1.0],
-			["blush", Color("#ff7a8a"), 0.9, 0.55]]:
+			["blush", Color("#ff7a8a"), 0.9, 0.55], ["tear", Color("#9fd8ff"), 0.15, 0.78], ["lip", Color("#c95c66"), 0.7, 1.0],
+			["cheek", (_m.get("skin", Color(0.95, 0.75, 0.6)) as Color).lightened(0.12), 0.8, 1.0]]:
 		var m := StandardMaterial3D.new()
 		m.albedo_color = e[1]
 		m.albedo_color.a = float(e[3])
@@ -208,6 +273,32 @@ static func _measure(head: MeshInstance3D) -> Dictionary:
 			if int(hist[key]) > best:
 				best = int(hist[key])
 				skin = ck
+	# Wangenfarbe (unter den Augen – dort ist sicher Haut, auch bei Bart) und Gesichtsbehaarung um den Mund
+	var cheek_col := skin
+	var hist2 := {}
+	var best2 := 0
+	for i in vs.size():
+		var dxc := absf(vs[i].x - cx)
+		if dxc > 0.05 * u and dxc < 0.2 * u and vs[i].y < eye_y - 0.05 * u and vs[i].y > eye_y - 0.12 * u and vs[i].z > front - 0.2 * bb.size.z:
+			var ck2: Color = px.call(i)
+			var key2 := ck2.to_html(false).substr(0, 4)
+			hist2[key2] = int(hist2.get(key2, 0)) + 1
+			if int(hist2[key2]) > best2:
+				best2 = int(hist2[key2])
+				cheek_col = ck2
+	var hair := func(y0: float, y1: float) -> float:
+		var n_all := 0
+		var n_h := 0
+		for i in vs.size():
+			if absf(vs[i].x - cx) < 0.1 * u and vs[i].y > y0 and vs[i].y < y1 and vs[i].z > front - 0.15 * bb.size.z:
+				n_all += 1
+				var c5: Color = px.call(i)
+				if absf(c5.r - cheek_col.r) + absf(c5.g - cheek_col.g) + absf(c5.b - cheek_col.b) > 0.35:
+					n_h += 1
+		return float(n_h) / float(n_all) if n_all >= 4 else 0.0
+	var mouth_y := eye_y - 0.16 * u
+	var stache: bool = float(hair.call(mouth_y + 0.005 * u, mouth_y + 0.06 * u)) > 0.45   # Schnurrbart über dem Mund
+	var beard: bool = float(hair.call(mouth_y - 0.14 * u, mouth_y - 0.03 * u)) > 0.5      # Bart unter dem Mund
 	# Original-Brauen: kleine, nicht hautfarbene Fläche direkt über jedem Auge – nur wenn auf beiden Seiten eindeutig
 	var ey := eye_y + er.y
 	var cand: Array = [[], []]
@@ -301,7 +392,8 @@ static func _measure(head: MeshInstance3D) -> Dictionary:
 			var ok := zl > -1e6 and zr > -1e6 and zd > -1e6 and zu > -1e6
 			nrm[j * nx + i] = Vector3(-(zr - zl) / (2.0 * g), -(zu - zd) / (2.0 * g), 1.0).normalized() if ok else Vector3(0, 0.15, 1).normalized()
 	var res := {"nrm": nrm, "mesh": am, "eye_c": eye_c, "eye_r": er, "u": u, "cx": cx, "brows": brows, "brow_col": brow_col, "brow_y": brow_y,
-		"mouth": Vector3(cx, eye_y - 0.16 * u, 0.0), "gx0": gx0, "gy0": gy0, "g": g, "nx": nx, "ny": ny, "depth": depth, "front": front}
+		"mouth": Vector3(cx, eye_y - 0.16 * u - (0.032 * u if stache else 0.0), 0.0), "gx0": gx0, "gy0": gy0, "g": g, "nx": nx, "ny": ny,
+		"depth": depth, "front": front, "skin": cheek_col, "stache": stache, "beard": beard}
 	return res
 
 
@@ -345,7 +437,7 @@ func set_expression(name: String, secs := 0.18, intensity := 1.0) -> void:
 	var e: Dictionary = expressions[name]
 	var n: Dictionary = expressions.neutral
 	for k in KEYS:
-		var base := 1.0 if k == "width" else 0.0
+		var base := 1.0 if k in ONE_KEYS else 0.0
 		_tgt[k] = lerpf(float(n.get(k, base)), float(e.get(k, base)), clampf(intensity, 0.0, 1.0))
 	_tau = maxf(secs, 0.001) / 2.5
 	if secs <= 0.0:
@@ -354,6 +446,43 @@ func set_expression(name: String, secs := 0.18, intensity := 1.0) -> void:
 	if name != current:
 		current = name
 		expression_changed.emit(name)
+
+
+## Zielwerte direkt setzen (LumosEmotion mischt die Gefühle; das Gesicht gleitet in secs hinüber).
+func set_params(params: Dictionary, secs := 0.06) -> void:
+	for k: String in params:
+		if _tgt.has(k):
+			_tgt[k] = float(params[k])
+	_tau = maxf(secs, 0.001) / 2.5
+
+
+## Kurze Mundaktion über dem Ausdruck: yawn, sigh, swallow, gasp, sob, snicker, smack, chatter, pant, press.
+func mouth_action(id: String, secs := -1.0) -> void:
+	if not MOUTH_ACTIONS.has(id):
+		return
+	_act = id
+	_act_t = 0.0
+	_act_d = secs if secs > 0.0 else float(MOUTH_ACTIONS[id])
+
+
+func mouth_action_running() -> String:
+	return _act
+
+
+## Großer Blicksprung: oft blinzelt man dabei (natürlich, nicht bei jedem).
+func saccade(amount: float) -> void:
+	if amount > 0.45 and _blink <= 0.0 and rng.randf() < 0.4:
+		_start_blink()
+
+
+func _start_blink() -> void:
+	if not blink_on or float(_tgt.squint) > 0.6 or float(_tgt.lid) > 0.8:
+		return
+	_blink = 1.0
+	_blink_dur = rng.randf_range(0.11, 0.2) * blink_slow
+	blinks += 1
+	if rng.randf() < 0.14:
+		_blink2 = _blink_dur + rng.randf_range(0.06, 0.12)   # Doppelblinzeln
 
 
 ## Alias der Trailer-Schreibweise.
@@ -388,17 +517,38 @@ func _process(delta: float) -> void:
 	for k in KEYS:
 		_cur[k] = lerpf(_cur[k], _tgt[k], f)
 	_flash = move_toward(_flash, 0.0, delta * 1.4)
+	if gaze_target.x != INF:
+		gaze = gaze.lerp(gaze_target, 1.0 - exp(-delta / 0.035))   # Augen springen (Sakkade), der Kopf folgt später
+	# Lidschlag: unregelmäßig (log-normal um ~3,4 s), Häufigkeit/Dauer je Gefühl, gelegentlich doppelt
 	_blink_t -= delta
 	if _blink_t <= 0.0:
-		_blink_t = randf_range(2.2, 5.0)
-		if blink_on and float(_tgt.squint) < 0.6 and float(_tgt.lid) < 0.8:
+		_blink_t = clampf(3.4 * exp(rng.randfn(0.0, 0.5)) / maxf(blink_mult, 0.1), 0.35, 11.0)
+		_start_blink()
+	if _blink2 > 0.0:
+		_blink2 -= delta
+		if _blink2 <= 0.0 and _blink <= 0.0:
 			_blink = 1.0
+			blinks += 1
 	var bl := 0.0
 	if _blink > 0.0:
-		_blink = maxf(0.0, _blink - delta / 0.17)
+		_blink = maxf(0.0, _blink - delta / _blink_dur)
 		bl = sin(clampf(1.0 - _blink, 0.0, 1.0) * PI)
+	if _act != "":
+		_act_t += delta
+		if _act_t >= _act_d:
+			_act = ""
+	if talk > 0.01:
+		_syl_t -= delta
+		if _syl_t <= 0.0:   # nächste Silbe: Öffnung, Rundung, Breite – mit Pausen wie beim Sprechen
+			_syl_t = rng.randf_range(0.1, 0.21)
+			_syl_to = Vector3(0.0, 0.0, 1.0) if rng.randf() < 0.16 else Vector3(rng.randf_range(0.2, 1.0), rng.randf_range(0.0, 0.7), rng.randf_range(0.85, 1.12))
+		_syl = _syl.lerp(_syl_to, 1.0 - exp(-delta / 0.045))
+	else:
+		_syl = _syl.lerp(Vector3(0, 0, 1), 1.0 - exp(-delta / 0.06))
 	# nur neu zeichnen, wenn sich etwas sichtbar ändert
-	var sig := bl * 7.0 + laugh * 3.1 + sin(laugh_phase) * laugh + chew * sin(_t * 9.0) + gaze.x * 1.7 + gaze.y * 2.3 + _flash * 5.0 + feature_scale
+	var sig := bl * 7.0 + laugh * 3.1 + sin(laugh_phase) * laugh + chew * sin(_t * 9.0) + gaze.x * 1.7 + gaze.y * 2.3 + _flash * 5.0 + feature_scale \
+		+ _syl.x * 4.1 + _syl.y * 1.9 + (_act_t * 13.0 if _act != "" else 0.0) + (sin(_t * 40.0) * float(_cur.tremble) if float(_cur.tremble) > 0.01 else 0.0) \
+		+ (_t * 3.0 if float(_cur.tear) > 0.05 else 0.0)
 	for k in KEYS:
 		sig += float(_cur[k]) * (KEYS.find(k) + 1.3)
 	_lod_acc += delta
@@ -419,21 +569,28 @@ func _draw(bl: float) -> void:
 	var fs := feature_scale
 	var eye_c: Array = _m.eye_c
 	var er: Vector2 = _m.eye_r * 1.12 * fs
-	var lid := clampf(maxf(float(_cur.lid), bl), 0.0, 1.0)
-	var squint := clampf(float(_cur.squint) + laugh * 0.4, 0.0, 1.0)
-	var wide := float(_cur.wide)
+	var ae := sin(clampf(_act_t / _act_d, 0.0, 1.0) * PI) if _act != "" else 0.0   # Hüllkurve der Mundaktion
+	var lid := clampf(maxf(float(_cur.lid), bl) + (ae * 0.85 if _act == "yawn" else 0.0), 0.0, 1.0)
+	var squint := clampf(float(_cur.squint) + laugh * 0.4 + (ae * 0.4 if _act == "sob" else 0.0), 0.0, 1.0)
+	var wide := float(_cur.wide) + (ae * 0.6 if _act == "gasp" else 0.0)
 	var a := er.x * (1.0 + 0.22 * wide)
 	var b := er.y * (1.0 + 0.3 * wide + 0.1 * float(_cur.brow))
-	var gz := Vector2(gaze.x * 0.012, gaze.y * 0.008) * u
+	var cross := float(_cur.cross)
+	var scl := maxf(float(_cur.sclera), cross * 0.85)   # weiße Augen mit Pupille (Schreck, Bettelblick, Schielen)
+	var pup := clampf(float(_cur.pupil), 0.3, 1.6)
+	var shake := sin(_t * 38.0) * float(_cur.tremble) * 0.004 * u
+	var gz := Vector2(gaze.x * 0.012, gaze.y * 0.008) * u * (1.0 - scl)   # mit Lederhaut wandert nur die Pupille
 	# --- Augen ---
-	_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.eye)
+	var eyes: Array = []
+	_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.white if scl > 0.02 else _mat.eye)
 	for sd in 2:
 		var c: Vector3 = eye_c[sd]
-		var cx := c.x + gz.x
+		var cx := c.x + gz.x + shake
 		var cy := c.y + gz.y
 		var inner := 1.0 if sd == 0 else -1.0
 		var ld := clampf(lid + (float(_cur.asym) * 0.3 if sd == 1 else 0.0), 0.0, 1.0)
 		var pe := _plane(cx, cy, a)
+		eyes.append([cx, cy, ld, pe, inner])
 		for k in SEG:
 			var x0 := -1.0 + 2.0 * k / SEG
 			var x1 := -1.0 + 2.0 * (k + 1) / SEG
@@ -443,19 +600,83 @@ func _draw(bl: float) -> void:
 			var b1 := _eye_bot(x1, b, ld, squint, t1, u)
 			_quad_s(pe, cx + x0 * a, cy + t0, cx + x1 * a, cy + t1, cx + x1 * a, cy + b1, cx + x0 * a, cy + b0, 0.004)
 	_im.surface_end()
-	# --- Glanzpunkte (nur bei offenen Augen) ---
-	if lid < 0.5 and squint < 0.55:
-		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.white)
+	var hl_c := []   # Mittelpunkte der Glanzpunkte
+	if scl > 0.02:
+		# Pupille im weißen Auge: klein vor Schreck, groß beim Bettelblick, wandert mit dem Blick und beim Schielen zur Nase
+		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.eye)
 		for sd in 2:
-			var c2: Vector3 = eye_c[sd]
-			var hx := c2.x + gz.x - a * 0.28 + gaze.x * a * 0.2
-			var hy := c2.y + gz.y + b * 0.38 - lid * b * 0.5
-			var r := (0.011 + 0.004 * wide) * u * fs
-			var ph := _plane(hx, hy, r * 2.0)
+			var e: Array = eyes[sd]
+			var ecx: float = e[0]
+			var ecy: float = e[1]
+			var eld: float = e[2]
+			var ein: float = e[4]
+			var pa := a * lerpf(1.0, 0.46, scl) * pup
+			var pb := b * lerpf(1.0, 0.52, scl) * pup
+			var px := ecx + gaze.x * a * 0.45 * scl + cross * ein * a * 0.42
+			var py := ecy + gaze.y * b * 0.4 * scl
+			hl_c.append(Vector3(px - pa * 0.3, py + pb * 0.38, pa))
+			for k in SEG:
+				var q0 := -1.0 + 2.0 * k / SEG
+				var q1 := -1.0 + 2.0 * (k + 1) / SEG
+				var ax0 := px + q0 * pa
+				var ax1 := px + q1 * pa
+				var xe0 := clampf((ax0 - ecx) / a, -1.0, 1.0)
+				var xe1 := clampf((ax1 - ecx) / a, -1.0, 1.0)
+				var et0 := _eye_top(xe0, b, eld, xe0 * ein)
+				var et1 := _eye_top(xe1, b, eld, xe1 * ein)
+				var tp0 := minf(py + pb * sqrt(maxf(1.0 - q0 * q0, 0.0)), ecy + et0)
+				var tp1 := minf(py + pb * sqrt(maxf(1.0 - q1 * q1, 0.0)), ecy + et1)
+				var bt0 := maxf(py - pb * sqrt(maxf(1.0 - q0 * q0, 0.0)), ecy + _eye_bot(xe0, b, eld, squint, et0, u))
+				var bt1 := maxf(py - pb * sqrt(maxf(1.0 - q1 * q1, 0.0)), ecy + _eye_bot(xe1, b, eld, squint, et1, u))
+				if tp0 > bt0 and tp1 > bt1:
+					_quad_s(e[3], ax0, tp0, ax1, tp1, ax1, bt1, ax0, bt0, 0.0055)
+		_im.surface_end()
+	else:
+		for sd in 2:
+			var e2: Array = eyes[sd]
+			hl_c.append(Vector3(float(e2[0]) - a * 0.28 + gaze.x * a * 0.2, float(e2[1]) + b * 0.38 - lid * b * 0.5, a))
+	# --- Glanzpunkte (nur bei offenen Augen; beim Bettelblick groß und doppelt) ---
+	if lid < 0.5 and squint < 0.55:
+		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.white if scl <= 0.02 else _mat.white)
+		for sd in 2:
+			var h: Vector3 = hl_c[sd]
+			var r := (0.011 + 0.004 * wide) * u * fs * (lerpf(1.0, pup * 1.15, scl) if scl > 0.02 else 1.0)
+			var spots: Array = [[h.x, h.y, r]]
+			if pup > 1.15 and scl > 0.3:
+				spots.append([h.x + r * 1.6, h.y - r * 1.4, r * 0.5])
+			for sp in spots:
+				var hx: float = sp[0]
+				var hy: float = sp[1]
+				var rr: float = sp[2]
+				var ph := _plane(hx, hy, rr * 2.0)
+				for k in 8:
+					var a0 := TAU * k / 8.0
+					var a1 := TAU * (k + 1) / 8.0
+					_tri_s(ph, Vector2(hx, hy), Vector2(hx + cos(a0) * rr, hy + sin(a0) * rr), Vector2(hx + cos(a1) * rr, hy + sin(a1) * rr), 0.0075)
+		_im.surface_end()
+	# --- Tränen: feuchter Lidrand, Bäche über die Wangen, fallende Tropfen ---
+	var tear := float(_cur.tear)
+	if tear > 0.05:
+		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.tear)
+		for sd in 2:
+			var e3: Array = eyes[sd]
+			var tx: float = float(e3[0]) - float(e3[4]) * a * 0.55
+			var ty: float = float(e3[1]) - b * 0.55
+			var tw := 0.012 * u * fs * (0.7 + 0.5 * tear)
+			var ln := (0.05 + 0.17 * tear) * u
+			var pt := _plane(tx, ty - ln * 0.5, maxf(ln, tw))
+			for k in 6:
+				var y0 := ty - ln * k / 6.0
+				var y1 := ty - ln * (k + 1) / 6.0
+				var wob0 := sin(_t * 5.0 + y0 * 40.0) * 0.004 * u
+				var wob1 := sin(_t * 5.0 + y1 * 40.0) * 0.004 * u
+				_quad_s(pt, tx - tw * 0.5 + wob0, y0, tx + tw * 0.5 + wob0, y0, tx + tw * 0.5 + wob1, y1, tx - tw * 0.5 + wob1, y1, 0.008)
+			var dy := ty - ln - fmod(_t * 0.7 + sd * 0.37, 1.0) * 0.06 * u   # Tropfen am Ende des Bachs
+			var dr := tw * 0.9
 			for k in 8:
-				var a0 := TAU * k / 8.0
-				var a1 := TAU * (k + 1) / 8.0
-				_tri_s(ph, Vector2(hx, hy), Vector2(hx + cos(a0) * r, hy + sin(a0) * r), Vector2(hx + cos(a1) * r, hy + sin(a1) * r), 0.007)
+				var a4 := TAU * k / 8.0
+				var a5 := TAU * (k + 1) / 8.0
+				_tri_s(pt, Vector2(tx, dy), Vector2(tx + cos(a4) * dr, dy + sin(a4) * dr * 1.3), Vector2(tx + cos(a5) * dr, dy + sin(a5) * dr * 1.3), 0.0085)
 		_im.surface_end()
 	# --- Wangenröte (Freude, Verlegenheit) ---
 	var blush := float(_cur.blush) + laugh * 0.3
@@ -473,6 +694,22 @@ func _draw(bl: float) -> void:
 				var a2 := TAU * k / 12.0
 				var a3 := TAU * (k + 1) / 12.0
 				_tri_s(pb, Vector2(bx, by), Vector2(bx + cos(a2) * rx, by + sin(a2) * ry), Vector2(bx + cos(a3) * rx, by + sin(a3) * ry), 0.003)
+		_im.surface_end()
+	# --- aufgeblasene Backen (Wut, Trotz) ---
+	var cheek := float(_cur.cheek)
+	if cheek > 0.05:
+		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.cheek)
+		var mcp: Vector3 = _m.mouth
+		for sd in 2:
+			var cxp := mcp.x + (-0.115 if sd == 0 else 0.115) * u
+			var cyp := mcp.y + 0.03 * u
+			var rxp := 0.075 * u * fs * (0.5 + 0.6 * cheek)
+			var ryp := 0.062 * u * fs * (0.5 + 0.6 * cheek)
+			var pc := _plane(cxp, cyp, rxp)
+			for k in 14:
+				var a6 := TAU * k / 14.0
+				var a7 := TAU * (k + 1) / 14.0
+				_tri_s(pc, Vector2(cxp, cyp), Vector2(cxp + cos(a6) * rxp, cyp + sin(a6) * ryp), Vector2(cxp + cos(a7) * rxp, cyp + sin(a7) * ryp), 0.0095 + 0.01 * cheek)
 		_im.surface_end()
 	# --- Brauen (nur wenn die Original-Brauen ersetzt wurden) ---
 	if has_own_brows:
@@ -497,15 +734,51 @@ func _draw(bl: float) -> void:
 				_quad_s(pw, pts[k].x, pts[k].y + thk, pts[k + 1].x, pts[k + 1].y + thk, pts[k + 1].x, pts[k + 1].y - thk, pts[k].x, pts[k].y - thk, 0.006)
 		_im.surface_end()
 	# --- Mund: groß und rund, damit Gefühle auch von weitem lesbar sind ---
-	var open := clampf(float(_cur.open) + laugh * (0.2 + 0.3 * (0.5 + 0.5 * sin(laugh_phase))), 0.0, 1.0)
+	var open := clampf(float(_cur.open) + laugh * (0.2 + 0.3 * (0.5 + 0.5 * sin(laugh_phase))) + _syl.x * talk * 0.55, 0.0, 1.0)
 	var curve := float(_cur.curve)
-	var rnd := float(_cur.round)
-	var w := 0.125 * u * fs * float(_cur.width) * (1.0 + 0.45 * maxf(curve, 0.0) + 0.4 * open) * lerpf(1.0, 0.8, rnd) * (1.0 + 0.1 * sin(_t * 9.0) * chew)
+	var rnd := clampf(float(_cur.round) + _syl.y * talk * 0.6, 0.0, 1.0)
+	var pout := float(_cur.pout)
+	var press := float(_cur.press)
+	var smirk := float(_cur.smirk)
+	var widf := float(_cur.width) * lerpf(1.0, _syl.z, talk)
+	match _act:   # Mundaktionen über dem Ausdruck
+		"yawn":
+			open = maxf(open, ae)
+			rnd = maxf(rnd, 0.65 * ae)
+		"sigh":
+			open = maxf(open, 0.3 * ae)
+			rnd = maxf(rnd, 0.5 * ae)
+		"swallow", "press":
+			press = maxf(press, ae)
+		"gasp":
+			open = maxf(open, 0.9 * ae)
+			rnd = maxf(rnd, 0.8 * ae)
+		"sob":
+			open = maxf(open, (0.35 + 0.5 * absf(sin(_act_t * 8.5))) * ae)
+			curve = minf(curve, -0.8)
+		"snicker":
+			smirk = maxf(smirk, 0.7 * ae)
+			open = maxf(open, (0.08 + 0.14 * absf(sin(_act_t * 17.0))) * ae)
+		"smack":
+			press = maxf(press, absf(sin(_act_t * 14.0)) * ae)
+		"chatter":
+			open = maxf(open, (0.12 + 0.1 * absf(sin(_act_t * 42.0))) * ae)
+		"pant":
+			open = maxf(open, (0.28 + 0.22 * sin(_act_t * 13.0)) * ae)
+			rnd = maxf(rnd, 0.4 * ae)
+	if cheek > 0.05:   # Backen voll Luft: Mund klein und zu
+		press = maxf(press, cheek)
+		widf *= 1.0 - 0.45 * cheek
+	open *= 1.0 - press
+	var trem := float(_cur.tremble)
+	curve += sin(_t * 33.0) * 0.08 * trem
+	var w := 0.125 * u * fs * widf * (1.0 + 0.45 * maxf(curve, 0.0) + 0.4 * open) * lerpf(1.0, 0.8, rnd) * (1.0 + 0.1 * sin(_t * 9.0) * chew) \
+		* (1.0 - 0.42 * pout) * (1.0 + 0.06 * press)
 	if chew > 0.0:
 		open = maxf(open * (1.0 - chew), 0.0)
 		curve = lerpf(curve, 0.35 + 0.25 * sin(_t * 9.0), chew)
-	var hu := (0.015 + open * lerpf(0.03, 0.12, rnd)) * u * fs
-	var hl2 := (0.015 + open * lerpf(0.22, 0.15, rnd)) * u * fs
+	var hu := (0.015 * (1.0 - 0.55 * press) + open * lerpf(0.03, 0.12, rnd)) * u * fs
+	var hl2 := (0.015 * (1.0 - 0.55 * press) + open * lerpf(0.22, 0.15, rnd) + 0.01 * pout) * u * fs + sin(_t * 41.0) * 0.005 * u * trem
 	if curve < 0.0 and open > 0.05:
 		# offener Mund bei negativen Gefühlen: oben gewölbt, unten flach („∩“) – liest sich als Grimasse statt Grinsen
 		var k := clampf(-curve, 0.0, 1.0) * 0.65
@@ -518,7 +791,7 @@ func _draw(bl: float) -> void:
 	for k in SEG + 1:
 		var x := -1.0 + 2.0 * k / SEG
 		var bell := pow(maxf(1.0 - x * x, 0.0), lerpf(0.7, 0.5, rnd))
-		var yc := curve * 0.085 * u * fs * (x * x - 0.4)
+		var yc := curve * 0.085 * u * fs * (x * x - 0.4) + smirk * 0.05 * u * fs * (x + 0.35 * x * x)
 		top.append(Vector2(mc.x + x * w, mc.y + yc + hu * bell))
 		bot.append(Vector2(mc.x + x * w, mc.y + yc - hl2 * bell))
 	var pm := _plane(mc.x, mc.y - (hl2 - hu) * 0.5, maxf(w, 0.02 * u))
@@ -529,7 +802,13 @@ func _draw(bl: float) -> void:
 		_quad_s(pm, top[k].x, top[k].y, top[k + 1].x, top[k + 1].y, m1.x, m1.y, m0.x, m0.y, 0.005)
 		_quad_s(pm, m0.x, m0.y, m1.x, m1.y, bot[k + 1].x, bot[k + 1].y, bot[k].x, bot[k].y, 0.005)
 	_im.surface_end()
-	if open > 0.2:
+	if pout > 0.1:   # Schmollen: vorgeschobene Unterlippe
+		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.lip)
+		var lth := 0.016 * u * fs * pout
+		for k in range(1, SEG - 1):
+			_quad_s(pm, bot[k].x, bot[k].y, bot[k + 1].x, bot[k + 1].y, bot[k + 1].x, bot[k + 1].y - lth, bot[k].x, bot[k].y - lth, 0.0075)
+		_im.surface_end()
+	if open > 0.2 or _act == "chatter":
 		_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _mat.teeth)
 		for k in range(2, SEG - 2):
 			var d0 := (top[k] - bot[k]) * 0.24

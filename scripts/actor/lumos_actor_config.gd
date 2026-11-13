@@ -9,8 +9,27 @@ extends Resource
 ## Profile:
 ##  * "humanoid": zweiteilige Arme und Beine (KayKit-Helden, eigene Avatare auf dem KayKit-Rig) – alles verfügbar
 ##  * "simple":   einteilige Gliedmaßen (Kenney-Figuren) – Arme zielen als Ganzes, keine Fuß-IK
-##  * "rigid":    kein Skelett (Haustiere) – Haltung, Lachen, Stöße und Blick über den ganzen Körper (Pivot)
+##  * "rigid":    kein Skelett (Haustiere) – Haltung, Lachen, Stöße und Blick über den ganzen Körper (Pivot);
+##                benannte Einzelteile (Schwanz, Beine) bewegen sich prozedural (Wedeln, Schritte)
+##
+## Schnittstellen-Version: API_VERSION (Framework) und schema (gespeicherte Profile). migrate() hebt ältere Profile an,
+## ohne sie unbrauchbar zu machen – neue Felder bekommen Standardwerte, vorhandene Werte bleiben.
 
+const API_VERSION := 2            ## 1 = Framework 1.5.0/1.5.1 · 2 = 1.5.2 (Gefühlszustand, Schichten, Sozialverhalten)
+const SCHEMA := 2
+
+## Daten statt Sonderlösungen: Körpermerkmale und Persönlichkeits-Vorlage je Modell (überschreibbar, unbekannte
+## Modelle bekommen abgeleitete Werte). mass/agility/bounce wirken auf Trägheit, Landen, Federn und Zubehör.
+const MODEL_TRAITS := {
+	"hero/knight": {"mass": 1.15, "agility": 0.95, "bounce": 0.4, "personality": "brave"},
+	"hero/mage": {"mass": 0.85, "agility": 1.12, "bounce": 0.65, "personality": "curious"},
+	"hero/barbarian": {"mass": 1.4, "agility": 0.85, "bounce": 0.35, "personality": "boisterous"},
+	"hero/ranger": {"mass": 0.95, "agility": 1.05, "bounce": 0.55, "personality": "dreamy"},
+	"pet/": {"mass": 0.45, "agility": 1.4, "bounce": 0.85, "personality": "pet"},
+	"mini/": {"mass": 0.7, "agility": 1.15, "bounce": 0.7, "personality": "balanced"},
+}
+
+@export var schema := SCHEMA
 @export var profile := "humanoid"
 
 @export_group("Knochen")
@@ -48,6 +67,18 @@ extends Resource
 @export var ankle_height := 0.09       ## Höhe des Fußknochens über der Sohle (Skelett-Raum)
 @export var ground_mask := 1           ## Kollisionsmaske der Bodenabfrage (Raycast), 0 = keine
 
+@export_group("Gewicht und Bewegungsstil")
+@export var mass := 1.0                ## relative Masse: schwer = träger, tiefer beim Landen, langsamere Federn
+@export var agility := 1.0             ## Beweglichkeit: höhere Frequenz der Federn, schnellere Reaktion
+@export var bounce := 0.5              ## Bewegungsstil 0 = straff · 1 = federnd/nachschwingend
+@export var jiggle := true             ## Zubehör (Hut, Umhang, Köcher) schwingt nach
+
+@export_group("Verhalten")
+@export var personality: LumosPersonality   ## leer = Vorlage aus MODEL_TRAITS bzw. "balanced"
+@export var autonomy := 1.0            ## 0 = nur Regie · 0,35 = Mikroleben und dezente Reaktionen · 1 = volles Sozialverhalten
+@export var cartoon := 1.0             ## Stärke der Cartoon-Übertreibungen (0 = aus)
+@export var seed := 0                  ## Zufallsstartwert (0 = aus dem Modellnamen) – gleiche Abläufe bei jedem Lauf
+
 @export_group("Leistung")
 @export var lod := true                ## Detailstufen: fern → ohne Fuß-IK/Oberkörper-Blick, außerhalb des Bildes → pausiert
 @export var lod_far := 24.0            ## ab dieser Entfernung (in Körpergrößen) gilt eine Figur als fern
@@ -63,6 +94,7 @@ extends Resource
 ## Adapter: Konfiguration aus dem Skelett ableiten (Knochennamen gängiger Rigs, ein- oder zweiteilige Gliedmaßen).
 static func detect(rig: CharacterRig) -> LumosActorConfig:
 	var c := LumosActorConfig.new()
+	_apply_traits(c, rig.model_key if rig else "")
 	if rig == null or rig.skel == null:
 		c.profile = "rigid"
 		c.foot_ik = false
@@ -109,6 +141,32 @@ static func detect(rig: CharacterRig) -> LumosActorConfig:
 	if not two_legs:
 		c.foot_ik = false
 		c.foot_lock = false
+	return c
+
+
+static func _apply_traits(c: LumosActorConfig, key: String) -> void:
+	var t: Dictionary = {}
+	for k: String in MODEL_TRAITS:
+		if key == k or (k.ends_with("/") and key.begins_with(k)):
+			t = MODEL_TRAITS[k]
+			break
+	c.mass = float(t.get("mass", 1.0))
+	c.agility = float(t.get("agility", 1.0))
+	c.bounce = float(t.get("bounce", 0.5))
+	c.personality = LumosPersonality.preset(String(t.get("personality", "balanced")))
+	c.seed = absi(hash(key)) % 100000 + 1
+
+
+## Ältere Profile anheben (fehlende Felder → Standardwerte), damit gespeicherte Konfigurationen nach Updates gültig
+## bleiben. Gibt die Konfiguration zurück (dieselbe Instanz).
+static func migrate(c: LumosActorConfig) -> LumosActorConfig:
+	if c.schema < 2:
+		if c.personality == null:
+			c.personality = LumosPersonality.preset("balanced")
+		c.mass = maxf(c.mass, 0.1)
+		c.agility = maxf(c.agility, 0.1)
+		c.autonomy = clampf(c.autonomy, 0.0, 1.0)
+	c.schema = SCHEMA
 	return c
 
 

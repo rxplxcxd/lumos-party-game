@@ -18,7 +18,26 @@ const POSTURE := {
 	"angry": [0.18, 0.12, 0.12, 0.0], "determined": [0.1, 0.06, 0.04, 0.0], "sleepy": [0.12, 0.22, -0.06, 0.06],
 	"asleep": [0.2, 0.36, -0.08, -0.2], "pant": [0.35, -0.06, 0.08, 0.0], "ouch": [0.2, 0.16, 0.16, 0.0],
 	"smug": [-0.08, -0.12, 0.0, 0.1], "dreamy": [0.0, -0.1, 0.0, 0.14], "plead": [0.1, -0.1, 0.1, 0.16],
+	# 1.5.2 – erweitertes Gefühlsspektrum
+	"delight": [-0.14, -0.18, 0.12, 0.0], "euphoria": [-0.2, -0.28, 0.18, 0.0], "pride": [-0.18, -0.2, -0.05, 0.0],
+	"relief": [0.12, 0.06, -0.14, 0.0], "content": [0.0, -0.04, -0.03, 0.04], "affection": [0.02, 0.06, 0.0, 0.14],
+	"tender": [0.05, 0.08, -0.02, 0.12], "playful": [-0.04, -0.06, 0.06, -0.1], "gloat": [-0.1, -0.08, 0.1, 0.05],
+	"bashful": [0.12, 0.16, 0.12, 0.12], "disappointed": [0.22, 0.14, -0.16, 0.0], "fear": [-0.06, 0.14, 0.28, 0.0],
+	"panic": [-0.12, 0.08, 0.34, 0.0], "anger": [0.18, 0.12, 0.12, 0.0], "frustrated": [0.12, 0.06, 0.16, 0.0],
+	"jealous": [0.06, 0.08, 0.06, -0.14], "shame": [0.26, 0.32, 0.16, 0.0], "insecure": [0.1, 0.12, 0.14, 0.06],
+	"lonely": [0.2, 0.18, -0.14, 0.08], "exhausted": [0.34, 0.08, -0.12, 0.0], "surprise": [-0.1, -0.12, 0.22, 0.0],
+	"disbelief": [-0.06, -0.04, 0.06, 0.0], "suspicious": [-0.1, 0.02, 0.04, -0.08], "embarrassed": [0.1, 0.16, 0.16, 0.1],
+	"nervous": [0.04, 0.06, 0.2, 0.0], "compassion": [0.12, 0.12, 0.0, 0.16], "admiration": [-0.08, -0.1, 0.06, 0.06],
+	"defiant": [-0.14, -0.18, 0.04, 0.0], "impatient": [0.02, 0.0, 0.06, 0.0], "focus": [0.14, 0.08, 0.04, 0.0],
+	"pensive": [0.04, 0.06, 0.0, 0.1], "teasing": [0.06, -0.06, 0.06, -0.12], "cry": [-0.12, -0.3, 0.2, 0.0],
+	"love": [0.0, 0.04, 0.04, 0.14], "puppy": [0.08, 0.1, 0.12, 0.14], "sulk": [-0.06, -0.12, 0.08, -0.06],
+	"puffed": [0.1, 0.04, 0.18, 0.0], "dizzy": [0.04, 0.06, 0.0, 0.18], "cross_eyed": [0.0, 0.0, 0.06, 0.0],
+	"sleep_smile": [0.2, 0.3, -0.08, -0.15],
 }
+## Zubehör, das nachschwingt (Name enthält …): Art, Stärke. Hüte wippen um ihren Ansatz, Umhänge hängen und wehen.
+const JIGGLE_KINDS := [["helmet", "hat", 0.22], ["visor", "hat", 0.22], ["bearhat", "hat", 0.4], ["hat", "hat", 1.0],
+	["hood", "hat", 0.5], ["hair", "hat", 0.8], ["cape", "cape", 1.0], ["cloak", "cape", 1.0], ["quiver", "pack", 0.6],
+	["backpack", "pack", 0.6], ["tail", "pack", 1.0]]
 
 var cfg := LumosActorConfig.new()
 var dt := 1.0 / 60.0
@@ -40,6 +59,15 @@ var grounded := true                # false (Sprung, Sitzen auf etwas Höherem):
 var foot_w := 1.0
 var attend_target := Vector3.ZERO   # Blickziel (Welt); attend_w 0..1
 var attend_w := 0.0
+# --- 1.5.2: Gewicht, Balance, Sekundärbewegung ---
+var weight_shift := 0.0             # −1..1 Gewicht aufs eine/andere Bein (Kontrapost; von LumosMicro)
+var crouch := 0.0                   # 0..1 in die Knie (Lachanfall, Verstecken, Ausholen vor dem Sprung)
+var load := 0.0                     # 0..1 schwerer Gegenstand: zurücklehnen, einsinken, Schultern tiefer
+var hop_lift := 0.0                 # Höhe eines Pivot-Sprungs (CharacterRig.hop) – dann keine Fußverankerung
+var micro_head := Vector3.ZERO      # Kopf-Zusatz aus Mikrobewegung/Cartoon (getrennt von head_add der Regie)
+var micro_chest := Vector3.ZERO
+var tremble := 0.0                  # Zittern (Angst, Kälte, Schluchzen)
+var traits := {"mass": 1.0, "agility": 1.0, "bounce": 0.5}
 
 var _b := {}
 var _head := Vector3.ZERO
@@ -66,6 +94,21 @@ var _arm_len := 0.5
 var _reach_len := 0.5            # Schulter → Handgelenk (IK-Kette bei ausgerichteter Hand)
 var _hand_q := {}                 # Seite → geglättete Handdrehung (Quaternion, Skelett-Raum)
 var _hand_off := {}               # Seite → Versatz Handgelenk→Hand (Ruhepose, Skelett-Raum)
+var _rv := Vector3.ZERO           # Wurzel: Geschwindigkeit, Beschleunigung (Skelett-Raum), Gierrate
+var _ra := Vector3.ZERO
+var _yaw_prev := INF
+var _yaw_rate := 0.0
+var _iner := Vector4.ZERO         # Trägheitsfedern: Brust (Neigung, Seite), Kopf (Neigung, Seite)
+var _iner_v := Vector4.ZERO
+var _arm_sw := 0.0                # Armschwung aus Trägheit
+var _arm_sw_v := 0.0
+var _turn_lag := 0.0              # Brust folgt einer Drehung verzögert
+var _turn_lag_v := 0.0
+var _ws := 0.0                    # geglättete Gewichtsverlagerung
+var _drop := 0.0                  # Becken-Feder (m, + = tiefer)
+var _drop_v := 0.0
+var _flail := 0.0                 # Arme rudern (Stolpern)
+var _jig: Array = []              # Zubehör-Federn: {bone, parent, rest (Transform3D), kind, gain, ang, vel, prev, pv}
 
 
 func bind(skel: Skeleton3D, config: LumosActorConfig = null) -> bool:
@@ -93,6 +136,9 @@ func bind(skel: Skeleton3D, config: LumosActorConfig = null) -> bool:
 	if has_legs():
 		_leg_len = skel.get_bone_global_rest(int(_b["leg0.l"])).origin.distance_to(skel.get_bone_global_rest(int(_b["leg2.l"])).origin)
 	_t = randf() * 10.0
+	traits = {"mass": cfg.mass, "agility": cfg.agility, "bounce": cfg.bounce}
+	if cfg.jiggle:
+		_setup_jiggle(skel)
 	return int(_b.head) >= 0
 
 
@@ -159,6 +205,12 @@ func push(world_impulse: Vector3) -> void:
 	var sk := get_skeleton()
 	if sk:
 		_imp_v += sk.global_transform.basis.inverse() * world_impulse
+
+
+## Haltung direkt (Brust, Kopf, Schultern, Neigung) – LumosEmotion mischt sie aus den Gefühlen.
+func set_posture_vec(v: Vector4, secs := 0.3) -> void:
+	_post_t = v * cfg.posture_scale
+	_post_tau = maxf(secs, 0.02) / 2.5
 
 
 ## Gefühls-Haltung (Namen wie die Gesichtsausdrücke), weich in secs Sekunden.
@@ -248,13 +300,15 @@ func _process_modification() -> void:
 	_imp_v += (-_imp * cfg.impulse_stiffness - _imp_v * cfg.impulse_damping) * dt
 	_imp += _imp_v * dt
 	_imp = _imp.limit_length(1.2)
+	_dynamics(sk)
 	var br := sin(_t * breath_rate * TAU / 2.6) * breath
 	var sway := sin(_t * 0.55) * 0.035 * cfg.idle_sway * clampf(1.0 - _lean.length() * 6.0, 0.0, 1.0)
-	var chest_pitch := _chest.x + _post.x - br * 0.03 + _lean.x + _imp.z * 0.45
-	var chest_roll := _chest.z + _lean.y + _imp.x * 0.45 + sway * 0.5
-	var shoulder := br * 0.035 + _post.z
-	var head_pitch := _head.x + _post.y + br * 0.012 - _imp.z * 0.3 - _lean.x * 0.4
-	var head_roll := _head.z + _post.w - _imp.x * 0.3 - sway * 0.4
+	var trem := sin(_t * 47.0) * 0.022 * tremble
+	var chest_pitch := _chest.x + _post.x - br * 0.03 + _lean.x + _imp.z * 0.45 + _iner.x + micro_chest.x - 0.16 * load
+	var chest_roll := _chest.z + _lean.y + _imp.x * 0.45 + sway * 0.5 + _iner.y + micro_chest.z + trem
+	var shoulder := br * 0.035 + _post.z - 0.05 * load + absf(trem) * 0.6
+	var head_pitch := _head.x + _post.y + br * 0.012 - _imp.z * 0.3 - _lean.x * 0.4 + _iner.z + micro_head.x + sin(_t * 53.0) * 0.016 * tremble
+	var head_roll := _head.z + _post.w - _imp.x * 0.3 - sway * 0.4 + _iner.w + micro_head.z
 	if laugh > 0.001:
 		var s := sin(laugh_phase)
 		chest_pitch += (s * 0.07 - 0.09) * laugh
@@ -269,12 +323,20 @@ func _process_modification() -> void:
 	_rot(sk, "hips", Vector3.FORWARD, sway)
 	_rot(sk, "hips", Vector3.UP, turn * 0.3)
 	_rot(sk, "chest", Vector3.RIGHT, chest_pitch)
-	_rot(sk, "chest", Vector3.UP, _chest.y + turn * 0.7)
+	_rot(sk, "chest", Vector3.UP, _chest.y + turn * 0.7 + _turn_lag + micro_chest.y)
 	_rot(sk, "chest", Vector3.FORWARD, chest_roll)
 	_rot(sk, "arm0.l", Vector3.FORWARD, -shoulder)
 	_rot(sk, "arm0.r", Vector3.FORWARD, shoulder)
+	# Arme schwingen träge nach (Anhalten → nach vorn) und rudern beim Stolpern – nur, wo keine Hand-IK greift
+	for sd in ["l", "r"]:
+		var free := 1.0 - float(hand_w[sd])
+		if free > 0.01:
+			var fl := sin(_t * 15.0 + (0.0 if sd == "l" else 2.2)) * 0.9 * _flail
+			_rot(sk, "arm0." + sd, Vector3.RIGHT, (-_arm_sw + fl) * free)
+			if _flail > 0.01:
+				_rot(sk, "arm0." + sd, Vector3.FORWARD, (0.6 * _flail + absf(fl) * 0.3) * (-1.0 if sd == "l" else 1.0) * free)
 	_rot(sk, "head", Vector3.RIGHT, head_pitch)
-	_rot(sk, "head", Vector3.UP, _head.y - turn)
+	_rot(sk, "head", Vector3.UP, _head.y - turn + micro_head.y + clampf(_yaw_rate * 0.07, -0.35, 0.35))   # Kopf führt in Drehungen
 	_rot(sk, "head", Vector3.FORWARD, head_roll)
 	# Teleport (Szenenwechsel, Zurücksetzen): Verankerung lösen
 	var root := sk.global_position
@@ -283,9 +345,13 @@ func _process_modification() -> void:
 			_foot[sd].on = false
 			_foot[sd].w = 0.0
 	_last_root = root
-	foot_w = move_toward(foot_w, 1.0 if grounded and not lite else 0.0, dt / 0.12)
+	foot_w = move_toward(foot_w, 1.0 if grounded and not lite and hop_lift < 0.02 else 0.0, dt / 0.12)
 	if cfg.foot_ik and has_legs() and foot_w > 0.001:
 		_feet(sk)
+	# Kontrapost: die Schultern kippen gegen das Becken, der Kopf bleibt fast waagerecht
+	if absf(_ws) > 0.002:
+		_rot(sk, "chest", Vector3.FORWARD, _ws * 0.1 * foot_w)
+		_rot(sk, "head", Vector3.FORWARD, -_ws * 0.035 * foot_w)
 	# Hände: Ziel (geglättet) → Handgelenk-Ziel (bei vorgegebener Handdrehung), Reach-Assist, dann IK
 	var mode := arm_mode()
 	var ik_t := {}
@@ -327,6 +393,8 @@ func _process_modification() -> void:
 				_set_hand_basis(sk, sd, ik_b[sd], w)
 		elif mode == "aim":
 			_aim(sk, int(_b["arm0." + sd]), ik_t[sd], w)
+	if not _jig.is_empty():
+		_update_jiggle(sk)
 	# Gelenk-Positionen nach der Modifikation merken
 	var gx := sk.global_transform
 	for k in _b:
@@ -340,6 +408,233 @@ func _process_modification() -> void:
 		var wi: int = _b.get("wrist." + sd, -1)
 		if wi >= 0:
 			_hand_basis[sd] = gx.basis * sk.get_bone_global_pose(wi).basis
+
+
+## Gewicht und Trägheit je Bild: Wurzel-Beschleunigung und Gierrate aus der Bewegung der Figur → Federn für
+## Oberkörper (kippt beim Bremsen nach vorn, beim Anfahren zurück), Kopf (schwingt verzögert nach), Arme (pendeln),
+## Brust in Drehungen (folgt verzögert, der Kopf führt), Gewichtsverlagerung und Becken (Landen, Hocke, Last).
+## Masse und Beweglichkeit (traits) bestimmen Frequenz und Ausschlag: schwer = träger und tiefer.
+func _dynamics(sk: Skeleton3D) -> void:
+	var root := sk.global_position
+	var h := maxf(dt, 0.001)
+	var mass := maxf(float(traits.mass), 0.3)
+	var agi := maxf(float(traits.agility), 0.3)
+	var bounce := clampf(float(traits.bounce), 0.0, 1.0)
+	var inv_b := sk.global_basis.orthonormalized().inverse()
+	var fz := sk.global_basis.z
+	var yaw := atan2(fz.x, fz.z)
+	if _last_root == Vector3.INF or root.distance_to(_last_root) > 1.5:
+		_rv = Vector3.ZERO
+		_ra = Vector3.ZERO
+		_yaw_prev = yaw
+		_reset_jiggle()
+	else:
+		var v := inv_b * (root - _last_root) / h
+		_ra = _ra.lerp(((v - _rv) / h).limit_length(40.0), 1.0 - exp(-dt / 0.06))
+		_rv = v
+		_yaw_rate = lerpf(_yaw_rate, clampf(wrapf(yaw - _yaw_prev, -PI, PI) / h, -8.0, 8.0), 1.0 - exp(-dt / 0.05))
+		_yaw_prev = yaw
+	var sm := sqrt(mass)
+	var zc := lerpf(0.78, 0.4, bounce)
+	# Oberkörper (Neigung vor/zurück, seitlich) – Trägheit gegen die Beschleunigung
+	var tgt_p := clampf(-_ra.z * 0.016 * sm, -0.35, 0.35)
+	var tgt_r := clampf(-_ra.x * 0.01 * sm, -0.25, 0.25)
+	var sp := spring(_iner.x, _iner_v.x, tgt_p, 1.7 * agi / sm, zc, dt)
+	var sr := spring(_iner.y, _iner_v.y, tgt_r, 1.7 * agi / sm, zc, dt)
+	# Kopf: folgt dem Oberkörper verzögert und schwingt etwas weiter (Nachbewegung)
+	var hp := spring(_iner.z, _iner_v.z, _iner.x * 0.75, 2.6 * agi / sm, zc * 0.85, dt)
+	var hr := spring(_iner.w, _iner_v.w, _iner.y * 0.6, 2.6 * agi / sm, zc * 0.85, dt)
+	_iner = Vector4(sp.x, sr.x, hp.x, hr.x)
+	_iner_v = Vector4(sp.y, sr.y, hp.y, hr.y)
+	var sa := spring(_arm_sw, _arm_sw_v, clampf(-_ra.z * 0.03 * sm, -0.6, 0.6), 1.3 / sm, lerpf(0.6, 0.3, bounce), dt)
+	_arm_sw = sa.x
+	_arm_sw_v = sa.y
+	var st := spring(_turn_lag, _turn_lag_v, clampf(-_yaw_rate * 0.05, -0.3, 0.3), 2.2 * agi, 0.7, dt)
+	_turn_lag = st.x
+	_turn_lag_v = st.y
+	_ws = lerpf(_ws, clampf(weight_shift, -1.0, 1.0), 1.0 - exp(-dt / 0.45))
+	var drop_t := (crouch * 0.24 + load * 0.08) * _leg_len * sk.global_basis.get_scale().y
+	var sd := spring(_drop, _drop_v, drop_t, 2.4 * agi / sm, lerpf(0.8, 0.45, bounce), dt)
+	_drop = sd.x
+	_drop_v = sd.y
+	_flail = move_toward(_flail, 0.0, dt / 0.9)
+
+
+## Gedämpfte Feder (halbimplizit, mit Unterschritten bei großen Zeitschritten) → (Wert, Geschwindigkeit).
+static func spring(x: float, v: float, target: float, hz: float, zeta: float, step: float) -> Vector2:
+	var k := pow(TAU * hz, 2.0)
+	var c := 2.0 * zeta * TAU * hz
+	var n := maxi(1, ceili(step / (1.0 / 90.0)))
+	var hh := step / n
+	for i in n:
+		v += ((target - x) * k - v * c) * hh
+		x += v * hh
+	return Vector2(x, v)
+
+
+## Landung (Sprung, Stolpern): das Becken federt ein – schwere Figuren tiefer und langsamer, leichte federnder.
+func land(strength := 1.0) -> void:
+	var sk := get_skeleton()
+	var sc := sk.global_basis.get_scale().y if sk else 1.0
+	_drop_v += 0.9 * clampf(strength, 0.0, 2.0) * sqrt(maxf(float(traits.mass), 0.3)) * sc
+
+
+## Gleichgewicht verlieren: starker Stoß, die Füße lösen sich zum Ausfallschritt, die Arme rudern, dann fängt
+## sich die Figur über die Federn wieder.
+func stumble(world_dir: Vector3, strength := 1.0) -> void:
+	if world_dir.length() > 0.001:
+		push(world_dir.normalized() * 6.0 * strength)
+	_flail = clampf(maxf(_flail, strength), 0.0, 1.0)
+	_drop_v += 0.5 * strength
+	for sd in ["l", "r"]:
+		if not (_foot[sd] as Dictionary).is_empty():
+			_foot[sd].on = false
+			_foot[sd].step = 1.0
+
+
+## Messwerte für Tests: Trägheitswinkel (Brust, Kopf), Armschwung, Becken, Gewichtsverlagerung, Gierrate.
+func dynamics_state() -> Dictionary:
+	return {"chest": Vector2(_iner.x, _iner.y), "head": Vector2(_iner.z, _iner.w), "arms": _arm_sw, "drop": _drop, "ws": _ws,
+		"yaw_rate": _yaw_rate, "turn_lag": _turn_lag, "acc": _ra, "vel": _rv}
+
+
+## Zubehör (Hüte, Helme, Umhänge, Köcher): eigener Knochen je Teil; die Haut des Teils wird darauf umgebunden
+## (Kopie der Skin-Ressource je Figur – Modelldateien bleiben unverändert). Drehpunkt am Ansatz des Teils.
+func _setup_jiggle(sk: Skeleton3D) -> void:
+	for c in sk.get_children():
+		var mi := c as MeshInstance3D
+		if mi == null or mi.skin == null or mi.mesh == null:
+			continue
+		var nm := String(mi.name).to_lower()
+		var kind := ""
+		var gain := 0.0
+		for e: Array in JIGGLE_KINDS:
+			if nm.contains(String(e[0])):
+				kind = String(e[1])
+				gain = float(e[2])
+				break
+		if kind == "":
+			continue
+		var used := {}
+		for si in mi.mesh.get_surface_count():
+			var arr := mi.mesh.surface_get_arrays(si)
+			var bs: PackedInt32Array = arr[Mesh.ARRAY_BONES] if arr[Mesh.ARRAY_BONES] != null else PackedInt32Array()
+			var ws: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS] if arr[Mesh.ARRAY_WEIGHTS] != null else PackedFloat32Array()
+			for q in mini(bs.size(), ws.size()):
+				if ws[q] > 0.01:
+					used[bs[q]] = int(used.get(bs[q], 0)) + 1
+		if used.is_empty():
+			continue
+		var skin := mi.skin
+		var top := -1
+		var top_n := -1
+		for bi: int in used:
+			if int(used[bi]) > top_n:
+				top_n = int(used[bi])
+				top = bi
+		var parent := _bind_bone(sk, skin, top)
+		if kind != "hat":
+			parent = int(_b.get("chest", parent))   # Umhang und Köcher hängen am Oberkörper
+		if parent < 0:
+			continue
+		var bb := mi.transform * mi.get_aabb()
+		var pc := bb.get_center()
+		var pivot := Vector3(pc.x, bb.position.y + bb.size.y * 0.28, pc.z)
+		if kind != "hat":   # Ansatz oben, an der Körperseite des Teils
+			pivot = Vector3(pc.x, bb.end.y - bb.size.y * 0.06, (bb.end.z - bb.size.z * 0.25) if pc.z < 0.0 else (bb.position.z + bb.size.z * 0.25))
+		var gr := Transform3D(Basis(), pivot)
+		var bname := "lumos_jig_%d" % _jig.size()
+		var jb := sk.get_bone_count()
+		sk.add_bone(bname)
+		sk.set_bone_parent(jb, parent)
+		var local := sk.get_bone_global_rest(parent).affine_inverse() * gr
+		sk.set_bone_rest(jb, local)
+		sk.set_bone_pose(jb, local)
+		var ns := skin.duplicate() as Skin
+		for bi2: int in used:
+			var ob := _bind_bone(sk, skin, bi2)
+			if ob < 0:
+				continue
+			ns.set_bind_pose(bi2, gr.affine_inverse() * sk.get_bone_global_rest(ob) * skin.get_bind_pose(bi2))
+			if skin.get_bind_name(bi2) != &"":
+				ns.set_bind_name(bi2, bname)
+			else:
+				ns.set_bind_bone(bi2, jb)
+		mi.skin = ns
+		_jig.append({"bone": jb, "parent": parent, "local": local, "kind": kind, "gain": gain, "name": String(mi.name),
+			"ang": Vector2.ZERO, "vel": Vector2.ZERO, "prev": Vector3.INF, "pv": Vector3.ZERO, "pa": Vector3.ZERO})
+
+
+func _bind_bone(sk: Skeleton3D, skin: Skin, i: int) -> int:
+	var bn := skin.get_bind_name(i)
+	return sk.find_bone(bn) if bn != &"" else skin.get_bind_bone(i)
+
+
+func _reset_jiggle() -> void:
+	for j: Dictionary in _jig:
+		j.prev = Vector3.INF
+		j.pv = Vector3.ZERO
+		j.pa = Vector3.ZERO
+		j.vel = Vector2.ZERO
+
+
+## Zubehör-Federn: Hüte kippen gegen die Beschleunigung und wippen nach, Umhänge heben sich mit dem Tempo, hängen
+## sonst und schwingen seitlich; alles begrenzt, damit nichts durch den Körper schlägt.
+func _update_jiggle(sk: Skeleton3D) -> void:
+	var gx := sk.global_transform
+	var inv_b := gx.basis.orthonormalized().inverse()
+	var cp := 0.0
+	var ci: int = _b.get("chest", -1)
+	if ci >= 0:
+		var cu := sk.get_bone_global_pose(ci).basis.y.normalized()
+		cp = atan2(cu.z, cu.y)
+	var mass := maxf(float(traits.mass), 0.3)
+	for j: Dictionary in _jig:
+		var base: Transform3D = sk.get_bone_global_pose(int(j.parent)) * (j.local as Transform3D)
+		var wp := gx * base.origin
+		var a_loc := Vector3.ZERO
+		if (j.prev as Vector3) != Vector3.INF:
+			var v := (wp - (j.prev as Vector3)) / maxf(dt, 0.001)
+			j.pa = (j.pa as Vector3).lerp(((v - (j.pv as Vector3)) / maxf(dt, 0.001)).limit_length(60.0), 1.0 - exp(-dt / 0.04))
+			j.pv = v
+			a_loc = inv_b * (j.pa as Vector3)
+		j.prev = wp
+		var g := float(j.gain)
+		var tgt := Vector2.ZERO
+		var hz := 2.0
+		var zeta := 0.3
+		var lim := Vector4(-0.2, 0.2, -0.2, 0.2)
+		match String(j.kind):
+			"hat":
+				tgt = Vector2(-a_loc.z * 0.012, a_loc.x * 0.012) * g
+				hz = 2.6
+				zeta = 0.22
+				lim = Vector4(-0.16, 0.16, -0.16, 0.16) * g
+			"cape":
+				tgt = Vector2((minf(maxf(_rv.z, 0.0) * 0.2, 0.8) + a_loc.z * 0.02 - cp * 0.85) * g, -a_loc.x * 0.015 * g)
+				hz = 1.5
+				zeta = 0.32
+				lim = Vector4(-0.05, 0.95, -0.3, 0.3)
+			_:
+				tgt = Vector2(a_loc.z * 0.014, -a_loc.x * 0.01) * g
+				lim = Vector4(-0.25, 0.25, -0.2, 0.2)
+		var ang: Vector2 = j.ang
+		var vel: Vector2 = j.vel
+		var px := spring(ang.x, vel.x, tgt.x, hz / sqrt(mass), zeta, dt)
+		var py := spring(ang.y, vel.y, tgt.y, hz / sqrt(mass), zeta, dt)
+		var cx := clampf(px.x, lim.x, lim.y)
+		var cy := clampf(py.x, lim.z, lim.w)
+		j.ang = Vector2(cx, cy)
+		j.vel = Vector2(px.y if is_equal_approx(cx, px.x) else 0.0, py.y if is_equal_approx(cy, py.x) else 0.0)
+		sk.set_bone_global_pose(int(j.bone), Transform3D(base.basis * Basis.from_euler(Vector3(cx, 0.0, cy)), base.origin))
+
+
+## Zubehör-Zustand für Tests: [[Name, Art, Winkel]].
+func jiggle_state() -> Array:
+	var out: Array = []
+	for j: Dictionary in _jig:
+		out.append([String(j.name), String(j.kind), j.ang])
+	return out
 
 
 ## Reach-Assist: liegt das Ziel außerhalb der Armreichweite, dreht sich die Brust um ihren Ursprung so weit
@@ -476,9 +771,12 @@ func _feet(sk: Skeleton3D) -> void:
 	for sd in ["l", "r"]:
 		_foot_dy[sd] = lerpf(_foot_dy[sd], want[sd], f)
 	_pelvis = lerpf(_pelvis, minf(minf(float(_foot_dy.l), float(_foot_dy.r)), 0.0), f)
-	if absf(_pelvis) > 0.0005 and int(_b.get("hips", -1)) >= 0:
+	var pel_y := (_pelvis - clampf(_drop, -0.02, 0.4 * _leg_len * scl)) / scl
+	var pel_x := _ws * 0.08 * _leg_len
+	if (absf(pel_y) > 0.0005 or absf(pel_x) > 0.0005) and int(_b.get("hips", -1)) >= 0:
 		var hp := sk.get_bone_global_pose(int(_b.hips))
-		hp.origin.y += _pelvis / scl * foot_w
+		hp.origin += Vector3(pel_x, pel_y, 0.0) * foot_w
+		hp.basis = Basis(Vector3.FORWARD, -_ws * 0.06 * foot_w) * hp.basis   # Hüfte sinkt auf der Spielbein-Seite
 		sk.set_bone_global_pose(int(_b.hips), hp)
 	var inv := gx.affine_inverse()
 	for sd in ["l", "r"]:
@@ -489,7 +787,7 @@ func _feet(sk: Skeleton3D) -> void:
 			var lp: Vector3 = inv * (ft2.pos as Vector3)
 			tg = Vector3(lerpf(tg.x, lp.x, lw), tg.y, lerpf(tg.z, lp.z, lw))
 		tg.y += float(_foot_dy[sd]) / scl + sin(clampf(float(ft2.step), 0.0, 1.0) * PI) * 0.07 * _leg_len
-		if (tg - (anim[sd] as Vector3)).length() < 0.0005 and absf(_pelvis) < 0.0005:
+		if (tg - (anim[sd] as Vector3)).length() < 0.0005 and absf(pel_y) < 0.0005 and absf(pel_x) < 0.0005:
 			continue
 		_ik(sk, "leg0." + sd, "leg1." + sd, "leg2." + sd, tg, Vector3(0.1 if sd == "l" else -0.1, 0.0, 1.0), foot_w, 0.995)
 

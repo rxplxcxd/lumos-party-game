@@ -73,7 +73,8 @@ func grab(obj: Node3D, hand := "r", secs := 0.35) -> void:
 		if actor.body:
 			actor.body.chest_add = Vector3.ZERO
 		actor.reach(hand, func() -> Vector3: return carry_point(hand), 0.3, func() -> Array: return [actor.forward(), Vector3.UP])
-		actor.look_at_target(look_before)
+		if actor.look_target() == obj:   # nur zurückschauen, wenn niemand inzwischen ein neues Blickziel gesetzt hat
+			actor.look_at_target(look_before)
 		grabbed.emit(obj, hand))
 
 
@@ -123,32 +124,13 @@ func throw_to(target: Vector3, hand := "r", arc := 1.2, flight := 0.6) -> void:
 		actor.release(hand, 0.4)
 		if actor.body:
 			actor.body.chest_add = Vector3.ZERO
-		actor.look_at_target(look_before))
+		if actor.look_target() is Vector3 and (actor.look_target() as Vector3).is_equal_approx(target):
+			actor.look_at_target(look_before))
 
 
-## Weitergeben: beide Hände treffen sich (Handflächen nach oben), der Gegenstand wechselt die Hand.
-func give(to: LumosActor, hand := "r", to_hand := "l") -> void:
-	var obj: Node3D = held[hand]
-	if obj == null or to == null:
-		return
-	var mid := func() -> Vector3:
-		return (actor.body.joint_pos("shoulder." + hand) + to.body.joint_pos("shoulder." + to_hand)) * 0.5 + Vector3(0, -0.12, 0)
-	actor.look_at_target(to)
-	to.look_at_target(obj)
-	actor.reach(hand, mid, 0.4, func() -> Array: return [actor.forward(), Vector3.UP])
-	to.reach(to_hand, func() -> Vector3: return (mid.call() as Vector3) + Vector3(0, -0.06, 0), 0.45, func() -> Array: return [to.forward(), Vector3.UP])
-	var tw := _tween()
-	tw.tween_interval(0.5)
-	tw.tween_callback(func() -> void:
-		held[hand] = null
-		to.interact.held[to_hand] = obj
-		released.emit(obj, hand)
-		to.interact.grabbed.emit(obj, to_hand)
-		to.feel("smile", 0.3)
-		actor.release(hand, 0.4)
-		to.reach(to_hand, func() -> Vector3: return to.interact.carry_point(to_hand), 0.4, func() -> Array: return [to.forward(), Vector3.UP])
-		to.look_at_target(actor)
-		contact.emit("give", to))
+## Weitergeben (Interaktionsprotokoll „give“): beide Hände treffen sich, der Gegenstand wechselt die Hand.
+func give(to: LumosActor, hand := "r", to_hand := "l") -> LumosInteraction:
+	return LumosInteraction.start("give", actor, to, {"hand": hand, "to_hand": to_hand})
 
 
 ## Beide Hände ans Lenkrad (10 und 2 Uhr): Griffpunkte auf dem Kranz drehen sich mit dem Rad, die Finger liegen
@@ -183,215 +165,22 @@ func release_wheel() -> void:
 	actor.release("r")
 
 
-## High-Five: zueinander drehen und so versetzt aufstellen, dass die rechten Schultern einander gegenüberstehen
-## (die großen Köpfe bleiben seitlich versetzt), ausholen, die Handflächen treffen sich über Schulterhöhe (Finger
-## oben), beide federn vom Schlag zurück; danach lachen beide (versetzt). Abstand aus der echten Armreichweite.
-static func high_five(a: LumosActor, b: LumosActor) -> void:
-	_face_each_other(a, b)
-	if a.body == null or b.body == null or a.body.arm_mode() != "2bone" or b.body.arm_mode() != "2bone":
-		_simple_contact(a, b, "high_five")
-		return
-	var d := b.rig.global_position - a.rig.global_position
-	d.y = 0.0
-	var dist := d.length()
-	var n := d / maxf(dist, 0.01)
-	var rt := n.cross(Vector3.UP).normalized()          # rechts von A
-	var geo := func(me: LumosActor) -> Vector2:          # (seitlicher, vorderer) Versatz der rechten Schulter
-		var o := me.body.rest_pos("shoulder.r") - me.rig.global_position
-		return Vector2(o.dot(me.rig.global_basis.x.normalized()), o.dot(me.forward()))
-	var ga: Vector2 = geo.call(a)
-	var gb: Vector2 = geo.call(b)
-	var x := (ga.x + gb.x) * 0.5
-	var h := 0.32 * (a.body.reach_length() + b.body.reach_length()) * 0.5   # Treffpunkt über Schulterhöhe
-	var gap := 0.025                                                         # Handflächen berühren sich
-	var horiz := func(me: LumosActor) -> float:
-		var r := me.body.reach_length() * 0.93
-		var v := h - me.body.wrist_offset("r")
-		return sqrt(maxf(r * r - v * v, 0.01))
-	var want: float = ga.y + gb.y + float(horiz.call(a)) + float(horiz.call(b)) + gap * 2.0
-	var mid0 := (a.rig.global_position + b.rig.global_position) * 0.5
-	mid0.y = a.rig.global_position.y
-	var pa1 := mid0 - n * want * 0.5 - rt * x
-	var pb1 := Vector3(mid0.x, b.rig.global_position.y, mid0.z) + n * want * 0.5 + rt * x
-	var meet := func() -> Vector3:
-		var p := (a.body.joint_pos("shoulder.r") + b.body.joint_pos("shoulder.r")) * 0.5
-		return p + Vector3.UP * h
-	var ta := func() -> Vector3: return (meet.call() as Vector3) - n * gap
-	var tb := func() -> Vector3: return (meet.call() as Vector3) + n * gap
-	var ori_a := func() -> Array: return [Vector3.UP, n]
-	var ori_b := func() -> Array: return [Vector3.UP, -n]
-	a.feel("grin", 0.2)
-	b.feel("grin", 0.2)
-	a.rig.anticipate(0.22, 0.06)
-	b.rig.anticipate(0.22, 0.06)
-	var tw := a.interact._tween()
-	tw.set_parallel(true)
-	tw.tween_property(a.rig, "global_position", pa1, 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(b.rig, "global_position", pb1, 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.set_parallel(false)
-	tw.tween_callback(func() -> void:
-		for me: LumosActor in [a, b]:
-			me.body.chest_add = Vector3(0.06, -0.12, 0)   # Schlagschulter etwas nach vorn
-			me.body.head_add = Vector3(0, 0, -0.12)       # Kopf weicht dem Arm aus
-		a.reach("r", ta, 0.22, ori_a)
-		b.reach("r", tb, 0.22, ori_b))
-	tw.tween_interval(0.25)
-	tw.tween_callback(func() -> void:
-		var p: Vector3 = meet.call()
-		Audio.sfx("pop", p, -3.0, 1.2)
-		a.nudge(-n * 1.8)
-		b.nudge(n * 1.8)
-		a.rig.squash(1.06, 0.95, 0.25)
-		b.rig.squash(1.06, 0.95, 0.25)
-		a.interact.contact.emit("high_five", b)
-		b.interact.contact.emit("high_five", a))
-	tw.tween_interval(0.16)
-	tw.tween_callback(func() -> void:
-		a.release("r", 0.45)
-		b.release("r", 0.45)
-		for me2: LumosActor in [a, b]:
-			me2.body.chest_add = Vector3.ZERO
-			me2.body.head_add = Vector3.ZERO
-		a.laugh(1.2, 0.8))
-	tw.tween_interval(0.22)
-	tw.tween_callback(b.laugh.bind(1.2, 0.9))
+## Zwei-Personen-Aktionen laufen seit 1.5.2 über das Interaktionsprotokoll (LumosInteraction) – eine Umsetzung,
+## Phasen, Schicht-Ansprüche, sauberes Beenden. Diese Aufrufe bleiben als Kurzformen erhalten.
+static func high_five(a: LumosActor, b: LumosActor) -> LumosInteraction:
+	return LumosInteraction.start("high_five", a, b)
 
 
-## Figuren ohne zweiteilige Arme (Kenney, Haustiere): Kontakt als Stups mit Körper-Reaktion statt Hand-IK.
-static func _simple_contact(a: LumosActor, b: LumosActor, kind: String) -> void:
-	var d := b.rig.global_position - a.rig.global_position
-	d.y = 0.0
-	var n := d.normalized() if d.length() > 0.01 else a.forward()
-	var tw := a.interact._tween()
-	tw.tween_interval(0.2)
-	tw.tween_callback(func() -> void:
-		a.nudge(-n * 1.4)
-		b.nudge(n * 1.4)
-		a.interact.contact.emit(kind, b)
-		b.interact.contact.emit(kind, a)
-		a.laugh(1.0, 0.8)
-		b.laugh(1.0, 0.8))
+static func hug(a: LumosActor, b: LumosActor, hold := 1.2) -> LumosInteraction:
+	return LumosInteraction.start("hug", a, b, {"secs": hold})
 
 
-## Umarmung in drei Phasen: aufeinander zugehen (Köpfe seitlich versetzt, damit die großen Köpfe nicht ineinander
-## stecken), Arme um die Schultern legen und sich andrücken, lösen und wieder auseinandertreten.
-static func hug(a: LumosActor, b: LumosActor, hold := 1.2) -> void:
-	_face_each_other(a, b)
-	var pa0 := a.rig.global_position
-	var pb0 := b.rig.global_position
-	var d := pb0 - pa0
-	d.y = 0.0
-	var dist := d.length()
-	if dist < 0.01:
-		return
-	var n := d / dist
-	var side := n.cross(Vector3.UP).normalized()
-	var close := (a.head_radius() + b.head_radius()) * 0.72
-	var pa1 := pa0 + n * (dist - close) * 0.5 + side * 0.12
-	var pb1 := pb0 - n * (dist - close) * 0.5 - side * 0.12
-	for me: LumosActor in [a, b]:
-		me.feel("joy", 0.25)
-	var tw := a.interact._tween()
-	tw.set_parallel(true)
-	tw.tween_property(a.rig, "global_position", pa1, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(b.rig, "global_position", pb1, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.set_parallel(false)
-	tw.tween_callback(func() -> void:
-		for pair in [[a, b, 1.0], [b, a, -1.0]]:
-			var me: LumosActor = pair[0]
-			var other: LumosActor = pair[1]
-			for hand in ["l", "r"]:
-				var opp := "r" if hand == "l" else "l"
-				me.reach(hand, func() -> Vector3: return other.body.joint_pos("shoulder." + opp) - other.forward() * 0.14 + Vector3(0, -0.04, 0), 0.32,
-					func() -> Array: return [(other.rig.global_position - me.rig.global_position).normalized().cross(Vector3.UP) * (-1.0 if hand == "r" else 1.0), other.forward()],
-					0.2)   # kaum Vorlehnen: die großen Köpfe bleiben nebeneinander
-			if me.body:
-				me.body.head_add = Vector3(0.1, 0.25 * float(pair[2]), 0.25 * float(pair[2]))
-				me.body.chest_add = Vector3(0.16, 0, 0))
-	tw.tween_interval(0.34)
-	tw.tween_callback(func() -> void:
-		a.nudge(n * 1.2)
-		b.nudge(-n * 1.2)
-		a.feel("dreamy", 0.3)
-		b.feel("dreamy", 0.3)
-		a.interact.contact.emit("hug", b)
-		b.interact.contact.emit("hug", a))
-	tw.tween_interval(hold)
-	tw.tween_callback(func() -> void:
-		for me2: LumosActor in [a, b]:
-			me2.release("l", 0.4)
-			me2.release("r", 0.4)
-			me2.feel("smile", 0.4)
-			if me2.body:
-				me2.body.head_add = Vector3.ZERO
-				me2.body.chest_add = Vector3.ZERO)
-	tw.tween_interval(0.25)
-	tw.set_parallel(true)
-	tw.tween_property(a.rig, "global_position", pa0, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(b.rig, "global_position", pb0, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+static func shove(a: LumosActor, b: LumosActor, strength := 1.0) -> LumosInteraction:
+	return LumosInteraction.start("playful_shove", a, b, {"strength": strength})
 
 
-## Schubser: beide Handflächen an die Brust des anderen (Oberfläche, nicht hinein); b federt zurück und stolpert,
-## a bekommt den Rückstoß.
-static func shove(a: LumosActor, b: LumosActor, strength := 1.0) -> void:
-	_face_each_other(a, b)
-	var chest := func(hand: String) -> Vector3:
-		var c := b.body.joint_pos("chest") + Vector3(0, 0.05, 0)
-		var to_a := (a.rig.global_position - b.rig.global_position).normalized()
-		return c + to_a * b.head_radius() * 0.55 + b.right() * (0.12 if hand == "l" else -0.12)
-	var ori := func() -> Array: return [Vector3.UP, (b.rig.global_position - a.rig.global_position).normalized()]
-	a.feel("determined", 0.15)
-	a.reach("l", chest.bind("l"), 0.16, ori)
-	a.reach("r", chest.bind("r"), 0.16, ori)
-	var tw := a.interact._tween()
-	tw.tween_interval(0.17)
-	tw.tween_callback(func() -> void:
-		var dir := b.rig.global_position - a.rig.global_position
-		b.react_hit(dir, strength, true)
-		a.nudge(-dir.normalized() * 1.4 * strength)
-		Audio.sfx("hit_soft", b.rig.global_position, -3.0)
-		a.interact.contact.emit("shove", b)
-		b.interact.contact.emit("shoved", a))
-	tw.tween_interval(0.2)
-	tw.tween_callback(func() -> void:
-		a.release("l", 0.4)
-		a.release("r", 0.4)
-		a.feel("grin", 0.3))
-
-
-## Schulterklopfen: Hand liegt auf der Schulter (Handfläche nach unten), klopft count-mal, die Schulter gibt jedes
-## Mal nach; der andere schaut her und lächelt.
-static func pat(a: LumosActor, b: LumosActor, hand := "r", count := 3) -> void:
-	var sh := func() -> Vector3:
-		var l := b.body.joint_pos("shoulder.l")
-		var r := b.body.joint_pos("shoulder.r")
-		var p := a.rig.global_position
-		return (l if l.distance_to(p) < r.distance_to(p) else r) + Vector3.UP * 0.12
-	a.look_at_target(b)
-	a.reach(hand, sh, 0.3, func() -> Array: return [(b.rig.global_position - a.rig.global_position).normalized(), Vector3.DOWN])
-	var tw := a.interact._tween()
-	tw.tween_interval(0.3)
-	for k in count:
-		tw.tween_callback(func() -> void:
-			b.nudge(Vector3.DOWN * 1.0 + (b.rig.global_position - a.rig.global_position).normalized() * 0.4)
-			Audio.sfx("hit_soft", b.rig.global_position, -14.0, 1.5))
-		tw.tween_interval(0.22)
-	tw.tween_callback(func() -> void:
-		b.look_at_target(a)
-		b.feel("smile", 0.3)
-		a.interact.contact.emit("pat", b))
-	tw.tween_interval(0.2)
-	tw.tween_callback(a.release.bind(hand, 0.4))
-
-
-static func _face_each_other(a: LumosActor, b: LumosActor) -> void:
-	var d := b.rig.global_position - a.rig.global_position
-	d.y = 0.0
-	if d.length() > 0.05:
-		a.rig.turn_to(d, 0.2)
-		b.rig.turn_to(-d, 0.2)
-	a.look_at_target(b)
-	b.look_at_target(a)
+static func pat(a: LumosActor, b: LumosActor, hand := "r", count := 3) -> LumosInteraction:
+	return LumosInteraction.start("pat", a, b, {"hand": hand, "count": count})
 
 
 ## Je Bild (vom LumosActor aufgerufen): gehaltene und fliegende Gegenstände nachführen.
