@@ -40,7 +40,10 @@ Auf dem Entwicklungsbranch; `main` bleibt unverändert bis zur Freigabe.
   20 Spannen bis −392 mm, jetzt keine; kleinster Abstand im ganzen Trailer +23 mm. Inszenierung an zehn Stellen
   korrigiert (Abklatschen, Auflaufen, Schulterklopfen, An-die-Hand-nehmen, Strand-Laufwege, Knuff, Boss,
   Sumo-Hintergrund, Sumo-Stoß, Lagerfeuer); bildgenau
-  wiederholbar; Vorschau einzelner Beats mit `--trailer-to`. Trennungsprüfung: Skriptprüfung des Trailers separat
+  wiederholbar; Vorschau einzelner Beats mit `--trailer-to`. Neu gerendert: H.264 High 1920×1080, konstant 60 fps,
+  5836 Bilder, 97,27 s, 157,6 MB (12,96 Mbit/s), AAC-LC 48 kHz Stereo 259 kbit/s, −14,1 LUFS, True Peak −1,2 dBFS;
+  Video-Prüfung `qa.py` OK (alle 21 harten Schnitte in der Schnittliste, Weltenwechsel unsichtbar, keine Standbilder,
+  keine Tonaussetzer). Trennungsprüfung: Skriptprüfung des Trailers separat
   (`Check.tscn -- --check-dirs=res://trailer`), die Prüfung des Spiels liest den Trailer-Ordner nicht mehr.
 * **Grenzen:** nicht im Spiel eingebaut; GPU-/Render-/Web-Kosten nicht gemessen (nur CPU headless); Ausweichen
   kostet im Gedränge ≈ 32 µs je Figur; Hand-in-Hand beim Loslaufen 20–28 cm Handgelenkabstand.

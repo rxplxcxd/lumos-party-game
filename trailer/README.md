@@ -38,6 +38,10 @@ Ergebnis in `trailer_out/`:
 * `sheets/`: Kontaktbögen mit einem Bild je Sekunde
 * `marks.json`: Schnittliste des Trailers
 
+Stand 1.5.2 (`bash trailer/render.sh <ordner> 1920 1080 60`, 45 min mit Software-Rendering):
+`Lumos_Party_Trailer_1080p60.mp4` · H.264 High, yuv420p, 1920×1080, konstant 60 fps, 5836 Bilder, 97,27 s,
+157 632 462 Byte (12,96 Mbit/s) · AAC-LC 48 kHz Stereo, 259 kbit/s, −14,1 LUFS, True Peak −1,2 dBFS · `qa.py`: OK.
+
 Eine schnelle Kontrollfassung (etwa 5 Minuten) entsteht mit `TRAILER_QUICK=1 bash trailer/render.sh /tmp/vorschau 1280 720 30`.
 Der 4K60-Master braucht mit Software-Rendering etwa 1 s je Bild (gemessen: 5731 Bilder in 1 h 48 min). Mit
 einer echten GPU geht es deutlich schneller.
