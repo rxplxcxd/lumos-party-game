@@ -64,6 +64,7 @@ var _hand_basis := {}               # Seite → Welt-Basis des Handgelenks nach 
 var _t := 0.0
 var _arm_len := 0.5
 var _reach_len := 0.5            # Schulter → Handgelenk (IK-Kette bei ausgerichteter Hand)
+var _hand_q := {}                 # Seite → geglättete Handdrehung (Quaternion, Skelett-Raum)
 var _hand_off := {}               # Seite → Versatz Handgelenk→Hand (Ruhepose, Skelett-Raum)
 
 
@@ -293,30 +294,37 @@ func _process_modification() -> void:
 		var w: float = hand_w[sd]
 		if w <= 0.001:
 			_hand_on[sd] = false
+			_hand_q.erase(sd)
 			continue
 		_hand_s[sd] = hand_t[sd] if not _hand_on[sd] else (_hand_s[sd] as Vector3).lerp(hand_t[sd], 1.0 - exp(-dt / 0.035))
 		_hand_on[sd] = true
 		var tg := sk.global_transform.affine_inverse() * (_hand_s[sd] as Vector3)
 		var hd: Array = hand_dir[sd]
 		var want := _hand_basis_for(sk, sd, hd[0], hd[1]) if mode == "2bone" and hd.size() == 2 else Basis()
+		if want != Basis():
+			# Wechsel der Handhaltung (z. B. Greifen von oben → Halten von unten) gleitet statt umzuklappen
+			var q := want.orthonormalized().get_rotation_quaternion()
+			if _hand_q.has(sd):
+				q = (_hand_q[sd] as Quaternion).slerp(q, 1.0 - exp(-dt / 0.07))
+			_hand_q[sd] = q
+			want = Basis(q).scaled(want.get_scale())
+		else:
+			_hand_q.erase(sd)
 		if want != Basis() and _hand_off.has(sd):
 			# Ziel gilt für die Hand: Handgelenk so setzen, dass die gedrehte Hand genau dort landet
 			tg -= (want * ((_hand_rest[sd] as Array)[0] as Basis).inverse()) * (_hand_off[sd] as Vector3)
-		else:
-			want = Basis()
 		ik_t[sd] = tg
 		ik_b[sd] = want
 	if mode == "2bone" and cfg.reach_lean > 0.0:
 		for sd: String in ik_t:
-			_lean_to(sk, sd, ik_t[sd], float(hand_w[sd]) * float(hand_assist[sd]), ik_b[sd] != Basis())
+			_lean_to(sk, sd, ik_t[sd], float(hand_w[sd]) * float(hand_assist[sd]), ik_b[sd] != Basis() and _hand_off.has(sd))
 	for sd: String in ik_t:
 		var w: float = hand_w[sd]
 		if mode == "2bone":
 			var pole := Vector3(0.45 if sd == "l" else -0.45, -1.0, -0.55)
-			_ik(sk, "arm0." + sd, "arm1." + sd, ("wrist." if ik_b[sd] != Basis() else "arm2.") + sd, ik_t[sd], pole, w, 0.985)
-			var hd2: Array = hand_dir[sd]
-			if hd2.size() == 2:
-				_orient_hand(sk, sd, hd2[0], hd2[1], w)
+			_ik(sk, "arm0." + sd, "arm1." + sd, ("wrist." if ik_b[sd] != Basis() and _hand_off.has(sd) else "arm2.") + sd, ik_t[sd], pole, w, 0.985)
+			if ik_b[sd] != Basis():
+				_set_hand_basis(sk, sd, ik_b[sd], w)
 		elif mode == "aim":
 			_aim(sk, int(_b["arm0." + sd]), ik_t[sd], w)
 	# Gelenk-Positionen nach der Modifikation merken
@@ -397,11 +405,8 @@ func arm_length() -> float:
 	return _arm_len * (sk.global_transform.basis.get_scale().x if sk else 1.0)
 
 
-## Handgelenk ausrichten: Fingerrichtung und Handflächen-Normale (Welt) → Basis aus der Ruhepose gedreht.
-func _orient_hand(sk: Skeleton3D, sd: String, finger: Vector3, palm: Vector3, w: float) -> void:
-	var want := _hand_basis_for(sk, sd, finger, palm)
-	if want == Basis():
-		return
+## Handgelenk ausrichten: Ziel-Basis (Skelett-Raum, aus _hand_basis_for, geglättet), mit Gewicht w eingeblendet.
+func _set_hand_basis(sk: Skeleton3D, sd: String, want: Basis, w: float) -> void:
 	var wi: int = _b["wrist." + sd]
 	var g := sk.get_bone_global_pose(wi)
 	var sc := g.basis.get_scale()

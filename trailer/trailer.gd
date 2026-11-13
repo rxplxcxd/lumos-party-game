@@ -65,6 +65,7 @@ var _slogan: Label
 var _slogan2: Label
 var _cta: Label
 var _bigword: Label
+var _caption: Label
 var _music: Array[AudioStreamPlayer] = []
 var _star: Node3D
 var _star_light: OmniLight3D
@@ -75,8 +76,8 @@ var _karts: Array[KartVisual] = []
 var _fire_light: OmniLight3D
 var _snack: Node3D
 var _rng := RandomNumberGenerator.new()
-var faces: Array = []                     # trailer_face.gd je Figur (Mimik)
-var bodies: Array = []                    # trailer_body.gd je Figur (Arm-IK, Lachen, Atmung)
+var faces: Array[LumosFace] = []          # Framework-Gesicht je Figur (scripts/actor/lumos_face.gd)
+var bodies: Array[LumosBody] = []         # Framework-Körper je Figur (Arm-IK, Fußanker, Haltung, Blick, Lachen, Atmung)
 var _laughs: Array = [[], [], [], []]     # je Figur: [Beginn, Dauer, Stärke]
 var _reach: Array = [[], [], [], []]      # je Figur: [Seite, t0, t1, t2, t3, Ziel]
 var _carry: Array = []                    # [Objekt, Figur, Seite, t0, t1, Versatz]
@@ -132,8 +133,7 @@ func _ready() -> void:
 	var cw2: Vector3 = _cam_eval(WIPE2_T)[0]
 	_curtain_local = Vector3(cw2.x, 0.0, cw2.z - 1.7)
 	_use_set("forest")
-	_sets.forest.visible = false   # Akt 1 beginnt in völliger Dunkelheit
-	_use_env("void")
+	_dim_forest()   # Akt 1 beginnt im gedämpften Mondlicht – der Stern weckt die Welt
 	if _face_test != "":
 		_run_face_test()
 		return
@@ -193,7 +193,7 @@ func _process(delta: float) -> void:
 		_trunk.global_position = _origin + _trunk_local
 	if _curtain.visible:
 		_curtain.global_position = _origin + _curtain_local
-	_fill.light_energy = lerpf(_fill.light_energy, (1.15 if (_set_now == "forest" and t > 9.5 and t < 84.0) else (1.7 if (t > 54.5 and t < 56.96) else 0.0)), 1.0 - exp(-delta / 0.6))
+	_fill.light_energy = lerpf(_fill.light_energy, (1.15 if (_set_now == "forest" and t > 7.6 and t < 84.0) else (1.7 if (t > 54.5 and t < 56.96) else 0.0)), 1.0 - exp(-delta / 0.6))
 	_drive_music()
 	_animate_props(delta)
 	if t >= DUR:
@@ -258,7 +258,10 @@ func go(i: int, t0: float, t1: float, a: Vector3, b: Vector3, hop := 0.0) -> voi
 
 
 func look(i: int, time: float, target: Variant) -> void:
-	at(time, func() -> void: _look[i] = target)
+	at(time, func() -> void:
+		if target is int and not (_look[i] is int and int(_look[i]) == int(target)):
+			faces[i].flash_brows(0.7)   # neuer Blickkontakt: Brauen heben sich kurz
+		_look[i] = target)
 
 
 func face(i: int, time: float, dir: Vector3) -> void:
@@ -301,7 +304,9 @@ func react(i: int, time: float, id: String) -> void:
 
 ## Gesichtsausdruck wechseln (gleitet in secs Sekunden hinüber).
 func expr(i: int, time: float, name: String, secs := 0.18) -> void:
-	at(time, func() -> void: faces[i].set_expr(name, secs))
+	at(time, func() -> void:
+		faces[i].set_expr(name, secs)
+		bodies[i].set_posture(name, maxf(secs, 0.3)))   # Haltung trägt das Gefühl mit (Brust, Kopf, Schultern)
 
 
 ## Lachen als Bewegungskette: Schmunzeln → Mund auf, Augen zu Sicheln, Brust und Schultern wippen → klingt aus.
@@ -315,9 +320,10 @@ func laugh(i: int, time: float, dur := 1.4, strength := 1.0, then := "smile") ->
 
 
 ## Hand an einen Punkt führen: t0→t1 hin, bis t2 halten, bis t3 zurück. Ziel: Vector3 (Set-Koordinaten) oder
-## Callable → Weltposition (z. B. die Schulter eines Freundes, die sich bewegt).
-func reach(i: int, side: String, t0: float, t1: float, t2: float, t3: float, target: Variant) -> void:
-	(_reach[i] as Array).append([side, t0, t1, t2, t3, target])
+## Callable → Weltposition (z. B. die Schulter eines Freundes, die sich bewegt). orient: Handhaltung
+## [Fingerrichtung, Handflächen-Normale] (Welt) oder Callable → Array; leer = Hand bleibt, wie die Animation sie hält.
+func reach(i: int, side: String, t0: float, t1: float, t2: float, t3: float, target: Variant, orient: Variant = []) -> void:
+	(_reach[i] as Array).append([side, t0, t1, t2, t3, target, orient])
 
 
 ## Gegenstand liegt von t0 bis t1 in der Hand der Figur.
@@ -337,7 +343,7 @@ func breath(i: int, time: float, amount: float, rate := 1.4) -> void:
 
 
 func _bone(i: int, name: String) -> Vector3:
-	return bodies[i].bone_pos(name)
+	return bodies[i].joint_pos(name.replace("upperarm.", "shoulder."))
 
 
 ## Kamera-Schlüsselbild (Set-Koordinaten). cut = harter Schnitt (kein Übergang vom vorigen Schlüssel).
@@ -550,7 +556,15 @@ func _drive_actor(i: int) -> void:
 	bd.laugh = lv
 	fc.laugh = lv
 	fc.laugh_phase = bd.laugh_phase
+	# Blick: Oberkörper und Hüfte drehen mit (Kopf bleibt auf dem Ziel) – Ausdruck, Haltung und Blick gemeinsam
+	bd.attend_target = _gaze[i]
+	bd.attend_w = _gaze_w[i]
+	# Fußanker nur beim normalen Stehen/Gehen/Laufen auf dem Boden (nicht in Posen, Sprüngen, im Kart)
+	var r := heroes[i]
+	bd.grounded = not _hold[i] and not r.is_locked() and _set_now != "race" and r.current in ["idle", "idle_b", "walk", "run"] \
+		and r.global_position.y - _origin.y < 0.06
 	var hw := {"l": 0.0, "r": 0.0}
+	var hd := {"l": [], "r": []}
 	for rc in _reach[i]:
 		if t < float(rc[1]) or t > float(rc[4]):
 			continue
@@ -560,7 +574,11 @@ func _drive_actor(i: int) -> void:
 			hw[sd] = w
 			var tg = rc[5]
 			bd.hand_t[sd] = (tg as Callable).call() if tg is Callable else _origin + (tg as Vector3)
+			var o: Variant = rc[6]
+			hd[sd] = (o as Callable).call() if o is Callable else o
 	bd.hand_w = hw
+	bd.hand_dir = hd
+	bd.hand_assist = {"l": 0.6, "r": 0.6}   # zu ferne Ziele: etwas hinlehnen, aber die großen Köpfe bleiben frei
 
 
 func _drive_carry() -> void:
@@ -568,7 +586,13 @@ func _drive_carry() -> void:
 		var n: Node3D = c[0]
 		if is_instance_valid(n) and t >= float(c[3]) and t <= float(c[4]):
 			var i: int = c[1]
-			n.global_position = _bone(i, "hand." + String(c[2])) + heroes[i].global_basis * (c[5] as Vector3)
+			var sd := String(c[2])
+			var hd: Array = bodies[i].hand_dir.get(sd, [])
+			if hd.size() == 2 and float(bodies[i].hand_w.get(sd, 0.0)) > 0.5:
+				var ax: Array = bodies[i].hand_axes(sd)   # ausgerichtete Hand: Gegenstand liegt auf der Handfläche
+				n.global_position = _bone(i, "hand." + sd) + (ax[1] as Vector3) * 0.07 + (ax[0] as Vector3) * 0.04
+			else:
+				n.global_position = _bone(i, "hand." + sd) + heroes[i].global_basis * (c[5] as Vector3)
 
 
 func _drive_camera() -> void:
@@ -688,7 +712,8 @@ func _build_ui() -> void:
 	_slogan2 = _label(root, "A little adventure. A lot of memories.", 34, Color(1, 1, 1, 0.92), 8, 0.635)
 	_cta = _label(root, "Lumos One  ·  Browser & PWA  ·  Lokal & Online mit bis zu 4 Freunden", 26, Color(1, 1, 1, 0.8), 6, 0.84)
 	_bigword = _label(root, "", 170, UI.GOLD, 28, 0.42)
-	for l in [_title, _slogan, _slogan2, _cta, _bigword]:
+	_caption = _label(root, "", 40, Color(1, 1, 1, 0.95), 10, 0.8)   # dezente Einblendung in der Montage
+	for l in [_title, _slogan, _slogan2, _cta, _bigword, _caption]:
 		l.modulate.a = 0.0
 
 
@@ -1198,12 +1223,21 @@ func _build_cast() -> void:
 		r.play("idle")
 		r.visible = false
 		heroes.append(r)
-		var body: SkeletonModifier3D = preload("res://trailer/trailer_body.gd").new()
+		# Character Framework (eine zentrale Umsetzung für Spiel-Labor und Trailer): Rig-Profil automatisch erkannt
+		var cfg := LumosActorConfig.detect(r)
+		cfg.ground_mask = 0      # Boden = Standhöhe der Figur (Callable unten) – keine Raycasts gegen Kulissen
+		cfg.lod = false          # Film: immer volle Qualität
+		cfg.attention = 0.42     # beim Ansehen dreht der Oberkörper deutlich mit
+		var body := LumosBody.new()
 		r.skel.add_child(body)   # nach dem Slapstick-Modifier des Spiels → wird zuletzt angewandt
-		body.bind(r.skel)
+		body.bind(r.skel, cfg)
+		body.ground = func(_p: Vector3) -> float: return r.global_position.y
+		body.grounded = false
 		bodies.append(body)
-		var fc: Node3D = preload("res://trailer/trailer_face.gd").new()
-		fc.setup(r)
+		var fc := LumosFace.new()
+		fc.feature_scale = cfg.feature_scale
+		if not fc.setup(r):
+			push_error("TRAILER: kein Gesicht für " + k)
 		faces.append(fc)
 	_nat.walk = _stride(heroes[0], "walk", 1.6)
 	_nat.run = _stride(heroes[0], "run", 4.6)
@@ -1315,27 +1349,36 @@ func _script_all() -> void:
 	_act5()
 
 
-## Der Wald wird nicht hart eingeschaltet, sondern vom Stern aus entzündet: Himmel, Mond- und Umgebungslicht
-## blenden auf, die Leuchtpilze gehen der Reihe nach an – je weiter weg, desto später.
+## Mondlicht-Wald zu Beginn: alles ist schon da, aber kühl und gedämpft; die Leuchtpilze sind aus.
+func _dim_forest() -> void:
+	_sets.forest.visible = true
+	_use_env("forest_night")
+	var we: WorldEnvironment = _env_we["forest_night"]
+	var env := we.environment
+	var sun := we.get_meta("sun") as DirectionalLight3D
+	we.set_meta("full", [env.ambient_light_energy, env.background_energy_multiplier, env.fog_light_energy, sun.light_energy])
+	env.ambient_light_energy *= 0.3
+	env.background_energy_multiplier *= 0.35
+	env.fog_light_energy *= 0.3
+	sun.light_energy *= 0.22
+	for l in _shroom_lights:
+		l.light_energy = 0.0
+
+
+## Der Stern weckt den Wald: Himmel, Mond- und Umgebungslicht blenden vom Mondlicht auf volle Stärke, die
+## Leuchtpilze gehen der Reihe nach an – je weiter weg, desto später.
 func _reveal_forest() -> void:
 	_sets.forest.visible = true
 	_use_env("forest_night")
 	var we: WorldEnvironment = _env_we["forest_night"]
 	var env := we.environment
 	var sun := we.get_meta("sun") as DirectionalLight3D
-	var amb := env.ambient_light_energy
-	var bg := env.background_energy_multiplier
-	var fg := env.fog_light_energy
-	var se := sun.light_energy
-	env.ambient_light_energy = amb * 0.05
-	env.background_energy_multiplier = 0.0
-	env.fog_light_energy = 0.0
-	sun.light_energy = 0.0
+	var full: Array = we.get_meta("full", [env.ambient_light_energy, env.background_energy_multiplier, env.fog_light_energy, sun.light_energy])
 	var tw := create_tween().set_parallel()
-	tw.tween_property(env, "ambient_light_energy", amb, 2.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tw.tween_property(env, "background_energy_multiplier", bg, 3.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(env, "fog_light_energy", fg, 3.0)
-	tw.tween_property(sun, "light_energy", se, 2.8)
+	tw.tween_property(env, "ambient_light_energy", float(full[0]), 2.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(env, "background_energy_multiplier", float(full[1]), 3.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(env, "fog_light_energy", float(full[2]), 2.8)
+	tw.tween_property(sun, "light_energy", float(full[3]), 2.6)
 	for l in _shroom_lights:
 		var d := l.global_position.distance_to(_origin + Vector3(2.0, 1.0, 0.0))
 		l.light_energy = 0.0
@@ -1345,65 +1388,67 @@ func _reveal_forest() -> void:
 
 
 # --- Akt 1 – Ein kleiner Stern (0–15 s) ----------------------------------------------------------------------
+## Der Wald liegt von Anfang an im kühlen, gedämpften Mondlicht (kein schwarzes Nichts); der Stern erscheint nach
+## gut zwei Sekunden, weicht einmal kichernd aus und weckt beim Berühren die Welt – danach bleibt Zeit zum Staunen.
 func _act1() -> void:
 	var A := 0
 	var star := func() -> Vector3: return _star.global_position
 	at(0.0, func() -> void:
 		heroes[A].visible = true
-		var rim := OmniLight3D.new()   # Mondlicht von schräg hinten: die Figur ist von Anfang an gut zu erkennen
+		var rim := OmniLight3D.new()   # Mondlicht von schräg hinten: die Figur hebt sich vom dunklen Wald ab
 		rim.name = "VoidRim"
 		rim.light_color = Color(0.6, 0.7, 1.0)
-		rim.light_energy = 2.4
+		rim.light_energy = 1.7
 		rim.omni_range = 6.0
 		rim.shadow_enabled = false
 		heroes[A].add_child(rim)
 		rim.position = Vector3(0.7, 2.3, 1.9)
 		_letterbox(0.1, 0.01)
-		_fade(_black, 0.0, 2.0))
-	# Allein im Dunkeln: zögernde Schritte, der Blick sucht
+		_fade(_black, 0.0, 1.4))
+	# Allein im Mondlicht: zögernde Schritte, der Blick sucht
 	expr(A, 0.0, "worried", 0.0)
 	breath(A, 0.0, 0.55)
-	go(A, 0.5, 3.4, Vector3(-3.4, 0, 0), Vector3(-1.4, 0, 0))
-	look(A, 0.9, Vector3(-4.0, 1.4, 3.0))
-	look(A, 1.9, Vector3(1.0, 1.7, -3.0))
-	look(A, 2.8, Vector3(2.0, 1.3, 1.5))
+	go(A, 0.3, 2.3, Vector3(-3.4, 0, 0), Vector3(-1.4, 0, 0))
+	look(A, 0.5, Vector3(-4.0, 1.4, 3.0))
+	look(A, 1.2, Vector3(1.0, 1.7, -3.0))
+	look(A, 1.9, Vector3(2.0, 1.3, 1.5))
 	key(0.0, Vector3(-3.7, 1.65, 6.2), Vector3(-2.9, 1.2, 0.0), 38.0)
-	key(3.4, Vector3(-1.0, 1.6, 5.0), Vector3(-0.7, 1.25, 0.0), 36.0)
-	face(A, 3.4, Vector3(1, 0, 0))
-	at(3.6, func() -> void:
+	key(2.3, Vector3(-1.0, 1.6, 5.0), Vector3(-0.7, 1.25, 0.0), 36.0)
+	face(A, 2.3, Vector3(1, 0, 0))
+	at(2.4, func() -> void:
 		_star.visible = true
 		_star.scale = Vector3.ONE * 0.01
 		create_tween().tween_property(_star, "scale", Vector3.ONE * 0.75, 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		create_tween().tween_property(_star_light, "light_energy", 2.6, 0.8)
 		Audio.sfx("sparkle_up", null, -4.0, 1.1, 0.0))
 	# Schreck → Neugier: Kopf schief, vorsichtig näher
-	look(A, 3.7, Vector3(1.2, 1.55, 0))
-	expr(A, 3.72, "surprised", 0.1)
-	at(3.75, func() -> void: heroes[A].squash(0.94, 1.08, 0.3))
-	expr(A, 4.4, "curious", 0.35)
-	tilt(A, 4.4, Vector3(0, 0, 0.22))
-	go(A, 4.8, 6.0, Vector3(-1.4, 0, 0), Vector3(0.25, 0, 0))
-	key(5.2, Vector3(1.5, 1.6, 4.3), Vector3(0.6, 1.38, 0.0), 36.0)
-	# Die Hand streckt sich aus – der Stern weicht kichernd aus
-	reach(A, "r", 6.0, 6.42, 6.5, 7.0, star)
-	at(6.45, func() -> void:
+	look(A, 2.5, Vector3(1.2, 1.55, 0))
+	expr(A, 2.52, "surprised", 0.1)
+	at(2.55, func() -> void: heroes[A].squash(0.94, 1.08, 0.3))
+	expr(A, 3.1, "curious", 0.35)
+	tilt(A, 3.1, Vector3(0, 0, 0.22))
+	go(A, 3.3, 4.4, Vector3(-1.4, 0, 0), Vector3(0.25, 0, 0))
+	key(3.7, Vector3(1.5, 1.6, 4.3), Vector3(0.6, 1.38, 0.0), 36.0)
+	# Die Hand streckt sich aus – der Stern weicht kichernd aus, er muss selbst lachen
+	reach(A, "r", 4.4, 4.82, 4.9, 5.4, star)
+	at(4.85, func() -> void:
 		create_tween().tween_property(_star, "position:x", 2.05, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		Audio.sfx("pluck", null, -6.0, 1.4, 0.0))
-	look(A, 6.5, Vector3(2.05, 1.55, 0))
-	expr(A, 6.5, "surprised", 0.1)
-	expr(A, 6.95, "smile", 0.35)
-	tilt(A, 6.9, Vector3.ZERO)
-	go(A, 7.1, 8.0, Vector3(0.25, 0, 0), Vector3(1.45, 0, 0))
-	key(7.6, Vector3(2.9, 1.55, 3.5), Vector3(1.75, 1.42, 0.0), 36.0)
-	reach(A, "r", 8.0, 8.42, 8.75, 9.5, star)
-	# Berührung: der Stern leuchtet auf, steigt in die Baumkronen und entzündet den Wald
-	at(8.45, func() -> void:
+	look(A, 4.9, Vector3(2.05, 1.55, 0))
+	expr(A, 4.9, "surprised", 0.1)
+	tilt(A, 5.25, Vector3.ZERO)
+	laugh(A, 5.3, 0.75, 0.55, "smile")
+	go(A, 5.6, 6.4, Vector3(0.25, 0, 0), Vector3(1.45, 0, 0))
+	key(5.9, Vector3(2.9, 1.55, 3.5), Vector3(1.75, 1.42, 0.0), 36.0)
+	reach(A, "r", 6.4, 6.82, 7.15, 7.9, star)
+	# Berührung: der Stern leuchtet auf, steigt in die Baumkronen und weckt den Wald (Licht, Farben, Leuchtpilze)
+	at(6.85, func() -> void:
 		Audio.sfx("chime", null, -2.0, 1.0, 0.0)
 		Audio.sfx("woom", null, -6.0, 0.8, 0.0)
 		FX.shockwave(_origin + Vector3(2.05, 1.5, 0), 40.0, Color(1.0, 0.85, 0.45, 0.9))
 		_mark("Blitz")
 		create_tween().tween_property(_flash, "modulate:a", 0.5, 0.1))
-	at(8.58, func() -> void:
+	at(6.98, func() -> void:
 		var rim := heroes[A].get_node_or_null("VoidRim")
 		if rim:
 			rim.queue_free()
@@ -1415,27 +1460,32 @@ func _act1() -> void:
 		tw.tween_property(_star_light, "light_energy", 0.0, 2.2)
 		tw.chain().tween_callback(func() -> void: _star.visible = false))
 	# Freunde und Träumer sind von Anfang an in dieser Welt (noch weit außerhalb des Bildes)
-	go(1, 8.6, 8.61, Vector3(22.5, _hill_y, -1.6), Vector3(22.5, _hill_y, -1.6))
-	face(1, 8.6, Vector3(-1, 0, 0.3))
-	go(3, 8.6, 8.61, Vector3(31.0, _stone_y - 0.04, -2.6), Vector3(31.0, _stone_y - 0.04, -2.6))
-	pose(3, 8.6, "sit")
-	face(3, 8.6, Vector3(0.6, 0, 0.7))
-	look(3, 8.6, Vector3(32.1, 0.7, -1.9))
-	expr(3, 8.6, "dreamy", 0.0)
-	at(8.66, func() -> void:
+	go(1, 7.0, 7.01, Vector3(22.5, _hill_y, -1.6), Vector3(22.5, _hill_y, -1.6))
+	face(1, 7.0, Vector3(-1, 0, 0.3))
+	go(3, 7.0, 7.01, Vector3(31.0, _stone_y - 0.04, -2.6), Vector3(31.0, _stone_y - 0.04, -2.6))
+	pose(3, 7.0, "sit")
+	face(3, 7.0, Vector3(0.6, 0, 0.7))
+	look(3, 7.0, Vector3(32.1, 0.7, -1.9))
+	expr(3, 7.0, "dreamy", 0.0)
+	at(7.06, func() -> void:
 		heroes[1].visible = true
 		heroes[3].visible = true)
-	# Staunen in Nahaufnahme, dann hebt sich die Kamera und gibt den Wald frei – er dreht sich langsam mit
-	expr(A, 8.5, "awe", 0.15)
-	look(A, 8.6, _star)
-	key(8.5, Vector3(3.0, 1.55, 3.5), Vector3(1.7, 1.45, 0.0), 37.0)
-	key(9.8, Vector3(3.1, 1.62, 3.8), Vector3(1.6, 1.5, 0.0), 38.0)
+	# Staunen in Nahaufnahme, dann hebt sich die Kamera und gibt den erwachten Wald frei
+	expr(A, 6.9, "awe", 0.15)
+	look(A, 7.0, _star)
+	key(6.9, Vector3(3.0, 1.55, 3.5), Vector3(1.7, 1.45, 0.0), 37.0)
+	key(8.4, Vector3(3.1, 1.62, 3.8), Vector3(1.6, 1.5, 0.0), 38.0)
 	key(15.0, Vector3(3.8, 4.2, 9.4), Vector3(1.9, 2.0, -5.0), 50.0)
-	face(A, 10.5, Vector3(0, 0, -1))
-	look(A, 10.7, Vector3(-6.0, 4.0, -12.0))
-	look(A, 11.6, Vector3(8.0, 3.0, -10.0))
-	face(A, 12.0, Vector3(-1, 0, -0.3))
-	expr(A, 12.3, "smile", 0.6)
+	face(A, 9.2, Vector3(0.35, 0, -1))
+	look(A, 9.4, Vector3(-6.0, 4.0, -12.0))
+	look(A, 10.1, Vector3(8.0, 3.0, -10.0))
+	# Die Welt leuchtet: er dreht sich zu uns, Freudensprung und echtes Lachen (Gesicht, Brust, Schultern)
+	face(A, 10.5, Vector3(0.3, 0, 1))
+	look(A, 10.7, "cam")
+	expr(A, 10.9, "joy", 0.25)
+	react(A, 11.1, "cheer")
+	laugh(A, 11.2, 1.3, 0.85, "smile")
+	face(A, 12.4, Vector3(-1, 0, -0.3))
 	look(A, 12.8, Vector3(1.0, 14.0, -4.0))   # ganz nach oben in die Baumkronen
 	face(A, 13.5, Vector3(0.25, 0, 1))
 	look(A, 13.9, "cam")            # … und entdeckt uns: „Kommst du mit?“
@@ -1512,7 +1562,7 @@ func _act2() -> void:
 	at(33.5, func() -> void:
 		_hold[B] = false
 		heroes[B].play("idle", 0.3))
-	go(B, 33.9, 34.6, Vector3(22.5, _hill_y, -1.6), Vector3(22.3, 0, -0.5), 0.35)
+	go(B, 33.9, 34.6, Vector3(22.5, _hill_y, -1.6), Vector3(22.15, 0, -0.35), 0.35)
 
 
 # --- Akt 3 – Gemeinsam unterwegs (35–58 s) --------------------------------------------------------------------
@@ -1522,20 +1572,33 @@ func _act3() -> void:
 	var C := 2
 	var D := 3
 	# Abklatschen: beide holen aus, die Hände treffen sich wirklich in der Mitte
-	face(A, 34.6, Vector3(1, 0, 0.45))    # leicht zur Kamera geöffnet: beide Gesichter sind zu sehen
-	face(B, 34.6, Vector3(-1, 0, 0.75))
+	face(A, 34.6, Vector3(1, 0, 0.25))    # leicht zur Kamera geöffnet: beide Gesichter sind zu sehen
+	face(B, 34.6, Vector3(-1, 0, 0.3))
 	look(A, 34.6, B)
 	look(B, 34.6, A)
 	expr(A, 34.6, "grin", 0.3)
-	var clap := Vector3(21.8, 1.42, 0.05)
+	var d_ab := func() -> Vector3:
+		var d := heroes[B].global_position - heroes[A].global_position
+		d.y = 0.0
+		return d.normalized()
+	var clap := func() -> Vector3: return (_bone(A, "upperarm.r") + _bone(B, "upperarm.l")) * 0.5 + Vector3.UP * 0.2
 	at(34.82, func() -> void:
 		heroes[A].anticipate(0.22, 0.06)
 		heroes[B].anticipate(0.22, 0.06))
-	reach(A, "r", 34.95, 35.26, 35.36, 35.85, clap)
-	reach(B, "r", 34.98, 35.26, 35.36, 35.85, clap)
+	reach(A, "r", 34.95, 35.26, 35.36, 35.85, func() -> Vector3: return (clap.call() as Vector3) - (d_ab.call() as Vector3) * 0.025,
+		func() -> Array: return [Vector3.UP, d_ab.call()])
+	reach(B, "l", 34.98, 35.26, 35.36, 35.85, func() -> Vector3: return (clap.call() as Vector3) + (d_ab.call() as Vector3) * 0.025,
+		func() -> Array: return [Vector3.UP, -(d_ab.call() as Vector3)])
+	tilt(A, 35.0, Vector3(0, 0, 0.12))   # Köpfe weichen dem Arm aus
+	tilt(B, 35.0, Vector3(0, 0, 0.12))
+	tilt(A, 35.7, Vector3.ZERO)
+	tilt(B, 35.7, Vector3.ZERO)
 	at(35.27, func() -> void:
 		Audio.sfx("pop", null, -2.0, 1.2, 0.0)
-		FX.ring(_origin + clap, Color(1, 1, 1, 0.7), 0.9, 0.25)
+		FX.ring(clap.call(), Color(1, 1, 1, 0.7), 0.9, 0.25)
+		var d: Vector3 = d_ab.call()
+		bodies[A].push(-d * 1.8)   # der Schlag geht durch beide Körper
+		bodies[B].push(d * 1.8)
 		heroes[A].squash(1.06, 0.95, 0.25)
 		heroes[B].squash(1.06, 0.95, 0.25))
 	laugh(A, 35.6, 1.25, 0.8)
@@ -1543,7 +1606,7 @@ func _act3() -> void:
 	key(36.7, Vector3(22.0, 1.5, 3.6), Vector3(21.8, 1.32, -0.2), 36.0)
 	# gemeinsam weiter – ein Schmetterling landet auf der Nase des Helden; er bremst, sie schaut dem Falter nach …
 	go(A, 37.0, 38.9, Vector3(21.3, 0, 0.1), Vector3(24.6, 0, 0.2))
-	go(B, 37.15, 39.05, Vector3(22.3, 0, -0.5), Vector3(23.72, 0, 0.1))
+	go(B, 37.15, 39.05, Vector3(22.15, 0, -0.35), Vector3(23.72, 0, 0.1))
 	look(A, 37.0, null)
 	look(B, 37.0, null)
 	key(37.0, Vector3(24.4, 1.6, 4.6), Vector3(22.7, 1.25, -0.2), 42.0)
@@ -1555,9 +1618,11 @@ func _act3() -> void:
 	expr(B, 38.4, "dreamy", 0.3)
 	# … und läuft auf: beide Hände landen in seinem Rücken, er stolpert einen Schritt vor
 	var back := func() -> Vector3: return _bone(A, "chest") - _fwd(A) * 0.2
-	reach(B, "l", 38.9, 39.05, 39.22, 39.6, back)
-	reach(B, "r", 38.9, 39.05, 39.22, 39.6, back)
+	reach(B, "l", 38.9, 39.05, 39.22, 39.6, back, func() -> Array: return [Vector3.UP, _fwd(B)])
+	reach(B, "r", 38.9, 39.05, 39.22, 39.6, back, func() -> Array: return [Vector3.UP, _fwd(B)])
 	at(39.06, func() -> void:
+		bodies[A].push(_fwd(A) * 2.6)    # Oberkörper wird nach vorn geworfen …
+		bodies[B].push(-_fwd(B) * 1.6)   # … sie prallt zurück
 		heroes[A].squash(1.1, 0.92, 0.3)
 		heroes[B].squash(1.08, 0.94, 0.3)
 		Audio.sfx("hit_soft", heroes[A].global_position, -4.0, 1.2, 0.0))
@@ -1584,7 +1649,7 @@ func _act3() -> void:
 	look(B, 42.7, C)
 	expr(A, 42.5, "smile", 0.4)
 	expr(B, 42.8, "smile", 0.4)
-	at(44.5, func() -> void: bodies[C].chest_add = Vector3(0.5, 0, 0))
+	at(44.5, func() -> void: bodies[C].chest_add = Vector3(0.32, 0, 0))   # gebückt, das Gesicht bleibt sichtbar
 	reach(C, "l", 44.45, 44.9, 46.5, 46.95, func() -> Vector3: return _rel(C, -0.2, 0.5, 0.24))
 	reach(C, "r", 44.45, 44.9, 46.5, 46.95, func() -> Vector3: return _rel(C, 0.2, 0.5, 0.24))
 	look(C, 44.6, Vector3(24.6, 0.2, 0.9))
@@ -1592,9 +1657,15 @@ func _act3() -> void:
 	# Der Held geht hin und klopft ihm auf die Schulter – die Hand kommt an
 	go(A, 44.3, 45.0, Vector3(25.3, 0, 0.2), Vector3(24.55, 0, 0.5))
 	face(A, 45.0, Vector3(-1, 0, 0.45))
-	reach(A, "r", 45.05, 45.42, 46.3, 46.8, func() -> Vector3: return _near_shoulder(C, A) + Vector3(0, 0.1 + 0.05 * sin(t * 12.0), 0))
-	key(45.2, Vector3(23.6, 1.45, 4.4), Vector3(24.15, 1.15, 0.7), 38.0)
-	look(C, 45.7, A)
+	reach(A, "r", 45.05, 45.42, 46.3, 46.8, func() -> Vector3: return _near_shoulder(C, A) + Vector3(0, 0.1 + 0.05 * sin(t * 12.0), 0),
+		func() -> Array: return [_fwd(A), Vector3.DOWN])
+	for pt in [45.42, 45.94]:   # Tiefpunkte des Klopfens: die Schulter gibt nach
+		at(pt, func() -> void:
+			var d := heroes[C].global_position - heroes[A].global_position
+			d.y = 0.0
+			bodies[C].push(d.normalized() * 1.3))
+	key(45.2, Vector3(25.7, 0.95, 3.0), Vector3(24.0, 1.2, 0.7), 40.0)   # tief vor dem Barbaren: Gesicht und Hand auf der Schulter
+	look(C, 45.45, A)
 	expr(C, 45.8, "smile", 0.4)
 	laugh(B, 45.7, 1.0, 0.5)
 	at(46.7, func() -> void: bodies[C].chest_add = Vector3.ZERO)
@@ -1649,14 +1720,23 @@ func _act3() -> void:
 	expr(A, 54.9, "smile", 0.3)
 	go(A, 55.0, 55.7, Vector3(42.0, 0, 0.2), Vector3(41.1, 0, 0.3))   # stellt sich neben sie – beide Gesichter frei
 	var hands := func() -> Vector3: return (_bone(A, "upperarm.l") + _bone(B, "upperarm.r")) * 0.5 + Vector3(0, -0.22, 0)
-	reach(A, "l", 55.65, 55.98, 57.35, 57.8, hands)
-	reach(B, "r", 55.75, 56.02, 57.35, 57.8, hands)
+	var d_ba := func() -> Vector3:
+		var d := heroes[A].global_position - heroes[B].global_position
+		d.y = 0.0
+		return d.normalized()
+	reach(A, "l", 55.65, 55.98, 57.35, 57.8, func() -> Vector3: return (hands.call() as Vector3) + (d_ba.call() as Vector3) * 0.03,
+		func() -> Array: return [(_fwd(A) * 0.5 + Vector3.DOWN).normalized(), -(d_ba.call() as Vector3)])
+	reach(B, "r", 55.75, 56.02, 57.35, 57.8, func() -> Vector3: return (hands.call() as Vector3) - (d_ba.call() as Vector3) * 0.03,
+		func() -> Array: return [(_fwd(B) * 0.5 + Vector3.DOWN).normalized(), d_ba.call()])
 	at(55.98, func() -> void: Audio.sfx("plop", null, -8.0, 1.3, 0.0))
 	look(B, 56.0, A)
 	expr(B, 56.0, "surprised", 0.15)
 	tilt(B, 56.0, Vector3.ZERO)
 	go(A, 56.1, 57.9, Vector3(41.1, 0, 0.3), Vector3(46.6, 0, 0.1))
-	at(56.24, func() -> void: heroes[B].squash(0.94, 1.07, 0.3))   # der Ruck
+	at(56.24, func() -> void:
+		heroes[B].squash(0.94, 1.07, 0.3)   # der Ruck: ihr Oberkörper wird mitgerissen
+		bodies[B].push((d_ba.call() as Vector3) * 2.4)
+		bodies[A].push(-(d_ba.call() as Vector3) * 0.9))
 	go(B, 56.26, 57.9, Vector3(40.6, 0, -0.9), Vector3(45.4, 0, -0.5))
 	expr(B, 56.6, "laugh", 0.3)
 	expr(A, 56.3, "grin", 0.3)
@@ -1702,7 +1782,11 @@ func _act4() -> void:
 	expr(C, 61.2, "grin", 0.2)
 	at(61.58, func() -> void:
 		heroes[D].squash(1.1, 0.92, 0.25)
+		var d := heroes[D].global_position - heroes[C].global_position
+		d.y = 0.0
+		bodies[D].push(d.normalized() * 2.0)   # der Knuff schiebt ihn seitlich weg
 		Audio.sfx("hit_soft", null, -8.0, 1.4, 0.0))
+	laugh(D, 61.75, 0.9, 0.7)
 	look(D, 61.6, C)
 	expr(D, 61.6, "laugh", 0.2)
 	look(C, 62.2, null)
@@ -1745,7 +1829,8 @@ func _act4() -> void:
 
 
 ## Elf Takte Spiel (je 1,74 s): Spielbrett aus der Luft + Würfelblock (2) · Zug über vier Felder · Stern ·
-## Sumo-Ring · Zielsprint · Boss-Ausweichen · Nitro Dash: Start, Drift, Überholen, Ziel.
+## Ereignisfeld „?“ · Minispiel Sumo-Ring · Boss-Ausweichen · Nitro Dash: Start, Drift, Überholen, Ziel.
+## Dezente Einblendungen benennen, was man sieht: Spielbrett · Ereignisfelder · Minispiele · Bosskämpfe · Nitro Dash.
 func _montage() -> void:
 	var sh := 4.0 * BEAT
 	var s := []
@@ -1755,6 +1840,13 @@ func _montage() -> void:
 	var B := 1
 	var C := 2
 	var D := 3
+	# Was man sieht, in einem Wort – klein über dem unteren Kinobalken
+	for c: Array in [[s[0] + 0.3, "SPIELBRETT", s[4]], [s[4] + 0.15, "EREIGNISFELDER", s[5]], [s[5] + 0.15, "MINISPIELE", s[6]],
+			[s[6] + 0.15, "BOSSKÄMPFE", s[7]], [s[7] + 0.15, "NITRO DASH", s[11] - 0.2]]:
+		at(float(c[0]), func() -> void:
+			_caption.text = String(c[1])
+			_fade(_caption, 1.0, 0.16))
+		at(float(c[2]) - 0.2, func() -> void: _fade(_caption, 0.0, 0.16))
 	var cast := func(on: Array, time: float) -> void:
 		at(time, func() -> void:
 			for k in 4:
@@ -1846,67 +1938,98 @@ func _montage() -> void:
 		expr(k, s[3] + 1.0, "laugh", 0.2)
 	key(s[3], pe + Vector3(-1.6, 1.5, 5.0), pe + Vector3(0.1, 2.0, 0), 46.0, true)
 	key(s[4] - 0.01, pe + Vector3(-1.2, 1.5, 4.2), pe + Vector3(0.0, 2.0, 0), 42.0)
-	# --- 4: Minispiel „Sumo-Ring“ – der Barbar schiebt den Träumer mit beiden Händen von der Plattform
-	at(s[4], func() -> void:
+	# --- 4: Ereignisfeld „?“ – die Magierin hüpft drauf, ein Geschenk springt aus dem Feld und platzt: Münzregen
+	cast.call([A, B, C, D], s[4])
+	var pq: Vector3 = _bp[23]
+	var pq0: Vector3 = _bp[22]
+	for k in [A, C, D]:
+		var hp: Vector3 = _bp[[19, 0, 27, 12][k]] if k != A else _bp[i0 + 4]
+		go(k, s[4], s[4] + 0.01, hp, hp)
+		look(k, s[4] + 0.1, B)
+		expr(k, s[4], "curious", 0.0)
+	go(B, s[4], s[4] + 0.01, pq0, pq0)
+	face(B, s[4], (pq - pq0).normalized() + side * 0.9)
+	expr(B, s[4], "grin", 0.0)
+	go(B, s[4] + 0.08, s[4] + 0.46, pq0, pq, 0.8)
+	at(s[4] + 0.46, func() -> void:
+		heroes[B].land_impact(0.5)
+		Audio.sfx("tick", null, -2.0, 1.3, 0.0)
+		var lbl: Label3D = _board.space_nodes[23].get_child(1) as Label3D
+		if lbl:
+			var tw := lbl.create_tween()
+			tw.tween_property(lbl, "scale", Vector3.ONE * 1.7, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tw.tween_property(lbl, "scale", Vector3.ONE, 0.3))
+	at(s[4] + 0.6, func() -> void:
+		var gift := Assets.spawn("hol/present_red", _sets.board, pq + Vector3(0.75, 0.0, 0.95), 25.0, 1.1)
+		gift.name = "EventGift"
+		Juice.pop_in(gift, 0.28)
+		var tw := gift.create_tween()
+		tw.tween_property(gift, "position:y", pq.y + 0.9, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_property(gift, "position:y", pq.y + 0.05, 0.25).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		Audio.sfx("sparkle_up", null, -4.0, 1.2, 0.0))
+	look(B, s[4] + 0.62, pq + Vector3(0.75, 0.5, 0.95))
+	expr(B, s[4] + 0.62, "surprised", 0.1)
+	at(s[4] + 0.64, func() -> void: heroes[B].squash(0.93, 1.09, 0.28))
+	at(s[4] + 1.12, func() -> void:
+		var gift := _sets.board.get_node_or_null("EventGift") as Node3D
+		if gift:
+			FX.confetti(gift.global_position + Vector3.UP * 0.8, 70)
+			FX.coins_burst(heroes[B].global_position, 12, true, _sets.board)   # Münzregen auf die Magierin
+			gift.queue_free()
+		Audio.sfx("coin", null, 0.0, 1.0, 0.0)
+		Juice.float_text(self, _origin + pq + Vector3.UP * 2.6, "+10", UI.GOLD, 110))
+	expr(B, s[4] + 1.14, "joy", 0.12)
+	laugh(B, s[4] + 1.2, 1.0, 1.0)
+	reach(B, "l", s[4] + 1.12, s[4] + 1.32, s[5], s[5], func() -> Vector3: return _rel(B, -0.5, 2.05, 0.15), func() -> Array: return [Vector3.UP, _fwd(B)])
+	reach(B, "r", s[4] + 1.14, s[4] + 1.34, s[5], s[5], func() -> Vector3: return _rel(B, 0.5, 2.05, 0.15), func() -> Array: return [Vector3.UP, _fwd(B)])
+	for k in [A, C, D]:
+		expr(k, s[4] + 1.2, "laugh", 0.2)
+		laugh(k, s[4] + 1.25 + 0.05 * k, 0.8, 0.6)
+	key(s[4], pq + Vector3(-1.5, 1.6, 4.9), pq + Vector3(0.4, 1.25, 0.3), 44.0, true)
+	key(s[5] - 0.01, pq + Vector3(-1.1, 1.5, 4.2), pq + Vector3(0.45, 1.35, 0.3), 40.0)
+	# --- 5: Minispiel „Sumo-Ring“ – der Barbar schiebt den Träumer mit beiden Händen von der Plattform
+	at(s[5], func() -> void:
 		_use_set("montage", "day")
 		_board.star_node.position = _bp[21] + Vector3.UP * 2.5)
-	cast.call([A, B, C, D], s[4])
+	cast.call([A, B, C, D], s[5])
 	var top := 0.6
-	go(C, s[4], s[4] + 0.5, Vector3(-1.5, top, 0.2), Vector3(-0.25, top, 0.2))
-	go(D, s[4], s[4] + 0.01, Vector3(0.55, top, 0.2), Vector3(0.55, top, 0.2))
-	face(D, s[4], Vector3(-1, 0, 0))
-	look(C, s[4], D)
-	look(D, s[4], C)
-	expr(C, s[4], "determined", 0.0)
-	expr(D, s[4], "surprised", 0.0)
+	go(C, s[5], s[5] + 0.5, Vector3(-1.5, top, 0.2), Vector3(-0.25, top, 0.2))
+	go(D, s[5], s[5] + 0.01, Vector3(0.55, top, 0.2), Vector3(0.55, top, 0.2))
+	face(D, s[5], Vector3(-1, 0, 0))
+	look(C, s[5], D)
+	look(D, s[5], C)
+	expr(C, s[5], "determined", 0.0)
+	expr(D, s[5], "surprised", 0.0)
 	var chest_d := func() -> Vector3: return _bone(D, "chest") + Vector3(0, 0.05, 0)
-	reach(C, "l", s[4] + 0.3, s[4] + 0.5, s[4] + 0.95, s[4] + 1.2, chest_d)
-	reach(C, "r", s[4] + 0.3, s[4] + 0.5, s[4] + 0.95, s[4] + 1.2, chest_d)
-	at(s[4] + 0.5, func() -> void:
+	reach(C, "l", s[5] + 0.3, s[5] + 0.5, s[5] + 0.95, s[5] + 1.2, chest_d)
+	reach(C, "r", s[5] + 0.3, s[5] + 0.5, s[5] + 0.95, s[5] + 1.2, chest_d)
+	at(s[5] + 0.5, func() -> void:
 		Audio.sfx("hit_soft", null, -2.0, 1.0, 0.0)
 		heroes[D].squash(1.1, 0.92, 0.3))
-	go(C, s[4] + 0.5, s[4] + 0.95, Vector3(-0.25, top, 0.2), Vector3(1.9, top, 0.2))
-	go(D, s[4] + 0.5, s[4] + 0.95, Vector3(0.55, top, 0.2), Vector3(2.75, top, 0.2))
-	expr(D, s[4] + 0.55, "scared", 0.1)
-	reach(D, "l", s[4] + 0.6, s[4] + 0.85, s[4] + 1.2, s[4] + 1.5, func() -> Vector3: return _rel(D, -0.6, 1.8, 0.1))
-	reach(D, "r", s[4] + 0.65, s[4] + 0.9, s[4] + 1.2, s[4] + 1.5, func() -> Vector3: return _rel(D, 0.6, 1.7, 0.1))
-	go(D, s[4] + 0.95, s[4] + 1.5, Vector3(2.75, top, 0.2), Vector3(5.3, -0.7, 0.4), 0.7)
-	at(s[4] + 1.42, func() -> void:
+	go(C, s[5] + 0.5, s[5] + 0.95, Vector3(-0.25, top, 0.2), Vector3(1.9, top, 0.2))
+	go(D, s[5] + 0.5, s[5] + 0.95, Vector3(0.55, top, 0.2), Vector3(2.75, top, 0.2))
+	expr(D, s[5] + 0.55, "scared", 0.1)
+	reach(D, "l", s[5] + 0.6, s[5] + 0.85, s[5] + 1.2, s[5] + 1.5, func() -> Vector3: return _rel(D, -0.6, 1.8, 0.1))
+	reach(D, "r", s[5] + 0.65, s[5] + 0.9, s[5] + 1.2, s[5] + 1.5, func() -> Vector3: return _rel(D, 0.6, 1.7, 0.1))
+	go(D, s[5] + 0.95, s[5] + 1.5, Vector3(2.75, top, 0.2), Vector3(5.3, -0.7, 0.4), 0.7)
+	at(s[5] + 1.42, func() -> void:
 		FX.splash(_origin + Vector3(5.3, -0.3, 0.4), 1.7)
 		Audio.sfx("splash", null, 0.0, 1.0, 0.0))
-	expr(C, s[4] + 1.1, "laugh", 0.2)
+	expr(C, s[5] + 1.1, "laugh", 0.2)
 	# im Hintergrund ringen der Held und die Magierin, Hände an den Schultern
-	go(A, s[4], s[4] + 0.01, Vector3(-1.2, top, -1.9), Vector3(-1.2, top, -1.9))
-	go(B, s[4], s[4] + 0.01, Vector3(-0.3, top, -2.1), Vector3(-0.3, top, -2.1))
-	face(A, s[4], Vector3(1, 0, -0.2))
-	face(B, s[4], Vector3(-1, 0, 0.2))
-	look(A, s[4], B)
-	look(B, s[4], A)
+	go(A, s[5], s[5] + 0.01, Vector3(-1.2, top, -1.9), Vector3(-1.2, top, -1.9))
+	go(B, s[5], s[5] + 0.01, Vector3(-0.3, top, -2.1), Vector3(-0.3, top, -2.1))
+	face(A, s[5], Vector3(1, 0, -0.2))
+	face(B, s[5], Vector3(-1, 0, 0.2))
+	look(A, s[5], B)
+	look(B, s[5], A)
 	for hs in ["l", "r"]:
-		reach(A, hs, s[4], s[4] + 0.05, s[5], s[5], func() -> Vector3: return _bone(B, "upperarm." + ("r" if hs == "l" else "l")))
-		reach(B, hs, s[4], s[4] + 0.05, s[5], s[5], func() -> Vector3: return _bone(A, "upperarm." + ("r" if hs == "l" else "l")))
-	expr(A, s[4], "determined", 0.0)
-	expr(B, s[4], "grin", 0.0)
-	key(s[4], Vector3(-2.2, 2.3, 7.6), Vector3(0.6, 1.3, 0.0), 44.0, true)
-	key(s[5] - 0.01, Vector3(0.6, 2.0, 7.0), Vector3(2.6, 0.9, 0.2), 42.0)
-	# --- 5: Minispiel „Zielsprint“ – Kopf an Kopf über die Linie
-	cast.call([A, B, C], s[5])
-	var lanes := [[B, -0.75, 56.0, 60.9, 1.22], [A, 0.75, 55.9, 60.5, 1.26], [C, -2.25, 55.2, 59.4, 1.3]]
-	for ln in lanes:
-		var k: int = ln[0]
-		go(k, s[5], s[5] + float(ln[4]), Vector3(float(ln[2]), 0, float(ln[1])), Vector3(float(ln[3]), 0, float(ln[1])))
-		expr(k, s[5], "determined", 0.0)
-		breath(k, s[5], 0.9, 2.8)
-	reach(B, "r", s[5] + 0.8, s[5] + 1.0, s[5] + 1.3, s[5] + 1.6, func() -> Vector3: return _rel(B, 0.2, 1.3, 0.8))   # die Hand zuerst!
-	expr(B, s[5] + 1.2, "laugh", 0.15)
-	expr(A, s[5] + 1.3, "ouch", 0.15)
-	at(s[5] + 1.12, func() -> void:
-		_mark("Blitz")
-		_flash.modulate.a = 0.45
-		_fade(_flash, 0.0, 0.25)
-		Audio.sfx("whistle_up", null, -4.0, 1.2, 0.0))
-	key(s[5], Vector3(63.4, 1.0, 4.8), Vector3(57.6, 1.1, -0.4), 38.0, true)
-	key(s[6] - 0.01, Vector3(63.1, 1.1, 4.5), Vector3(59.4, 1.1, -0.4), 36.0)
+		reach(A, hs, s[5], s[5] + 0.05, s[6], s[6], func() -> Vector3: return _bone(B, "upperarm." + ("r" if hs == "l" else "l")))
+		reach(B, hs, s[5], s[5] + 0.05, s[6], s[6], func() -> Vector3: return _bone(A, "upperarm." + ("r" if hs == "l" else "l")))
+	expr(A, s[5], "determined", 0.0)
+	expr(B, s[5], "grin", 0.0)
+	key(s[5], Vector3(-2.2, 2.3, 7.6), Vector3(0.6, 1.3, 0.0), 44.0, true)
+	key(s[6] - 0.01, Vector3(0.6, 2.0, 7.0), Vector3(2.6, 0.9, 0.2), 42.0)
 	# --- 6: Bosskampf – dem Schlag gerade noch ausgewichen
 	cast.call([D], s[6])
 	at(s[6], func() -> void:
@@ -2006,7 +2129,7 @@ func _act5() -> void:
 		var mouth := _bone(C, "head") + _fwd(C) * 0.36 + Vector3(0, 0.08, 0)
 		var give := smoothstep(t0 + 4.05, t0 + 4.5, t) * (1.0 - smoothstep(t0 + 4.85, t0 + 5.3, t))
 		return rest.lerp(mouth, bite.call(t - (t0 + 0.5))).lerp(_origin + mid, give)
-	reach(C, "r", t0 - 0.1, t0, t0 + 5.3, t0 + 5.8, c_hand)
+	reach(C, "r", t0 - 0.1, t0, t0 + 5.3, t0 + 5.8, c_hand, func() -> Array: return [_fwd(C), Vector3.UP])   # Keks auf der Handfläche
 	carry(_snack, C, "r", t0, t0 + 4.74)
 	at(t0 + 0.82, func() -> void: Audio.sfx("plop", null, -12.0, 1.7, 0.0))
 	# Die kleine Pointe, nah: Der Held schielt auf den Keks · der Barbar merkt es, zieht die Braue hoch · der Held
@@ -2025,14 +2148,15 @@ func _act5() -> void:
 	at(t0 + 4.02, func() -> void: heroes[C].squash(1.03, 0.97, 0.4))   # das Seufzen
 	look(A, t0 + 4.3, Vector3(-5.9, 1.2, -19.5))
 	expr(A, t0 + 4.3, "awe", 0.2)
-	reach(A, "l", t0 + 4.3, t0 + 4.72, t0 + 4.8, t0 + 5.0, mid)
+	reach(A, "l", t0 + 4.3, t0 + 4.72, t0 + 4.8, t0 + 5.0, func() -> Vector3: return _origin + mid + Vector3.UP * 0.06,
+		func() -> Array: return [_fwd(A), Vector3.DOWN])   # greift von oben zu
 	at(t0 + 4.74, func() -> void: Audio.sfx("plop", null, -10.0, 1.5, 0.0))
 	carry(_snack, A, "l", t0 + 4.74, DUR + 1.0)
 	var a_hand := func() -> Vector3:
 		var mouth := _bone(A, "head") + _fwd(A) * 0.36 + Vector3(0, 0.06, 0)
 		var rest := _rel(A, -0.2, 0.82, 0.34)
 		return (_origin + mid).lerp(mouth, smoothstep(t0 + 4.85, t0 + 5.25, t)).lerp(rest, smoothstep(t0 + 5.55, t0 + 6.0, t))
-	reach(A, "l", t0 + 4.76, t0 + 4.9, DUR, DUR, a_hand)
+	reach(A, "l", t0 + 4.76, t0 + 4.9, DUR, DUR, a_hand, func() -> Array: return [_fwd(A), Vector3.UP])
 	tilt(A, t0 + 4.9, Vector3.ZERO)
 	at(t0 + 5.3, func() -> void:
 		faces[A].chew = 1.0
@@ -2043,6 +2167,13 @@ func _act5() -> void:
 	laugh(C, t0 + 5.55, 1.7, 0.6)
 	at(t0 + 5.9, func() -> void: faces[A].chew = 0.0)
 	laugh(A, t0 + 5.95, 1.5, 0.55)
+	# … die Magierin im Gras dreht den Kopf zu den beiden und lacht mit
+	pose(B, t0 + 5.6, "sit")
+	face(B, t0 + 5.65, Vector3(-1, 0, 0.6))
+	look(B, t0 + 5.7, A)
+	expr(B, t0 + 5.8, "grin", 0.25)
+	laugh(B, t0 + 6.25, 1.5, 0.8)
+	look(B, t0 + 7.9, Vector3(-2.0, 20.0, -24.0))
 	# Ein Funke steigt auf – die Kamera zieht sich zurück und steigt in den Nachthimmel
 	at(t0 + 6.4, func() -> void:
 		FX.sparks(_origin + fire + Vector3.UP * 0.6, Color(1.0, 0.7, 0.3), 8, 0.6)
@@ -2257,14 +2388,15 @@ func _race_state(k: int, u: float) -> Array:
 			var inner := _drift_inner()
 			var e1 := u * u * (3.0 - 2.0 * u)
 			var slide := sin(clampf(u * 1.12, 0.0, 1.0) * PI)
-			st.append([s0 + 58.0 * u, inner * lerpf(-4.2, 3.6, e1), inner * 0.5 * slide, 33.0, false])
-			st.append([s0 - 10.0 + 55.0 * u, inner * lerpf(-1.0, -4.5, e1), inner * 0.2 * slide, 31.5, false])
-			st.append([s0 - 19.0 + 54.0 * u, inner * 2.0, inner * 0.12 * slide, 31.0, false])
+			st.append([s0 + 58.0 * u, inner * lerpf(-4.2, 3.6, e1), inner * 0.68 * slide, 33.0, false])
+			st.append([s0 - 10.0 + 55.0 * u, inner * lerpf(-1.0, -4.5, e1), inner * 0.34 * slide, 31.5, false])
+			st.append([s0 - 19.0 + 54.0 * u, inner * 2.0, inner * 0.22 * slide, 31.0, false])
 			st.append([s0 - 30.0 + 54.0 * u, -inner * 2.5, 0.0, 31.0, false])
-		2:   # Überholen: der Held zündet den Boost und zieht innen vorbei
+		2:   # Überholen: im Windschatten, Boost, ausscheren, vorbeiziehen und wieder einscheren
 			var e2 := u * u * (3.0 - 2.0 * u)
-			st.append([ln - 86.0 + 52.0 * u + 16.0 * e2, lerpf(3.4, 2.6, e2), 0.0, 30.0 + 55.0 * u * (1.0 - u), u > 0.2])
-			st.append([ln - 76.0 + 52.0 * u, -2.6, 0.0, 30.0, false])
+			var lane := lerpf(lerpf(-2.3, 1.8, smoothstep(0.2, 0.5, u)), -1.6, smoothstep(0.74, 1.0, u))
+			st.append([ln - 86.0 + 52.0 * u + 16.0 * e2, lane, 0.0, 30.0 + 55.0 * u * (1.0 - u), u > 0.25 and u < 0.85])
+			st.append([ln - 76.0 + 52.0 * u, -2.6 + 0.35 * smoothstep(0.55, 0.75, u) * (1.0 - smoothstep(0.75, 1.0, u)), 0.0, 30.0, false])
 			st.append([ln - 92.0 + 51.0 * u, -0.5, 0.0, 29.5, false])
 			st.append([ln - 101.0 + 50.0 * u, 3.0, 0.0, 29.0, false])
 		_:   # Zieldurchfahrt
@@ -2287,16 +2419,32 @@ func _drive_karts(delta: float) -> void:
 		return
 	var rs := _race_shot()
 	var st := _race_state(int(rs.x), rs.y)
+	# Nachbarzustände (±du) → Fahrtrichtung und Querbeschleunigung aus der tatsächlichen Bahn
+	var du := 0.012
+	var hdt := du * 4.0 * BEAT
+	var st0 := _race_state(int(rs.x), maxf(rs.y - du, 0.0))
+	var st2 := _race_state(int(rs.x), minf(rs.y + du, 1.0))
 	for j in _karts.size():
 		var kv := _karts[j]
 		var e: Array = st[j]
-		var yaw := float(e[2])
+		var drift := float(e[2])
+		var p0 := _track_pt(float(st0[j][0]), float(st0[j][1]), 0.0)
+		var p1 := _track_pt(float(e[0]), float(e[1]), 0.0)
+		var p2 := _track_pt(float(st2[j][0]), float(st2[j][1]), 0.0)
+		var fwd_t := _track_fwd(float(e[0]))
+		var right_t := fwd_t.cross(Vector3.UP).normalized()
+		var vel := (p2 - p0) / (2.0 * hdt)
+		var head := atan2(vel.dot(right_t), maxf(vel.dot(fwd_t), 0.5))   # Nase zeigt dorthin, wo das Kart hinfährt
+		var acc := (p2 - 2.0 * p1 + p0) / (hdt * hdt)
+		var right_k := (fwd_t * cos(head) + right_t * sin(head)).cross(Vector3.UP).normalized()
+		var lat := clampf(acc.dot(right_k), -45.0, 45.0)
 		var sc := kv.scale
 		kv.visible = true
-		kv.global_transform = _kart_xf(float(e[0]), float(e[1]), yaw)
+		kv.global_transform = _kart_xf(float(e[0]), float(e[1]), head)
 		kv.scale = sc
-		kv.update_visual(float(e[3]), clampf(yaw * 2.0, -1.0, 1.0), int(signf(yaw)) if absf(yaw) > 0.12 else 0, 2 if absf(yaw) > 0.3 else 0,
-			bool(e[4]), false, delta)
+		var ddir := int(signf(drift)) if absf(drift) > 0.12 else 0
+		kv.update_visual(float(e[3]), clampf(head * 3.0 + lat * 0.02 + drift * 0.8, -1.0, 1.0), ddir, 2 if absf(drift) > 0.3 else 0,
+			bool(e[4]), false, delta, drift * 1.15, lat)
 	_spark_acc += delta
 	if absf(float(st[0][2])) > 0.3 and _spark_acc >= 0.05:   # Funken am Heck, zeitbasiert
 		_spark_acc = 0.0

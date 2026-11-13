@@ -2,8 +2,7 @@
 
 Eigenständige Produktionsumgebung für den Trailer. Sie ist vollständig vom Spiel getrennt:
 
-* Alles liegt in diesem Ordner: Szene (`Trailer.tscn`), Regie-Skript (`trailer.gd`), Mimik (`trailer_face.gd`),
-  Körper-Ebene (`trailer_body.gd`), eingefrorene Rennstrecke (`trailer_track.gd`), Render-Skript (`render.sh`), Video-Prüfung (`qa.py`) und Trennungs-Prüfung
+* Alles liegt in diesem Ordner: Szene (`Trailer.tscn`), Regie-Skript (`trailer.gd`), eingefrorene Rennstrecke (`trailer_track.gd`), Render-Skript (`render.sh`), Video-Prüfung (`qa.py`) und Trennungs-Prüfung
   (`check_isolation.sh`).
 * Die Nitro-Dash-Szene fährt auf einer eigenen Kopie des Lumos-Rings im Stand von Spiel 1.3.0
   (`trailer_track.gd`). Das Spiel hat seine Strecken in 1.4.0 neu entworfen. Die Kamerafahrten des Trailers sind
@@ -83,16 +82,18 @@ Licht, Brennweite und Staffelung im Raum.
 
 ## Animationsregie
 
-* **Mimik (`trailer_face.gd`):** Die Figuren des Spiels haben starre Augen und keinen Mund. Der Trailer versenkt
-  die Original-Augen in einer eigenen Kopie des Kopf-Meshs und hängt eigene Augen, Glanzpunkte und einen Mund an
-  den Kopfknochen. Augen- und Mundposition werden je Figur aus dem Mesh vermessen. Ausdrücke sind Parametersätze
-  (`expr()`), zwischen denen das Gesicht weich gleitet: Lidschlag, Lachaugen, große Staune-Augen, schräge Lider,
-  Blickrichtung, Mundform mit Zähnen und Zunge. Die Brauen der Figuren bleiben, es gibt keine doppelten.
-* **Körper (`trailer_body.gd`):** liegt über Animation und Slapstick-Modifier des Spiels.
-  * Arm-IK: `reach()` führt eine Hand an einen Punkt im Raum (Schulter des Freundes, Hand beim Abklatschen, Keks).
-  * `carry()` legt einen Gegenstand in die Hand.
-  * Lachen (`laugh()`) ist eine Kette: Schmunzeln, Mund auf, Augen zu Sicheln, Brust und Schultern wippen,
-    ausklingen. Mund und Körper teilen dieselbe Phase.
+* **Figuren = Character Framework des Spiels** (`scripts/actor/`, siehe `docs/CHARACTER_FRAMEWORK.md`). Seit 1.5.1
+  gibt es nur noch eine Umsetzung: Der Trailer hängt je Darsteller `LumosBody` (Skelett-Modifier) und `LumosFace`
+  an, Profil per `LumosActorConfig.detect()`. Eigene Kopien (`trailer_face.gd`, `trailer_body.gd`) gibt es nicht mehr.
+  Trailer-Einstellungen: `ground_mask = 0` (Boden = Standhöhe der Figur, keine Raycasts gegen Kulissen),
+  `lod = false` (immer volle Qualität), `attention = 0.42`.
+  * Mimik: große Augen, Lachaugen, Brauen-Heben bei neuem Blickkontakt, große Münder (auch von weitem lesbar),
+    Wangenröte. `expr()` setzt Gesicht **und** Haltung (Brust, Kopf, Schultern) zum Gefühl.
+  * Blick: Kopf auf das Ziel, Oberkörper und Hüfte drehen mit (`attend_target`).
+  * Arm-IK mit Reach-Assist: `reach()` führt eine Hand an einen Punkt; liegt er zu weit weg, lehnt sich die Brust hin.
+  * Fußanker beim Stehen, Gehen und Laufen (nicht in Posen, Sprüngen oder im Kart).
+  * `carry()` legt einen Gegenstand in die Hand. Lachen (`laugh()`) ist eine Kette: Schmunzeln, Mund auf, Augen zu
+    Sicheln, Brust und Schultern wippen, ausklingen. Mund und Körper teilen dieselbe Phase.
   * Atmung, Kopfneigung (`tilt()`), Vorbeugen. Alles läuft in Filmzeit, also bei 30 und 60 fps gleich.
 * **Keine Symbole:** Reaktionen aus der Bibliothek des Spiels laufen ohne „HAHA“, „!“ und Sternchen. Gefühle zeigen
   Gesicht und Körper.

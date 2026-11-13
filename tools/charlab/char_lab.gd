@@ -405,7 +405,13 @@ func _auto() -> void:
 			m.pd = minf(m.pd, (actors[0].body.hand_axes("r")[1] as Vector3).dot(Vector3.DOWN) * -1.0))
 	_ok(got[0] and m.min_d < 0.04, "7 Hand erreicht die Oberfläche des Balls (Abstand %.0f mm)" % (m.min_d * 1000.0))
 	_ok(m.pd < -0.85, "7 Handfläche zeigt beim Zugreifen nach unten auf den Ball (Abweichung %.0f°)" % rad_to_deg(acos(clampf(-m.pd, -1, 1))))
-	await _wait(0.8)
+	var flip := [Vector3.ZERO, 0.0]   # Wechsel Greifen (Handfläche unten) → Tragen (oben): gleitet statt umzuklappen
+	await _wait(0.8, func() -> void:
+		var pn: Vector3 = actors[0].body.hand_axes("r")[1]
+		if flip[0] != Vector3.ZERO:
+			flip[1] = maxf(float(flip[1]), _deg(flip[0], pn))
+		flip[0] = pn)
+	_ok(float(flip[1]) < 15.0, "7 Wechsel der Handhaltung gleitet (größter Drehschritt je Bild %.1f°)" % float(flip[1]))
 	var up_dot := (actors[0].body.hand_axes("r")[1] as Vector3).dot(Vector3.UP)
 	_ok(actors[0].interact.held.r == ball and up_dot > 0.85 and ball.global_position.y > actors[0].hand_pos("r").y, "7 Ball liegt auf der nach oben gedrehten Handfläche (%.0f°)" % rad_to_deg(acos(clampf(up_dot, -1, 1))))
 	await _shot("07_halten")

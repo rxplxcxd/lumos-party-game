@@ -1,7 +1,39 @@
 # Changelog – Lumos Party & Nitro Dash
 
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
+Ab 1.5.1 wieder in kleinen Schritten: 1.5.1, 1.5.2 … bis 1.9.9 (keine Sprünge auf ganze Versionen).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
+
+## 1.5.1 – Framework gehärtet, Trailer nutzt es, Neu-Render 1080p60
+Eine zentrale Umsetzung: Der Trailer nutzt jetzt das Character Framework, die alten Kopien `trailer/trailer_face.gd`
+und `trailer/trailer_body.gd` sind gelöscht. Spielmodi bleiben unverändert (Framework dort noch nicht eingebaut).
+1.5.0 bleibt als Rückfall erhalten (Git-Verlauf, Original-Render aufbewahrt).
+* **Adapter-Architektur:** `LumosActorConfig.detect()` erkennt das Rig – Profile `humanoid` (KayKit-Helden),
+  `simple` (Kenney-Figuren: zielende Arme, keine Fuß-IK), `rigid` (Haustiere ohne Skelett: Ganzkörper-Haltung).
+  `actor.capabilities()` sagt, was eine Figur kann; jede Funktion fällt sonst sauber zurück.
+* **Fußanker:** Standphase wird in der Welt verankert, Bodenhöhe per Callable oder Raycast. Rutschen beim Gehen
+  0,2 → 0,009 m/s, beim Laufen 0,6 → 0,04 m/s (gemessen).
+* **Hand-IK mit Handdrehung:** Finger- und Handflächenrichtung je Griff, Kette endet am Handgelenk, damit die
+  gedrehte Hand exakt am Ziel liegt; Haltungswechsel gleiten. **Reach-Assist:** Brust lehnt sich zu fernen Zielen.
+  Lenkrad 131 → 3 mm, High-Five 438 → 50 mm (Handflächen berühren sich), Greifen 0 mm mit Handfläche unten/oben.
+* **Interaktionen mit Anfang, Höhepunkt, Ende:** High-Five (Schultern gegenüber, Abstand aus der Reichweite),
+  Umarmung, Schubser, Schulterklopfen (Schulter gibt nach); Kontakte geben mit Stoß-Federn Gewicht weiter.
+* **Gesicht lesbarer:** deutlich größere Münder (rundes „O“, Grimasse „∩“ bei negativen Gefühlen), Wangenröte,
+  Brauen-Heben bei Blickkontakt; Gesichtsteile liegen auf der Kopfkrümmung (kein Schweben/Durchdringen, 0°/45°/75°
+  geprüft). „Traurig“ senkt den Kopf nur noch so weit, dass das Gesicht sichtbar bleibt.
+* **Ganzer Körper fühlt mit:** Haltung je Gefühl, beim Ansehen drehen Hüfte und Oberkörper mit.
+* **Leistung:** 16 Figuren 13 ms → 4,3 ms je Bild (Framework-Anteil 3,9 ms, CPU); Detailstufen: fern ohne Fußanker,
+  außerhalb des Bildes pausiert (16 Figuren 0,65 ms). Messung bei 1/4/8/16 Figuren im Labor.
+* **Testlabor:** 16 Prüfbereiche inkl. Fußkontakt, Handdrehung, Haltungswechsel, Körperkontakt, gleichzeitige
+  Animationen, Kompatibilität, Leistung und LOD – läuft in der CI (`CHARLAB OK`).
+* **Trailer:** Beginn im Mondlicht-Wald statt Schwarz, der Stern weckt die Welt nach 7 s (vorher 8,6 s), Freudensprung
+  zur Kamera; Kontakte mit Handhaltung und Gewicht (Abklatschen, Auflaufen, Schulterklopfen, An-die-Hand-nehmen);
+  Montage zeigt Spielbrett, **Ereignisfeld „?“** (Geschenk, Münzregen), Minispiel, Boss, Rennen – mit dezenten
+  Einblendungen; Nitro Dash mit echter Fahrtrichtung, Querbeschleunigung, kräftigerem Drift und Überholmanöver
+  (ausscheren, vorbeiziehen, einscheren); Lagerfeuer: Keks auf der Handfläche, die Magierin setzt sich auf und lacht
+  mit. Neu gerendert in 1920×1080 bei 60 fps.
+* **Grenzen (dokumentiert):** eigene Avatare im Labor nicht geprüft, GPU-/Web-Leistung nicht gemessen, Kenney-Figuren
+  und Haustiere ohne Gesicht.
 
 ## 1.5.0 – Character Animation & Interaction Framework (Fundament, noch nicht im Spiel eingebaut)
 Neuer, eigenständiger Baustein in `scripts/actor/` mit Testlabor in `tools/charlab/`. Brett, Minispiele, Nitro Dash
