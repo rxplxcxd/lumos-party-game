@@ -1671,7 +1671,7 @@ func _act3() -> void:
 	at(53.0, func() -> void: _curtain.visible = true)
 	at(WIPE2_T - 0.35, func() -> void: Audio.sfx("splash", null, -6.0, 1.0, 0.0))
 	at(WIPE2_T, func() -> void: _use_set("beach", "sunset"))
-	at(61.0, func() -> void: _curtain.visible = false)   # längst hinter der Kamera
+	at(63.45, func() -> void: _curtain.visible = false)   # erst im Schnitt auf den Boss – vorher bliebe es als Sprung sichtbar
 
 
 # --- Akt 4 – Das Abenteuer eskaliert (Strand, Vulkan, Boss, BOOM, Montage) --------------------------------------
