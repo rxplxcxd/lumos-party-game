@@ -174,13 +174,19 @@ func _hide_original_eyes(rig: CharacterRig) -> void:
 					(cand[0 if v3.x < 0.0 else 1] as Array).append([i3, c3])
 		var ok := true
 		for sd2 in 2:
+			# nur die Fläche direkt über dem Auge (seitlich begrenzt) und nur das unterste Band von 4,5 cm –
+			# Haarsträhnen und Kapuzenränder darüber gehören nicht zur Braue
 			var lo := INF
-			var hi := -INF
+			var near: Array = []
 			for e in cand[sd2]:
-				lo = minf(lo, vs[int(e[0])].y)
-				hi = maxf(hi, vs[int(e[0])].y)
-			if (cand[sd2] as Array).size() < 6 or (cand[sd2] as Array).size() > 90 or hi - lo > 0.075:
+				if absf(vs[int(e[0])].x - _eye_c[sd2].x) < _eye_r.x * 2.0:
+					near.append(e)
+					lo = minf(lo, vs[int(e[0])].y)
+			cand[sd2] = near.filter(func(e2: Array) -> bool: return vs[int(e2[0])].y < lo + 0.045)
+			if (cand[sd2] as Array).size() < 6 or (cand[sd2] as Array).size() > 60:
 				ok = false
+		if OS.has_environment("LUMOS_FACE_DEBUG"):   # Diagnose für neue Modelle
+			print("[FACE] ", mi.name, " Haut=", skin.to_html(false), " Brauen-Kandidaten ", (cand[0] as Array).size(), "/", (cand[1] as Array).size(), " ok=", ok)
 		if ok:
 			var ysum := 0.0
 			for sd3 in 2:

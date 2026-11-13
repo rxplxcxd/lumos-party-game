@@ -73,6 +73,8 @@ func _ready() -> void:
 	label.add_theme_font_size_override("font_size", 15)
 	layer.add_child(label)
 	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--lab-faces="):
+			_face_sheet.call_deferred(String(a).get_slice("=", 1))
 		if String(a).begins_with("--lab-auto"):
 			_out = String(a).get_slice("=", 1) if String(a).contains("=") else ""
 			_auto.call_deferred()
@@ -414,3 +416,24 @@ func _auto() -> void:
 	_ok(ms < 12.0 or DisplayServer.get_name() != "headless", "Leistung: 16 Akteure, %.2f ms je Bild (alles, ohne Grafik)" % ms)
 	print("CHARLAB " + ("OK" if _fails == 0 else "FEHLER: %d" % _fails))
 	get_tree().quit(0 if _fails == 0 else 1)
+
+
+## Nahaufnahmen aller Gesichter je Ausdruck (… -- --lab-faces=/ordner): Sichtprüfung für neue Modelle.
+func _face_sheet(dir: String) -> void:
+	label.visible = false
+	DirAccess.make_dir_recursive_absolute(dir)
+	for i in actors.size():
+		actors[i].rig.global_position = Vector3(-1.8 + i * 1.2, 0, 0)
+		actors[i].rig.face_now(Vector3(0.12 * (1.5 - i), 0, 1))
+	cam.position = Vector3(0, 1.62, 4.6)
+	cam.look_at(Vector3(0, 1.55, 0))
+	cam.fov = 30.0
+	for nm in ["neutral", "joy", "laugh", "surprised", "scared", "angry", "sad", "confused", "asleep", "smug"]:
+		for a in actors:
+			if a.face:
+				a.face.blink_on = false
+				a.express(nm, 0.0)
+		await _wait(0.3)
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(dir.path_join(nm + ".png"))
+	get_tree().quit()

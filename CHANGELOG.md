@@ -3,6 +3,24 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.5.0 – Character Animation & Interaction Framework (Fundament, noch nicht im Spiel eingebaut)
+Neuer, eigenständiger Baustein in `scripts/actor/` mit Testlabor in `tools/charlab/`. Brett, Minispiele, Nitro Dash
+und Trailer sind unverändert und nutzen ihn noch nicht. Doku: `docs/CHARACTER_FRAMEWORK.md`.
+* **`LumosActor`:** Fassade, die sich an ein vorhandenes `CharacterRig` hängt, ohne Rig oder Modell zu ändern.
+* **`LumosFace`:** Gesichtsebene für Figuren ohne Gesichts-Bones. Augen, Lider, Brauen und Mund werden je Modell
+  aus dem Kopf-Mesh vermessen. 21 Ausdrücke mit weichen Übergängen und Stärke, Lidschlag, Blickrichtung.
+  Original-Brauen werden nur ersetzt, wenn sie eindeutig erkennbar sind (nie doppelte Brauen).
+* **`LumosBody`:** Arm-IK, Fuß-IK mit Beckenausgleich, Atmung, Gewichtsverlagerung, Lachen, Impuls-Feder für
+  Stöße, Neigung beim Beschleunigen, Bremsen und in Kurven.
+* **`LumosLocomotion`:** Zustände mit Überblendung, Anfahren und Ausrollen, Schritte synchron zum echten Tempo
+  (das Tempo je Clip wird vermessen).
+* **`LumosInteract`:** Greifen, Halten, Werfen, Weitergeben, beide Hände am Lenkrad, High-Five, Umarmung,
+  Schubser. Jede Interaktion verbindet Hand-IK, Körper, Gesicht, Objekt und die Reaktion des Partners.
+* **Testlabor:** zehn Vorführungen per Taste und ein automatischer Lauf mit Messungen (neu in der CI). Ergebnis
+  mit vier Helden: alle Prüfungen bestanden, 16 Akteure kosten rund 2 ms je Bild.
+* **Bekannte Grenzen:** Der Standfuß rutscht noch leicht, die IK dreht keine Hände, andere Figurentypen als die
+  KayKit-Helden sind ungeprüft.
+
 ## 1.4.1 – Trailer: zweite Animations- und Inszenierungsrunde
 Alle Änderungen liegen in `trailer/` (dazu Doku und Versionsnummer). Das Spiel ist unverändert.
 * **Gesichter:** eigene Mimik-Ebene für die Darsteller (`trailer/trailer_face.gd`). Augen mit Lidschlag, Lachaugen,
