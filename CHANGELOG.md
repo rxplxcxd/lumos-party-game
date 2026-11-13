@@ -3,6 +3,34 @@
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.4.1 – Trailer: zweite Animations- und Inszenierungsrunde
+Alle Änderungen liegen in `trailer/` (dazu Doku und Versionsnummer). Das Spiel ist unverändert.
+* **Gesichter:** eigene Mimik-Ebene für die Darsteller (`trailer/trailer_face.gd`). Augen mit Lidschlag, Lachaugen,
+  Staune-Augen und Blickrichtung, dazu ein Mund mit Zähnen und Zunge. Ausdrücke gleiten weich ineinander und
+  wechseln während der Handlung.
+* **Lachen statt „HAHA“:** Alle Symbol-Einblendungen (HAHA, Ausrufezeichen, Sternchen, Zzz) sind entfernt. Lachen
+  ist eine Bewegungskette aus Gesicht, Brust und Schultern, der Zweite lacht zeitversetzt mit.
+* **Berührungen finden statt** (`trailer/trailer_body.gd`, Arm-IK): Abklatschen, Auflaufen mit beiden Händen im
+  Rücken, Schulterklopfen, an der Hand mitziehen, Festklammern beim Boss, Schubser im Sumo-Ring, Keks von Hand zu
+  Hand.
+* **Schritte passen zum Tempo:** Lauf-Clips werden vermessen, Wege und Tempo sind darauf ausgelegt. Die Figuren
+  rutschen nicht mehr über den Boden.
+* **Szenenlogik:**
+  * Niemand erscheint mitten im Bild, niemand schwebt über Stein oder Hügel, nichts wächst in Sitzplätze.
+  * Wasserfall ohne Flimmern, als Fels mit Becken und Nebel statt glattem Block.
+  * Schmetterling mit echten Flügeln, Glühwürmchen nicht mehr vor der Linse.
+* **Enthüllung des Waldes:** Der Held ist von Anfang an gut zu sehen. Der Stern steigt auf, Himmel und Licht blenden
+  auf, die Leuchtpilze gehen der Reihe nach an. Der Blitz ist nur noch halb so hell.
+* **Weltenwechsel:** zwei statt vier (Wald → Wiese hinter dem Stamm, Wiese → Bucht hinter dem Wasserfall-Tor), mit
+  Übergangszonen und weichem Bodenverlauf. Die Schnee-Welt und der weiße Blitz im Sprung entfallen.
+* **Mehr Lumos Party:** Die Montage zeigt das echte Spielbrett „Wuschel-Wiesen“ (Kamerafahrt, Würfelblock, Zug
+  über vier Felder, Stern), dann Sumo-Ring, Zielsprint, Bosskampf und Nitro Dash. Startarena, Podest und die
+  Figur auf der grünen Fläche entfallen.
+* **Kamera:** näher an den Figuren, Gegenschuss an der Riesenblume, Über-die-Schulter am Wasserfall, weiches
+  Fülllicht für die Gesichter im Nachtwald.
+* **Lagerfeuer:** Alle sitzen nebeneinander auf einer Bank. Der Held schielt zum Keks, setzt den Bettelblick auf,
+  der Barbar reicht ihn hinüber, die Hand nimmt ihn, beide lachen leise.
+
 ## 1.4.0 – Nitro Dash: Gameplay- und Qualitätsoffensive
 Sicherungsstand vor dem Umbau: Commit `841697b1` (Version 1.3.0). Alle anderen Spielmodi sind unverändert und
 geprüft (siehe unten).

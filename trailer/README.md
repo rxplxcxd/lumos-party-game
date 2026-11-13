@@ -2,8 +2,8 @@
 
 Eigenständige Produktionsumgebung für den Trailer. Sie ist vollständig vom Spiel getrennt:
 
-* Alles liegt in diesem Ordner: Szene (`Trailer.tscn`), Regie-Skript (`trailer.gd`), eingefrorene Rennstrecke
-  (`trailer_track.gd`), Render-Skript (`render.sh`), Video-Prüfung (`qa.py`) und Trennungs-Prüfung
+* Alles liegt in diesem Ordner: Szene (`Trailer.tscn`), Regie-Skript (`trailer.gd`), Mimik (`trailer_face.gd`),
+  Körper-Ebene (`trailer_body.gd`), eingefrorene Rennstrecke (`trailer_track.gd`), Render-Skript (`render.sh`), Video-Prüfung (`qa.py`) und Trennungs-Prüfung
   (`check_isolation.sh`).
 * Die Nitro-Dash-Szene fährt auf einer eigenen Kopie des Lumos-Rings im Stand von Spiel 1.3.0
   (`trailer_track.gd`). Das Spiel hat seine Strecken in 1.4.0 neu entworfen. Die Kamerafahrten des Trailers sind
@@ -48,6 +48,7 @@ Ansehen im Fenster (Esc beendet): `godot --path . res://trailer/Trailer.tscn`. W
 * `--trailer-msaa=0..3`: Kantenglättung (0 aus, 1 = 2×, 2 = 4×, 3 = 8×)
 * `--trailer-shadow=N`: Schattenauflösung
 * `--trailer-marks=datei.json`: Schnittliste schreiben
+* `--trailer-faces=/ordner`: Kontrollbilder der Mimik (alle vier Darsteller, je Ausdruck ein PNG)
 
 ## Prüfung des fertigen Videos (`qa.py`)
 
@@ -65,12 +66,12 @@ Bild für Bild (Analyse in 192×108) und für den Ton in 50-ms-Fenstern:
 
 | Zeit | Akt | Inhalt |
 |---|---|---|
-| 0–15 s | 1 · Ein kleiner Stern | Dunkelheit, Stern erscheint, Neugier, Stern weicht aus, Berührung → Lichtwelle → Glühwürmchen-Wald, Kran nach oben |
-| 15–35 s | 2 · Eine Welt voller Wunder | Weg, Glühwürmchen vor der Nase, Stolpern über den Ast, Wasserfall, die Magierin winkt in der Ferne, Loslaufen |
-| 35–58 s | 3 · Gemeinsam unterwegs | High-Five, Schmetterling auf der Nase, Zusammenstoß, der keuchende Barbar, der Träumer auf dem Stein, Beinahe-Zusammenprall, der vergessene Freund wird an der Hand mitgezogen; die Gruppe läuft durch, während die Welt wechselt: hinter dem Baumstamm (Wald → Wiese) und hinter dem Wasserfall (Wiese → Schnee) |
-| 58–65 s | 4 · Das Abenteuer eskaliert | Sprung nach dem Stern, Weltenwechsel in der Luft, Landung im Sand, Strand → Vulkangestein, der Boss erhebt sich, alle schauen nach oben, Stille … BOOM |
-| 65–84,5 s | Montage | auf dem Takt (138 BPM): Minispiel-Start, Münzduell, Fotofinish, Wasserplumps, Boss-Ausweichen, Siegerpose, dann Nitro Dash auf dem Lumos-Ring (Start, Drift, Überholen, Ziel), Jubel |
-| 84,5–97 s | 5 · Wieder zusammen | Lagerfeuer: Hände wärmen, Sterne schauen, essen, eingeschlafen an der Schulter, Nahaufnahme der Keks-Pointe, Funke steigt auf, Blick zur aufsteigenden Kamera, Logo, Slogans, Plattform-Hinweis |
+| 0–15 s | 1 · Ein kleiner Stern | Allein im Mondlicht, suchender Blick · Stern erscheint, Schreck wird Neugier · die Hand streckt sich aus, der Stern weicht aus · Berührung: der Stern steigt auf und entzündet den Wald (Himmel und Licht blenden auf, die Leuchtpilze gehen der Reihe nach an) · Staunen in Nahaufnahme, dann hebt sich die Kamera |
+| 15–35 s | 2 · Eine Welt voller Wunder | Die Kamera bleibt nah: Glühwürmchen vor der Nase, er will es fangen und lacht · Stolpern über den Ast, Blick zurück, Lachen über sich selbst · Wasserfall über die Schulter gefilmt · die Magierin winkt in der Ferne, er winkt zurück und läuft los |
+| 35–58 s | 3 · Gemeinsam unterwegs | Abklatschen (die Hände treffen sich) · Schmetterling auf der Nase, die Magierin läuft auf (Hände im Rücken) · der Barbar kommt keuchend ins Bild, Hände auf den Knien, Schulterklopfen · der Träumer auf dem Stein bemerkt es zu spät · Weltenwechsel hinter dem Baumstamm (Wald → Wiese) · Riesenblume im Gegenschuss, der Held nimmt die Hand der Magierin und zieht sie mit · Kamerafahrt hinter dem Wasserfall-Tor (Wiese → Bucht) |
+| 58–65 s | 4 · Das Abenteuer eskaliert | Bucht im Abendlicht, Sand wird zu Vulkangestein, Knuffen im Laufen · der Boss erhebt sich: die Magierin klammert sich an den Helden, der Träumer duckt sich hinter den Barbaren · Stille … BOOM |
+| 65–84,5 s | Montage | auf dem Takt (138 BPM): das echte Spielbrett „Wuschel-Wiesen“ aus der Luft, Würfelblock, Sprung dagegen (2 Takte) · Zug über vier Felder, +3 Münzen · der Stern schwebt herab · Minispiel Sumo-Ring (Schubser ins Wasser) · Zielsprint · Boss-Ausweichen · Nitro Dash auf dem Lumos-Ring (Start, Drift, Überholen, Ziel) |
+| 84,5–97 s | 5 · Wieder zusammen | Alle nebeneinander auf der Bank am Feuer: Hände wärmen, der Träumer schläft an der Schulter, die Magierin zeigt in die Sterne · Nahaufnahme: Blick zum Keks, Bettelblick, der Barbar reicht ihn hinüber, die Hand nimmt ihn, beide lachen leise · Funke steigt auf, Blick zur aufsteigenden Kamera, Logo, Slogans |
 
 Kein Dialog. Musik: Glühwald-Thema (Akte 1–4 und 5), Hurry-Up-Thema (Montage), dazu Effekte aus der
 Sound-Bibliothek des Spiels.
@@ -82,13 +83,38 @@ Licht, Brennweite und Staffelung im Raum.
 
 ## Animationsregie
 
+* **Mimik (`trailer_face.gd`):** Die Figuren des Spiels haben starre Augen und keinen Mund. Der Trailer versenkt
+  die Original-Augen in einer eigenen Kopie des Kopf-Meshs und hängt eigene Augen, Glanzpunkte und einen Mund an
+  den Kopfknochen. Augen- und Mundposition werden je Figur aus dem Mesh vermessen. Ausdrücke sind Parametersätze
+  (`expr()`), zwischen denen das Gesicht weich gleitet: Lidschlag, Lachaugen, große Staune-Augen, schräge Lider,
+  Blickrichtung, Mundform mit Zähnen und Zunge. Die Brauen der Figuren bleiben, es gibt keine doppelten.
+* **Körper (`trailer_body.gd`):** liegt über Animation und Slapstick-Modifier des Spiels.
+  * Arm-IK: `reach()` führt eine Hand an einen Punkt im Raum (Schulter des Freundes, Hand beim Abklatschen, Keks).
+  * `carry()` legt einen Gegenstand in die Hand.
+  * Lachen (`laugh()`) ist eine Kette: Schmunzeln, Mund auf, Augen zu Sicheln, Brust und Schultern wippen,
+    ausklingen. Mund und Körper teilen dieselbe Phase.
+  * Atmung, Kopfneigung (`tilt()`), Vorbeugen. Alles läuft in Filmzeit, also bei 30 und 60 fps gleich.
+* **Keine Symbole:** Reaktionen aus der Bibliothek des Spiels laufen ohne „HAHA“, „!“ und Sternchen. Gefühle zeigen
+  Gesicht und Körper.
+* **Schritte:** Das Tempo, bei dem der Standfuß eines Lauf-Clips am Boden stillsteht, wird beim Start aus dem Clip
+  vermessen (Gehen 0,67 m/s, Laufen 2,2 m/s). Die Abspielgeschwindigkeit folgt dem tatsächlichen Tempo, alle Wege
+  sind auf diese Geschwindigkeiten ausgelegt. Vorher liefen die Figuren bis zu dreimal schneller als ihre Beine.
+* **Raum:**
+  * Niemand erscheint mitten im Bild (`_qa_popins()` meldet es sonst). Die Freunde stehen ab der Enthüllung des
+    Waldes an ihren Plätzen.
+  * Stein- und Hügelhöhe werden aus den Modellen gelesen, niemand schwebt.
+  * Sperrzonen halten Bäume und Büsche aus Lichtung, Wasserfall und Sitzplätzen heraus.
+  * Wasserfälle nutzen einen eigenen Fließ-Shader ohne Verformung (kein Flimmern vor der Felswand).
+* **Spielbrett:** Die Montage baut das Brett mit dem `BoardBuilder` des Spiels (nur gelesen). Würfelblock und
+  Stern sind die Modelle aus dem Spiel.
 * **Wege:** `go()` beschreibt Wegstücke. Folgen zwei Stücke zeitlich und räumlich direkt aufeinander und zeigen
   in eine ähnliche Richtung, läuft die Figur ohne Halt durch.
 * **Blick:** `look()` setzt ein Ziel (Punkt, Objekt, Figur oder `"cam"` für den Zuschauer). Der Kopf folgt mit
   Verzögerung. Ohne Ziel schweift der Blick beim Laufen voraus.
 * **Gewicht:** Vorlage beim Beschleunigen, Rücklage beim Bremsen, kurzes Einsacken beim Anhalten.
-* **Weltenwechsel:** Stamm und Wasserfall sind Verdecker, die keiner Welt gehören. Sie werden zum Wechselzeitpunkt
-  genau vor die Kamera gesetzt und ziehen mit in die neue Welt. `qa.py` prüft, dass im Wechselbild kein Sprung
+* **Weltenwechsel:** Stamm und Wasserfall-Tor sind Verdecker, die keiner Welt gehören. Sie stehen zum
+  Wechselzeitpunkt genau vor der Kamera und ziehen mit in die neue Welt. Die Schnee-Welt entfällt: zwei Wechsel
+  statt vier, dafür mit Übergangszonen (Wiesenblumen am Waldrand, Sand und Palmen am Ende der Wiese). `qa.py` prüft, dass im Wechselbild kein Sprung
   messbar ist.
 * **Rennen:** `_race_state()` liefert je Einstellung den Zustand aller Karts als reine Funktion der Zeit. Karts und
   Kamera lesen denselben Zustand. Die Fahrbahn nutzt eine Trailer-eigene Kopie des Straßen-Shaders.
