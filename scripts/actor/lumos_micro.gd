@@ -25,6 +25,9 @@ const GESTURES := {
 	"flail": [1.4, ["arm.l", "arm.r"], false], "belly": [1.6, ["arm.l"], false], "knee_slap": [1.6, ["arm.r"], false],
 	"wipe_tears": [1.2, ["arm.r"], false], "cheer": [1.6, ["arm.l", "arm.r"], false],
 }
+## Wie schnell die Hände in die Geste gehen (s): gemütliches Strecken langsam, Jubel und Faust schnell.
+const REACH_SECS := {"stretch": 0.9, "hug_self": 0.6, "chin": 0.55, "cross_arms": 0.55, "arms_up": 0.35, "cheer": 0.3,
+	"fist_pump": 0.22, "wave": 0.35, "point": 0.4, "clap": 0.3, "flail": 0.2, "knee_slap": 0.3}
 ## Gesten, die eine Persönlichkeit von sich aus zeigt (ohne Gefühl): Zug → Gesten
 const TRAIT_GESTURES := {"confidence": ["hips", "adjust"], "shyness": ["rub_hands", "scratch", "face_touch"],
 	"curiosity": ["chin"], "energy": ["bounce", "stretch"], "playfulness": ["bounce", "rub_hands"]}
@@ -87,7 +90,8 @@ func play(id: String, opts := {}) -> bool:
 	stats.gestures[id] = int(stats.gestures.get(id, 0)) + 1
 	for sd in ["l", "r"]:
 		if ("arm." + sd) in chans and actor.body.arm_mode() != "none":
-			actor.reach(sd, _target.bind(sd), 0.26, _orient.bind(sd), 0.25, owner)
+			# kein Reach-Assist: Ziele am eigenen Körper würden sonst mit dem Lehnen wandern (Rückkopplung)
+			actor.reach(sd, _target.bind(sd), float(opts.get("reach", REACH_SECS.get(id, 0.45))), _orient.bind(sd), 0.0, owner)
 	if id == "flail" and actor.body:
 		actor.body.stumble(Vector3.ZERO, 1.0)
 	return true
@@ -97,8 +101,9 @@ func stop() -> void:
 	if gesture == "":
 		return
 	var owner := String(_g.owner)
+	var rs := float(REACH_SECS.get(String(_g.id), 0.45)) * 1.15
 	for sd in ["l", "r"]:
-		actor.release(sd, 0.3, owner)
+		actor.release(sd, rs, owner)
 	actor.layers.release(owner)
 	gesture = ""
 	_g = {}
@@ -441,7 +446,7 @@ func _pick_gesture(p: LumosPersonality) -> void:
 ## Persönlicher Raum: kommt jemand zu nah, lehnt sich die Figur zurück und schaut hin (Schüchterne früher).
 func _personal_space(d: float) -> void:
 	_space_t -= d
-	if _space_t > 0.0 or actor.social == null or actor.body == null:
+	if _space_t > 0.0 or actor.social == null or actor.body == null or actor.scripted:
 		return
 	_space_t = 0.25
 	var lean := 0.0

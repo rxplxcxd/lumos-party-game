@@ -14,6 +14,7 @@ const P_IDLE := 0
 const P_MICRO := 10       ## Mikrogesten, Blicke ins Leere
 const P_SOCIAL := 20      ## Reaktionen auf andere (Mitlachen, Zurückwinken, Hinschauen)
 const P_EMOTE := 30       ## Cartoon-Reaktionen, große Gefühlsausbrüche
+const P_API := 35         ## ausdrückliche reach()-Aufrufe des Spiels (Tragen, Greifen) – Interaktionen dürfen übernehmen
 const P_INTERACT := 40    ## Interaktionsprotokoll (Umarmung, High-Five, Übergabe …)
 const P_SCRIPT := 50      ## Regie (Trailer, Zwischensequenzen, Spiel-Logik)
 const P_REFLEX := 60      ## Reflexe (Schreck-Sprung, Treffer)

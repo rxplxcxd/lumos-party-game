@@ -549,8 +549,8 @@ func _process(delta: float) -> void:
 	var sig := bl * 7.0 + laugh * 3.1 + sin(laugh_phase) * laugh + chew * sin(_t * 9.0) + gaze.x * 1.7 + gaze.y * 2.3 + _flash * 5.0 + feature_scale \
 		+ _syl.x * 4.1 + _syl.y * 1.9 + (_act_t * 13.0 if _act != "" else 0.0) + (sin(_t * 40.0) * float(_cur.tremble) if float(_cur.tremble) > 0.01 else 0.0) \
 		+ (_t * 3.0 if float(_cur.tear) > 0.05 else 0.0)
-	for k in KEYS:
-		sig += float(_cur[k]) * (KEYS.find(k) + 1.3)
+	for ki in KEYS.size():
+		sig += float(_cur[KEYS[ki]]) * (ki + 1.3)
 	_lod_acc += delta
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 	var period := 0.0

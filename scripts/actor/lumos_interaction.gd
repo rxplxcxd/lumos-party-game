@@ -55,7 +55,7 @@ static func start(p_kind: String, p_a: LumosActor, p_b: LumosActor, p_opts := {}
 	it.b = p_b
 	it.opts = p_opts
 	it._owner = "ia:%s:%d" % [p_kind, it.get_instance_id()]
-	var ch := ["root", "torso", "head", "eyes", "arm.l", "arm.r"]
+	var ch := ["root", "legs", "torso", "head", "eyes", "arm.l", "arm.r"]
 	if not p_a.layers.claim(it._owner, ch, LumosLayers.P_INTERACT, it.cancel):
 		return null
 	if p_b and not p_b.layers.claim(it._owner, ch, LumosLayers.P_INTERACT, it.cancel):

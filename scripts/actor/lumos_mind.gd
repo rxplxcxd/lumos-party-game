@@ -92,7 +92,7 @@ func _react(ev: Dictionary, dist: float) -> void:
 			if not actor.autonomy_gate(0.35):
 				return
 			var pc := p.contagion() * rel * clampf(i, 0.3, 1.0) * (1.0 if dist < 6.0 else 0.55)
-			if rng.randf() < pc and p.shyness < 0.75:
+			if rng.randf() < clampf(pc * 1.4, 0.0, 0.95) and p.shyness < 0.75:
 				var li := clampf((0.35 + 0.6 * p.contagion()) * rng.randf_range(0.75, 1.1), 0.3, 1.0)
 				if not actor.autonomy_gate(0.6):
 					li *= 0.5

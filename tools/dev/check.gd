@@ -3,7 +3,7 @@ extends Node
 func _ready() -> void:
 	var bad := 0
 	var files: Array[String] = []
-	for d in ["res://autoload", "res://scripts", "res://scenes"]:
+	for d in ["res://autoload", "res://scripts", "res://scenes", "res://tools/charlab", "res://trailer"]:
 		_collect(d, files)
 	for f in files:
 		var r = load(f)

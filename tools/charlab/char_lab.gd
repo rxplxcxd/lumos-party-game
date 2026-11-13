@@ -80,6 +80,9 @@ func _ready() -> void:
 		elif String(a).begins_with("--lab-auto"):
 			_out = String(a).get_slice("=", 1) if String(a).contains("=") else ""
 			_auto.call_deferred()
+		elif String(a).begins_with("--lab-behavior"):   # nur die Verhaltensbereiche B1–B20 (Entwicklung)
+			_out = String(a).get_slice("=", 1) if String(a).contains("=") else ""
+			_behavior_only.call_deferred()
 
 
 func _spawn(key: String, pos: Vector3) -> LumosActor:
@@ -279,6 +282,13 @@ func _stance_slip(a: LumosActor, secs: float) -> Vector2:
 			slip += float(e[1])
 			n += 1
 	return Vector2(slip / maxf(n, 1), n)
+
+
+func _behavior_only() -> void:
+	await get_tree().process_frame
+	await (preload("res://tools/charlab/behavior_lab.gd").new() as RefCounted).call("run", self)
+	print("CHARLAB " + ("OK" if _fails == 0 else "FEHLER: %d" % _fails))
+	get_tree().quit(0 if _fails == 0 else 1)
 
 
 func _auto() -> void:
@@ -567,6 +577,8 @@ func _auto() -> void:
 	var back := crowd.filter(func(c: LumosActor) -> bool: return c.lod < 2).size()
 	_ok(paused == 16 and back == 16, "15 LOD: außerhalb des Bildes pausiert (%d/16), im Bild sofort wieder aktiv (%d/16)" % [paused, back])
 	_ok(t_lod < total16, "15 LOD: 16 Figuren außerhalb des Bildes %.2f ms statt %.2f ms" % [t_lod, total16])
+	# 1.5.2 – Character Behavior Laboratory (Bereiche B1–B20)
+	await (preload("res://tools/charlab/behavior_lab.gd").new() as RefCounted).call("run", self)
 	print("CHARLAB " + ("OK" if _fails == 0 else "FEHLER: %d" % _fails))
 	get_tree().quit(0 if _fails == 0 else 1)
 

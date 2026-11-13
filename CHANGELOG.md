@@ -4,6 +4,43 @@ Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Re
 Ab 1.5.1 wieder in kleinen Schritten: 1.5.1, 1.5.2 … bis 1.9.9 (keine Sprünge auf ganze Versionen).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.5.2 – Universelles Mehrschicht-System: Gefühl, Mikroleben, Gewicht, Sozialverhalten, Cartoon
+Baut auf 1.5.1 auf (Rückfall: Commit `76e50fce`), ohne funktionierende Systeme zu ersetzen. Spielabläufe unverändert;
+der Trailer nutzt den vollen Stack. Doku mit Architektur, Schnittstellen, Profilen, Leistung, Grenzen und
+Migrationsanleitung: `docs/CHARACTER_FRAMEWORK.md`.
+* **Gefühlszustand (`LumosEmotion`):** 36 geforderte Gefühle (positiv, negativ, sozial) mit eigenem Gesicht, eigener
+  Haltung und eigenem Verhalten; Stimmung + Reaktionen gleichzeitig (auch widersprüchlich), Anstieg/Halten/Abklingen,
+  Auslöser, Nachwirkungen (Lachen → Zufriedenheit, Schreck → Nervosität …).
+* **Persönlichkeit (`LumosPersonality`):** zehn Züge, Vorlagen je Modell als Daten; wirkt auf Blickkontakt,
+  Reaktionszeit, Gefühls- und Ausdrucksstärke, Gesten, Haltung, Ansteckung, Cartoon-Neigung.
+* **Schichten (`LumosLayers`):** Kanäle und Prioritäten (Mikro < Sozial < Cartoon < API < Interaktion < Regie <
+  Reflex), kontrolliertes Verdrängen mit sauberem Ende, Ablehnung bei Konflikt.
+* **Mikroleben (`LumosMicro`):** Augen führen, der Kopf folgt; Blickkontakt halten/ausweichen; natürlicher Lidschlag
+  (unregelmäßig, doppelt, je Gefühl); Stand-/Spielbeinwechsel; 31 Gesten mit eigenem Tempo.
+* **Gesicht:** Pupillen in weißen Augen (Schreck, Bettelblick, Schielen), Tränen, Backen aufblasen, Schmollen,
+  Lippenpressen, Zittern, schiefes Grinsen; Sprechen silbenweise; Gähnen, Seufzen, Schlucken, Schluchzen, Keuchen.
+* **Gewicht und Balance:** Trägheitsfedern für Oberkörper, Kopf und Arme; Kontrapost; Becken-Feder für Landung,
+  Hocke, Last; koordiniertes Drehen; Stolpern mit Erholung; Masse/Beweglichkeit/Stil je Figur.
+* **Sekundärbewegung:** Hüte, Helme, Umhänge, Köcher federn auf eigenen Laufzeit-Knochen (Modelle unverändert);
+  Hutkrempen weichen nahen Köpfen aus.
+* **Sozialverhalten (`LumosSocial`, `LumosMind`):** Wahrnehmung und Ereignisse; versetzte, individuelle Reaktionen
+  (Mitlachen, Trösten, zur Schreck-Quelle schauen, Zurückwinken, Witze, Sieg/Niederlage, Mittanzen, Zeigen folgen,
+  Zuhören); Autonomie-Stufen.
+* **Interaktionsprotokoll (`LumosInteraction`):** Phasen mit sauberem Abbruch; 13 Arten inkl. neu Handschlag,
+  Trösten, Necken, gemeinsames Jubeln/Tanzen/Lachen, Erschrecken; Körper-Variante für einfache Modelle.
+* **Cartoon (`LumosCartoon`):** 26 Reaktionen (Tränenfontänen, riesige Augen, Erstarren, Sterne, Herzen, Lachanfall,
+  Backen aufblasen, Verstecken …), Intensitätsstufen, Abklingzeit und Budget, Effekte nie übers Gesicht.
+* **Haustiere:** Schwanz wedelt/zieht ein (wo das Modell einen eigenen Schwanz hat), Beine schwingen beim Laufen.
+* **Versionierte Schnittstellen:** `API_VERSION = 2`, Profil-Schema mit `migrate()`.
+* **Character Behavior Laboratory:** 20 Testbereiche (B1–B20) mit Messwerten im selben CI-Lauf, plus Kontrollbilder.
+* **Behoben:** Rückkopplung beim Abklatschen (1.5.1-Video-QA: Bildsprung bei 34,97 s) – Ziele am eigenen Körper aus
+  der Ruhepose; Ellbogen klappt bei erhobenen Händen nicht mehr um; lösende Hände springen nicht mehr.
+* **Trailer:** volle Akteure mit Regie-Schicht; dazwischen leben die Figuren selbst; neue Momente (Staunen mit
+  Erstarren, Kopfkratzen, Schielen, Rotwerden, Herzen, Zittern, Sternchen, Bettelblick, Schlucken, Lächeln im
+  Schlaf). Neu gerendert in 1920×1080 bei 60 fps.
+* **Grenzen:** nicht im Spiel eingebaut; keine Finger; große Hutkrempen können noch in Köpfe ragen; Umhänge starr am
+  Oberkörper; GPU/Web-Leistung nicht gemessen; eigene Avatare ungeprüft.
+
 ## 1.5.1 – Framework gehärtet, Trailer nutzt es, Neu-Render 1080p60
 Eine zentrale Umsetzung: Der Trailer nutzt jetzt das Character Framework, die alten Kopien `trailer/trailer_face.gd`
 und `trailer/trailer_body.gd` sind gelöscht. Spielmodi bleiben unverändert (Framework dort noch nicht eingebaut).

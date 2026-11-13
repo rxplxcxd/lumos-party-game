@@ -82,21 +82,20 @@ Licht, Brennweite und Staffelung im Raum.
 
 ## Animationsregie
 
-* **Figuren = Character Framework des Spiels** (`scripts/actor/`, siehe `docs/CHARACTER_FRAMEWORK.md`). Seit 1.5.1
-  gibt es nur noch eine Umsetzung: Der Trailer hängt je Darsteller `LumosBody` (Skelett-Modifier) und `LumosFace`
-  an, Profil per `LumosActorConfig.detect()`. Eigene Kopien (`trailer_face.gd`, `trailer_body.gd`) gibt es nicht mehr.
-  Trailer-Einstellungen: `ground_mask = 0` (Boden = Standhöhe der Figur, keine Raycasts gegen Kulissen),
-  `lod = false` (immer volle Qualität), `attention = 0.42`.
-  * Mimik: große Augen, Lachaugen, Brauen-Heben bei neuem Blickkontakt, große Münder (auch von weitem lesbar),
-    Wangenröte. `expr()` setzt Gesicht **und** Haltung (Brust, Kopf, Schultern) zum Gefühl.
-  * Blick: Kopf auf das Ziel, Oberkörper und Hüfte drehen mit (`attend_target`).
-  * Arm-IK mit Reach-Assist: `reach()` führt eine Hand an einen Punkt; liegt er zu weit weg, lehnt sich die Brust hin.
+* **Figuren = Character Framework des Spiels** (`scripts/actor/`, siehe `docs/CHARACTER_FRAMEWORK.md`). Seit 1.5.2
+  sind die Darsteller volle `LumosActor` (Gefühlszustand, Mikroleben, Gewicht, Zubehör-Federn, Sozialverhalten) mit
+  `scripted = true`, `autonomy = 0.35` und festen Zufallsstartwerten (`cfg.seed`) – jeder Render ist gleich.
+  Weitere Einstellungen: `ground_mask = 0` (Boden = Standhöhe), `lod = false`, `attention = 0.42`.
+  * Regie-Schicht je Bild: `script_look()` (ungeglättetes Ziel: die Augen springen, der Kopf folgt), `script_hand()`
+    (Hände mit Handhaltung), `script_laugh()` (Lach-Hüllkurve). `expr()` setzt Stimmungen (`feel`), `breath()` die
+    Atmung (`set_breath`). Wo das Drehbuch nichts vorgibt, leben die Figuren selbst.
+  * Gezielte Cartoon-Momente über `actor.cartoon()` und Gesten über `actor.gesture()` (Regie-Priorität).
+  * Ziele am eigenen bzw. gemeinsamen Körper (Abklatschen, An-die-Hand-nehmen) aus der Ruhepose der Schultern –
+    sonst verschiebt das Lehnen zum Ziel das Ziel (1.5.1: Bildsprung bei 34,97 s).
   * Fußanker beim Stehen, Gehen und Laufen (nicht in Posen, Sprüngen oder im Kart).
-  * `carry()` legt einen Gegenstand in die Hand. Lachen (`laugh()`) ist eine Kette: Schmunzeln, Mund auf, Augen zu
-    Sicheln, Brust und Schultern wippen, ausklingen. Mund und Körper teilen dieselbe Phase.
-  * Atmung, Kopfneigung (`tilt()`), Vorbeugen. Alles läuft in Filmzeit, also bei 30 und 60 fps gleich.
-* **Keine Symbole:** Reaktionen aus der Bibliothek des Spiels laufen ohne „HAHA“, „!“ und Sternchen. Gefühle zeigen
-  Gesicht und Körper.
+  * `carry()` legt einen Gegenstand in die Hand; Lachen (`laugh()`) ist eine Kette aus Mund und Körper.
+* **Keine Schrift-Symbole:** Reaktionen laufen ohne „HAHA“, „!“ oder „Zzz“. Gefühle zeigen Gesicht und Körper; Cartoon-
+  Effekte (Tränen, Herzen, Sterne) nur an wenigen gezielten Stellen.
 * **Schritte:** Das Tempo, bei dem der Standfuß eines Lauf-Clips am Boden stillsteht, wird beim Start aus dem Clip
   vermessen (Gehen 0,67 m/s, Laufen 2,2 m/s). Die Abspielgeschwindigkeit folgt dem tatsächlichen Tempo, alle Wege
   sind auf diese Geschwindigkeiten ausgelegt. Vorher liefen die Figuren bis zu dreimal schneller als ihre Beine.

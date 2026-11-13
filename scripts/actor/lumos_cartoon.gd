@@ -119,6 +119,10 @@ static func stop(actor: LumosActor, id: String) -> void:
 				var t2 := (fx as Node).create_tween()
 				t2.tween_interval(1.0)
 				t2.tween_callback((fx as Node).queue_free)
+			elif fx is Sprite3D:   # Herzen, Tropfen: kurz ausblenden statt zu verschwinden
+				var t3 := (fx as Node).create_tween()
+				t3.tween_property(fx, "modulate:a", 0.0, 0.25)
+				t3.tween_callback((fx as Node).queue_free)
 			else:
 				(fx as Node).queue_free()
 	var owner := String(run.owner)
@@ -130,8 +134,8 @@ static func stop(actor: LumosActor, id: String) -> void:
 		actor.body.tremble = 0.0
 		actor.body.crouch = 0.0
 		actor.body.micro_chest = Vector3.ZERO
-	if actor.rig.anim:
-		actor.rig.anim.speed_scale = 1.0
+	if actor.rig.anim and float(actor.rig.get("_speed_target")) < 0.05:
+		actor.rig.set("_speed_target", 1.0)
 	actor.cartoon_head = Vector3.ZERO
 	actor.layers.release(owner)
 
@@ -368,12 +372,14 @@ static func _rigid_variant(actor: LumosActor, id: String, i: float, dur: float) 
 static func _freeze(actor: LumosActor, run: Dictionary, secs: float) -> void:
 	if actor.rig.anim == null:
 		return
+	var before: float = actor.rig.get("_speed_target")
+	actor.rig.set("_speed_target", 0.04)   # das Rig gleitet sonst sofort zurück zum Abspieltempo
 	actor.rig.anim.speed_scale = 0.04
 	var tw := actor.create_tween()
 	tw.tween_interval(secs)
 	tw.tween_callback(func() -> void:
 		if is_instance_valid(actor) and actor.rig.anim:
-			actor.rig.anim.speed_scale = 1.0)
+			actor.rig.set("_speed_target", before if before > 0.05 else 1.0))
 	(run.tweens as Array).append(tw)
 
 

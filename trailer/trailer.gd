@@ -76,8 +76,9 @@ var _karts: Array[KartVisual] = []
 var _fire_light: OmniLight3D
 var _snack: Node3D
 var _rng := RandomNumberGenerator.new()
-var faces: Array[LumosFace] = []          # Framework-Gesicht je Figur (scripts/actor/lumos_face.gd)
-var bodies: Array[LumosBody] = []         # Framework-Körper je Figur (Arm-IK, Fußanker, Haltung, Blick, Lachen, Atmung)
+var actors: Array[LumosActor] = []        # Character Framework 1.5.2 je Darsteller (Gefühl, Mikroleben, Gewicht, Sozialverhalten)
+var faces: Array[LumosFace] = []          # = actors[i].face
+var bodies: Array[LumosBody] = []         # = actors[i].body
 var _laughs: Array = [[], [], [], []]     # je Figur: [Beginn, Dauer, Stärke]
 var _reach: Array = [[], [], [], []]      # je Figur: [Seite, t0, t1, t2, t3, Ziel]
 var _carry: Array = []                    # [Objekt, Figur, Seite, t0, t1, Versatz]
@@ -184,7 +185,6 @@ func _process(delta: float) -> void:
 		var e: Array = _ev.pop_front()
 		(e[1] as Callable).call()
 	for i in heroes.size():
-		bodies[i].dt = delta
 		_drive(i, delta)
 	_drive_carry()
 	_drive_camera()
@@ -304,9 +304,7 @@ func react(i: int, time: float, id: String) -> void:
 
 ## Gesichtsausdruck wechseln (gleitet in secs Sekunden hinüber).
 func expr(i: int, time: float, name: String, secs := 0.18) -> void:
-	at(time, func() -> void:
-		faces[i].set_expr(name, secs)
-		bodies[i].set_posture(name, maxf(secs, 0.3)))   # Haltung trägt das Gefühl mit (Brust, Kopf, Schultern)
+	at(time, func() -> void: actors[i].feel(name, secs))   # Gesicht, Haltung, Blickstil, Lidschlag, Atmung gemeinsam
 
 
 ## Lachen als Bewegungskette: Schmunzeln → Mund auf, Augen zu Sicheln, Brust und Schultern wippen → klingt aus.
@@ -337,9 +335,7 @@ func tilt(i: int, time: float, v: Vector3) -> void:
 
 
 func breath(i: int, time: float, amount: float, rate := 1.4) -> void:
-	at(time, func() -> void:
-		bodies[i].breath = amount
-		bodies[i].breath_rate = rate)
+	at(time, func() -> void: actors[i].set_breath(amount, rate))
 
 
 func _bone(i: int, name: String) -> Vector3:
@@ -448,13 +444,10 @@ func _drive(i: int, delta: float) -> void:
 		want = head + fdir * 4.0 + fdir.cross(Vector3.UP) * sin(t * 0.6 + i * 2.3) * 1.3 + Vector3.UP * (sin(t * 0.9 + i * 1.7) * 0.35 - 0.2)
 		w = 0.45
 	if w > 0.0:
-		if _gaze_w[i] < 0.02:
-			_gaze[i] = want
-		_gaze[i] = _gaze[i].lerp(want, 1.0 - exp(-delta / 0.14))   # der Kopf wandert zum Ziel, statt umzuspringen
+		_gaze[i] = want   # ungeglättet: der Akteur lässt die Augen springen und den Kopf verzögert folgen
 	_gaze_w[i] = lerpf(_gaze_w[i], w, 1.0 - exp(-delta / 0.2))
 	if r.modifier:
-		r.modifier.look_target = _gaze[i]
-		r.modifier.look_weight = _gaze_w[i]
+		pass   # Kopf-Blick setzt der Akteur (Augen springen zuerst, der Kopf folgt) – siehe _drive_actor
 	_drive_actor(i)
 	# Nachschwingen: beim Anhalten sackt die Figur kurz ein, beim Loslaufen streckt sie sich
 	if not _hold[i] and lp.y < 0.05:
@@ -541,29 +534,24 @@ func _stride(r: CharacterRig, clip_name: String, fallback: float) -> float:
 	return v if v > 0.4 and v < 9.0 else fallback
 
 
-## Mimik und Körper-Ebene je Bild: Augen folgen dem Blickziel, Lach-Hüllkurve, Hände an ihre Ziele.
+## Regie-Eingänge je Bild an den Akteur (höchste Schicht): Blick, Lach-Hüllkurve, Hände. Wo das Drehbuch nichts
+## vorgibt, lebt die Figur selbst (Blicke, Lidschlag, Gewicht, kleine Gesten, Zubehör, dezente Reaktionen).
 func _drive_actor(i: int) -> void:
-	var fc = faces[i]
-	var bd = bodies[i]
-	var loc: Vector3 = (fc as Node3D).global_transform.affine_inverse() * _gaze[i]
-	var gz := Vector2(clampf(loc.x / maxf(loc.z, 0.4) * 1.3, -1, 1), clampf((loc.y - 1.6) / maxf(loc.z, 0.4) * 1.3, -1, 1))
-	fc.gaze = fc.gaze.lerp(gz * _gaze_w[i], 0.25)
+	var ac := actors[i]
+	var bd := bodies[i]
+	ac.script_look(_gaze[i], _gaze_w[i])
 	var lv := 0.0
 	for l in _laughs[i]:
 		var u := t - float(l[0])
 		if u > 0.0 and u < float(l[1]):
 			lv = maxf(lv, float(l[2]) * smoothstep(0.0, 0.32, u) * (1.0 - smoothstep(float(l[1]) - 0.65, float(l[1]), u)))
-	bd.laugh = lv
-	fc.laugh = lv
-	fc.laugh_phase = bd.laugh_phase
-	# Blick: Oberkörper und Hüfte drehen mit (Kopf bleibt auf dem Ziel) – Ausdruck, Haltung und Blick gemeinsam
-	bd.attend_target = _gaze[i]
-	bd.attend_w = _gaze_w[i]
+	ac.script_laugh(lv)
 	# Fußanker nur beim normalen Stehen/Gehen/Laufen auf dem Boden (nicht in Posen, Sprüngen, im Kart)
 	var r := heroes[i]
 	bd.grounded = not _hold[i] and not r.is_locked() and _set_now != "race" and r.current in ["idle", "idle_b", "walk", "run"] \
 		and r.global_position.y - _origin.y < 0.06
 	var hw := {"l": 0.0, "r": 0.0}
+	var ht := {"l": Vector3.ZERO, "r": Vector3.ZERO}
 	var hd := {"l": [], "r": []}
 	for rc in _reach[i]:
 		if t < float(rc[1]) or t > float(rc[4]):
@@ -573,12 +561,11 @@ func _drive_actor(i: int) -> void:
 		if w >= float(hw[sd]):
 			hw[sd] = w
 			var tg = rc[5]
-			bd.hand_t[sd] = (tg as Callable).call() if tg is Callable else _origin + (tg as Vector3)
+			ht[sd] = (tg as Callable).call() if tg is Callable else _origin + (tg as Vector3)
 			var o: Variant = rc[6]
 			hd[sd] = (o as Callable).call() if o is Callable else o
-	bd.hand_w = hw
-	bd.hand_dir = hd
-	bd.hand_assist = {"l": 0.6, "r": 0.6}   # zu ferne Ziele: etwas hinlehnen, aber die großen Köpfe bleiben frei
+	for sd2 in ["l", "r"]:
+		ac.script_hand(sd2, float(hw[sd2]), ht[sd2], hd[sd2], 0.6)   # zu ferne Ziele: etwas hinlehnen, die Köpfe bleiben frei
 
 
 func _drive_carry() -> void:
@@ -1228,17 +1215,17 @@ func _build_cast() -> void:
 		cfg.ground_mask = 0      # Boden = Standhöhe der Figur (Callable unten) – keine Raycasts gegen Kulissen
 		cfg.lod = false          # Film: immer volle Qualität
 		cfg.attention = 0.42     # beim Ansehen dreht der Oberkörper deutlich mit
-		var body := LumosBody.new()
-		r.skel.add_child(body)   # nach dem Slapstick-Modifier des Spiels → wird zuletzt angewandt
-		body.bind(r.skel, cfg)
-		body.ground = func(_p: Vector3) -> float: return r.global_position.y
-		body.grounded = false
-		bodies.append(body)
-		var fc := LumosFace.new()
-		fc.feature_scale = cfg.feature_scale
-		if not fc.setup(r):
+		cfg.autonomy = 0.35      # Mikroleben und dezente Reaktionen; große Handlungen nur nach Drehbuch
+		cfg.seed = 4100 + heroes.size()   # gleiche Blicke, Gesten und Lidschläge in jedem Render
+		var actor := LumosActor.attach(r, cfg)
+		actor.scripted = true    # die Regie setzt Position und Clips
+		if actor.face == null:
 			push_error("TRAILER: kein Gesicht für " + k)
-		faces.append(fc)
+		actor.body.ground = func(_p: Vector3) -> float: return r.global_position.y
+		actor.body.grounded = false
+		actors.append(actor)
+		bodies.append(actor.body)
+		faces.append(actor.face)
 	_nat.walk = _stride(heroes[0], "walk", 1.6)
 	_nat.run = _stride(heroes[0], "run", 4.6)
 	heroes[0].play("idle", 0.0, 1.0, true)
@@ -1423,8 +1410,7 @@ func _act1() -> void:
 		Audio.sfx("sparkle_up", null, -4.0, 1.1, 0.0))
 	# Schreck → Neugier: Kopf schief, vorsichtig näher
 	look(A, 2.5, Vector3(1.2, 1.55, 0))
-	expr(A, 2.52, "surprised", 0.1)
-	at(2.55, func() -> void: heroes[A].squash(0.94, 1.08, 0.3))
+	at(2.52, func() -> void: actors[A].cartoon("big_surprise", 0.75, {"move": false}))   # riesige Augen, Erstarren, kleiner Hüpfer
 	expr(A, 3.1, "curious", 0.35)
 	tilt(A, 3.1, Vector3(0, 0, 0.22))
 	go(A, 3.3, 4.4, Vector3(-1.4, 0, 0), Vector3(0.25, 0, 0))
@@ -1438,6 +1424,7 @@ func _act1() -> void:
 	expr(A, 4.9, "surprised", 0.1)
 	tilt(A, 5.25, Vector3.ZERO)
 	laugh(A, 5.3, 0.75, 0.55, "smile")
+	at(5.75, func() -> void: actors[A].gesture("scratch", {"prio": LumosLayers.P_SCRIPT, "owner": "script:gest", "side": "l", "dur": 0.9}))   # verlegen am Helm kratzen
 	go(A, 5.6, 6.4, Vector3(0.25, 0, 0), Vector3(1.45, 0, 0))
 	key(5.9, Vector3(2.9, 1.55, 3.5), Vector3(1.75, 1.42, 0.0), 36.0)
 	reach(A, "r", 6.4, 6.82, 7.15, 7.9, star)
@@ -1506,7 +1493,8 @@ func _act2() -> void:
 	# Glühwürmchen vor der Nase: er schielt darauf, will es behutsam fangen – es entwischt, er lacht
 	at(FIREFLY_T, func() -> void: _firefly.visible = true)
 	look(A, FIREFLY_T + 0.2, _firefly)
-	expr(A, 18.3, "curious", 0.25)
+	expr(A, 18.3, "cross_eyed", 0.2)   # das Glühwürmchen sitzt direkt vor der Nase
+	expr(A, 19.0, "curious", 0.25)
 	tilt(A, 18.4, Vector3(0, 0, -0.18))
 	reach(A, "r", 18.85, 19.25, 19.35, 19.85, func() -> Vector3: return _firefly.global_position)
 	expr(A, 19.45, "surprised", 0.12)
@@ -1520,6 +1508,7 @@ func _act2() -> void:
 	# Ast auf dem Weg: Stolpern, Arme rudern, gerade noch gefangen – er schaut zurück und lacht über sich selbst
 	go(A, 23.2, 23.7, Vector3(8.0, 0, 0), Vector3(8.75, 0.0, 0.05), 0.25)
 	at(23.33, func() -> void:
+		bodies[A].stumble(_fwd(A), 0.6)   # Gleichgewicht verloren: Becken sackt, Füße lösen sich
 		heroes[A].play("hit_b", 0.1, 1.3, true)
 		heroes[A].lock(0.45)
 		Audio.sfx("wood_hit", heroes[A].global_position, -8.0, 1.3, 0.0))
@@ -1532,6 +1521,7 @@ func _act2() -> void:
 	face(A, 24.65, Vector3(-1, 0, 0.25))
 	look(A, 24.7, Vector3(8.6, 0.2, 0.2))
 	laugh(A, 25.1, 1.0, 0.55)
+	at(25.85, func() -> void: actors[A].gesture("scratch", {"prio": LumosLayers.P_SCRIPT, "owner": "script:gest", "dur": 1.0}))
 	look(A, 26.0, null)
 	go(A, 26.1, 27.6, Vector3(9.3, 0, -0.1), Vector3(12.0, 0, 0))
 	key(26.1, Vector3(11.4, 1.6, 4.4), Vector3(9.9, 1.25, -0.3), 42.0)
@@ -1581,7 +1571,7 @@ func _act3() -> void:
 		var d := heroes[B].global_position - heroes[A].global_position
 		d.y = 0.0
 		return d.normalized()
-	var clap := func() -> Vector3: return (_bone(A, "upperarm.r") + _bone(B, "upperarm.l")) * 0.5 + Vector3.UP * 0.2
+	var clap := func() -> Vector3: return (bodies[A].rest_pos("shoulder.r") + bodies[B].rest_pos("shoulder.l")) * 0.5 + Vector3.UP * 0.2
 	at(34.82, func() -> void:
 		heroes[A].anticipate(0.22, 0.06)
 		heroes[B].anticipate(0.22, 0.06))
@@ -1636,6 +1626,7 @@ func _act3() -> void:
 	look(B, 39.7, A)
 	expr(A, 39.7, "surprised", 0.2)
 	expr(B, 39.7, "plead", 0.2)   # „'tschuldigung!“
+	at(39.75, func() -> void: actors[B].cartoon("blush_shy", 0.75))   # rot vor Verlegenheit, kratzt sich am Kopf
 	laugh(A, 40.05, 1.5, 0.9)
 	laugh(B, 40.3, 1.4, 1.0)
 	key(41.2, Vector3(26.0, 1.6, 5.2), Vector3(24.2, 1.2, 0.0), 44.0)
@@ -1643,7 +1634,7 @@ func _act3() -> void:
 	at(40.6, func() -> void: heroes[C].visible = true)
 	go(C, 40.6, 43.6, Vector3(14.0, 0, 0.9), Vector3(22.9, 0, 0.9))
 	go(C, 43.6, 44.5, Vector3(22.9, 0, 0.9), Vector3(23.7, 0, 0.9))
-	expr(C, 40.6, "pant", 0.0)
+	expr(C, 40.6, "exhausted", 0.0)
 	breath(C, 40.6, 1.0, 2.8)
 	look(A, 42.4, C)
 	look(B, 42.7, C)
@@ -1683,10 +1674,8 @@ func _act3() -> void:
 	look(D, 48.7, Vector3(26.0, 1.5, 0.0))
 	look(D, 49.1, Vector3(36.0, 1.5, 0.0))
 	look(D, 49.4, A)
-	expr(D, 49.15, "surprised", 0.12)
-	at(49.42, func() -> void:
-		heroes[D].squash(0.9, 1.14, 0.25)
-		_hold[D] = false)
+	at(49.15, func() -> void: actors[D].cartoon("big_surprise", 0.85, {"move": false}))   # verdutzt: zu spät bemerkt
+	at(49.42, func() -> void: _hold[D] = false)
 	go(D, 49.5, 49.95, Vector3(31.0, _stone_y - 0.04, -2.6), Vector3(31.4, 0, -1.2), 0.5)
 	expr(D, 50.0, "grin", 0.3)
 	# Der Held schaut über die Schulter und winkt ihn heran – im Laufen
@@ -1715,11 +1704,12 @@ func _act3() -> void:
 	face(B, 54.6, Vector3(0.75, 0, -1))
 	look(B, 54.4, Vector3(43.2, 2.6, -2.8))
 	expr(B, 54.5, "awe", 0.3)
+	at(54.95, func() -> void: actors[B].cartoon("love", 0.55))   # kleine Herzen für die Riesenblume
 	tilt(B, 54.8, Vector3(-0.1, 0, 0.15))
 	look(A, 54.7, B)
 	expr(A, 54.9, "smile", 0.3)
 	go(A, 55.0, 55.7, Vector3(42.0, 0, 0.2), Vector3(41.1, 0, 0.3))   # stellt sich neben sie – beide Gesichter frei
-	var hands := func() -> Vector3: return (_bone(A, "upperarm.l") + _bone(B, "upperarm.r")) * 0.5 + Vector3(0, -0.22, 0)
+	var hands := func() -> Vector3: return (bodies[A].rest_pos("shoulder.l") + bodies[B].rest_pos("shoulder.r")) * 0.5 + Vector3(0, -0.22, 0)
 	var d_ba := func() -> Vector3:
 		var d := heroes[A].global_position - heroes[B].global_position
 		d.y = 0.0
@@ -1813,6 +1803,7 @@ func _act4() -> void:
 	go(B, 63.75, 64.3, Vector3(59.6, 0, -0.8), Vector3(60.05, 0, -0.35))
 	go(D, 63.8, 64.5, Vector3(58.4, 0, -1.3), Vector3(58.3, 0, 1.35))
 	expr(C, 64.5, "determined", 0.3)
+	at(64.55, func() -> void: actors[D].cartoon("shiver", 0.7))   # der Träumer zittert hinter dem breiten Rücken
 	# Tief hinter der Gruppe: die vier klein im unteren Bilddrittel, der Boss türmt sich darüber auf
 	key(63.45, Vector3(55.0, 1.25, 9.4), Vector3(67.0, 6.4, -9.5), 54.0, true)
 	key(65.3, Vector3(56.0, 1.15, 8.2), Vector3(68.0, 7.4, -10.5), 50.0)
@@ -1856,9 +1847,12 @@ func _montage() -> void:
 				_hold[k] = false
 				bodies[k].chest_add = Vector3.ZERO
 				bodies[k].head_add = Vector3.ZERO
-				bodies[k].breath = 0.4
-				bodies[k].breath_rate = 1.4
-				faces[k].set_expr("smile", 0.0)
+				actors[k].set_breath(0.4, 1.4)
+				actors[k].micro.stop()
+				for cid: String in LumosCartoon.running(actors[k]):
+					LumosCartoon.stop(actors[k], cid)
+				actors[k].emotion.clear()
+				actors[k].feel("smile", 0.0)
 			for kv in _karts:
 				kv.visible = false)
 	# --- 0+1: Das Spielbrett – Kamerafahrt von oben bis zum Helden, der Würfelblock erscheint, er springt dagegen
@@ -2046,7 +2040,7 @@ func _montage() -> void:
 		FX.explosion(_origin + Vector3(120, 0.6, 3), 1.2)
 		Juice.shake(0.4))
 	look(D, s[6] + 1.0, Vector3(120, 4, -8))
-	expr(D, s[6] + 1.1, "determined", 0.2)
+	at(s[6] + 1.0, func() -> void: actors[D].cartoon("dizzy", 0.8, {"force": true}))   # knapp entkommen – Sternchen
 	key(s[6], Vector3(115.6, 3.0, 9.6), Vector3(120.0, 2.4, -1.0), 46.0, true)
 	key(s[7] - 0.01, Vector3(116.4, 2.6, 8.8), Vector3(121.0, 2.0, 0.0), 44.0)
 	# --- 7–10: Nitro Dash auf dem Lumos-Ring: Start · Drift · Überholen · Ziel (Kamera fährt mit, siehe _race_camera)
@@ -2083,8 +2077,9 @@ func _act5() -> void:
 			heroes[k].set_lean(0.0)
 			bodies[k].chest_add = Vector3.ZERO
 			bodies[k].head_add = Vector3.ZERO
-			bodies[k].breath = 0.45
-			bodies[k].breath_rate = 1.2
+			actors[k].set_breath(0.45, 1.2)
+			actors[k].micro.stop()
+			actors[k].emotion.clear()
 		_music[2].play(84.0)
 		_snack.visible = true
 		FX.embers(_origin + fire, 10))
@@ -2103,8 +2098,7 @@ func _act5() -> void:
 		heroes[B].face_now(Vector3(1, 0, 0))
 		heroes[D].rotation.z = deg_to_rad(-13.0)   # lehnt sich an den Freund
 		bodies[D].head_add = Vector3(0.12, 0, -0.3)
-		bodies[D].breath = 0.9
-		bodies[D].breath_rate = 0.75
+		actors[D].set_breath(0.9, 0.75)
 		bodies[A].chest_add = Vector3(0.16, 0, 0)
 		faces[C].chew = 1.0)
 	expr(D, t0, "asleep", 0.0)
@@ -2142,7 +2136,7 @@ func _act5() -> void:
 	at(t0 + 3.2, func() -> void: faces[C].chew = 0.0)
 	expr(C, t0 + 3.25, "smug", 0.2)
 	look(A, t0 + 3.55, C)
-	expr(A, t0 + 3.6, "plead", 0.25)
+	expr(A, t0 + 3.6, "puppy", 0.25)   # großer, glänzender Bettelblick
 	look(C, t0 + 4.0, _snack)
 	expr(C, t0 + 4.0, "smile", 0.3)
 	at(t0 + 4.02, func() -> void: heroes[C].squash(1.03, 0.97, 0.4))   # das Seufzen
@@ -2165,7 +2159,9 @@ func _act5() -> void:
 	look(A, t0 + 5.5, C)
 	look(C, t0 + 5.4, A)
 	laugh(C, t0 + 5.55, 1.7, 0.6)
-	at(t0 + 5.9, func() -> void: faces[A].chew = 0.0)
+	at(t0 + 5.9, func() -> void:
+		faces[A].chew = 0.0
+		faces[A].mouth_action("swallow"))
 	laugh(A, t0 + 5.95, 1.5, 0.55)
 	# … die Magierin im Gras dreht den Kopf zu den beiden und lacht mit
 	pose(B, t0 + 5.6, "sit")
@@ -2173,6 +2169,7 @@ func _act5() -> void:
 	look(B, t0 + 5.7, A)
 	expr(B, t0 + 5.8, "grin", 0.25)
 	laugh(B, t0 + 6.25, 1.5, 0.8)
+	expr(D, t0 + 6.6, "sleep_smile", 0.8)   # der Träumer lächelt im Schlaf mit (keine „Zzz“-Schrift: Gefühle zeigt das Gesicht)
 	look(B, t0 + 7.9, Vector3(-2.0, 20.0, -24.0))
 	# Ein Funke steigt auf – die Kamera zieht sich zurück und steigt in den Nachthimmel
 	at(t0 + 6.4, func() -> void:
@@ -2511,10 +2508,9 @@ func _run_face_test() -> void:
 	for name in ["neutral", "smile", "laugh", "awe", "scared", "determined", "asleep", "plead"]:
 		for i in 4:
 			faces[i].blink_on = false
-			faces[i].set_expr(name, 0.0)
-			faces[i].laugh = 1.0 if name == "laugh" else 0.0
-			bodies[i].laugh = faces[i].laugh
-			bodies[i].dt = 1.0 / 60.0
+			actors[i].cfg.autonomy = 0.0
+			actors[i].feel(name, 0.0)
+			actors[i].script_laugh(1.0 if name == "laugh" else 0.0)
 		for k in 8:
 			await get_tree().process_frame
 		get_viewport().get_texture().get_image().save_png(_face_test.path_join(name + ".png"))

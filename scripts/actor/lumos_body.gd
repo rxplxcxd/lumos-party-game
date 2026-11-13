@@ -67,6 +67,7 @@ var hop_lift := 0.0                 # Höhe eines Pivot-Sprungs (CharacterRig.ho
 var micro_head := Vector3.ZERO      # Kopf-Zusatz aus Mikrobewegung/Cartoon (getrennt von head_add der Regie)
 var micro_chest := Vector3.ZERO
 var tremble := 0.0                  # Zittern (Angst, Kälte, Schluchzen)
+var hat_avoid := Vector3.ZERO       # Welt-Richtung zu einem nahen Kopf (Länge 0..1): die Hutkrempe weicht nach hinten aus
 var traits := {"mass": 1.0, "agility": 1.0, "bounce": 0.5}
 
 var _b := {}
@@ -93,6 +94,7 @@ var _t := 0.0
 var _arm_len := 0.5
 var _reach_len := 0.5            # Schulter → Handgelenk (IK-Kette bei ausgerichteter Hand)
 var _hand_q := {}                 # Seite → geglättete Handdrehung (Quaternion, Skelett-Raum)
+var _pole := {}                   # Seite → geglättete Ellbogen-Richtung
 var _hand_off := {}               # Seite → Versatz Handgelenk→Hand (Ruhepose, Skelett-Raum)
 var _rv := Vector3.ZERO           # Wurzel: Geschwindigkeit, Beschleunigung (Skelett-Raum), Gierrate
 var _ra := Vector3.ZERO
@@ -387,7 +389,14 @@ func _process_modification() -> void:
 	for sd: String in ik_t:
 		var w: float = hand_w[sd]
 		if mode == "2bone":
-			var pole := Vector3(0.45 if sd == "l" else -0.45, -1.0, -0.55)
+			# Ellbogen-Richtung: unten-außen-hinten; liegt das Ziel über der Schulter (Kopf kratzen, Winken), wandert sie
+			# nach außen-hinten – sonst stünde sie fast entgegen der Zielrichtung und der Ellbogen könnte umklappen.
+			var sx := 1.0 if sd == "l" else -1.0
+			var shp := sk.get_bone_global_pose(int(_b["arm0." + sd])).origin
+			var up_f := clampf(((ik_t[sd] as Vector3) - shp).normalized().y, 0.0, 1.0)
+			var pole_t := Vector3(sx * (0.45 + 0.85 * up_f), -1.0 * (1.0 - up_f) - 0.12, -0.55)
+			_pole[sd] = pole_t if not _pole.has(sd) else (_pole[sd] as Vector3).lerp(pole_t, 1.0 - exp(-dt / 0.08))
+			var pole: Vector3 = _pole[sd]
 			_ik(sk, "arm0." + sd, "arm1." + sd, ("wrist." if ik_b[sd] != Basis() and _hand_off.has(sd) else "arm2.") + sd, ik_t[sd], pole, w, 0.985)
 			if ik_b[sd] != Basis():
 				_set_hand_basis(sk, sd, ik_b[sd], w)
@@ -562,6 +571,7 @@ func _setup_jiggle(sk: Skeleton3D) -> void:
 				ns.set_bind_bone(bi2, jb)
 		mi.skin = ns
 		_jig.append({"bone": jb, "parent": parent, "local": local, "kind": kind, "gain": gain, "name": String(mi.name),
+			"rad": maxf(bb.size.x, bb.size.z) * 0.5,
 			"ang": Vector2.ZERO, "vel": Vector2.ZERO, "prev": Vector3.INF, "pv": Vector3.ZERO, "pa": Vector3.ZERO})
 
 
@@ -606,10 +616,12 @@ func _update_jiggle(sk: Skeleton3D) -> void:
 		var lim := Vector4(-0.2, 0.2, -0.2, 0.2)
 		match String(j.kind):
 			"hat":
-				tgt = Vector2(-a_loc.z * 0.012, a_loc.x * 0.012) * g
+				var av := inv_b * hat_avoid   # jemand ist nah am Kopf: Krempe hebt sich auf seiner Seite (Hut kippt weg)
+				tgt = Vector2(-a_loc.z * 0.012 - av.z * 0.45, a_loc.x * 0.012 + av.x * 0.45) * g
 				hz = 2.6
 				zeta = 0.22
-				lim = Vector4(-0.16, 0.16, -0.16, 0.16) * g
+				var extra := 0.3 * minf(av.length(), 1.0)
+				lim = Vector4(-0.16 * g - extra, 0.16 * g + extra, -0.16 * g - extra, 0.16 * g + extra)
 			"cape":
 				tgt = Vector2((minf(maxf(_rv.z, 0.0) * 0.2, 0.8) + a_loc.z * 0.02 - cp * 0.85) * g, -a_loc.x * 0.015 * g)
 				hz = 1.5
@@ -627,6 +639,16 @@ func _update_jiggle(sk: Skeleton3D) -> void:
 		j.ang = Vector2(cx, cy)
 		j.vel = Vector2(px.y if is_equal_approx(cx, px.x) else 0.0, py.y if is_equal_approx(cy, py.x) else 0.0)
 		sk.set_bone_global_pose(int(j.bone), Transform3D(base.basis * Basis.from_euler(Vector3(cx, 0.0, cy)), base.origin))
+
+
+## Größter Hut-Radius (Welt, waagerecht) – für den Abstand der Krempe zu anderen Köpfen; 0 = kein Hut.
+func hat_radius() -> float:
+	var r := 0.0
+	var sk := get_skeleton()
+	for j: Dictionary in _jig:
+		if String(j.kind) == "hat" and float(j.gain) > 0.5:
+			r = maxf(r, float(j.get("rad", 0.0)))
+	return r * (sk.global_basis.get_scale().x if sk else 1.0)
 
 
 ## Zubehör-Zustand für Tests: [[Name, Art, Winkel]].

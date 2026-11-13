@@ -434,7 +434,7 @@ func reach(hand: String, target: Variant, secs := 0.3, orient: Variant = null, a
 		return
 	var h: Dictionary = _hands[hand]
 	if owner == "":   # ausdrücklicher Aufruf (Spiel, Regie): Kanal belegen, damit keine Leerlauf-Geste ihn übernimmt
-		layers.claim("api:arm." + hand, ["arm." + hand], LumosLayers.P_SCRIPT)
+		layers.claim("api:arm." + hand, ["arm." + hand], LumosLayers.P_API)
 	h.target = target
 	h.orient = orient
 	h.assist = assist
@@ -548,6 +548,7 @@ func _process(delta: float) -> void:
 	if lod < 2:
 		mind.update(d)
 		micro.update(d)
+		_hat_clearance()
 	emotion.update(d)
 	_apply_emotion(d)
 	_update_gaze(d)
@@ -557,6 +558,28 @@ func _process(delta: float) -> void:
 		interact.tick(d)
 	if body == null:
 		_rigid_body(d, lv)
+
+
+## Breite Hutkrempe: kommt ein anderer Kopf in ihren Bereich, weicht der Hut nach hinten aus.
+func _hat_clearance() -> void:
+	if body == null or social == null:
+		return
+	var hr := body.hat_radius()
+	if hr <= 0.0:
+		return
+	var me := body.joint_pos("head")
+	var push := Vector3.ZERO
+	for pc: Dictionary in social.perceive(self):
+		var o: LumosActor = pc.a
+		if float(pc.d) > hr + 1.2:
+			continue
+		var oh := o.body.joint_pos("head") if o.body else o.head_top()
+		var to := oh - me
+		to.y = 0.0
+		var reach := hr + o.head_radius()
+		if to.length() < reach and to.length() > 0.01:
+			push += to.normalized() * (1.0 - to.length() / reach) * 1.6
+	body.hat_avoid = body.hat_avoid.lerp(push.limit_length(1.0), 0.2)
 
 
 func _apply_emotion(d: float) -> void:
@@ -585,11 +608,11 @@ func _update_gaze(d: float) -> void:
 	var w := 0.0
 	var follow := 0.85
 	var tau_h := lerpf(0.34, 0.16, personality.impulsivity)
-	if _s_look_w > 0.02:
+	if _s_look_w > 0.02:   # Regie: Ziel ungeglättet – Augen springen, der Kopf folgt in ~0,15 s fast ganz
 		want = _s_look
 		w = _s_look_w
-		follow = 1.0
-		tau_h = 0.06
+		follow = 0.92
+		tau_h = 0.15
 	elif _look != null:   # der Kopf dreht ~80 % mit, den Rest übernehmen die Augen (wie beim Menschen)
 		want = _resolve(_look)
 		w = 1.0
@@ -644,7 +667,7 @@ func _update_hands(d: float) -> void:
 		var h: Dictionary = _hands[hand]
 		h.w = move_toward(float(h.w), float(h.to), float(h.rate) * d)
 		var sw := smoothstep(0.0, 1.0, float(h.w))
-		if sw > 0.0 and h.target != null:
+		if sw > 0.0 and h.target != null and float(h.to) > 0.0:   # beim Lösen bleiben Ziel und Haltung stehen
 			var p := _resolve(h.target)
 			if p != Vector3.INF:
 				body.hand_t[hand] = p
@@ -653,7 +676,9 @@ func _update_hands(d: float) -> void:
 			var o: Variant = h.orient
 			if o is Callable:
 				o = (o as Callable).call()
-			body.hand_dir[hand] = o if o is Array else []
+			var oa: Array = o if o is Array else []
+			if not oa.is_empty() or float(h.w) >= 0.999:
+				body.hand_dir[hand] = oa
 		body.hand_w[hand] = sw
 		body.hand_assist[hand] = float(h.assist)
 		var sh: Array = _s_hands.get(hand, [])
@@ -698,8 +723,9 @@ func _rigid_body(d: float, lv: float) -> void:
 	var trem := sin(_t * 46.0) * 0.04 * pet_tremble
 	rig.pivot.rotation.x = _rig_post.x * 0.6 + _rig_lean.x + _rig_imp.x + rock
 	rig.pivot.rotation.z = _rig_post.y + _rig_lean.y + _rig_imp.y + trem
-	var val := float(emotion.mods.valence)
-	var aro := float(emotion.mods.arousal)
+	var dm := LumosEmotion.meta(emotion.dominant())   # Haustiere zeigen das vorherrschende Gefühl deutlich
+	var val := float(dm.get("v", 0.0))
+	var aro := float(dm.get("a", 0.4))
 	if _pet.has("tail"):
 		var tl: Array = _pet.tail
 		var tn: Node3D = tl[0]

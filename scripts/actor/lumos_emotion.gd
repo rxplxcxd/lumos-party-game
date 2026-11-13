@@ -87,6 +87,8 @@ const META := {
 }
 ## Diese Gesichtsparameter werden nicht gemittelt, sondern das stärkste Gefühl gewinnt (Röte, Tränen, Zittern …).
 const MAX_KEYS := ["blush", "tear", "tremble", "cheek", "sclera", "cross"]
+const _MAXSET := {"blush": true, "tear": true, "tremble": true, "cheek": true, "sclera": true, "cross": true}
+const _ONESET := {"width": true, "pupil": true}
 
 var personality: LumosPersonality
 var expressions: Dictionary = {}
@@ -253,8 +255,8 @@ func _mix() -> void:
 		var ex: Dictionary = expressions.get(id, {})
 		for k: String in keys:
 			var b := float(_base[k])
-			var v := float(ex.get(k, 1.0 if k in ["width", "pupil"] else 0.0))   # fehlender Schlüssel = Grundwert (wie im Gesicht)
-			if k in MAX_KEYS:
+			var v := float(ex.get(k, 1.0 if _ONESET.has(k) else 0.0))   # fehlender Schlüssel = Grundwert (wie im Gesicht)
+			if _MAXSET.has(k):
 				mx[k] = maxf(float(mx[k]), b + (v - b) * i * gain)
 			else:
 				acc[k] = float(acc[k]) + (v - b) * i * w
@@ -278,7 +280,7 @@ func _mix() -> void:
 			breath = m.br
 	var n := maxf(wsum, 0.0001)
 	for k: String in keys:
-		if k in MAX_KEYS:
+		if _MAXSET.has(k):
 			face_out[k] = float(mx[k])
 		else:
 			face_out[k] = float(_base[k]) + float(acc[k]) / n * gain
