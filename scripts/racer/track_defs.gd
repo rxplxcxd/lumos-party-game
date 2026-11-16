@@ -206,6 +206,7 @@ static func _coral() -> Dictionary:
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d.bank = {t["i1"]: -8, t["i3"]: 9}
 	d["dividers"] = [[t["div0"], 4.0, 66.0, -2.6, 2.6]]
+	d["hazards"] = [{"p": t["i1"], "type": "geyser", "skin": "water", "off": 12.0, "x": -4.0, "w": 4.2, "period": 4.4, "on": 1.1, "phase": 0.0}, {"p": t["i1"], "type": "geyser", "skin": "water", "off": 28.0, "x": 4.0, "w": 4.2, "period": 4.4, "on": 1.1, "phase": 2.2}, {"p": t["w1"], "type": "geyser", "skin": "water", "off": 14.0, "x": 0.0, "w": 4.2, "period": 4.0, "on": 1.0, "phase": 1.0}, {"p": t["i3"], "type": "log", "skin": "crab", "off": 14.0, "x": 0.0, "w": 18.0, "period": 5.4, "on": 2.6, "phase": 0.0}]
 	d["desc"] = "Hafen, Tauchgang durch den Korallentunnel, Felsinsel mit zwei Routen, Sprung über den Steg."
 	return d
 
@@ -247,6 +248,7 @@ static func _storm() -> Dictionary:
 	d.boosts = [[t["b1"], 0.0], [t["end2"], 2.0]]
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d.bank = {t["i1"]: -8}
+	d["hazards"] = [{"p": t["i1"], "type": "geyser", "skin": "bolt", "off": 20.0, "x": -3.2, "w": 4.4, "period": 5.0, "on": 0.8, "phase": 0.0}, {"p": t["wet0"], "type": "geyser", "skin": "bolt", "off": 20.0, "x": 3.2, "w": 4.4, "period": 5.0, "on": 0.8, "phase": 2.5}, {"p": t["wet2"], "type": "geyser", "skin": "rock", "off": 34.0, "x": -3.0, "w": 4.6, "period": 5.6, "on": 1.6, "phase": 0.6}, {"p": t["wet3"], "type": "geyser", "skin": "rock", "off": 14.0, "x": 3.2, "w": 4.6, "period": 5.6, "on": 1.6, "phase": 3.4}]
 	d["desc"] = "Serpentinen im Unwetter, nasse Kurven, Sprung über die Schlucht, Abfahrt unter der Brücke."
 	return d
 
@@ -267,6 +269,7 @@ static func _frost() -> Dictionary:
 	d.boosts = [[t["b1"], 0.0], [t["end2"], -2.0]]
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d.bank = {t["i3"]: 8}
+	d["hazards"] = [{"p": t["i1"], "type": "log", "skin": "snowball", "off": 14.0, "x": 0.0, "w": 18.0, "period": 5.2, "on": 2.3, "phase": 0.0}, {"p": t["ice2"], "type": "log", "skin": "snowball", "off": 60.0, "x": 0.0, "w": 18.0, "period": 5.2, "on": 2.3, "phase": 2.6}, {"p": t["i3"], "type": "log", "skin": "snowball", "off": 6.0, "x": 0.0, "w": 18.0, "period": 4.8, "on": 2.1, "phase": 1.3}]
 	d["desc"] = "Eisplatten, enge Kehre am Gipfel, Skisprungschanze und eisige Abfahrt."
 	return d
 
@@ -287,6 +290,7 @@ static func _orbit() -> Dictionary:
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d.bank = {t["i1"]: -9}
 	d["bounce"] = [[t["bo1"], 0.0, -3.5, 4.5, 12.0], [t["bo2"], 0.0, 3.5, 4.5, 12.0]]
+	d["hazards"] = [{"p": t["i1"], "type": "log", "skin": "orb", "off": 12.0, "x": 0.0, "w": 18.0, "period": 4.6, "on": 1.9, "phase": 0.0}, {"p": t["i3"], "type": "log", "skin": "orb", "off": 8.0, "x": 0.0, "w": 18.0, "period": 4.6, "on": 1.9, "phase": 2.3}]
 	d["desc"] = "Boost-Tunnel, Sternenfedern, Looping und langer Schwebeflug."
 	return d
 
@@ -306,6 +310,7 @@ static func _city() -> Dictionary:
 	d.boosts = [[t["b1"], 0.0], [t["end2"], 2.0]]
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d["dividers"] = [[t["div0"], 6.0, 70.0, -2.2, 2.2]]
+	d["hazards"] = [{"p": t["b1"], "type": "log", "skin": "car", "off": 52.0, "x": 0.0, "w": 18.0, "period": 5.6, "on": 2.0, "phase": 0.0}, {"p": t["i2"], "type": "log", "skin": "car", "off": 20.0, "x": 0.0, "w": 18.0, "period": 5.6, "on": 2.0, "phase": 2.8}, {"p": t["i3"], "type": "log", "skin": "car", "off": 20.0, "x": 0.0, "w": 18.0, "period": 5.0, "on": 1.9, "phase": 1.4}]
 	d["desc"] = "Enge 90°-Ecken, Häuserblock mit zwei Routen, Schikane und Kanalsprung."
 	return d
 
@@ -326,6 +331,7 @@ static func _desert() -> Dictionary:
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d.bank = {t["i1"]: 8, t["i3"]: 8}
 	d["bounce"] = [[t["bo1"], 0.0, 0.0, 6.0, 11.0]]
+	d["hazards"] = [{"p": t["i1"], "type": "log", "skin": "tumbleweed", "off": 14.0, "x": 0.0, "w": 18.0, "period": 4.8, "on": 2.4, "phase": 0.0}, {"p": t["i3"], "type": "geyser", "skin": "sand", "off": 30.0, "x": -3.6, "w": 4.4, "period": 4.4, "on": 1.1, "phase": 0.0}, {"p": t["i3"], "type": "geyser", "skin": "sand", "off": 62.0, "x": 3.6, "w": 4.4, "period": 4.4, "on": 1.1, "phase": 2.2}, {"p": t["b2"], "type": "log", "skin": "tumbleweed", "off": 30.0, "x": 0.0, "w": 18.0, "period": 4.8, "on": 2.4, "phase": 2.4}]
 	d["desc"] = "Canyon-S-Kurven, Dünen-Sprungfeld, Looping und Gleitflug über die Schlucht."
 	return d
 
@@ -366,6 +372,7 @@ static func _candy() -> Dictionary:
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d.bank = {t["i1"]: 8}
 	d["bounce"] = [[t["bo1"], 0.0, -3.5, 4.5, 12.0], [t["bo2"], 0.0, 3.5, 4.5, 12.0]]
+	d["hazards"] = [{"p": t["i1"], "type": "log", "skin": "gumball", "off": 62.0, "x": 0.0, "w": 18.0, "period": 5.0, "on": 2.2, "phase": 0.0}, {"p": t["bo2"], "type": "log", "skin": "gumball", "off": 24.0, "x": 0.0, "w": 18.0, "period": 5.0, "on": 2.2, "phase": 2.5}, {"p": t["i4"], "type": "log", "skin": "gumball", "off": 12.0, "x": 0.0, "w": 18.0, "period": 4.6, "on": 2.0, "phase": 1.2}]
 	d["desc"] = "Riesen-Süßigkeiten, Kaugummi-Sprungfelder, Lolli-Looping, Brücke über die erste Kurve."
 	return d
 
@@ -408,5 +415,6 @@ static func _falls() -> Dictionary:
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d.bank = {t["i1"]: -8}
 	d["falls"] = [t["fall"]]
+	d["hazards"] = [{"p": t["wet0"], "type": "geyser", "skin": "water", "off": 16.0, "x": -3.8, "w": 4.2, "period": 4.2, "on": 1.1, "phase": 0.0}, {"p": t["wet0"], "type": "geyser", "skin": "water", "off": 36.0, "x": 3.8, "w": 4.2, "period": 4.2, "on": 1.1, "phase": 2.1}, {"p": t["bridge"], "type": "geyser", "skin": "water", "off": 30.0, "x": 0.0, "w": 4.2, "period": 4.6, "on": 1.0, "phase": 1.0}]
 	d["desc"] = "Mitten durch den Wasserfall, Brücke über die eigene Strecke, Gleitflug über den Schluchtfluss."
 	return d

@@ -17,6 +17,10 @@ var info: Dictionary = {}
 var env_preset := "day"
 var time_limit := 40.0
 var time_left := 40.0
+## Spielzeit seit dem Start in Sekunden (läuft nur im Zustand „play“, steht bei Pause, folgt Zeitlupe/Hitstop).
+## Für alles, was das Spiel beeinflusst (CPU-Takt, Bahnen von Gegnern) – nie die Echtzeit-Uhr: Die läuft in der
+## Pause weiter und im Test-Zeitraffer zu langsam.
+var clock := 0.0
 var state := "setup"
 var touch_profile := "minigame"
 var survival := false
@@ -256,6 +260,7 @@ func _flow() -> void:
 func _process(delta: float) -> void:
 	if state != "play":
 		return
+	clock += delta
 	if show_timer:
 		time_left = maxf(0.0, time_left - delta)
 		var secs := int(ceil(time_left))
@@ -911,6 +916,52 @@ func _return(placements: Array[int]) -> void:
 			Router.goto("res://scenes/menu/MainMenu.tscn", {"page": "online"})
 		_:
 			Router.goto("res://scenes/menu/MainMenu.tscn")
+
+
+# --- Zugspiele: niemand hält die Runde auf ----------------------------------------------------------
+
+const TURN_PATIENCE := 20.0
+var _turn_slot := -1
+var _turn_idle := 0.0
+var _turn_label: Label
+
+
+## Für Spiele, in denen einer nach dem anderen dran ist: je Bild für den Spieler am Zug aufrufen. Zählt bei
+## Menschen die Zeit ohne jede Eingabe; die letzten 5 Sekunden zeigt ein Countdown. true = Geduld vorbei – das
+## Spiel führt den Zug dann selbst aus (mit dem, was gerade eingestellt ist). CPU-Züge und fremde Online-Plätze
+## zählen nie. So kann ein abwesender Spieler die anderen nicht endlos warten lassen.
+func turn_timed_out(slot: int, delta: float, limit := TURN_PATIENCE) -> bool:
+	if slot != _turn_slot:
+		_turn_slot = slot
+		_turn_idle = 0.0
+	if slot < 0 or slot >= Game.players.size() or Game.players[slot].cpu or not Net.owns_slot(slot):
+		if _turn_label:
+			_turn_label.visible = false
+		return false
+	var busy := InputHub.move(slot).length() > 0.3
+	for act: String in InputHub.ACTIONS:
+		busy = busy or InputHub.held(slot, act)
+	_turn_idle = 0.0 if busy else _turn_idle + delta
+	var left := limit - _turn_idle
+	if left <= 5.0 and left > 0.0:
+		if _turn_label == null:
+			_turn_label = UI.label("", 44, Color("#ffd23f"), true, 10)
+			_turn_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+			_turn_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			_turn_label.position = Vector2(-260, 96)
+			_turn_label.size = Vector2(520, 60)
+			_hud_root.add_child(_turn_label)
+		_turn_label.visible = true
+		_turn_label.text = "%s: noch %d …" % [Game.SLOT_NAMES[slot], int(ceil(left))]
+	elif _turn_label:
+		_turn_label.visible = false
+	if _turn_idle >= limit:
+		_turn_idle = 0.0
+		_turn_slot = -1
+		if _turn_label:
+			_turn_label.visible = false
+		return true
+	return false
 
 
 # --- HUD & Overlays -------------------------------------------------------------------------------

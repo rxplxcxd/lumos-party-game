@@ -215,7 +215,7 @@ func cpu_think(slot: int, _delta: float) -> void:
 		return
 	var level: int = Game.players[slot].cpu_level
 	var held := {}
-	var t := Time.get_ticks_msec() / 1000.0 * (7.0 + mini(level, 2) * 2.0) + slot
+	var t := clock * (7.0 + mini(level, 2) * 2.0) + slot   # Spielzeit: gleicher Schwung bei jeder Bildrate und im Zeitraffer
 	var mv := Vector2(cos(t), sin(t))
 	if _spin[slot] >= MAX_SPIN * _cpu_target[slot] * Game.lv([0.75, 0.88, 1.0], level):
 		mv = Vector2.ZERO

@@ -141,6 +141,8 @@ func on_tick(delta: float) -> void:
 	var a_now := InputHub.held(s, "a")
 	var a_edge := a_now and not _prev_a[s]
 	_prev_a[s] = a_now
+	if (_phase == "aim" or _phase == "power") and turn_timed_out(s, delta, 15.0 if _phase == "aim" else 4.0):
+		a_edge = true   # abwesend: der Wurf geht mit der gerade angezeigten Richtung/Kraft los
 	match _phase:
 		"aim":
 			_aim += _aim_dir * delta * 0.9

@@ -2,6 +2,8 @@ extends MinigameBase
 ## Stampf-Wellen: Runde Kristallbühne über dem Sternenhimmel. B = Stampfer (kurzer Hüpfer, bei der Landung
 ## läuft ein Wellenring los). Wellen werfen alle am Boden nach außen – A = drüberspringen. Dazu rollen
 ## Bühnenwellen von der Mitte. Wer runterfällt, ist raus; Wellentreffer zählen bei Gleichstand.
+## Die Bühne schrumpft: Nach einem Drittel der Zeit bricht der äußere Ring weg, nach zwei Dritteln der mittlere –
+## jeweils mit Vorwarnung (Ring blinkt, Grollen). So bleibt es nie beim gemütlichen Wellenhüpfen bis zum Abpfiff.
 ## Online: Host-Modell (Host simuliert Wellen und Treffer).
 
 const R := 9.0
@@ -12,7 +14,16 @@ const STOMP_CD := 1.4
 var _waves: Array[Dictionary] = []   # {c: Vector3, r, owner, node, hit:{}}
 var _cd: Array[float] = [0, 0, 0, 0]
 var _stomping: Array[bool] = [false, false, false, false]
+var _airborne: Array[bool] = [false, false, false, false]   # Stampfer hat den Boden verlassen (Landung erst danach)
+var _stomp_t: Array[float] = [0, 0, 0, 0]
 var _stage_t := 4.0
+const STAGE_R := [9.0, 7.4, 5.6]          # Radius nach 0, 1, 2 abgebrochenen Ringen
+const BREAK_AT := [0.34, 0.67]            # Anteil der Spielzeit, zu dem ein Ring wegbricht
+const BREAK_WARN := 2.6                   # Sekunden Vorwarnung
+var _stage: Array[Node3D] = []            # [außen, mitte, kern]
+var _lines: Array[MeshInstance3D] = []
+var _broken := 0
+var _warned := 0
 
 
 func _init() -> void:
@@ -32,10 +43,14 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.cylinder(world, R, 0.6, Vector3(0, -0.3, 0), Color("#3b2f7a"))
+	# Drei ineinanderliegende Scheiben: Die äußeren brechen im Lauf der Runde weg (Kern minimal höher, kein Flimmern)
+	var cols := [Color("#33286b"), Color("#3b2f7a"), Color("#46388c")]
+	for k in 3:
+		_stage.append(WorldKit.cylinder(world, float(STAGE_R[k]), 0.6, Vector3(0, -0.3 + k * 0.012, 0), cols[k]))
 	for k in 4:
 		var rr := MgKit.ring(world, 2.0 + k * 2.2, 0.08, Color(0.75, 0.6, 1.0, 0.7), 1.2)
-		rr.position.y = 0.02
+		rr.position.y = 0.05
+		_lines.append(rr)
 	# Kristalle und schwebende Sterne rund um die Bühne
 	for i in 10:
 		var a := TAU * i / 10.0
@@ -60,8 +75,45 @@ func on_start() -> void:
 		(av as PartyAvatar).rig.surface = "metal"
 
 
+## Aktueller Bühnenradius; soon = schon der Radius nach dem angekündigten Abbruch (für die CPU: rechtzeitig nach innen).
+func stage_radius(soon := false) -> float:
+	return float(STAGE_R[mini(maxi(_broken, _warned if soon else 0), 2)])
+
+
+func _stage_tick(prog: float) -> void:
+	for k in 2:
+		var at := float(BREAK_AT[k]) * time_limit
+		var now := prog * time_limit
+		if _warned <= k and now >= at - BREAK_WARN:   # Vorwarnung: der Ring blinkt und grollt
+			_warned = k + 1
+			Audio.sfx("woom", Vector3.ZERO, 0.0, 0.6)
+			Juice.shake(0.12)
+			var mat := ((_stage[k].get_child(1) as MeshInstance3D).mesh as CylinderMesh).material as StandardMaterial3D
+			mat.emission_enabled = true
+			mat.emission = Color(1.0, 0.35, 0.3)
+			var tw := create_tween().set_loops(7)
+			tw.tween_property(mat, "emission_energy_multiplier", 1.6, BREAK_WARN / 14.0)
+			tw.tween_property(mat, "emission_energy_multiplier", 0.0, BREAK_WARN / 14.0)
+		if _broken <= k and now >= at:                 # Abbruch: Kollision weg, Scheibe stürzt ab
+			_broken = k + 1
+			var ring := _stage[k]
+			(ring.get_child(0) as CollisionShape3D).set_deferred("disabled", true)
+			var tw2 := create_tween()
+			tw2.tween_property(ring, "position:y", -14.0, 1.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			tw2.tween_callback(ring.hide)
+			for ln in _lines:
+				if is_instance_valid(ln) and ln.visible and (ln.mesh as TorusMesh).outer_radius > stage_radius():
+					ln.visible = false
+			Audio.sfx("stone_hit", Vector3.ZERO, 2.0, 0.6)
+			FX.dust(Vector3(stage_radius() + 0.6, 0.2, 0), Color(0.7, 0.6, 1.0), 14, 1.4)
+			FX.dust(Vector3(-stage_radius() - 0.6, 0.2, 0), Color(0.7, 0.6, 1.0), 14, 1.4)
+			Juice.shake(0.3)
+			arena_radius = stage_radius() + 0.5
+
+
 func on_tick(delta: float) -> void:
 	var prog := 1.0 - time_left / time_limit
+	_stage_tick(prog)
 	for i in active_slots():
 		_cd[i] = maxf(0.0, _cd[i] - delta)
 		var av := avatars[i] as PartyAvatar
@@ -69,14 +121,23 @@ func on_tick(delta: float) -> void:
 			continue
 		if InputHub.pressed(i, "b") and _cd[i] <= 0.0 and av.is_on_floor() and not _stomping[i]:
 			_stomping[i] = true
+			_airborne[i] = false
+			_stomp_t[i] = 0.0
 			_cd[i] = STOMP_CD
 			av.velocity.y = 7.5
 			av.rig.play("jump_start", 0.08, 1.6, true)
 			Audio.sfx("woop", av.global_position, -6.0, 1.3)
-		elif _stomping[i] and av.velocity.y < 0.0 and av.is_on_floor():
-			_stomping[i] = false
-			_spawn_wave(av.global_position, i)
-			av.rig.land_impact(1.2)
+		elif _stomping[i]:
+			# Landung = wieder am Boden, nachdem die Figur abgehoben hat. (Die Fallgeschwindigkeit taugt dafür nicht:
+			# Am Boden setzt die Physik sie auf 0 – so entstand früher nie eine Welle.)
+			_stomp_t[i] += delta
+			if not av.is_on_floor():
+				_airborne[i] = true
+			elif _airborne[i] or _stomp_t[i] > 1.2:
+				_stomping[i] = false
+				if _airborne[i]:
+					_spawn_wave(av.global_position, i)
+					av.rig.land_impact(1.2)
 	_stage_t -= delta
 	if _stage_t <= 0.0:
 		_stage_t = lerpf(4.5, 2.4, prog)
@@ -130,6 +191,7 @@ func net_pack() -> Dictionary:
 
 func net_unpack(d: Dictionary) -> void:
 	super.net_unpack(d)
+	_stage_tick(1.0 - time_left / time_limit)   # Bühnenzustand folgt der (vom Host übernommenen) Spielzeit
 	var ws: Array = d.get("w", [])
 	# Wellen darstellen: neue anlegen, Radien übernehmen, alte entfernen
 	while _waves.size() < ws.size():
@@ -183,9 +245,10 @@ func cpu_think(slot: int, _delta: float) -> void:
 	if best:
 		var to := best.global_position - p
 		mv = Vector2(to.x, to.z).normalized() * (1.0 if bd > 3.5 else -0.3)
-		if bd < 4.0 and _cd[slot] <= 0.0 and randf() < Game.lv([0.01, 0.025, 0.04], level):
+		if bd < 4.0 and _cd[slot] <= 0.0 and randf() < Game.lv([0.02, 0.05, 0.08], level):
 			held["b"] = true
 	var r := Vector2(p.x, p.z).length()
-	if r > R * 0.6:
-		mv = mv * 0.3 - Vector2(p.x, p.z).normalized() * (r / R) * 1.6
+	var rs := stage_radius(true)   # schon vor dem Abbruch nach innen
+	if r > rs * 0.6:
+		mv = mv * 0.3 - Vector2(p.x, p.z).normalized() * (r / rs) * 1.6
 	InputHub.set_virtual(slot, mv.limit_length(1.0), held)

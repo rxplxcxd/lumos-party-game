@@ -155,7 +155,7 @@ func on_tick(delta: float) -> void:
 	if _flash_t <= 0.0:
 		_flash_t = rng.randf_range(3.0, 4.6)
 		_lightning(false)
-	var t := Time.get_ticks_msec() / 1000.0
+	var t := clock   # Spielzeit: nach einer Pause stehen die Geister dort, wo sie waren
 	for g in ghosts:
 		var rig: CharacterRig = g.rig
 		var x := sin(t * float(g.speed) + float(g.phase)) * (COLS * TILE * 0.5)

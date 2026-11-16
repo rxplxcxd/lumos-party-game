@@ -712,21 +712,31 @@ func _collide_racers() -> void:
 					InputHub.rumble(focus.slot, 0.4, 0.1)
 
 
-## Streckengefahr hat ein eigenes Kart erwischt (Lavafontäne, Baumstamm).
+## Streckengefahr hat ein eigenes Kart erwischt. kind = Erscheinungsbild (TrackMechanics.skin_of).
+const HAZARD_TEXT := {"lava": "Lava!", "water": "Fontäne!", "sand": "Sandfontäne!", "bolt": "Blitz!", "rock": "Steinschlag!", "log": "Baumstamm!",
+	"snowball": "Schneeball!", "gumball": "Kaugummikugel!", "orb": "Sternschnuppe!", "car": "Querverkehr!", "tumbleweed": "Steppenläufer!", "crab": "Krabbe!"}
+
+
 func _hazard_hit(r: Racer, kind: String) -> void:
 	if r.hit("spin"):
-		if kind == "geyser":
+		if kind in ["lava", "water", "sand", "bolt"]:   # wird hochgeschleudert
 			r.vh = 7.0
 			r.h = maxf(r.h, 0.1)
-			FX.burst(r.global_position + Vector3.UP, {"amount": 18, "life": 0.7, "spread": 50.0, "dir": Vector3.UP, "vel_min": 4.0, "vel_max": 8.0,
-				"gravity": Vector3(0, -12, 0), "size": 0.4, "additive": true, "color": Color(1.0, 0.55, 0.2)})
-			Audio.sfx("explosion_big", r.global_position, -8.0, 1.4)
+			if kind == "lava" or kind == "bolt":
+				FX.burst(r.global_position + Vector3.UP, {"amount": 18, "life": 0.7, "spread": 50.0, "dir": Vector3.UP, "vel_min": 4.0, "vel_max": 8.0,
+					"gravity": Vector3(0, -12, 0), "size": 0.4, "additive": true, "color": Color(1.0, 0.55, 0.2) if kind == "lava" else Color(0.8, 0.92, 1.0)})
+				Audio.sfx("explosion_big", r.global_position, -8.0, 1.4)
+			else:
+				FX.splash(r.global_position + Vector3.UP * 0.6, 1.4)
+				Audio.sfx("splash", r.global_position, -2.0, 0.9)
+				if kind == "water":
+					mech.drenched.emit(r, 1.0)
 		else:
-			Audio.sfx("stone_hit", r.global_position, -2.0, 0.8)
-			FX.dust(r.global_position, Color(0.6, 0.5, 0.35), 12, 1.2)
+			Audio.sfx("stone_hit", r.global_position, -2.0, 0.8 if kind in ["log", "rock", "car"] else 1.2)
+			FX.dust(r.global_position, Color(0.95, 0.97, 1.0) if kind == "snowball" else Color(0.6, 0.5, 0.35), 12, 1.2)
 		_net_hit(r, "spin")
 		if r == focus:
-			_message("Lava!" if kind == "geyser" else "Baumstamm!", Color("#ff9f43"))
+			_message(String(HAZARD_TEXT.get(kind, "Autsch!")), Color("#ff9f43"))
 
 
 ## Sprungfeld überfahren (vom Kart gemeldet) – nur Optik.

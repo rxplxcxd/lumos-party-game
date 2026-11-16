@@ -139,7 +139,7 @@ func on_tick(delta: float) -> void:
 	(_marker.mesh.surface_get_material(0) as StandardMaterial3D).emission = Game.player_color(p)
 	_marker.position = _slot_pos(_cursor) + Vector3(0, 2.4 + sin(Time.get_ticks_msec() / 160.0) * 0.12, 0)
 	_marker.rotation.x = PI * 0.5
-	if InputHub.pressed(p, "a"):
+	if InputHub.pressed(p, "a") or turn_timed_out(p, delta, 15.0):   # abwesend: die markierte Truhe zählt
 		picks[p] = _cursor
 		var av := avatars[p] as PartyAvatar
 		av.rig.react("determined")
