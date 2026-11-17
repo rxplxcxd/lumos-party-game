@@ -27,13 +27,17 @@ static func enabled() -> bool:
 
 ## Framework an eine Figur hängen. null = abgeschaltet oder Modell ohne passendes Skelett (eigene Lumos-Avatare
 ## sind noch nicht geprüft und bleiben deshalb ohne Framework).
-static func attach(rig: CharacterRig, autonomy := AUTONOMY) -> LumosActor:
+## far > 0: ab dieser Entfernung (in Körpergrößen) gilt die Figur als fern – ohne Fuß-IK und Oberkörper-Blick, im
+## Bild klein genug, dass man es nicht sieht (Standard des Frameworks: 24).
+static func attach(rig: CharacterRig, autonomy := AUTONOMY, far := 0.0) -> LumosActor:
 	if not enabled() or rig == null or not is_instance_valid(rig) or rig.model_key.begins_with("custom/"):
 		return null
 	var cfg := LumosActorConfig.detect(rig)
 	if cfg.profile == "rigid":
 		return null
 	cfg.autonomy = autonomy
+	if far > 0.0:
+		cfg.lod_far = far
 	return LumosActor.attach(rig, cfg)
 
 

@@ -6,15 +6,15 @@
 set -u
 targets="$1"; out="$2"; mode="${3:-}"
 cd "$(dirname "$0")/../.."
-: > "$out"
+[ "${APPEND:-0}" = "1" ] || : > "$out"
 while read -r t; do
 	[ -z "$t" ] && continue
 	case "$t" in
 		board:*) secs=40 ;; track:*) secs=45 ;; mg:*|boss:*) secs=60 ;; *) secs=20 ;;
 	esac
 	if [ "$mode" = "--xvfb" ]; then
-		# Render-Zählwerte bei Grafikstufe „Hoch“, kürzeres Fenster (Software-Rasterung ist langsam)
-		line=$(timeout 900 xvfb-run -a -s "-screen 0 1280x720x24" ./godot --fixed-fps 60 --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/scene_profile.gd --target="$t" --secs=12 --quality=high 2>/dev/null | grep '^PROFILE ' | tail -1)
+		# Render-Zählwerte bei Grafikstufe „Hoch“, 3 s Fenster nach 2 s Aufbau (Software-Rasterung ist langsam; Zählwerte genügen)
+		line=$(timeout 900 xvfb-run -a -s "-screen 0 1280x720x24" ./godot --fixed-fps 60 --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/scene_profile.gd --target="$t" --secs=3 --warm=2 --quality=high --res=640x360 2>/dev/null | grep '^PROFILE ' | tail -1)
 	else
 		line=$(timeout 600 ./godot --headless --fixed-fps 60 --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/scene_profile.gd --target="$t" --secs="$secs" 2>/dev/null | grep '^PROFILE ' | tail -1)
 	fi

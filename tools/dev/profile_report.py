@@ -93,6 +93,15 @@ def main():
                 x = xv.get(r["target"], {})
                 line += f" {fmt(x.get('draw_calls'), 0)} | {fmt(x.get('prims_k'), 1)} | {fmt(x.get('vmem_mb'), 0)} |"
             w(line)
+    if xv:
+        w("")
+        w("## Einordnung der Draw-Calls")
+        w("")
+        w("Beispiel Hauptmenü (eigene Messung, gleiche Ansicht): Grafikstufe Hoch 663 Draw-Calls je Bild, davon ≈ 600 "
+          "für die 3D-Insel (195 sichtbare Objekte, 88 Schattenwerfer, mehrteilige Figuren) und ≈ 60 für die Oberfläche; "
+          "Mittel 522, Niedrig 447 (ohne Schatten). Die Grafikstufen passen das bereits an: „Niedrig“ ohne Schatten, im "
+          "Web auf Niedrig/Mittel nur eine Schattenebene und 30 % kürzere Schattendistanz, kleine Deko wirft keinen "
+          "Schatten. Ob das auf schwachen Geräten reicht, zeigt erst eine Messung dort.")
     notes = [r for r in ok if r.get("errors") or r.get("late_loads") or r.get("over33")]
     if notes:
         w("")

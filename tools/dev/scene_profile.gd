@@ -46,7 +46,12 @@ func run() -> void:
 	tree.root.add_child.call_deferred(self)
 	await tree.process_frame
 	await tree.process_frame
-	tree.root.size = Vector2i(1280, 720)
+	# Bildgröße: Standard 1280×720; für Render-Zählwerte mit Software-Renderer genügt 640×360 (Draw-Calls und
+	# Primitive hängen nicht von der Auflösung ab, gleiches Seitenverhältnis = gleicher Bildausschnitt)
+	var res := String(args.get("res", "1280x720")).split("x")
+	tree.root.size = Vector2i(int(res[0]), int(res[1]))
+	if args.has("lively"):    # Character Framework (Menü-Insel, Siegerehrung) an/aus – für den Kostenvergleich
+		Game.settings["lively_faces"] = String(args["lively"]) != "0"
 	if args.has("quality"):   # Grafikstufe erzwingen (xvfb/Software-Renderer erkennt sonst „Niedrig“)
 		Game.settings["quality"] = String(args["quality"])
 		Gfx.apply()

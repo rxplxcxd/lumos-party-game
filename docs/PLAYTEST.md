@@ -46,6 +46,22 @@ und Ergebnis mit A weitergehen.
 | 18 Spiele | Modelle (Münzen, Geschosse, Sammelobjekte) wurden erst beim ersten Auftauchen geladen: Ruckler bis 448 ms | Vorabladen beim Aufbau (`MinigameBase.WARM_MODELS`, `Assets.warm`) |
 | Test-Infrastruktur | 2 von 379 Engine-Abstürzen beim parallelen Start (Signal 11 vor Spielbeginn, nicht spielbedingt) | Treiber wiederholt einmal |
 
+## Funde aus dem Szenen-Profil (dritter Durchlauf) und Nachprüfung
+
+Das Leistungsprofil aller Szenen (`docs/PERF_SCENES.md`) fing Engine-Fehlermeldungen und Ruckler mit, die der
+Spieler-Agent nicht als Fehler zählte (keine Skriptfehler):
+
+| Spiel | Fund | Korrektur |
+|---|---|---|
+| Rhythmus-Küche | Ruck bis 292 ms beim Wechsel in den 2. Gang: der Song des Gangs kam erst dann von der Platte (bei warmem Datei-Cache nur ≈ 10 ms, darum nicht immer sichtbar) | alle Gänge laden beim Start im Hintergrund vor; jedes Minispiel lädt Hurry-Up und Outro vor |
+| Lava-Surfen, Farb-Chaos, Wolkenboss, Ballon-Schlacht | „material is null“ bei jedem eingesammelten Edelstein, geplatzten Ballon u. Ä. – Godot 4.7 gibt eingefärbte Override-Materialien vor der Render-Instanz frei (isoliert nachgestellt: 5 von 5 Löschungen) | `Assets.keep_material`: Material als Metadaten bis zum Schluss gehalten (0 von 5) |
+| Achterbahn-Schießbude | Minispiel-Intro: Kanone zielt mit Nullvektor (steht genau über der Arenamitte) | feste Richtung als Rückfall |
+| Ballon-Schlacht | Slapstick-Modifier invertierte die Skelett-Basis einer auf Größe 0 geschrumpften Figur (Fehler je Bild) | übersprungen, solange die Figur unsichtbar klein ist |
+
+Nachprüfung mit dem Spieler-Agenten: diese sechs Spiele in 33 Läufen (alle Kategorien × Strategien) vollständig
+gespielt, alle enden sauber, 0 Skriptfehler, 0 Engine-Fehler während des Spiels (übrig sind nur die üblichen
+Speicher-Zusammenfassungen beim Beenden des Testprozesses).
+
 ## Ergebnis je Minispiel (zweiter Durchlauf, nach den Korrekturen)
 
 Platz = Platz des Agenten (1 = gewonnen), gemittelt. „Auffälligkeiten“ stammen aus dem Lauf **vor** dem Vorabladen

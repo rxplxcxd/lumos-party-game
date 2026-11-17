@@ -123,7 +123,9 @@ func _actor(key: String, pos: Vector3, scl := 0.95) -> CharacterRig:
 	r.position = pos
 	r.face_now(Vector3(0, 0, 1))
 	r.play("idle")
-	LumosGame.attach(r)   # Character Framework: Gesichter, Mikroleben, Blicke (abschaltbar: „Lebendige Mimik“)
+	# Character Framework: Gesichter, Mikroleben, Blicke (abschaltbar: „Lebendige Mimik“). Die Inselfiguren sind im
+	# Bild klein: Detailstufe „fern“ schon ab 12 Körpergrößen (ohne Fuß-IK/Oberkörper-Blick, nicht sichtbar)
+	LumosGame.attach(r, LumosGame.AUTONOMY, 12.0)
 	_heroes.append(r)
 	return r
 
