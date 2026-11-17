@@ -712,21 +712,31 @@ func _collide_racers() -> void:
 					InputHub.rumble(focus.slot, 0.4, 0.1)
 
 
-## Streckengefahr hat ein eigenes Kart erwischt (Lavafontäne, Baumstamm).
+## Streckengefahr hat ein eigenes Kart erwischt. kind = Erscheinungsbild (TrackMechanics.skin_of).
+const HAZARD_TEXT := {"lava": "Lava!", "water": "Fontäne!", "sand": "Sandfontäne!", "bolt": "Blitz!", "rock": "Steinschlag!", "log": "Baumstamm!",
+	"snowball": "Schneeball!", "gumball": "Kaugummikugel!", "orb": "Sternschnuppe!", "car": "Querverkehr!", "tumbleweed": "Steppenläufer!", "crab": "Krabbe!"}
+
+
 func _hazard_hit(r: Racer, kind: String) -> void:
 	if r.hit("spin"):
-		if kind == "geyser":
+		if kind in ["lava", "water", "sand", "bolt"]:   # wird hochgeschleudert
 			r.vh = 7.0
 			r.h = maxf(r.h, 0.1)
-			FX.burst(r.global_position + Vector3.UP, {"amount": 18, "life": 0.7, "spread": 50.0, "dir": Vector3.UP, "vel_min": 4.0, "vel_max": 8.0,
-				"gravity": Vector3(0, -12, 0), "size": 0.4, "additive": true, "color": Color(1.0, 0.55, 0.2)})
-			Audio.sfx("explosion_big", r.global_position, -8.0, 1.4)
+			if kind == "lava" or kind == "bolt":
+				FX.burst(r.global_position + Vector3.UP, {"amount": 18, "life": 0.7, "spread": 50.0, "dir": Vector3.UP, "vel_min": 4.0, "vel_max": 8.0,
+					"gravity": Vector3(0, -12, 0), "size": 0.4, "additive": true, "color": Color(1.0, 0.55, 0.2) if kind == "lava" else Color(0.8, 0.92, 1.0)})
+				Audio.sfx("explosion_big", r.global_position, -8.0, 1.4)
+			else:
+				FX.splash(r.global_position + Vector3.UP * 0.6, 1.4)
+				Audio.sfx("splash", r.global_position, -2.0, 0.9)
+				if kind == "water":
+					mech.drenched.emit(r, 1.0)
 		else:
-			Audio.sfx("stone_hit", r.global_position, -2.0, 0.8)
-			FX.dust(r.global_position, Color(0.6, 0.5, 0.35), 12, 1.2)
+			Audio.sfx("stone_hit", r.global_position, -2.0, 0.8 if kind in ["log", "rock", "car"] else 1.2)
+			FX.dust(r.global_position, Color(0.95, 0.97, 1.0) if kind == "snowball" else Color(0.6, 0.5, 0.35), 12, 1.2)
 		_net_hit(r, "spin")
 		if r == focus:
-			_message("Lava!" if kind == "geyser" else "Baumstamm!", Color("#ff9f43"))
+			_message(String(HAZARD_TEXT.get(kind, "Autsch!")), Color("#ff9f43"))
 
 
 ## Sprungfeld überfahren (vom Kart gemeldet) – nur Optik.
@@ -1486,7 +1496,40 @@ func _maybe_closeup(victim: Racer, attacker: Racer) -> void:
 	CutsceneManager.play("ItemHitCloseup", {"victim": victim, "letterbox": true, "blend_back": 0.22, "skippable": false})
 
 
+var _lens: LensDrops
+var _was_under := false
+
+
+## Wasser auf der Linse: Regen im Gewitter, Gischt auf nasser Fahrbahn (mehr direkt hinter einem Vordermann),
+## ein Schwall beim Auftauchen. Wasserfall und Fontänen melden sich über mech.drenched.
+func _update_lens() -> void:
+	if _lens == null or focus == null:
+		return
+	_lens.wind = clampf(absf(focus.v) / 30.0, 0.0, 1.0)
+	var rate := 0.0
+	if _underwater < 0.5:
+		if String(def.get("env", "")) == "storm":
+			rate += 1.6
+		if track.is_wet(focus.s) and focus.h < 0.5 and absf(focus.v) > 10.0:
+			rate += 1.2
+			for r in racers:
+				var o := r as Racer
+				var ds := track.wrap_s(o.s - focus.s)
+				if o != focus and ds > 0.5 and ds < 9.0 and absf(o.x - focus.x) < 3.0 and o.h < 0.5:
+					rate += 4.0   # fährt in der Gischt des Vordermanns
+		for hz: Dictionary in track.hazards:   # nahe an einer aktiven Wasserfontäne vorbei
+			if TrackMechanics.skin_of(hz) == "water" and RaceTrack.hazard_phase(hz, race_time) >= 1.0 \
+					and absf(track.wrap_s(float(hz.s) - focus.s + track.length * 0.5) - track.length * 0.5) < 7.0:
+				rate += 5.0
+	_lens.rain = rate
+	var under := _underwater > 0.5
+	if _was_under and not under:
+		_lens.splash(0.8)   # aufgetaucht: Wasser läuft von der Linse
+	_was_under = under
+
+
 func _update_underwater(delta: float) -> void:
+	_update_lens()
 	var target := 1.0 if (track.is_water(focus.s) and cam.global_position.y < -0.6) else 0.0
 	_underwater = lerpf(_underwater, target, clampf(delta * 3.0, 0, 1))
 	_bubbles.emitting = _underwater > 0.5
@@ -1509,6 +1552,12 @@ func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 10
 	add_child(layer)
+	if Gfx.active != "low" or OS.has_environment("LUMOS_LENS"):   # Tropfen auf der Linse (Umgebungsvariable: Test auf schwacher Grafik): unter der Anzeige, nicht auf der niedrigsten Grafikstufe
+		_lens = LensDrops.new()
+		layer.add_child(_lens)
+		mech.drenched.connect(func(r: Racer, amount: float) -> void:
+			if r == focus and _lens:
+				_lens.splash(amount))
 	_hud = UI.hud_root(layer)
 	var left := UI.vbox(-6)
 	_hud.add_child(left)

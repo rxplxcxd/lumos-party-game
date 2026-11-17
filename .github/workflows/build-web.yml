@@ -104,9 +104,9 @@ jobs:
           done
           ! grep -q "RACE-WARN\|SCRIPT ERROR" race.log
 
-      - name: Character-Framework – Testlabor (Mimik, IK, Schritte, Interaktionen, Leistung)
+      - name: Character Behavior Laboratory (Mimik, IK, Gewicht, Gefühle, Mikroleben, Sozialverhalten, Cartoon, Leistung)
         run: |
-          timeout 300 $GODOT_BIN --headless --fixed-fps 60 --path . res://tools/charlab/CharLab.tscn -- --lab-auto 2>&1 | tee charlab.log
+          timeout 1500 $GODOT_BIN --headless --fixed-fps 60 --path . res://tools/charlab/CharLab.tscn -- --lab-auto 2>&1 | tee charlab.log
           grep -q "CHARLAB OK" charlab.log
           ! grep -q "SCRIPT ERROR" charlab.log
 

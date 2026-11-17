@@ -4,8 +4,9 @@ extends Node3D
 ##
 ##  * Trennwände (dividers): feste Mittelinsel → zwei Routen (z. B. Felsinsel, Häuserblock, Tempelruine).
 ##  * Sprungfelder (bounces): Leuchtpilz, Kaugummi, Sternfeder, Düne – je nach Thema. Danach ist ein Trick möglich.
-##  * Gefahren (hazards): Lavafontäne ("geyser") und rollender Baumstamm ("log") – immer mit Vorwarnung (Glühen,
-##    Grollen, Staub), feste Takte aus der Rennzeit: auf allen Geräten gleich, nie überraschend.
+##  * Gefahren (hazards): Stelle bricht im Takt aus ("geyser": Lava, Wasser- und Sandfontäne, Blitz, Steinschlag) oder
+##    etwas kreuzt die Fahrbahn ("log": Baumstamm, Schneeball, Kaugummikugel, Sternschnuppe, Querverkehr, Steppenläufer,
+##    Krabbe) – immer mit Vorwarnung, feste Takte aus der Rennzeit: auf allen Geräten gleich, nie überraschend.
 ##  * Baumtunnel (tunnel), Wasserfall (falls), Pfützen auf nassen Abschnitten (wet).
 ## Treffer durch Gefahren gelten nur für eigene Karts (Opfer-Autorität) – gemeldet über on_hit(racer, kind).
 
@@ -17,6 +18,11 @@ var _hz_nodes: Array[Dictionary] = []
 var _rng := RandomNumberGenerator.new()
 var _falls_s: Array[float] = []
 var _prev_s: Dictionary = {}   # Racer-Index → s im letzten Takt (Durchfahrt durch den Wasserfall)
+const HIT_GRACE := 3.0          # s Schonfrist nach einem Gefahrentreffer: kein zweiter Treffer am selben Fleck
+var _immune: Dictionary = {}    # Racer-Index → Rennzeit, bis zu der Gefahren ihn nicht treffen
+
+## Ein Kart wurde nass (Wasserfall, Fontäne): Stärke 0..1 – für Tropfen auf der Kameralinse.
+signal drenched(racer: Racer, amount: float)
 
 
 func build(t: RaceTrack, d: Dictionary) -> void:
@@ -205,69 +211,180 @@ func bounce_fx(s: float, x: float) -> void:
 
 # --- Gefahren ------------------------------------------------------------------------------------------
 
+## Erscheinungsbilder der zeitgesteuerten Gefahren. Die Logik kennt nur zwei Arten – „geyser“ (Stelle bricht im Takt
+## aus) und „log“ (etwas kreuzt die Fahrbahn im Takt); jede Strecke bekommt ihr eigenes Bild dazu:
+##   geyser: lava (Vulkan) · water (Wasserfontäne) · sand (Sandfontäne) · bolt (Blitzeinschlag) · rock (Steinschlag)
+##   log:    log (Baumstamm) · snowball · gumball · orb (Sternschnuppe) · car (Querverkehr) · tumbleweed · crab
+const GEYSER_LOOK := {
+	"lava": {"rim": Color("#3a2a26"), "pool": Color("#ff6a1a"), "jet": Color(1.0, 0.5, 0.15, 0.95), "light": Color(1.0, 0.5, 0.2), "add": true, "up": 14.0},
+	"water": {"rim": Color("#8a9aa6"), "pool": Color("#3fb8e8"), "jet": Color(0.82, 0.95, 1.0, 0.9), "light": Color(0.6, 0.85, 1.0), "add": false, "up": 16.0},
+	"sand": {"rim": Color("#b08a52"), "pool": Color("#e2c27a"), "jet": Color(0.92, 0.8, 0.52, 0.9), "light": Color(1.0, 0.85, 0.6), "add": false, "up": 12.0},
+}
+const ROLL_LOOK := {
+	"snowball": {"col": Color("#f4f8ff"), "r": 1.25, "dust": Color(0.95, 0.97, 1.0)},
+	"gumball": {"col": Color("#ff6fa8"), "r": 1.2, "dust": Color(1.0, 0.8, 0.9)},
+	"orb": {"col": Color("#9fe8ff"), "r": 1.0, "dust": Color(0.7, 0.9, 1.0), "emit": 2.2},
+	"tumbleweed": {"col": Color("#a8824e"), "r": 1.15, "dust": Color(0.85, 0.72, 0.5)},
+}
+
+
+static func skin_of(h: Dictionary) -> String:
+	return String(h.get("skin", "lava" if String(h.type) == "geyser" else "log"))
+
+
 func _build_hazards() -> void:
+	var n := 0
 	for h in track.hazards:
 		var root := Node3D.new()
 		add_child(root)
-		var e := {"h": h, "root": root}
+		var e := {"h": h, "root": root, "on": false}
+		var skin := skin_of(h)
+		n += 1
 		match String(h.type):
 			"geyser":
 				root.global_transform = _xf(float(h.s), float(h.x), 0.02)
-				var rim := MeshInstance3D.new()
-				var tm := TorusMesh.new()
-				tm.inner_radius = float(h.w) * 0.32
-				tm.outer_radius = float(h.w) * 0.5
-				tm.material = _mat(Color("#3a2a26"), 0.95)
-				rim.mesh = tm
-				rim.scale = Vector3(1, 0.5, 1)
-				root.add_child(rim)
-				var pool := MeshInstance3D.new()
-				var cm := CylinderMesh.new()
-				cm.top_radius = float(h.w) * 0.34
-				cm.bottom_radius = float(h.w) * 0.34
-				cm.height = 0.05
-				var lm := _mat(Color("#ff6a1a"), 0.4, 1.0)
-				cm.material = lm
-				pool.mesh = cm
-				root.add_child(pool)
-				e["pool_mat"] = lm
-				var col := FX.emitter({"amount": 60, "life": 0.9, "one_shot": false, "explosive": 0.0, "spread": 12.0, "dir": Vector3.UP, "vel_min": 9.0,
-					"vel_max": 14.0, "gravity": Vector3(0, -6, 0), "size": 0.7, "additive": true, "color": Color(1.0, 0.5, 0.15, 0.95), "box": Vector3(1.2, 0.2, 1.2)})
-				root.add_child(col)
-				col.emitting = false
-				e["column"] = col
+				var w := float(h.w)
+				if skin == "bolt":       # Einschlagstelle: versengter Fleck, bei Gefahr knistert er – dann fährt der Blitz herab
+					var scorch := MeshInstance3D.new()
+					var sm := CylinderMesh.new()
+					sm.top_radius = w * 0.5
+					sm.bottom_radius = w * 0.5
+					sm.height = 0.04
+					var smat := _mat(Color("#2a2c3a"), 0.9, 0.12)
+					smat.emission = Color(0.6, 0.8, 1.0)
+					sm.material = smat
+					scorch.mesh = sm
+					root.add_child(scorch)
+					e["pool_mat"] = smat
+					var beam := MeshInstance3D.new()
+					var bm := CylinderMesh.new()
+					bm.top_radius = 0.5
+					bm.bottom_radius = 0.22
+					bm.height = 40.0
+					bm.radial_segments = 6
+					var bmat := _mat(Color(0.85, 0.95, 1.0), 1.0, 4.0)
+					bmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+					bm.material = bmat
+					beam.mesh = bm
+					beam.position.y = 20.0
+					beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+					beam.visible = false
+					root.add_child(beam)
+					e["beam"] = beam
+				elif skin == "rock":     # Schatten wächst, der Brocken fällt, bleibt kurz liegen und zerbröselt
+					var shadow := MeshInstance3D.new()
+					var shm := CylinderMesh.new()
+					shm.top_radius = w * 0.5
+					shm.bottom_radius = w * 0.5
+					shm.height = 0.03
+					var shmat := _mat(Color(0.05, 0.04, 0.03, 0.0), 1.0)
+					shmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+					shm.material = shmat
+					shadow.mesh = shm
+					root.add_child(shadow)
+					e["shadow_mat"] = shmat
+					var rock := Assets.spawn("env/rock_a", root)
+					var ab := Assets.model_aabb("env/rock_a")
+					rock.scale = Vector3.ONE * (w * 0.9 / maxf(maxf(ab.size.x, ab.size.z), 0.1))
+					rock.rotation.y = _rng.randf() * TAU
+					rock.visible = false
+					e["rock"] = rock
+				else:
+					var look: Dictionary = GEYSER_LOOK.get(skin, GEYSER_LOOK.lava)
+					var rim := MeshInstance3D.new()
+					var tm := TorusMesh.new()
+					tm.inner_radius = w * 0.32
+					tm.outer_radius = w * 0.5
+					tm.material = _mat(look.rim, 0.95)
+					rim.mesh = tm
+					rim.scale = Vector3(1, 0.5, 1)
+					root.add_child(rim)
+					var pool := MeshInstance3D.new()
+					var cm := CylinderMesh.new()
+					cm.top_radius = w * 0.34
+					cm.bottom_radius = w * 0.34
+					cm.height = 0.05
+					var lm := _mat(look.pool, 0.4 if skin == "lava" else 0.15, 1.0 if skin == "lava" else 0.25)
+					cm.material = lm
+					pool.mesh = cm
+					root.add_child(pool)
+					e["pool_mat"] = lm
+					var col := FX.emitter({"amount": 60, "life": 0.9, "one_shot": false, "explosive": 0.0, "spread": 12.0, "dir": Vector3.UP, "vel_min": float(look.up) * 0.65,
+						"vel_max": float(look.up), "gravity": Vector3(0, -6 if skin == "lava" else -16, 0), "size": 0.7, "additive": bool(look.add), "color": look.jet, "box": Vector3(1.2, 0.2, 1.2)})
+					root.add_child(col)
+					col.emitting = false
+					e["column"] = col
 				var l := OmniLight3D.new()
-				l.light_color = Color(1.0, 0.5, 0.2)
+				l.light_color = Color(0.75, 0.88, 1.0) if skin == "bolt" else (GEYSER_LOOK.get(skin, GEYSER_LOOK.lava).light as Color)
 				l.light_energy = 0.0
-				l.omni_range = 10.0
+				l.omni_range = 10.0 if skin != "bolt" else 22.0
 				l.position.y = 2.0
+				l.visible = skin != "rock"
 				root.add_child(l)
 				e["light"] = l
 			"log":
-				var lg := MeshInstance3D.new()
-				var cm2 := CylinderMesh.new()
-				cm2.top_radius = 0.75
-				cm2.bottom_radius = 0.75
-				cm2.height = 4.4
-				cm2.radial_segments = 12
-				cm2.material = _mat(Color("#7a5232"), 0.9)
-				lg.mesh = cm2
-				lg.rotation.x = PI * 0.5   # Achse entlang der Fahrtrichtung, rollt quer über die Strecke
 				var holder := Node3D.new()
 				root.add_child(holder)
-				holder.add_child(lg)
-				for sd: float in [-1.0, 1.0]:
-					var ring := MeshInstance3D.new()
-					var rc := CylinderMesh.new()
-					rc.top_radius = 0.6
-					rc.bottom_radius = 0.6
-					rc.height = 0.05
-					rc.material = _mat(Color("#c9a26a"), 0.8)
-					ring.mesh = rc
-					ring.position.y = sd * 2.22
-					lg.add_child(ring)
+				var mesh_n: Node3D
+				if skin == "car" or skin == "crab":   # fährt bzw. krabbelt quer – rollt nicht
+					mesh_n = Assets.spawn(("race/car_red" if n % 2 == 0 else "race/car_green") if skin == "car" else "pet/crab", holder)
+					var ab2 := Assets.model_aabb("race/car_red" if skin == "car" else "pet/crab")
+					mesh_n.scale = Vector3.ONE * ((3.6 if skin == "car" else 2.6) / maxf(maxf(ab2.size.x, ab2.size.z), 0.1))
+					e["bob"] = true
+				elif ROLL_LOOK.has(skin):
+					var lk: Dictionary = ROLL_LOOK[skin]
+					var ball := MeshInstance3D.new()
+					var sp := SphereMesh.new()
+					sp.radius = float(lk.r)
+					sp.height = float(lk.r) * 2.0
+					sp.radial_segments = 10 if skin == "tumbleweed" else 16
+					sp.rings = 5 if skin == "tumbleweed" else 8
+					var cols := [Color("#ff6fa8"), Color("#6fd0ff"), Color("#ffd24d"), Color("#8be06f")]
+					sp.material = _mat(cols[n % 4] if skin == "gumball" else (lk.col as Color), 0.35 if skin == "gumball" else 0.9, float(lk.get("emit", 0.0)))
+					ball.mesh = sp
+					if skin == "tumbleweed" or skin == "snowball":   # Streifen, damit man das Rollen sieht
+						var band := MeshInstance3D.new()
+						var tb := TorusMesh.new()
+						tb.inner_radius = float(lk.r) * 0.9
+						tb.outer_radius = float(lk.r) * 1.02
+						tb.material = _mat((lk.col as Color).darkened(0.25), 0.9)
+						band.mesh = tb
+						band.rotation.x = PI * 0.5
+						ball.add_child(band)
+					holder.add_child(ball)
+					mesh_n = ball
+					e["r"] = float(lk.r)
+					e["dust"] = lk.dust
+					if skin == "orb":
+						var ol := OmniLight3D.new()
+						ol.light_color = lk.col
+						ol.light_energy = 2.0
+						ol.omni_range = 8.0
+						holder.add_child(ol)
+				else:
+					var lg := MeshInstance3D.new()
+					var cm2 := CylinderMesh.new()
+					cm2.top_radius = 0.75
+					cm2.bottom_radius = 0.75
+					cm2.height = 4.4
+					cm2.radial_segments = 12
+					cm2.material = _mat(Color("#7a5232"), 0.9)
+					lg.mesh = cm2
+					lg.rotation.x = PI * 0.5   # Achse entlang der Fahrtrichtung, rollt quer über die Strecke
+					holder.add_child(lg)
+					for sd: float in [-1.0, 1.0]:
+						var ring := MeshInstance3D.new()
+						var rc := CylinderMesh.new()
+						rc.top_radius = 0.6
+						rc.bottom_radius = 0.6
+						rc.height = 0.05
+						rc.material = _mat(Color("#c9a26a"), 0.8)
+						ring.mesh = rc
+						ring.position.y = sd * 2.22
+						lg.add_child(ring)
+					mesh_n = lg
 				e["log"] = holder
-				e["mesh"] = lg
+				e["mesh"] = mesh_n
 				root.visible = false
 		_hz_nodes.append(e)
 
@@ -283,62 +400,132 @@ func tick(race_t: float, racers: Array) -> void:
 				if ps < fs and rr.s >= fs and rr.s - ps < 5.0:
 					FX.splash(rr.global_position + Vector3.UP * 1.2, 1.3)
 					Audio.sfx("splash", rr.global_position, -6.0 if rr.is_cpu else 0.0, 1.1)
+					drenched.emit(rr, 1.0)
 	for e in _hz_nodes:
 		var h: Dictionary = e.h
 		var ph := RaceTrack.hazard_phase(h, race_t)
+		var skin := skin_of(h)
+		var was_on: bool = e.on
+		e.on = ph >= 1.0
 		match String(h.type):
 			"geyser":
-				var col: CPUParticles3D = e.column
-				col.emitting = ph >= 1.0
+				var root_g: Node3D = e.root
 				var l: OmniLight3D = e.light
-				var pm: StandardMaterial3D = e.pool_mat
-				if ph >= 1.0:
-					l.light_energy = 3.0
-					pm.emission_energy_multiplier = 2.5
-				elif ph < 0.0:   # Vorwarnung: das Becken glüht auf und blubbert
-					l.light_energy = -ph * 1.5
-					pm.emission_energy_multiplier = 1.0 - ph * 1.5 + sin(race_t * 30.0) * 0.3
+				if skin == "bolt":
+					var beam: MeshInstance3D = e.beam
+					var pm_b: StandardMaterial3D = e.pool_mat
+					beam.visible = ph >= 1.0 and int(race_t * 40.0) % 3 != 0   # flackert
+					if ph >= 1.0:
+						l.light_energy = 7.0 if beam.visible else 3.0
+						pm_b.emission_energy_multiplier = 3.0
+						if not was_on:
+							Audio.sfx("explosion_big", root_g.global_position, -6.0, 1.7)
+							FX.sparks(root_g.global_position + Vector3.UP * 0.4, Color(0.8, 0.92, 1.0), 16, 1.4)
+					elif ph < 0.0:   # Vorwarnung: der Fleck knistert und flackert immer schneller
+						var k := -ph
+						l.light_energy = k * 2.0 * (1.0 if int(race_t * (10.0 + 30.0 * k)) % 2 == 0 else 0.2)
+						pm_b.emission_energy_multiplier = 0.12 + k * 2.5
+						if int(race_t * 8.0) != int((race_t - 0.016) * 8.0):
+							FX.sparks(root_g.global_position + Vector3.UP * 0.2, Color(0.8, 0.92, 1.0), 3, 0.5)
+					else:
+						l.light_energy = 0.0
+						pm_b.emission_energy_multiplier = 0.12
+				elif skin == "rock":
+					var rock: Node3D = e.rock
+					var shm: StandardMaterial3D = e.shadow_mat
+					if ph >= 1.0:
+						rock.visible = true
+						rock.position.y = 0.0
+						shm.albedo_color.a = 0.0
+						if not was_on:   # Aufschlag
+							FX.dust(root_g.global_position + Vector3.UP * 0.3, Color(0.62, 0.56, 0.5), 16, 1.6)
+							Audio.sfx("stone_hit", root_g.global_position, -2.0, 0.7)
+					elif ph < 0.0:   # Vorwarnung: Schatten wächst, der Brocken stürzt herab
+						rock.visible = true
+						rock.position.y = 18.0 * (1.0 + ph) * (1.0 + ph)
+						rock.rotation.x = race_t * 3.0
+						shm.albedo_color.a = 0.25 + 0.4 * -ph
+					else:
+						if rock.visible:   # zerbröselt
+							FX.dust(root_g.global_position + Vector3.UP * 0.5, Color(0.62, 0.56, 0.5), 10, 1.2)
+						rock.visible = false
+						shm.albedo_color.a = 0.0
 				else:
-					l.light_energy = 0.0
-					pm.emission_energy_multiplier = 1.0
+					var col: CPUParticles3D = e.column
+					col.emitting = ph >= 1.0
+					var pm: StandardMaterial3D = e.pool_mat
+					var base_e := 1.0 if skin == "lava" else 0.25
+					if ph >= 1.0:
+						l.light_energy = 3.0 if skin == "lava" else 1.2
+						pm.emission_energy_multiplier = base_e * 2.5
+						if not was_on and skin != "lava":
+							Audio.sfx("splash", root_g.global_position, -8.0, 0.8 if skin == "water" else 0.6)
+					elif ph < 0.0:   # Vorwarnung: das Becken glüht auf und blubbert
+						l.light_energy = -ph * (1.5 if skin == "lava" else 0.8)
+						pm.emission_energy_multiplier = base_e * (1.0 - ph * 1.5 + sin(race_t * 30.0) * 0.3)
+						if skin != "lava" and int(race_t * 7.0) != int((race_t - 0.016) * 7.0):   # Wasser/Sand sprudelt schon
+							FX.dust(root_g.global_position + Vector3.UP * 0.2, GEYSER_LOOK[skin].jet, 3, 0.5)
+					else:
+						l.light_energy = 0.0
+						pm.emission_energy_multiplier = base_e
 				if ph >= 1.0:
 					for r in racers:
 						var rr := r as Racer
 						if rr.remote or rr.h > 4.0:
 							continue
 						var ds := absf(track.wrap_s(rr.s - float(h.s) + track.length * 0.5) - track.length * 0.5)
-						if ds < 2.4 and absf(rr.x - float(h.x)) < float(h.w) * 0.5 + 0.6:
-							on_hit.call(rr, "geyser")
+						if ds < 2.4 and absf(rr.x - float(h.x)) < float(h.w) * 0.5 + 0.6 and race_t >= float(_immune.get(rr.idx, -1.0)):
+							_immune[rr.idx] = race_t + HIT_GRACE
+							on_hit.call(rr, skin)
 			"log":
 				var root: Node3D = e.root
 				var period := float(h.get("period", 5.0))
 				var u := fposmod(race_t + float(h.get("phase", 0.0)), period)
 				var x := log_x(h, race_t)
+				var rad := float(e.get("r", 0.75))
+				var bob: bool = e.get("bob", false)
+				var cyc0 := int(floor((race_t + float(h.get("phase", 0.0))) / period))
+				var dirx := 1.0 if cyc0 % 2 == 0 else -1.0
 				if x < INF:
 					root.visible = true
-					root.global_transform = _xf(float(h.s), x, 0.75)
+					root.global_transform = _xf(float(h.s), x, 0.0 if bob else rad)
 					var mesh: Node3D = e.mesh
-					mesh.rotation = Vector3(PI * 0.5, 0.0, -x / 0.75)   # rollt
-					if int(u * 5.0) != int((u - 0.016) * 5.0):
-						FX.dust(root.global_position + Vector3.DOWN * 0.6, Color(0.6, 0.5, 0.35), 3, 0.6)
+					if bob:   # Auto fährt quer (Nase in Fahrtrichtung), Krabbe läuft seitwärts
+						(e.log as Node3D).rotation.y = (PI * 0.5 * -dirx) if skin == "car" else 0.0
+						mesh.position.y = absf(sin(race_t * (9.0 if skin == "car" else 16.0))) * (0.04 if skin == "car" else 0.12)
+					elif skin == "log":
+						mesh.rotation = Vector3(PI * 0.5, 0.0, -x / 0.75)   # rollt
+					else:
+						mesh.rotation = Vector3(0.0, 0.0, -x / rad)
+					if not bob and int(u * 5.0) != int((u - 0.016) * 5.0):
+						FX.dust(root.global_position + Vector3.DOWN * (rad - 0.15), e.get("dust", Color(0.6, 0.5, 0.35)), 3, 0.6)
 					for r in racers:
 						var rr := r as Racer
 						if rr.remote or rr.h > 1.2:
 							continue
 						var ds := absf(track.wrap_s(rr.s - float(h.s) + track.length * 0.5) - track.length * 0.5)
-						if ds < 2.6 and absf(rr.x - x) < 1.4:
-							on_hit.call(rr, "log")
+						if ds < 2.6 and absf(rr.x - x) < 1.4 and race_t >= float(_immune.get(rr.idx, -1.0)):
+							_immune[rr.idx] = race_t + HIT_GRACE
+							on_hit.call(rr, skin)
 				elif RaceTrack.hazard_phase(h, race_t) < 0.0:
-					# Vorwarnung: der nächste Stamm wackelt schon am Straßenrand, Staub rieselt
-					var cyc := int(floor((race_t + float(h.get("phase", 0.0))) / period)) + 1
+					# Vorwarnung: das nächste Hindernis wackelt schon am Straßenrand (Staub rieselt, das Auto hupt)
+					var cyc := cyc0 + 1
 					var x0 := -(track.width * 0.5 + 2.0) * (1.0 if cyc % 2 == 0 else -1.0)
 					root.visible = true
-					root.global_transform = _xf(float(h.s), x0, 0.75)
-					(e.mesh as Node3D).rotation = Vector3(PI * 0.5, 0.0, sin(race_t * 38.0) * 0.12)
-					if int(u * 6.0) != int((u - 0.016) * 6.0):
-						FX.dust(root.global_position + Vector3.DOWN * 0.6, Color(0.6, 0.5, 0.35), 2, 0.5)
+					root.global_transform = _xf(float(h.s), x0, 0.0 if bob else rad)
+					if bob:
+						(e.log as Node3D).rotation.y = (PI * 0.5 * -(1.0 if cyc % 2 == 0 else -1.0)) if skin == "car" else 0.0
+						(e.mesh as Node3D).position.y = absf(sin(race_t * 22.0)) * 0.1
+						if skin == "car" and not bool(e.get("honked", false)):
+							e["honked"] = true
+							Audio.sfx("ui_back", root.global_position, -4.0, 0.7)
+					else:
+						(e.mesh as Node3D).rotation = Vector3(PI * 0.5 if skin == "log" else 0.0, 0.0, sin(race_t * 38.0) * 0.12)
+						if int(u * 6.0) != int((u - 0.016) * 6.0):
+							FX.dust(root.global_position + Vector3.DOWN * (rad - 0.15), e.get("dust", Color(0.6, 0.5, 0.35)), 2, 0.5)
 				else:
 					root.visible = false
+					e["honked"] = false
 
 
 ## Querposition eines rollenden Baumstamms zur Rennzeit t (INF = gerade keiner unterwegs). Er rollt abwechselnd

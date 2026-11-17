@@ -351,10 +351,15 @@ func tick(delta: float) -> void:
 	if on_wet:
 		turn *= 0.86   # nass: weniger Grip, Drifts rutschen weiter
 		_spray_t -= delta
-		if _spray_t <= 0.0 and absf(v) > 10.0:
-			_spray_t = 0.09
-			FX.burst(global_position + global_basis.z * 1.2 + Vector3.UP * 0.3, {"amount": 5, "life": 0.45, "spread": 40.0, "dir": Vector3.UP + global_basis.z,
-				"vel_min": 2.0, "vel_max": 4.0, "gravity": Vector3(0, -9, 0), "size": 0.22, "color": Color(0.8, 0.9, 1.0, 0.7)})
+		if _spray_t <= 0.0 and absf(v) > 8.0:
+			# Gischtfahne aus beiden Hinterrädern: wächst mit dem Tempo, im Drift fächert sie zur Kurvenaußenseite auf
+			var k := clampf(absf(v) / 28.0, 0.3, 1.0)
+			_spray_t = 0.07
+			for sd: float in [-1.0, 1.0]:
+				var side := global_basis.x * (sd * 0.55 + float(drift_dir) * -0.35)
+				FX.burst(global_position + global_basis.z * 1.1 + global_basis.x * sd * 0.55 + Vector3.UP * 0.15, {"amount": 4 if is_cpu else 6, "life": 0.5 + 0.25 * k,
+					"spread": 26.0, "dir": (Vector3.UP * 1.1 + global_basis.z * 0.9 + side * 0.5).normalized(), "vel_min": 2.5 + 3.0 * k, "vel_max": 4.5 + 5.0 * k,
+					"gravity": Vector3(0, -11, 0), "size": 0.2 + 0.16 * k, "color": Color(0.86, 0.94, 1.0, 0.6)})
 	var kappa := track.curvature(s)
 	# Gier-Trägheit: Das Kart dreht nicht schlagartig ein, sondern baut die Drehrate auf
 	_yaw_rate = lerpf(_yaw_rate, steer * turn, clampf(delta * (YAW_RESPONSE * (1.6 if drift_dir != 0 else 1.0)), 0.0, 1.0))
@@ -686,7 +691,8 @@ func _ai_input(delta: float) -> Dictionary:
 		use = get_parent().call("ai_wants_item", self)
 	# Rollender Baumstamm kreuzt genau bei Ankunft: kurz vom Gas (seitlich ausweichen hilft nicht, er rollt quer)
 	var gas := true
-	if mech != null and cpu_level > 0 and (mech as TrackMechanics).log_ahead(s, x, v, float(get_parent().get("race_time"))):
+	# Nur aus der Fahrt heraus: Wer schon langsam ist, rollt weiter – sonst bleibt die CPU vor dichtem Querverkehr stehen.
+	if mech != null and cpu_level > 0 and v > 9.0 and (mech as TrackMechanics).log_ahead(s, x, v, float(get_parent().get("race_time"))):
 		gas = false
 		drift = false
 	return {"steer": steer, "accel": gas, "brake": false, "drift": drift, "item": use, "pitch": -0.3 if gliding else 0.0}

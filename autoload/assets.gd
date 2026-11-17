@@ -785,6 +785,18 @@ func path(key: String) -> String:
 	return MODELS[key]
 
 
+## Prüfwerkzeug (tools/dev/player_agent.gd): solange an, merkt sich _res jedes Modell, das erst jetzt geladen wird.
+var late_watch := false
+var late_loads: Array[String] = []
+
+
+## Modelle vorab laden (im Aufbau eines Minispiels), die erst während des Spiels erscheinen – sonst ruckelt das
+## Bild beim ersten Auftauchen (Laden von der Platte bzw. aus dem Web-Paket).
+func warm(keys: Array) -> void:
+	for k: String in keys:
+		_res(k)
+
+
 func scene(key: String) -> PackedScene:
 	return _res(key) as PackedScene
 
@@ -795,7 +807,10 @@ func _res(key: String) -> Resource:
 	if p == "":
 		return null
 	if not _cache.has(p):
+		var t0 := Time.get_ticks_usec() if late_watch else 0
 		_cache[p] = load(p)
+		if late_watch:   # Test: Modell wurde erst mitten im Spiel von der Platte geholt (Ruckler beim ersten Mal)
+			late_loads.append("%s (%.0f ms)" % [key, (Time.get_ticks_usec() - t0) / 1000.0])
 	_used[p] = _gen
 	return _cache[p]
 
@@ -1023,6 +1038,17 @@ static func tint(root: Node, color: Color, unshaded := false, emission := 0.0) -
 				m.emission = color
 				m.emission_energy_multiplier = emission
 			mi.set_surface_override_material(s, m)
+			keep_material(mi, m)
+
+
+## Eigenes Material zusätzlich als Metadaten am Mesh halten. Godot 4.7 gibt Override-Materialien beim Löschen eines
+## Meshs frei, bevor dessen Render-Instanz verschwindet – die Instanz zeigt dann einen Bild lang auf ein gelöschtes
+## Material (Fehler „material is null“ bei jedem eingesammelten Edelstein, geplatzten Ballon …). Metadaten werden
+## erst ganz am Ende des Objekts freigegeben, also nach der Render-Instanz.
+static func keep_material(mi: GeometryInstance3D, m: Material) -> void:
+	var kept: Array = mi.get_meta("kept_mats", [])
+	kept.append(m)
+	mi.set_meta("kept_mats", kept)
 
 
 static func find_meshes(root: Node) -> Array[MeshInstance3D]:

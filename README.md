@@ -276,7 +276,7 @@ autoload/        EventBus, Game, Assets, Audio, InputHub, Juice, FX, CutsceneMan
 scripts/core/    CharacterRig, SlapstickModifier, ReactionClip, AvatarRetarget, CritterLife, RiverLife, WorldKit, …
 scripts/modes/   Partyhelfer-Reise, Lumos-Athlon, Kolosseum-Turnier
 scripts/party/   Brett-Daten, Brett-Baukasten, Brettspiel-Logik
-scripts/minigames/  MinigameBase + 38 Minispiele
+scripts/minigames/  MinigameBase + 69 Minispiele
 scripts/racer/   TrackDefs, RaceTrack, Racer (Fahrphysik + KI), NitroDash (Rennleitung, Items, HUD),
                  TrackMechanics (Streckenmechaniken), TrackScenery (Kulisse), ItemModels (Item-Modelle)
 scripts/ui/      Boot, Hauptmenü, Touch-Steuerung, Theme, Icons, Glücksrad

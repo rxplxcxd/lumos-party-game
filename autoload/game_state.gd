@@ -200,7 +200,7 @@ const MINIGAMES := [
 		"desc": "Zwanzig verdeckte Karten, zehn Paare: Deckt im Wechsel je zwei auf und merkt euch, wo Münze, Stern und Schlüssel liegen. Ein Treffer bringt einen Punkt – und ihr dürft gleich nochmal.",
 		"controls": "Stick: Rahmen bewegen · A: Karte umdrehen"},
 	{"id": "beach_volley", "name": "Strand-Volley", "scene": "res://scenes/minigames/BeachVolley.tscn", "kind": "score", "online": true, "cats": ["2v2"],
-		"desc": "Wasserball am Palmenstrand! Lauft unter den Ball: Hinten angenommen, spielt ihr eurem Partner am Netz zu – der springt und schmettert. Der Stick bestimmt, wohin der Ball fliegt. Wer schlecht steht, lässt harte Bälle abprallen; am Netz kann man blocken. Sieben Punkte gewinnen.",
+		"desc": "Wasserball am Palmenstrand! Hinten annehmen, der Partner am Netz springt und schmettert. Der Stick lenkt den Ball; wer schlecht steht, lässt harte Bälle abprallen. Am Netz wird geblockt. Sieben Punkte gewinnen.",
 		"controls": "Stick: Laufen & Zielen (nach vorne = direkt rüber) · A: Springen/Blocken · B (in der Luft am Netz): Schmetterball"},
 	{"id": "pedal_boat", "name": "Tretboot-Rennen", "scene": "res://scenes/minigames/PedalBoat.tscn", "kind": "race", "online": true, "cats": ["2v2"],
 		"desc": "Ab ins Tretboot! Tretet beide im Wechsel – A, B, A, B – und lenkt gemeinsam durch alle Bojen-Tore. Drei Runden um den See, Rempeln ausdrücklich erlaubt.",
@@ -274,7 +274,7 @@ var settings := {
 	"music": 0.7, "sfx": 0.9, "voice": 1.0,
 	"haptics": true, "touch_opacity": 0.8, "touch_scale": 1.0, "touch_layout": {},
 	"auto_accel": true, "steer_sens": 1.0, "screen_shake": 1.0, "quality": "auto", "show_fps": false, "dynamic_res": true, "frame_rate": "auto", "season_deco": "auto",
-	"color_saturation": 1.0, "color_strength": 1.0,
+	"color_saturation": 1.0, "color_strength": 1.0, "lively_faces": true,
 		"split_screen": true, "multi_display": true,
 }
 var party: Dictionary = {}

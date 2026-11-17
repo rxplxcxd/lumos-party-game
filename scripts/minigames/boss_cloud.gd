@@ -219,7 +219,7 @@ func _boss_ai(delta: float) -> void:
 	_atk_t -= delta
 	match _attack:
 		"idle":
-			_boss_pos = _boss_pos.lerp(Vector3(sin(Time.get_ticks_msec() / 1400.0) * 5.0, 4.0, -5.0), delta * 1.5)
+			_boss_pos = _boss_pos.lerp(Vector3(sin(clock / 1.4) * 5.0, 4.0, -5.0), delta * 1.5)
 			if _atk_t <= 0.0:
 				var options := ["wind", "rain", "dash"] if _phase >= 2 else ["wind", "rain"]
 				_attack = options[rng.randi() % options.size()]

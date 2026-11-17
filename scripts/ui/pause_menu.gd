@@ -81,6 +81,10 @@ func show_menu() -> void:
 	_confirm = UI.button("Raum verlassen" if Net.in_game() else "Zum Hauptmenü", Color("#c0392b"), 26, 420)
 	_confirm.pressed.connect(_quit)
 	v.add_child(_confirm)
+	# Einspaltige Knöpfe: links/rechts ohne Wirkung (die freie Nachbarsuche sprang von „Weiter“ zu „Steuerung“)
+	for b: Button in [resume, hb, _confirm]:
+		b.focus_neighbor_left = NodePath(".")
+		b.focus_neighbor_right = NodePath(".")
 	await get_tree().process_frame
 	_panel.position = (_root.size - _panel.size) / 2.0
 	Juice.pop_in(_panel, 0.25)
@@ -98,6 +102,7 @@ func _slider(title: String, key: String) -> Control:
 	s.step = 0.05
 	s.value = float(Game.settings.get(key, 0.8))
 	s.custom_minimum_size = Vector2(260, 40)
+	s.accessibility_name = title
 	s.value_changed.connect(func(val: float) -> void:
 		Game.settings[key] = val
 		Game.save_settings()

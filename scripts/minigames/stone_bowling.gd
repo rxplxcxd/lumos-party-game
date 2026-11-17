@@ -55,7 +55,19 @@ func build_arena() -> void:
 	var disc := WorldKit.cylinder(world, 2.1, 0.12, PIN_C + Vector3(0, 0.06, 0), Color("#a08868"), false)
 	disc.name = "Disc"
 	MgKit.ring(world, 2.0, 0.08, Color("#6b5a44"), 0.0).position = PIN_C + Vector3(0, 0.13, 0)
-	WorldKit.scatter(world, ["nat/rock_large", "nat/bush", "mt/stalagmite_s", "qn/rock_moss"], 14, Vector3(0, 0, 0), 5.5, 10.0, 0.0)
+	# Grasplateau unter der Tempelbahn (vorher schwebte die Bahn über dem 7 m tiefer liegenden Hintergrund) und
+	# Felsen/Büsche ringsum – nie auf der Bahn oder zwischen den Säulen (früher lag ein Brocken mitten auf der Bahn)
+	WorldKit.box(world, Vector3(70, 1.2, 70), Vector3(0, -0.9, -8.0), Color("#79a84f"))
+	var deco_rng := RandomNumberGenerator.new()
+	deco_rng.seed = 41
+	var keys := ["nat/rock_large", "nat/bush", "mt/stalagmite_s", "qn/rock_moss", "nat/bush"]
+	var placed := 0
+	while placed < 16:
+		var p := Vector3(deco_rng.randf_range(-12.5, 12.5), -0.3, deco_rng.randf_range(-12.0, 13.0))
+		if absf(p.x) < 5.2:
+			continue
+		WorldKit.place(world, keys[placed % keys.size()], p, deco_rng.randf() * 360.0, deco_rng.randf_range(0.8, 1.3), false, false)
+		placed += 1
 	_ball_node = Node3D.new()
 	world.add_child(_ball_node)
 	var bm := MeshInstance3D.new()
@@ -141,6 +153,8 @@ func on_tick(delta: float) -> void:
 	var a_now := InputHub.held(s, "a")
 	var a_edge := a_now and not _prev_a[s]
 	_prev_a[s] = a_now
+	if (_phase == "aim" or _phase == "power") and turn_timed_out(s, delta, 15.0 if _phase == "aim" else 4.0):
+		a_edge = true   # abwesend: der Wurf geht mit der gerade angezeigten Richtung/Kraft los
 	match _phase:
 		"aim":
 			_aim += _aim_dir * delta * 0.9

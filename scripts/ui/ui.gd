@@ -269,6 +269,22 @@ static func button(text: String, color := Color("#7b3cff"), size := 32, min_w :=
 	return b
 
 
+## Textfeld controller-tauglich: hoch/runter (Pfeiltasten, Steuerkreuz, Stick) verlässt das Feld auch während der
+## Eingabe. Godot hält den Fokus sonst im Feld fest, sobald es angewählt ist (Eingabemodus startet beim Fokus).
+static func field_nav(le: LineEdit, name := "") -> LineEdit:
+	if name != "":
+		le.accessibility_name = name
+	le.gui_input.connect(func(ev: InputEvent) -> void:
+		for pair: Array in [["ui_up", SIDE_TOP], ["ui_down", SIDE_BOTTOM]]:
+			if ev.is_action_pressed(String(pair[0]), true):
+				var n := le.find_valid_focus_neighbor(pair[1])
+				if n:
+					le.accept_event()
+					n.grab_focus()
+				return)
+	return le
+
+
 static func panel(color := PANEL, radius := 30) -> PanelContainer:
 	var p := PanelContainer.new()
 	if color != PANEL or radius != 30:

@@ -1,7 +1,185 @@
 # Changelog – Lumos Party & Nitro Dash
 
 Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Release-Reihe, Etappen 1.2.1 …).
+Ab 1.5.1 wieder in kleinen Schritten: 1.5.1, 1.5.2 … bis 1.9.9 (keine Sprünge auf ganze Versionen).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
+
+## 1.5.2 – Universelles Mehrschicht-System: Gefühl, Mikroleben, Gewicht, Sozialverhalten, Cartoon
+
+### 1.5.2 Qualitätsdurchlauf – Spielertest aller Minispiele, Nitro-Dash-Strecken, Trailer-Übergang
+Arbeitsstand und offene Punkte: `docs/WORKLOG.md` · Spielertest: `docs/PLAYTEST.md`.
+* **Projektinventar aus dem Code** (`tools/dev/inventory.gd` → `data/project_inventory.json`): 69 Minispiele (alle
+  mit Szene und Skript), 12 Strecken, 10 Bretter, 10 Bosse, 6 Figuren; prüft Strecken auf Selbstüberschneidung und
+  längste Geraden. README-Altlast „38 Minispiele“ korrigiert.
+* **Lumos Player Agent** (`tools/dev/player_agent.gd`): spielt jedes Minispiel als Mensch über echte
+  Tastatur-Ereignisse – klug, abwesend, zufällig, als Button-Masher; 379 Läufe, alle 69 Spiele enden sauber,
+  0 Skriptfehler.
+* **Stampf-Wellen repariert:** Stampfer erzeugten nie eine Welle (Landung wurde nie erkannt) – die Kernmechanik war
+  wirkungslos, fast jede Partie endete im Vierfach-Gleichstand. Dazu schrumpft die Bühne jetzt zweimal mit Vorwarnung.
+* **Spielzeit statt Echtzeit-Uhr** (`MinigameBase.clock`) in Kürbis-Weitwurf (CPU warf im Zeitraffer nie),
+  Geisterschloss und Wolkenboss (Sprünge nach einer Pause).
+* **Zug-Zeitbegrenzung** für abwesende Spieler in Pinguin-Curling, Schatz-Schnüffeln, Stein-Kegeln
+  (`turn_timed_out`, Countdown in den letzten 5 s).
+* **Kein Nachladen mitten im Spiel:** 18 Minispiele laden später erscheinende Modelle beim Aufbau (vorher Ruckler
+  bis 448 ms beim ersten Auftauchen).
+* **Nitro Dash – Streckenereignisse je Strecke:** Wasser- und Sandfontänen, Blitzeinschläge, Steinschlag,
+  Schneebälle, Kaugummikugeln, Sternschnuppen, Querverkehr, Steppenläufer, Krabben – alle mit Vorwarnung im festen
+  Takt, 3 s Schonfrist nach einem Treffer; 10 von 12 Strecken haben jetzt eigene Ereignisse (vorher 2).
+* **Nitro Dash – gestaltete Rückgeraden:** Der Streckenbaukasten füllt die Gerade des Rundenschlusses mit Schlenkern,
+  Kuppen, Item-Reihen und Marken; neun Strecken verlieren ihre 110–290 m lange leere Rückgerade (längste Gerade z. B.
+  Glühwald 233 → 77 m, Stadt 264 → 131 m).
+* **Nitro Dash – Wasser:** lichtbrechende Tropfen auf der Kameralinse (Wasserfall, Fontäne, Gischt des Vordermanns,
+  Gewitterregen, Auftauchen; verlaufen und verschwinden nach 1–3 s, Bildmitte bleibt frei, nicht auf niedrigster
+  Grafikstufe), kräftigere Reifengischt aus beiden Hinterrädern.
+* **Trailer:** Der Vordergrund-Stamm des Weltenwechsels Wald → Wiese hat Rinde (Furchen, Moos, Rundung) statt einer
+  schwarzen Fläche und zieht in 1,2 s statt rund 3 s durchs Bild; im Gegenschuss steht er nicht mehr in der Wiese.
+  Neu gerendert: H.264 High 1920×1080, konstant 60 fps, 5836 Bilder, 97,27 s, 159,4 MB, AAC-LC 48 kHz Stereo,
+  −14,1 LUFS, True Peak −1,2 dBFS; `qa.py` OK, Durchdringungs-Prüfung OK (kleinster Abstand +23 mm).
+* **Stein-Kegeln:** Die Tempelbahn schwebte über dem 7 m tieferen Hintergrund, verstreute Felsen lagen teils auf der
+  Bahn – jetzt Grasplateau unter der Bahn, Deko nur seitlich (Deko-Prüfung aller Minispiele: 0 Funde).
+* **Bretter:** Dauertest je Brett (5 Runden Party mit 4 CPUs) für alle 10 Bretter bestanden, 0 Skriptfehler.
+* **Menü-Agent** (`tools/dev/menu_agent.gd`): bedient das Menü nur über echte Tastatur- bzw. Controller-Ereignisse
+  und prüft je Seite Fokus, Erreichbarkeit aller Bedienelemente (Fokus-Breitensuche), Fallen, Text-Überlauf und die
+  Ausgänge (Abbrechen, Zurück); dazu 11 Abläufe Start → Spiel → Pause → „Zum Hauptmenü“ bzw. Spielende → Auswahl.
+  Nach den Korrekturen: 10 Seiten in 4 Konfigurationen (Tastatur 16:9, Controller, Smartphone 19,5:9, Tablet 4:3)
+  ohne Befund, 11 von 11 Abläufen sauber, 0 Engine-Fehler.
+* **Menü – behoben:** feste Controller-Reihenfolge der Hauptseite (die Einstellungen waren per Steuerkreuz nicht
+  verlässlich erreichbar); zurück auf der Hauptseite – auch nach einem Spiel – steht der Fokus auf dem Eintrag, über
+  den man hineinging (vorher immer ganz oben); Einstellungen beginnen beim ersten Regler statt mitten in der Liste;
+  Raumcode- und Anmeldefelder halten den Fokus nicht mehr fest; feste Höhe der Beschreibungen in Minispiel-Auswahl,
+  Party- und Rennmenü (wuchs eine Beschreibung beim Blättern um eine Zeile, rutschte das Raster nach dem Scrollen
+  weg und die gewählte Kachel lag bis zu 62 px außerhalb); Zeilenenden und einspaltige Knöpfe (auch im Pausenmenü)
+  springen nicht mehr seitlich in andere Zeilen; zugängliche Namen für Bildschirmleser an Kacheln, runden Knöpfen,
+  Stepper-Pfeilen, Reglern und Textfeldern.
+* **Character Framework im Spiel (erste Stufen):** Figuren-Insel im Hauptmenü (Gesichter, Mikroleben, Blicke,
+  Reaktionen aufs Antippen) und die Siegerehrung (Podest von Party-Ende und weiteren Modi: Anspannung, Freude, Stolz
+  des Siegers, Verlegenheit nach dem Missgeschick des Letzten). Eine zentrale Anbindung (`LumosGame`), nur an
+  Figuren, die eigens für die Szene entstehen; Spielabläufe unverändert. Neuer Schalter „Lebendige Mimik (Menü &
+  Siegerehrung)“, auf Grafikstufe „Niedrig“ automatisch aus. Behoben: Abschalten des Frameworks ließ die Figur ohne
+  Augen zurück (Original-Kopf wird jetzt wiederhergestellt).
+* **Leistungsprofil je Szene** (`tools/dev/scene_profile.gd`/`.sh`, Bericht `docs/PERF_SCENES.md`): Menü, 10 Bretter,
+  12 Strecken, 10 Bosskämpfe, 5 Modi, 67 Minispiele – Bildzeiten (Mittel, p95, p99, 1 %-Tief, Maximum mit Zeitpunkt),
+  Speicher, Knoten, Engine-Fehler, spät geladene Modelle; Render-Zählwerte mit echtem OpenGL.
+* **Behoben aus dem Profil:** Rhythmus-Küche ruckelte beim Wechsel in den 2. Gang bis 292 ms (Song kam erst dann
+  von der Platte) – alle Gänge sowie Hurry-Up und Outro jedes Minispiels laden jetzt im Hintergrund vor.
+  „material is null“-Fehler beim Einsammeln von Edelsteinen, Platzen von Ballons u. a. (Lava-Surfen, Farb-Chaos,
+  Wolkenboss, Ballon-Schlacht): Godot gab eingefärbte Materialien vor der Render-Instanz frei – Materialien werden
+  jetzt bis zum Schluss gehalten. Achterbahn-Schießbude: Kanonen-Zielen mit Nullvektor im Minispiel-Intro.
+  Ballon-Schlacht: nicht invertierbare Skelett-Basis bei auf Größe 0 geschrumpften Figuren (Fehler je Bild).
+* **Grenzen dieses Durchlaufs (ehrlich):** Die Runden sind kaum länger geworden (≈ 40–47 s) – neue Abschnitte, keine
+  neuen Streckenteile; Bretter und Bosse wurden nur über die bestehenden Dauertests geprüft, nicht einzeln
+  überarbeitet; Maus- und Touch-Bedienung des Menüs prüft der Menü-Agent nicht; Leistung nur als CPU-Zeit auf dem
+  Testserver und als Render-Zählwerte gemessen – echte Bildraten auf Zielgeräten und im Web-Build stehen aus; das
+  Character Framework steckt erst in Menü und Siegerehrung, nicht in Brett, Minispielen und Nitro Dash;
+  Linsentropfen nur in der Einzelansicht (nicht im Split-Screen).
+
+### 1.5.2 Finalisierung – Profiling, Optimierung, Durchdringungsschutz, Stresstests, Release-Validierung
+Auf dem Entwicklungsbranch; `main` bleibt unverändert bis zur Freigabe.
+* **Performance-Labor (`tools/charlab/PerfLab.tscn`, `LumosProf`):** misst jedes Teilsystem getrennt (Fassade,
+  Mind, Mikroleben, Gesten, Hutkrempe, Ausweichen, Gefühl, Blick, Hände, Wahrnehmung, sozialer Knoten,
+  Interaktionen, Gesicht/Neuzeichnen, Körper mit Gewicht/Haltung/Füßen/Armen/Zubehör, Lokomotion) in den Szenarien
+  0A/0B (ohne Framework), A–F, G1/G2 mit 1/4/8/16 Figuren; Mittel, p95, p99, Spitze; Wiederholungslauf; JSON + Markdown.
+* **Optimiert ohne sichtbaren Unterschied** (A/B-Bildvergleich, alle Prüfungen grün), 16 Figuren, Bildzeit Ø vorher
+  (`d9cccd8a`) → nachher: Stehen 7,16 → 3,74 ms, Bewegung 7,80 → 5,13, Interaktionen 10,63 → 6,34, Gefühle 12,12 →
+  7,95, Cartoon-Worst-Case 12,31 → 7,40, alles zugleich 11,24 → 7,43, außerhalb des Bildes 3,28 → 1,73, weit weg
+  5,84 → 3,95. Gesicht neu zeichnen nur bei sichtbarer Änderung (≥ 0,25 px), Gefühle als gepackte Felder mit
+  Änderungserkennung, Wahrnehmung einmal je Figur und Bild, Hutkrempe ohne volle Wahrnehmung, ruhende Gefühle
+  außerhalb des Bildes. Objekte nach allen Läufen 1114 → 181 (Lambda-Zyklen aufgelöst).
+* **Körpervolumen und Durchdringungsschutz:** feste Körperteile als Ellipsoide (Kopf mit Helm/Kapuze, Rumpf) aus den
+  Mesh-Grenzen; `clearance()`, `fit_distance()` für Aufstellungen; Kopf und Oberkörper weichen nahen Körpern aus –
+  **vorausschauend** bei schneller Annäherung (0,1 s); billige Hüllkugel-Schranke vor der genauen Rechnung.
+* **Stürze und Aufhelfen:** `fall()`/`get_up()`, Interaktion `help_up` (Hand reichen, greifen, hochziehen, stützen);
+  Reaktionen der anderen entstehen aus der Persönlichkeit (erschrecken, lachen, genau einer hilft); die Gestürzte
+  ärgert oder schämt sich und lacht später selbst darüber; Auslachen bringt einen bösen Blick.
+* **Stresstests B21–B26:** Stolper-Szenario mit 4 Figuren (2 Varianten), Unterbrechungen (Reflex mitten im Griff,
+  Regie-Abbruch), konkurrierende Anfragen, 30 Witze in 3 s ohne Kettenreaktion, zwei Stürze zugleich, keine
+  Durchdringung in allen 14 Interaktionen × 2 Paaren.
+* **Behoben:** Figuren, die im selben Bild entstanden, nahmen sich nie wahr (sozialer Knoten doppelt angelegt –
+  betraf den Trailer); `volumes()` nutzte die Pose vor der Modifikation; Gesicht erzeugte leere Flächen
+  (38 Fehlermeldungen); Lachanfall löste sich selbst wieder aus; Geduld der Gestürzten wurde während einer
+  Interaktion nie neu geprüft; Blick-Verweilen wurde durch wiederholte Reize zurückgesetzt; Wege führten durch die
+  Zielfigur hindurch; unseeded Zufall (Lidschlag-Takt, Atemphase) – Abläufe sind jetzt wiederholbar.
+* **Geänderte Interaktionsformen (Chibi-Geometrie: Kopf breiter als Arm lang), Prüfungen entsprechend angepasst:**
+  Umarmung seitlich Schulter an Schulter (Test 11 prüft Schulterabstand und innere Hand statt Umarmung von vorn);
+  Trösten mit der Hand am Oberarm (B15 prüft den Oberarm statt der Schulter); beim Loslassen der Umarmung ein
+  kleiner Schritt auseinander; High-Five 2 cm näher mit mehr Rumpf-Unterstützung (63 mm statt grenzwertig 96–105 mm).
+* **Trailer ohne Durchdringung:** Prüfprogramm `trailer/ClearanceProbe.tscn` (jedes Bild, alle Paare) – vorher
+  20 Spannen bis −392 mm, jetzt keine; kleinster Abstand im ganzen Trailer +23 mm. Inszenierung an zehn Stellen
+  korrigiert (Abklatschen, Auflaufen, Schulterklopfen, An-die-Hand-nehmen, Strand-Laufwege, Knuff, Boss,
+  Sumo-Hintergrund, Sumo-Stoß, Lagerfeuer); bildgenau
+  wiederholbar; Vorschau einzelner Beats mit `--trailer-to`. Neu gerendert: H.264 High 1920×1080, konstant 60 fps,
+  5836 Bilder, 97,27 s, 157,6 MB (12,96 Mbit/s), AAC-LC 48 kHz Stereo 259 kbit/s, −14,1 LUFS, True Peak −1,2 dBFS;
+  Video-Prüfung `qa.py` OK (alle 21 harten Schnitte in der Schnittliste, Weltenwechsel unsichtbar, keine Standbilder,
+  keine Tonaussetzer). Trennungsprüfung: Skriptprüfung des Trailers separat
+  (`Check.tscn -- --check-dirs=res://trailer`), die Prüfung des Spiels liest den Trailer-Ordner nicht mehr.
+* **Grenzen:** nicht im Spiel eingebaut; GPU-/Render-/Web-Kosten nicht gemessen (nur CPU headless); Ausweichen
+  kostet im Gedränge ≈ 32 µs je Figur; Hand-in-Hand beim Loslaufen 20–28 cm Handgelenkabstand.
+Baut auf 1.5.1 auf (Rückfall: Commit `76e50fce`), ohne funktionierende Systeme zu ersetzen. Spielabläufe unverändert;
+der Trailer nutzt den vollen Stack. Doku mit Architektur, Schnittstellen, Profilen, Leistung, Grenzen und
+Migrationsanleitung: `docs/CHARACTER_FRAMEWORK.md`.
+* **Gefühlszustand (`LumosEmotion`):** 36 geforderte Gefühle (positiv, negativ, sozial) mit eigenem Gesicht, eigener
+  Haltung und eigenem Verhalten; Stimmung + Reaktionen gleichzeitig (auch widersprüchlich), Anstieg/Halten/Abklingen,
+  Auslöser, Nachwirkungen (Lachen → Zufriedenheit, Schreck → Nervosität …).
+* **Persönlichkeit (`LumosPersonality`):** zehn Züge, Vorlagen je Modell als Daten; wirkt auf Blickkontakt,
+  Reaktionszeit, Gefühls- und Ausdrucksstärke, Gesten, Haltung, Ansteckung, Cartoon-Neigung.
+* **Schichten (`LumosLayers`):** Kanäle und Prioritäten (Mikro < Sozial < Cartoon < API < Interaktion < Regie <
+  Reflex), kontrolliertes Verdrängen mit sauberem Ende, Ablehnung bei Konflikt.
+* **Mikroleben (`LumosMicro`):** Augen führen, der Kopf folgt; Blickkontakt halten/ausweichen; natürlicher Lidschlag
+  (unregelmäßig, doppelt, je Gefühl); Stand-/Spielbeinwechsel; 31 Gesten mit eigenem Tempo.
+* **Gesicht:** Pupillen in weißen Augen (Schreck, Bettelblick, Schielen), Tränen, Backen aufblasen, Schmollen,
+  Lippenpressen, Zittern, schiefes Grinsen; Sprechen silbenweise; Gähnen, Seufzen, Schlucken, Schluchzen, Keuchen.
+* **Gewicht und Balance:** Trägheitsfedern für Oberkörper, Kopf und Arme; Kontrapost; Becken-Feder für Landung,
+  Hocke, Last; koordiniertes Drehen; Stolpern mit Erholung; Masse/Beweglichkeit/Stil je Figur.
+* **Sekundärbewegung:** Hüte, Helme, Umhänge, Köcher federn auf eigenen Laufzeit-Knochen (Modelle unverändert);
+  Hutkrempen weichen nahen Köpfen aus.
+* **Sozialverhalten (`LumosSocial`, `LumosMind`):** Wahrnehmung und Ereignisse; versetzte, individuelle Reaktionen
+  (Mitlachen, Trösten, zur Schreck-Quelle schauen, Zurückwinken, Witze, Sieg/Niederlage, Mittanzen, Zeigen folgen,
+  Zuhören); Autonomie-Stufen.
+* **Interaktionsprotokoll (`LumosInteraction`):** Phasen mit sauberem Abbruch; 13 Arten inkl. neu Handschlag,
+  Trösten, Necken, gemeinsames Jubeln/Tanzen/Lachen, Erschrecken; Körper-Variante für einfache Modelle.
+* **Cartoon (`LumosCartoon`):** 26 Reaktionen (Tränenfontänen, riesige Augen, Erstarren, Sterne, Herzen, Lachanfall,
+  Backen aufblasen, Verstecken …), Intensitätsstufen, Abklingzeit und Budget, Effekte nie übers Gesicht.
+* **Haustiere:** Schwanz wedelt/zieht ein (wo das Modell einen eigenen Schwanz hat), Beine schwingen beim Laufen.
+* **Versionierte Schnittstellen:** `API_VERSION = 2`, Profil-Schema mit `migrate()`.
+* **Character Behavior Laboratory:** 20 Testbereiche (B1–B20) mit Messwerten im selben CI-Lauf, plus Kontrollbilder.
+* **Behoben:** Rückkopplung beim Abklatschen (1.5.1-Video-QA: Bildsprung bei 34,97 s) – Ziele am eigenen Körper aus
+  der Ruhepose; Ellbogen klappt bei erhobenen Händen nicht mehr um; lösende Hände springen nicht mehr.
+* **Trailer:** volle Akteure mit Regie-Schicht; dazwischen leben die Figuren selbst; neue Momente (Staunen mit
+  Erstarren, Kopfkratzen, Schielen, Rotwerden, Herzen, Zittern, Sternchen, Bettelblick, Schlucken, Lächeln im
+  Schlaf). Neu gerendert in 1920×1080 bei 60 fps.
+* **Grenzen:** nicht im Spiel eingebaut; keine Finger; große Hutkrempen weichen über eine eigene Feder aus (zählen
+  nicht als festes Volumen); Umhänge starr am Oberkörper; GPU/Web-Leistung nicht gemessen; eigene Avatare ungeprüft.
+
+## 1.5.1 – Framework gehärtet, Trailer nutzt es, Neu-Render 1080p60
+Eine zentrale Umsetzung: Der Trailer nutzt jetzt das Character Framework, die alten Kopien `trailer/trailer_face.gd`
+und `trailer/trailer_body.gd` sind gelöscht. Spielmodi bleiben unverändert (Framework dort noch nicht eingebaut).
+1.5.0 bleibt als Rückfall erhalten (Git-Verlauf, Original-Render aufbewahrt).
+* **Adapter-Architektur:** `LumosActorConfig.detect()` erkennt das Rig – Profile `humanoid` (KayKit-Helden),
+  `simple` (Kenney-Figuren: zielende Arme, keine Fuß-IK), `rigid` (Haustiere ohne Skelett: Ganzkörper-Haltung).
+  `actor.capabilities()` sagt, was eine Figur kann; jede Funktion fällt sonst sauber zurück.
+* **Fußanker:** Standphase wird in der Welt verankert, Bodenhöhe per Callable oder Raycast. Rutschen beim Gehen
+  0,2 → 0,009 m/s, beim Laufen 0,6 → 0,04 m/s (gemessen).
+* **Hand-IK mit Handdrehung:** Finger- und Handflächenrichtung je Griff, Kette endet am Handgelenk, damit die
+  gedrehte Hand exakt am Ziel liegt; Haltungswechsel gleiten. **Reach-Assist:** Brust lehnt sich zu fernen Zielen.
+  Lenkrad 131 → 3 mm, High-Five 438 → 50 mm (Handflächen berühren sich), Greifen 0 mm mit Handfläche unten/oben.
+* **Interaktionen mit Anfang, Höhepunkt, Ende:** High-Five (Schultern gegenüber, Abstand aus der Reichweite),
+  Umarmung, Schubser, Schulterklopfen (Schulter gibt nach); Kontakte geben mit Stoß-Federn Gewicht weiter.
+* **Gesicht lesbarer:** deutlich größere Münder (rundes „O“, Grimasse „∩“ bei negativen Gefühlen), Wangenröte,
+  Brauen-Heben bei Blickkontakt; Gesichtsteile liegen auf der Kopfkrümmung (kein Schweben/Durchdringen, 0°/45°/75°
+  geprüft). „Traurig“ senkt den Kopf nur noch so weit, dass das Gesicht sichtbar bleibt.
+* **Ganzer Körper fühlt mit:** Haltung je Gefühl, beim Ansehen drehen Hüfte und Oberkörper mit.
+* **Leistung:** 16 Figuren 13 ms → 4,3 ms je Bild (Framework-Anteil 3,9 ms, CPU); Detailstufen: fern ohne Fußanker,
+  außerhalb des Bildes pausiert (16 Figuren 0,65 ms). Messung bei 1/4/8/16 Figuren im Labor.
+* **Testlabor:** 16 Prüfbereiche inkl. Fußkontakt, Handdrehung, Haltungswechsel, Körperkontakt, gleichzeitige
+  Animationen, Kompatibilität, Leistung und LOD – läuft in der CI (`CHARLAB OK`).
+* **Trailer:** Beginn im Mondlicht-Wald statt Schwarz, der Stern weckt die Welt nach 7 s (vorher 8,6 s), Freudensprung
+  zur Kamera; Kontakte mit Handhaltung und Gewicht (Abklatschen, Auflaufen, Schulterklopfen, An-die-Hand-nehmen);
+  Montage zeigt Spielbrett, **Ereignisfeld „?“** (Geschenk, Münzregen), Minispiel, Boss, Rennen – mit dezenten
+  Einblendungen; Nitro Dash mit echter Fahrtrichtung, Querbeschleunigung, kräftigerem Drift und Überholmanöver
+  (ausscheren, vorbeiziehen, einscheren); Lagerfeuer: Keks auf der Handfläche, die Magierin setzt sich auf und lacht
+  mit. Neu gerendert in 1920×1080 bei 60 fps.
+* **Grenzen (dokumentiert):** eigene Avatare im Labor nicht geprüft, GPU-/Web-Leistung nicht gemessen, Kenney-Figuren
+  und Haustiere ohne Gesicht.
 
 ## 1.5.0 – Character Animation & Interaction Framework (Fundament, noch nicht im Spiel eingebaut)
 Neuer, eigenständiger Baustein in `scripts/actor/` mit Testlabor in `tools/charlab/`. Brett, Minispiele, Nitro Dash

@@ -348,6 +348,9 @@ func on_start() -> void:
 	root.add_child(_grade_label)
 	UI.place(_grade_label, Control.PRESET_CENTER_TOP, Vector2(-400, 180), Vector2(800, 36))
 	song_t = 0.0
+	# Alle Gänge vorladen: der Song des nächsten Gangs kam sonst erst beim Wechsel von der Platte (bis 290 ms Ruck)
+	for cm in COURSE_MUSIC:
+		Audio.warm_music(String(MusicMeta.MINIGAME[int(cm[0])][String(cm[1])].file))
 	Audio.music("", 0.6)
 
 

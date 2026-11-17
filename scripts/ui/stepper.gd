@@ -26,6 +26,8 @@ func setup(opts: Array, start := 0, width := 260.0, accent := Color("#7b3cff")) 
 	_right.icon = UI.cozy("arrow_r_cream")
 	_right.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_right.custom_minimum_size = Vector2(64, 56)
+	_left.accessibility_name = "Vorherige Auswahl"    # Bildschirmleser: Pfeile haben nur ein Symbol
+	_right.accessibility_name = "Nächste Auswahl"
 	_label = UI.label("", 28, Color.WHITE, true)
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.custom_minimum_size = Vector2(width, 56)
@@ -74,6 +76,8 @@ func value() -> Variant:
 func _refresh() -> void:
 	if _label and not options.is_empty():
 		_label.text = str(options[index])
+		_left.accessibility_description = _label.text
+		_right.accessibility_description = _label.text
 
 
 func arrows() -> Array[Button]:

@@ -426,6 +426,10 @@ func _tick_aim(delta: float) -> void:
 		_aim = clampf(_aim + mv.x * delta * 1.1, -1.2, 1.2)
 	_mouse_aim(p)
 	_place_thrower()
+	if turn_timed_out(p, delta):   # abwesend: mittlerer Schwung in die eingestellte Richtung
+		_power = 0.55
+		_release(p)
+		return
 	if InputHub.held(p, "a"):
 		_charging = true
 		_power += _power_dir * delta * 1.0

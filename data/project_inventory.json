@@ -1,0 +1,1794 @@
+{
+  "boards": {
+    "count": 10,
+    "list": [
+      {
+        "boss": "ignis",
+        "branch_points": 3,
+        "id": "dungeon",
+        "music": "board_dungeon",
+        "name": "Dungeon Deep",
+        "space_types": {
+          "B": 24,
+          "C": 2,
+          "L": 5,
+          "R": 8,
+          "S": 1,
+          "T": 3,
+          "X": 1
+        },
+        "spaces": 44
+      },
+      {
+        "boss": "klabautox",
+        "branch_points": 4,
+        "id": "pirates",
+        "music": "board_pirates",
+        "name": "Sonnige Palmen-Bucht",
+        "space_types": {
+          "B": 22,
+          "L": 6,
+          "N": 3,
+          "P": 4,
+          "R": 7,
+          "S": 1,
+          "X": 1
+        },
+        "spaces": 44
+      },
+      {
+        "boss": "astraios",
+        "branch_points": 4,
+        "id": "sky",
+        "music": "board_sky",
+        "name": "Sternen-Wolkenland",
+        "space_types": {
+          "B": 24,
+          "K": 6,
+          "L": 7,
+          "N": 1,
+          "R": 6,
+          "S": 1,
+          "X": 1
+        },
+        "spaces": 46
+      },
+      {
+        "boss": "grabstein",
+        "branch_points": 4,
+        "id": "graveyard",
+        "music": "board_graveyard",
+        "name": "Geisterfriedhof",
+        "space_types": {
+          "B": 22,
+          "C": 2,
+          "G": 5,
+          "L": 7,
+          "N": 1,
+          "R": 6,
+          "S": 1,
+          "X": 1
+        },
+        "spaces": 45
+      },
+      {
+        "boss": "frostbart",
+        "branch_points": 4,
+        "id": "frost",
+        "music": "board_frost",
+        "name": "Frostdorf",
+        "space_types": {
+          "B": 22,
+          "E": 5,
+          "L": 6,
+          "N": 3,
+          "R": 6,
+          "S": 1,
+          "X": 1
+        },
+        "spaces": 44
+      },
+      {
+        "boss": "galaxus",
+        "branch_points": 4,
+        "id": "station",
+        "music": "board_station",
+        "name": "Sternen-Sternwarte",
+        "space_types": {
+          "B": 22,
+          "K": 3,
+          "L": 6,
+          "N": 1,
+          "R": 5,
+          "S": 1,
+          "W": 5,
+          "X": 1
+        },
+        "spaces": 44
+      },
+      {
+        "boss": "noxumbra",
+        "branch_points": 4,
+        "id": "glowforest",
+        "music": "board_glowforest",
+        "name": "Glühwürmchen-Zauberwald",
+        "space_types": {
+          "B": 22,
+          "G": 2,
+          "L": 6,
+          "N": 2,
+          "R": 7,
+          "S": 1,
+          "W": 3,
+          "X": 1
+        },
+        "spaces": 44
+      },
+      {
+        "boss": "baahemoth",
+        "branch_points": 4,
+        "id": "meadow",
+        "music": "board_meadow",
+        "name": "Wuschel-Wiesen",
+        "space_types": {
+          "B": 22,
+          "D": 3,
+          "K": 4,
+          "L": 6,
+          "N": 2,
+          "R": 5,
+          "S": 1,
+          "X": 1
+        },
+        "spaces": 44
+      },
+      {
+        "boss": "marquise",
+        "branch_points": 4,
+        "id": "cake",
+        "music": "board_cake",
+        "name": "Zuckerback-Torte",
+        "space_types": {
+          "B": 22,
+          "D": 1,
+          "E": 3,
+          "L": 7,
+          "N": 2,
+          "R": 6,
+          "S": 1,
+          "T": 2,
+          "X": 1
+        },
+        "spaces": 45
+      },
+      {
+        "boss": "zephyros",
+        "branch_points": 3,
+        "id": "tower",
+        "music": "board_sky",
+        "name": "Der Wolkenturm",
+        "space_types": {
+          "B": 29,
+          "D": 1,
+          "L": 6,
+          "N": 2,
+          "R": 4,
+          "S": 1,
+          "T": 2,
+          "U": 5,
+          "Z": 1
+        },
+        "spaces": 51
+      }
+    ],
+    "party_modes": [
+      "classic",
+      "pro",
+      "blitz",
+      "team"
+    ]
+  },
+  "bosses": {
+    "count": 10,
+    "list": [
+      {
+        "attacks": 0,
+        "hp": 0,
+        "id": "ignis",
+        "name": "Ignis, der Seelenschmied"
+      },
+      {
+        "attacks": 0,
+        "hp": 0,
+        "id": "klabautox",
+        "name": "Klabautox"
+      },
+      {
+        "attacks": 0,
+        "hp": 0,
+        "id": "astraios",
+        "name": "Astraios"
+      },
+      {
+        "attacks": 0,
+        "hp": 0,
+        "id": "grabstein",
+        "name": "Graf Grabstein"
+      },
+      {
+        "attacks": 0,
+        "hp": 0,
+        "id": "frostbart",
+        "name": "Yeti-König Frostbart"
+      },
+      {
+        "attacks": 0,
+        "hp": 0,
+        "id": "galaxus",
+        "name": "Galaxus"
+      },
+      {
+        "attacks": 0,
+        "hp": 0,
+        "id": "noxumbra",
+        "name": "Noxumbra"
+      },
+      {
+        "attacks": 0,
+        "hp": 0,
+        "id": "baahemoth",
+        "name": "Baaah-hemoth"
+      },
+      {
+        "attacks": 0,
+        "hp": 0,
+        "id": "marquise",
+        "name": "Marzipan-Marquise"
+      },
+      {
+        "attacks": 0,
+        "hp": 0,
+        "id": "zephyros",
+        "name": "Zephyros"
+      }
+    ]
+  },
+  "characters": {
+    "count": 6,
+    "list": [
+      {
+        "id": "knight",
+        "model": "hero/knight",
+        "model_exists": true,
+        "name": "Ritter Rudi"
+      },
+      {
+        "id": "barbarian",
+        "model": "hero/barbarian",
+        "model_exists": true,
+        "name": "Barbara Bärenstark"
+      },
+      {
+        "id": "mage",
+        "model": "hero/mage",
+        "model_exists": true,
+        "name": "Magierin Mimi"
+      },
+      {
+        "id": "ranger",
+        "model": "hero/ranger",
+        "model_exists": true,
+        "name": "Waldläufer Wanja"
+      },
+      {
+        "id": "rogue",
+        "model": "hero/rogue",
+        "model_exists": true,
+        "name": "Schurkin Sina"
+      },
+      {
+        "id": "rogue_hooded",
+        "model": "hero/rogue_hooded",
+        "model_exists": true,
+        "name": "Kapuzen-Kalle"
+      }
+    ]
+  },
+  "doc_claims_readme": [
+    "10 Bretter",
+    "69 Minispiele",
+    "10 Bosse",
+    "12 Strecken",
+    "12 Items",
+    "10 Bretter",
+    "69 Minispiele",
+    "12 Strecken",
+    "12 Strecken",
+    "12 Items",
+    "10 Bosse",
+    "69 Minispiele"
+  ],
+  "godot": "4.7.2-stable (official)",
+  "minigames": {
+    "by_category": {
+      "1v3": 7,
+      "2v2": 23,
+      "boss": 2,
+      "coin": 5,
+      "coop": 1,
+      "duel": 13,
+      "ffa": 49,
+      "luck": 3
+    },
+    "by_kind": {
+      "race": 6,
+      "score": 41,
+      "survival": 22
+    },
+    "count": 69,
+    "list": [
+      {
+        "cats": [
+          "ffa",
+          "2v2"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B: Schubsen",
+        "id": "plank_panic",
+        "kind": "survival",
+        "name": "Plank-Panic",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/PlankPanic.tscn",
+        "script": "res://scripts/minigames/plank_panic.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "2v2",
+          "duel"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B: Schubsen",
+        "id": "dungeon_drop",
+        "kind": "survival",
+        "name": "Dungeon Drop",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/DungeonDrop.tscn",
+        "script": "res://scripts/minigames/dungeon_drop.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "2v2"
+        ],
+        "controls": "Stick: Lenken · A: Gas · B: Turbo-Rempler",
+        "id": "kart_bowling",
+        "kind": "survival",
+        "name": "Kart-Bowling",
+        "online": false,
+        "playable": true,
+        "scene": "res://scenes/minigames/KartBowling.tscn",
+        "script": "res://scripts/minigames/kart_bowling.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "2v2"
+        ],
+        "controls": "A: Absprung / Greifen · Stick: Seil wechseln",
+        "id": "treasure_zipline",
+        "kind": "score",
+        "name": "Schatz-Seilbahn",
+        "online": false,
+        "playable": true,
+        "scene": "res://scenes/minigames/TreasureZipline.tscn",
+        "script": "res://scripts/minigames/treasure_zipline.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "2v2",
+          "duel"
+        ],
+        "controls": "Stick: Laufen · A: Springen",
+        "id": "ghost_castle",
+        "kind": "race",
+        "name": "Geister-Schloss Schwindel",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/GhostCastle.tscn",
+        "script": "res://scripts/minigames/ghost_castle.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "2v2"
+        ],
+        "controls": "Stick: Laufen · A: Ins Fass springen",
+        "id": "barrel_chaos",
+        "kind": "score",
+        "name": "Fässer-Chaos",
+        "online": false,
+        "playable": true,
+        "scene": "res://scenes/minigames/BarrelChaos.tscn",
+        "script": "res://scripts/minigames/barrel_chaos.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "2v2"
+        ],
+        "controls": "Stick: Steuern · B: Boxhandschuh · A: Hüpfen",
+        "id": "lava_surf",
+        "kind": "score",
+        "name": "Lavastrom-Surfen",
+        "online": false,
+        "playable": true,
+        "scene": "res://scenes/minigames/LavaSurf.tscn",
+        "script": "res://scripts/minigames/lava_surf.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "duel"
+        ],
+        "controls": "A: Block fallen lassen",
+        "id": "tower_balance",
+        "kind": "score",
+        "name": "Turm-Balancieren",
+        "online": false,
+        "playable": true,
+        "scene": "res://scenes/minigames/TowerBalance.tscn",
+        "script": "res://scripts/minigames/tower_balance.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Laufen/Zielen · B: Werfen",
+        "id": "hot_bomb",
+        "kind": "survival",
+        "name": "Bomben-Heißer-Hut",
+        "online": false,
+        "playable": true,
+        "scene": "res://scenes/minigames/HotBomb.tscn",
+        "script": "res://scripts/minigames/hot_bomb.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "2v2",
+          "duel"
+        ],
+        "controls": "Stick: Laufen · A: Springen",
+        "id": "slime_sprint",
+        "kind": "race",
+        "name": "Schleim-Spur Sprint",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/SlimeSprint.tscn",
+        "script": "res://scripts/minigames/slime_sprint.gd"
+      },
+      {
+        "cats": [
+          "coin",
+          "ffa",
+          "2v2",
+          "duel"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B: Schubsen",
+        "id": "coin_rain",
+        "kind": "score",
+        "name": "Münzregen",
+        "online": false,
+        "playable": true,
+        "scene": "res://scenes/minigames/CoinRain.tscn",
+        "script": "res://scripts/minigames/coin_rain.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "2v2",
+          "duel"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B: Super-Schubser",
+        "id": "sumo_shove",
+        "kind": "survival",
+        "name": "Sumo-Schubser",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/SumoShove.tscn",
+        "script": "res://scripts/minigames/sumo_shove.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "2v2"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B: Werfen",
+        "id": "snowball_fight",
+        "kind": "score",
+        "name": "Schneeball-Schlacht",
+        "online": false,
+        "playable": true,
+        "scene": "res://scenes/minigames/SnowballFight.tscn",
+        "script": "res://scripts/minigames/snowball_fight.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "2v2"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B: Schubsen (betäubt)",
+        "id": "color_chaos",
+        "kind": "score",
+        "name": "Farb-Chaos",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/ColorChaos.tscn",
+        "script": "res://scripts/minigames/color_chaos.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "1v3"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B: Schubsen",
+        "id": "hammer_hop",
+        "kind": "survival",
+        "name": "Hammer-Hüpfen",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/HammerHop.tscn",
+        "script": "res://scripts/minigames/hammer_hop.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "duel",
+          "coin"
+        ],
+        "controls": "Stick: Schwimmer bewegen · A: Anschlagen",
+        "id": "fish_catch",
+        "kind": "score",
+        "name": "Fischfang",
+        "online": false,
+        "playable": true,
+        "scene": "res://scenes/minigames/FishCatch.tscn",
+        "script": "res://scripts/minigames/fish_catch.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "1v3"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B: Schubsen",
+        "id": "meteor_dodge",
+        "kind": "survival",
+        "name": "Sternschnuppen-Regen",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/MeteorDodge.tscn",
+        "script": "res://scripts/minigames/meteor_dodge.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "2v2"
+        ],
+        "controls": "Stick: Richtung schnippen · A: A-Note",
+        "id": "rhythm_dance",
+        "kind": "score",
+        "name": "Rhythmus-Tanz",
+        "online": false,
+        "playable": true,
+        "scene": "res://scenes/minigames/RhythmDance.tscn",
+        "script": "res://scripts/minigames/rhythm_dance.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "duel"
+        ],
+        "controls": "Stick links/rechts: Richtung drehen · A halten: Kraft laden (Punkte zeigen den Weg) · loslassen: Schlag · B: Laden abbrechen",
+        "id": "minigolf_duel",
+        "kind": "score",
+        "name": "Minigolf-Duell",
+        "online": false,
+        "playable": true,
+        "scene": "res://scenes/minigames/MinigolfDuel.tscn",
+        "script": "res://scripts/minigames/minigolf_duel.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "2v2"
+        ],
+        "controls": "Stick: Lenken · A: Gas · B: Turbo-Rempler · X: Torte",
+        "id": "balloon_battle",
+        "kind": "survival",
+        "name": "Ballon-Kart-Battle",
+        "online": false,
+        "playable": true,
+        "scene": "res://scenes/minigames/BalloonBattle.tscn",
+        "script": "res://scripts/minigames/balloon_battle.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B: Schubsen",
+        "id": "flower_rush",
+        "kind": "survival",
+        "name": "Blumen-Farbenrausch",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/FlowerRush.tscn",
+        "script": "res://scripts/minigames/flower_rush.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Laufen · A: Springen",
+        "id": "plush_balls",
+        "kind": "survival",
+        "name": "Kuschel-Bälle-Hüpfen",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/PlushBalls.tscn",
+        "script": "res://scripts/minigames/plush_balls.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick/Steuerkreuz: oben · rechts · unten · links",
+        "id": "sleepy_stars",
+        "kind": "survival",
+        "name": "Schlummer-Sternchen-Tanz",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/SleepyStars.tscn",
+        "script": "res://scripts/minigames/sleepy_stars.gd"
+      },
+      {
+        "cats": [
+          "ffa",
+          "duel"
+        ],
+        "controls": "Stick kreisen / B hämmern: Schwung · A: Loslassen",
+        "id": "pumpkin_toss",
+        "kind": "score",
+        "name": "Kürbis-Weitwurf",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/PumpkinToss.tscn",
+        "script": "res://scripts/minigames/pumpkin_toss.gd"
+      },
+      {
+        "cats": [
+          "1v3",
+          "2v2"
+        ],
+        "controls": "A: Ziehen (im Takt = doppelt)",
+        "id": "tug_of_war",
+        "kind": "score",
+        "name": "Seilziehen am Pilzbach",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/TugOfWar.tscn",
+        "script": "res://scripts/minigames/tug_of_war.gd"
+      },
+      {
+        "cats": [
+          "1v3"
+        ],
+        "controls": "Solo: Stick Spur · A Sprung · B Honigfalle — Trio: A Tempo · Stick Spur",
+        "id": "honey_chase",
+        "kind": "score",
+        "name": "Honigbären-Flucht",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/HoneyChase.tscn",
+        "script": "res://scripts/minigames/honey_chase.gd"
+      },
+      {
+        "cats": [
+          "1v3"
+        ],
+        "controls": "Solo: Stick wirbeln — Trio: Stick wählen · A tippen",
+        "id": "hollow_hide",
+        "kind": "score",
+        "name": "Baumhöhlen-Versteck",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/HollowHide.tscn",
+        "script": "res://scripts/minigames/hollow_hide.gd"
+      },
+      {
+        "cats": [
+          "2v2"
+        ],
+        "controls": "Pumper: A hämmern · Springer: A springen · Allein in der Lore: A pumpen, B springen",
+        "id": "rail_express",
+        "kind": "race",
+        "name": "Schienen-Express",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/RailExpress.tscn",
+        "script": "res://scripts/minigames/rail_express.gd"
+      },
+      {
+        "cats": [
+          "2v2"
+        ],
+        "controls": "Stick: Laufen · B: Werfen / Schubsen",
+        "id": "star_hoops",
+        "kind": "score",
+        "name": "Sternen-Korbschlacht",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/StarHoops.tscn",
+        "script": "res://scripts/minigames/star_hoops.gd"
+      },
+      {
+        "cats": [
+          "luck",
+          "coin",
+          "ffa"
+        ],
+        "controls": "A: Walze stoppen",
+        "id": "lucky_bells",
+        "kind": "score",
+        "name": "Glücks-Glöckchen",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/LuckyBells.tscn",
+        "script": "res://scripts/minigames/lucky_bells.gd"
+      },
+      {
+        "cats": [
+          "luck",
+          "ffa"
+        ],
+        "controls": "Stick: Kiste wählen · A: Nehmen",
+        "id": "chest_sniff",
+        "kind": "score",
+        "name": "Schatzkisten-Schnüffeln",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/ChestSniff.tscn",
+        "script": "res://scripts/minigames/chest_sniff.gd"
+      },
+      {
+        "cats": [
+          "boss"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B: Werfen",
+        "id": "boss_battle",
+        "kind": "score",
+        "name": "Boss-Kampf",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/BossBattle.tscn",
+        "script": "res://scripts/minigames/boss_battle.gd"
+      },
+      {
+        "cats": [
+          "boss"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B: Werfen",
+        "id": "boss_cloud",
+        "kind": "score",
+        "name": "Boss: Pustebacke, der Wolkendrache",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/BossCloud.tscn",
+        "script": "res://scripts/minigames/boss_cloud.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Laufen & Taschenlampe richten · A: Foto (wenn der Ring leuchtet)",
+        "id": "ghost_photo",
+        "kind": "score",
+        "name": "Geister-Fotograf",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/GhostPhoto.tscn",
+        "script": "res://scripts/minigames/ghost_photo.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B: Packen / Werfen",
+        "id": "cheese_brawl",
+        "kind": "survival",
+        "name": "Käse-Kloppe",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/CheeseBrawl.tscn",
+        "script": "res://scripts/minigames/cheese_brawl.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Richtung · A halten & loslassen: Schwung · A hämmern: Eis wischen",
+        "id": "penguin_curling",
+        "kind": "score",
+        "name": "Pinguin-Curling",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/PenguinCurling.tscn",
+        "script": "res://scripts/minigames/penguin_curling.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Blase steuern & zielen · A/B abwechselnd: Wind pumpen",
+        "id": "bubble_ballet",
+        "kind": "survival",
+        "name": "Seifenblasen-Ballett",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/BubbleBallet.tscn",
+        "script": "res://scripts/minigames/bubble_ballet.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick/Steuerkreuz: ↑ Schritt · ← / → Lehnen · ↓ Hinsetzen",
+        "id": "sleepwalk",
+        "kind": "score",
+        "name": "Schlafwandler-Parcours",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/Sleepwalk.tscn",
+        "script": "res://scripts/minigames/sleepwalk.gd"
+      },
+      {
+        "cats": [
+          "coop"
+        ],
+        "controls": "A/B: Noten · Stick: Pfeil-Noten schnippen",
+        "id": "rhythm_kitchen",
+        "kind": "score",
+        "name": "Rhythmus-Küche",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/RhythmKitchen.tscn",
+        "script": "res://scripts/minigames/rhythm_kitchen.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Kugel rollen · A: Hopsen · B: Sprint-Stoß",
+        "id": "bumper_balls",
+        "kind": "survival",
+        "name": "Kugel-Karambolage",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/BumperBalls.tscn",
+        "script": "res://scripts/minigames/bumper_balls.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Laufen & gegenhalten · A: Springen",
+        "id": "log_bridge",
+        "kind": "survival",
+        "name": "Wackelsteg-Wirbel",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/LogBridge.tscn",
+        "script": "res://scripts/minigames/log_bridge.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Laufen · A: Springen",
+        "id": "spark_carousel",
+        "kind": "survival",
+        "name": "Funken-Karussell",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/SparkCarousel.tscn",
+        "script": "res://scripts/minigames/spark_carousel.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Laufen · A: Springen (auf Stapel)",
+        "id": "sandwich_storm",
+        "kind": "survival",
+        "name": "Sandwich-Sturm",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/SandwichStorm.tscn",
+        "script": "res://scripts/minigames/sandwich_storm.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B: Stampfen (Welle)",
+        "id": "stomp_waves",
+        "kind": "survival",
+        "name": "Stampf-Wellen",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/StompWaves.tscn",
+        "script": "res://scripts/minigames/stomp_waves.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Laufen · A: Springen",
+        "id": "boulder_run",
+        "kind": "survival",
+        "name": "Kullerfels-Flucht",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/BoulderRun.tscn",
+        "script": "res://scripts/minigames/boulder_run.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Rutschen · A: Springen · B: Schubsen",
+        "id": "ice_floes",
+        "kind": "survival",
+        "name": "Eisschollen-Sturm",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/IceFloes.tscn",
+        "script": "res://scripts/minigames/ice_floes.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "A halten/loslassen: Ausholen & Schlagen · B tippen: Krummen Nagel geradebiegen",
+        "id": "nail_pro",
+        "kind": "score",
+        "name": "Nagel-Profi",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/NailPro.tscn",
+        "script": "res://scripts/minigames/nail_pro.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Fliegen/Laufen · A halten: Schub",
+        "id": "jetpack_rally",
+        "kind": "score",
+        "name": "Raketen-Rucksack-Rallye",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/JetpackRally.tscn",
+        "script": "res://scripts/minigames/jetpack_rally.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "A schnell tippen: Anschieben · B halten: Bremsen",
+        "id": "sled_edge",
+        "kind": "score",
+        "name": "Schlitten an der Kante",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/SledEdge.tscn",
+        "script": "res://scripts/minigames/sled_edge.gd"
+      },
+      {
+        "cats": [
+          "coin",
+          "ffa"
+        ],
+        "controls": "Stick: Schlittern · A: Springen · B: Schubsen",
+        "id": "ice_coins",
+        "kind": "score",
+        "name": "Eislauf-Münzjagd",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/IceCoins.tscn",
+        "script": "res://scripts/minigames/ice_coins.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "A/B abwechselnd: Hacken · Stick links/rechts + Hacken: Seitlich graben",
+        "id": "pickaxe_dash",
+        "kind": "score",
+        "name": "Spitzhacken-Spurt",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/PickaxeDash.tscn",
+        "script": "res://scripts/minigames/pickaxe_dash.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Laufen · A: Springen",
+        "id": "bridge_bluff",
+        "kind": "score",
+        "name": "Blockpfad-Poker",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/BridgeBluff.tscn",
+        "script": "res://scripts/minigames/bridge_bluff.gd"
+      },
+      {
+        "cats": [
+          "1v3"
+        ],
+        "controls": "Solo – Stick: Fliegen · A halten: Traktorstrahl | Trio – Stick: Laufen · A tippen: Zappeln (im Strahl)",
+        "id": "ufo_heist",
+        "kind": "survival",
+        "name": "UFO-Kaperung",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/UfoHeist.tscn",
+        "script": "res://scripts/minigames/ufo_heist.gd"
+      },
+      {
+        "cats": [
+          "1v3"
+        ],
+        "controls": "Solo – Stick: Falle wählen · A: Auslösen | Trio – Stick: Laufen · A: Springen",
+        "id": "switch_gauntlet",
+        "kind": "race",
+        "name": "Schalter-Schikane",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/SwitchGauntlet.tscn",
+        "script": "res://scripts/minigames/switch_gauntlet.gd"
+      },
+      {
+        "cats": [
+          "2v2"
+        ],
+        "controls": "Stick: Laufen · B: Zündschnur austreten · A: Über die Hecke kicken",
+        "id": "bomb_defuse",
+        "kind": "score",
+        "name": "Bomben-Entschärfung",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/BombDefuse.tscn",
+        "script": "res://scripts/minigames/bomb_defuse.gd"
+      },
+      {
+        "cats": [
+          "2v2"
+        ],
+        "controls": "Stick: links/rechts ODER vor/zurück (je nach Rolle)",
+        "id": "axis_taxi",
+        "kind": "score",
+        "name": "Taxi-Koordinaten",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/AxisTaxi.tscn",
+        "script": "res://scripts/minigames/axis_taxi.gd"
+      },
+      {
+        "cats": [
+          "2v2"
+        ],
+        "controls": "Stick: Rahmen bewegen · A: Karte umdrehen",
+        "id": "memory_match",
+        "kind": "score",
+        "name": "Karten-Match",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/MemoryMatch.tscn",
+        "script": "res://scripts/minigames/memory_match.gd"
+      },
+      {
+        "cats": [
+          "2v2"
+        ],
+        "controls": "Stick: Laufen & Zielen (nach vorne = direkt rüber) · A: Springen/Blocken · B (in der Luft am Netz): Schmetterball",
+        "id": "beach_volley",
+        "kind": "score",
+        "name": "Strand-Volley",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/BeachVolley.tscn",
+        "script": "res://scripts/minigames/beach_volley.gd"
+      },
+      {
+        "cats": [
+          "2v2"
+        ],
+        "controls": "A/B abwechselnd: Treten · Stick: Gemeinsam lenken",
+        "id": "pedal_boat",
+        "kind": "race",
+        "name": "Tretboot-Rennen",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/PedalBoat.tscn",
+        "script": "res://scripts/minigames/pedal_boat.gd"
+      },
+      {
+        "cats": [
+          "2v2"
+        ],
+        "controls": "Stick: Laufen · B mehrmals: Herausziehen · A: Rempler",
+        "id": "veggie_harvest",
+        "kind": "score",
+        "name": "Gemüse-Ernte",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/VeggieHarvest.tscn",
+        "script": "res://scripts/minigames/veggie_harvest.gd"
+      },
+      {
+        "cats": [
+          "duel"
+        ],
+        "controls": "A: Rute hochreißen (erst beim Biss!)",
+        "id": "quick_fishing",
+        "kind": "score",
+        "name": "Schnell-Angler",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/QuickFishing.tscn",
+        "script": "res://scripts/minigames/quick_fishing.gd"
+      },
+      {
+        "cats": [
+          "duel"
+        ],
+        "controls": "Stick: Laufen · A: Springen · B halten: Ducken",
+        "id": "slap_carousel",
+        "kind": "survival",
+        "name": "Klatsch-Karussell",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/SlapCarousel.tscn",
+        "script": "res://scripts/minigames/slap_carousel.gd"
+      },
+      {
+        "cats": [
+          "duel"
+        ],
+        "controls": "Stick: Brett kippen",
+        "id": "marble_maze",
+        "kind": "score",
+        "name": "Murmel-Labyrinth",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/MarbleMaze.tscn",
+        "script": "res://scripts/minigames/marble_maze.gd"
+      },
+      {
+        "cats": [
+          "duel"
+        ],
+        "controls": "A: Richtung festlegen · A: Kraft festlegen & werfen",
+        "id": "stone_bowling",
+        "kind": "score",
+        "name": "Steinkopf-Kegeln",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/StoneBowling.tscn",
+        "script": "res://scripts/minigames/stone_bowling.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Laufen · A: Springen (auf die Biene!)",
+        "id": "mega_bee",
+        "kind": "score",
+        "name": "Mega-Summser",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/MegaBee.tscn",
+        "script": "res://scripts/minigames/mega_bee.gd"
+      },
+      {
+        "cats": [
+          "luck",
+          "coin",
+          "ffa"
+        ],
+        "controls": "Stick: Abwurf verschieben · A: Kugel fallen lassen",
+        "id": "prize_drop",
+        "kind": "score",
+        "name": "Kullerkasten",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/PrizeDrop.tscn",
+        "script": "res://scripts/minigames/prize_drop.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Fadenkreuz bewegen · A: Schießen",
+        "id": "coaster_shooter",
+        "kind": "score",
+        "name": "Achterbahn-Schießbude",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/CoasterShooter.tscn",
+        "script": "res://scripts/minigames/coaster_shooter.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "A halten/loslassen: Kraft & Wurf · Stick hoch/runter: Winkel",
+        "id": "stone_skip",
+        "kind": "score",
+        "name": "Flitzestein-Wurf",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/StoneSkip.tscn",
+        "script": "res://scripts/minigames/stone_skip.gd"
+      },
+      {
+        "cats": [
+          "ffa"
+        ],
+        "controls": "Stick: Laufen · A: Tür öffnen",
+        "id": "ghost_manor",
+        "kind": "race",
+        "name": "Spukvilla-Sprint",
+        "online": true,
+        "playable": true,
+        "scene": "res://scenes/minigames/GhostManor.tscn",
+        "script": "res://scripts/minigames/ghost_manor.gd"
+      }
+    ],
+    "playable": 69,
+    "scripts_without_catalog_entry": []
+  },
+  "modes": {
+    "other": [
+      "free_play",
+      "marathon"
+    ],
+    "party_modes": [
+      "Klassisch",
+      "Profi-Regeln",
+      "Blitz-Party",
+      "Team-Party (2 gegen 2)"
+    ],
+    "race_modes": [
+      "single",
+      "grand_prix",
+      "time_trial",
+      "split_screen",
+      "online"
+    ],
+    "scenes": [
+      "scenes/modes/Athlon.tscn",
+      "scenes/modes/Colosseum.tscn",
+      "scenes/modes/Journey.tscn"
+    ]
+  },
+  "problems": [],
+  "systems": {
+    "autoload": {
+      "lines": 7146,
+      "scripts": 14
+    },
+    "scripts/actor": {
+      "lines": 6807,
+      "scripts": 15
+    },
+    "scripts/bosses": {
+      "lines": 1183,
+      "scripts": 2
+    },
+    "scripts/core": {
+      "lines": 3480,
+      "scripts": 14
+    },
+    "scripts/minigames": {
+      "lines": 24639,
+      "scripts": 71
+    },
+    "scripts/modes": {
+      "lines": 2351,
+      "scripts": 4
+    },
+    "scripts/net": {
+      "lines": 914,
+      "scripts": 6
+    },
+    "scripts/party": {
+      "lines": 4820,
+      "scripts": 6
+    },
+    "scripts/racer": {
+      "lines": 5455,
+      "scripts": 9
+    },
+    "scripts/ui": {
+      "lines": 3619,
+      "scripts": 13
+    }
+  },
+  "tracks": {
+    "count": 12,
+    "cups": [
+      {
+        "id": "lumos",
+        "name": "Lumos-Cup",
+        "tracks": [
+          "lumos_ring",
+          "coral_canal",
+          "neon_volcano",
+          "storm_pass"
+        ]
+      },
+      {
+        "id": "stars",
+        "name": "Sternen-Cup",
+        "tracks": [
+          "frost_peak",
+          "orbit_ring",
+          "city_rally",
+          "desert_canyon"
+        ]
+      },
+      {
+        "id": "wonder",
+        "name": "Wunder-Cup",
+        "tracks": [
+          "glow_forest",
+          "candy_lane",
+          "jungle_ruins",
+          "falls_gorge"
+        ]
+      },
+      {
+        "id": "mega",
+        "name": "Mega-Cup (12 Strecken)",
+        "tracks": [
+          "lumos_ring",
+          "glow_forest",
+          "frost_peak",
+          "coral_canal",
+          "candy_lane",
+          "city_rally",
+          "neon_volcano",
+          "jungle_ruins",
+          "desert_canyon",
+          "storm_pass",
+          "falls_gorge",
+          "orbit_ring"
+        ]
+      }
+    ],
+    "list": [
+      {
+        "close_straight_m": 44.0,
+        "closest_self_distance_m": 16.9,
+        "env": "day",
+        "features": {
+          "boosts": 4,
+          "glide": 1,
+          "ice": 0,
+          "items": 4,
+          "loops": 1,
+          "ramps": 1,
+          "water": 0
+        },
+        "hazards": [],
+        "height_range_m": 26.0,
+        "id": "lumos_ring",
+        "length_m": 1054.0,
+        "longest_straight_m": 160.0,
+        "mechanics": [
+          "close_straight:1",
+          "close_err:1"
+        ],
+        "name": "Lumos-Ring",
+        "self_overlaps": 0,
+        "theme": "ring",
+        "total_turn_deg": 1081.0,
+        "width": 16.0
+      },
+      {
+        "close_straight_m": 195.0,
+        "closest_self_distance_m": 53.1,
+        "env": "pirates",
+        "features": {
+          "boosts": 2,
+          "glide": 0,
+          "ice": 0,
+          "items": 4,
+          "loops": 0,
+          "ramps": 1,
+          "water": 1
+        },
+        "hazards": [
+          "water",
+          "water",
+          "water",
+          "crab",
+          "water"
+        ],
+        "height_range_m": 11.9,
+        "id": "coral_canal",
+        "length_m": 1033.0,
+        "longest_straight_m": 149.0,
+        "mechanics": [
+          "close_straight:1",
+          "close_err:1",
+          "dividers:1",
+          "hazards:5"
+        ],
+        "name": "Korallen-Kanal",
+        "self_overlaps": 0,
+        "theme": "pirates",
+        "total_turn_deg": 969.0,
+        "width": 17.0
+      },
+      {
+        "close_straight_m": 112.0,
+        "closest_self_distance_m": 18.2,
+        "env": "sunset",
+        "features": {
+          "boosts": 2,
+          "glide": 1,
+          "ice": 0,
+          "items": 4,
+          "loops": 1,
+          "ramps": 1,
+          "water": 0
+        },
+        "hazards": [
+          "lava",
+          "lava",
+          "lava",
+          "lava",
+          "lava"
+        ],
+        "height_range_m": 28.0,
+        "id": "neon_volcano",
+        "length_m": 990.0,
+        "longest_straight_m": 160.0,
+        "mechanics": [
+          "close_straight:1",
+          "close_err:1",
+          "hazards:5"
+        ],
+        "name": "Vulkan-Inselchen",
+        "self_overlaps": 0,
+        "theme": "volcano",
+        "total_turn_deg": 966.0,
+        "width": 15.0
+      },
+      {
+        "close_straight_m": 201.0,
+        "closest_self_distance_m": 23.0,
+        "env": "storm",
+        "features": {
+          "boosts": 2,
+          "glide": 1,
+          "ice": 0,
+          "items": 4,
+          "loops": 0,
+          "ramps": 1,
+          "water": 0
+        },
+        "hazards": [
+          "bolt",
+          "bolt",
+          "rock",
+          "rock"
+        ],
+        "height_range_m": 23.0,
+        "id": "storm_pass",
+        "length_m": 1191.0,
+        "longest_straight_m": 161.0,
+        "mechanics": [
+          "close_straight:1",
+          "close_err:1",
+          "wet:3",
+          "hazards:4"
+        ],
+        "name": "Gewitter-Pass",
+        "self_overlaps": 0,
+        "theme": "storm",
+        "total_turn_deg": 1209.0,
+        "width": 14.0
+      },
+      {
+        "close_straight_m": 156.0,
+        "closest_self_distance_m": 43.1,
+        "env": "snow",
+        "features": {
+          "boosts": 2,
+          "glide": 1,
+          "ice": 3,
+          "items": 4,
+          "loops": 0,
+          "ramps": 1,
+          "water": 0
+        },
+        "hazards": [
+          "snowball",
+          "snowball",
+          "snowball"
+        ],
+        "height_range_m": 19.0,
+        "id": "frost_peak",
+        "length_m": 994.0,
+        "longest_straight_m": 159.0,
+        "mechanics": [
+          "close_straight:1",
+          "close_err:1",
+          "hazards:3"
+        ],
+        "name": "Frostgipfel",
+        "self_overlaps": 0,
+        "theme": "snow",
+        "total_turn_deg": 901.0,
+        "width": 15.0
+      },
+      {
+        "close_straight_m": 293.0,
+        "closest_self_distance_m": 17.6,
+        "env": "observatory",
+        "features": {
+          "boosts": 3,
+          "glide": 1,
+          "ice": 0,
+          "items": 5,
+          "loops": 1,
+          "ramps": 1,
+          "water": 0
+        },
+        "hazards": [
+          "orb",
+          "orb",
+          "orb"
+        ],
+        "height_range_m": 31.6,
+        "id": "orbit_ring",
+        "length_m": 1189.0,
+        "longest_straight_m": 194.0,
+        "mechanics": [
+          "close_straight:1",
+          "close_err:1",
+          "bounce:3",
+          "hazards:3"
+        ],
+        "name": "Sternenstaub-Bahn",
+        "self_overlaps": 0,
+        "theme": "space",
+        "total_turn_deg": 1239.0,
+        "width": 15.0
+      },
+      {
+        "close_straight_m": 279.0,
+        "closest_self_distance_m": 38.0,
+        "env": "day",
+        "features": {
+          "boosts": 2,
+          "glide": 1,
+          "ice": 0,
+          "items": 5,
+          "loops": 0,
+          "ramps": 1,
+          "water": 0
+        },
+        "hazards": [
+          "car",
+          "car",
+          "car",
+          "car"
+        ],
+        "height_range_m": 3.0,
+        "id": "city_rally",
+        "length_m": 1113.0,
+        "longest_straight_m": 131.0,
+        "mechanics": [
+          "close_straight:1",
+          "close_err:1",
+          "dividers:1",
+          "hazards:4"
+        ],
+        "name": "Stadt-Rallye",
+        "self_overlaps": 0,
+        "theme": "city",
+        "total_turn_deg": 1125.0,
+        "width": 17.0
+      },
+      {
+        "close_straight_m": 72.0,
+        "closest_self_distance_m": 17.0,
+        "env": "desert",
+        "features": {
+          "boosts": 2,
+          "glide": 1,
+          "ice": 0,
+          "items": 4,
+          "loops": 1,
+          "ramps": 1,
+          "water": 0
+        },
+        "hazards": [
+          "tumbleweed",
+          "sand",
+          "sand",
+          "tumbleweed"
+        ],
+        "height_range_m": 24.0,
+        "id": "desert_canyon",
+        "length_m": 1008.0,
+        "longest_straight_m": 152.0,
+        "mechanics": [
+          "close_straight:1",
+          "close_err:1",
+          "bounce:1",
+          "hazards:4"
+        ],
+        "name": "Wüsten-Canyon",
+        "self_overlaps": 0,
+        "theme": "desert",
+        "total_turn_deg": 1037.0,
+        "width": 15.0
+      },
+      {
+        "close_straight_m": 249.0,
+        "closest_self_distance_m": 28.2,
+        "env": "forest_dusk",
+        "features": {
+          "boosts": 2,
+          "glide": 0,
+          "ice": 0,
+          "items": 5,
+          "loops": 0,
+          "ramps": 0,
+          "water": 0
+        },
+        "hazards": [],
+        "height_range_m": 8.0,
+        "id": "glow_forest",
+        "length_m": 1151.0,
+        "longest_straight_m": 77.0,
+        "mechanics": [
+          "close_straight:1",
+          "close_err:1",
+          "wet:1",
+          "tunnel:1",
+          "bounce:4"
+        ],
+        "name": "Glühwald-Pfad",
+        "self_overlaps": 0,
+        "theme": "forest",
+        "total_turn_deg": 1240.0,
+        "width": 15.0
+      },
+      {
+        "close_straight_m": 20.0,
+        "closest_self_distance_m": 17.6,
+        "env": "sky",
+        "features": {
+          "boosts": 2,
+          "glide": 1,
+          "ice": 0,
+          "items": 4,
+          "loops": 1,
+          "ramps": 1,
+          "water": 0
+        },
+        "hazards": [
+          "gumball",
+          "gumball",
+          "gumball"
+        ],
+        "height_range_m": 26.0,
+        "id": "candy_lane",
+        "length_m": 1043.0,
+        "longest_straight_m": 154.0,
+        "mechanics": [
+          "close_straight:1",
+          "close_err:1",
+          "bounce:2",
+          "hazards:3"
+        ],
+        "name": "Zuckerguss-Allee",
+        "self_overlaps": 0,
+        "theme": "candy",
+        "total_turn_deg": 1199.0,
+        "width": 16.0
+      },
+      {
+        "close_straight_m": 228.0,
+        "closest_self_distance_m": 45.4,
+        "env": "day",
+        "features": {
+          "boosts": 2,
+          "glide": 1,
+          "ice": 0,
+          "items": 5,
+          "loops": 0,
+          "ramps": 1,
+          "water": 0
+        },
+        "hazards": [
+          "log",
+          "log",
+          "log",
+          "log"
+        ],
+        "height_range_m": 7.0,
+        "id": "jungle_ruins",
+        "length_m": 1130.0,
+        "longest_straight_m": 134.0,
+        "mechanics": [
+          "close_straight:1",
+          "close_err:1",
+          "dividers:1",
+          "hazards:4"
+        ],
+        "name": "Dschungel-Tempel",
+        "self_overlaps": 0,
+        "theme": "jungle",
+        "total_turn_deg": 1063.0,
+        "width": 18.0
+      },
+      {
+        "close_straight_m": 119.0,
+        "closest_self_distance_m": 37.8,
+        "env": "day",
+        "features": {
+          "boosts": 2,
+          "glide": 1,
+          "ice": 0,
+          "items": 4,
+          "loops": 0,
+          "ramps": 1,
+          "water": 0
+        },
+        "hazards": [
+          "water",
+          "water",
+          "water"
+        ],
+        "height_range_m": 11.0,
+        "id": "falls_gorge",
+        "length_m": 1043.0,
+        "longest_straight_m": 154.0,
+        "mechanics": [
+          "close_straight:1",
+          "close_err:1",
+          "wet:1",
+          "falls:1",
+          "hazards:3"
+        ],
+        "name": "Wasserfall-Schlucht",
+        "self_overlaps": 0,
+        "theme": "falls",
+        "total_turn_deg": 851.0,
+        "width": 15.0
+      }
+    ]
+  },
+  "version": "1.5.2"
+}

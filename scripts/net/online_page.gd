@@ -111,6 +111,7 @@ func _build_join() -> void:
 	_code_edit.custom_minimum_size = Vector2(240, 60)
 	_code_edit.add_theme_font_size_override("font_size", 32)
 	_code_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	UI.field_nav(_code_edit, "Raumcode")
 	_code_edit.text_changed.connect(func(t: String) -> void:
 		var up := t.to_upper()
 		if up != t:
@@ -124,6 +125,13 @@ func _build_join() -> void:
 	join.pressed.connect(func() -> void: Net.join_room(_code_edit.text))
 	row.add_child(join)
 	_join_box.add_child(row)
+	# Feste Wege durch die Beitreten-Zeile: Die freie Nachbarsuche sprang von „Beitreten“ nach links zum
+	# Athlon-Knopf statt ins Raumcode-Feld, und von oben kam man nie ins Feld.
+	big.focus_neighbor_bottom = big.get_path_to(_code_edit)
+	_code_edit.focus_neighbor_top = _code_edit.get_path_to(big)
+	_code_edit.focus_neighbor_right = _code_edit.get_path_to(join)
+	join.focus_neighbor_left = join.get_path_to(_code_edit)
+	join.focus_neighbor_top = join.get_path_to(big)
 	var hint := UI.label("Tipp: Alle Geräte brauchen Internet. Die Verbindung läuft direkt (WebRTC) – im selben WLAN unter 20 ms.", 18, Color(1, 1, 1, 0.6))
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.custom_minimum_size.x = 700

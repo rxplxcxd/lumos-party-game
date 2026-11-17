@@ -17,6 +17,10 @@ var info: Dictionary = {}
 var env_preset := "day"
 var time_limit := 40.0
 var time_left := 40.0
+## Spielzeit seit dem Start in Sekunden (läuft nur im Zustand „play“, steht bei Pause, folgt Zeitlupe/Hitstop).
+## Für alles, was das Spiel beeinflusst (CPU-Takt, Bahnen von Gegnern) – nie die Echtzeit-Uhr: Die läuft in der
+## Pause weiter und im Test-Zeitraffer zu langsam.
+var clock := 0.0
 var state := "setup"
 var touch_profile := "minigame"
 var survival := false
@@ -77,7 +81,34 @@ var _music_hurried := false
 var _debug_ai := "--debug-ai" in OS.get_cmdline_user_args()
 
 
+## Modelle, die erst im Lauf des Spiels erscheinen (Münzen, Geschosse, Sammelobjekte): vorab laden, sonst ruckelt
+## das Bild beim ersten Auftauchen. Die Liste stammt aus dem Player-Agenten (meldet „lädt mitten im Spiel nach“).
+const WARM_MODELS := {
+	"balloon_battle": ["hol/cookie", "toy/item_box"],
+	"barrel_chaos": ["bg/coin_gold", "dun/coin_stack"],
+	"bomb_defuse": ["qp/bomb"],
+	"boss_battle": ["bg/coin_gold"],
+	"boss_cloud": ["plat/coin"],
+	"chest_sniff": ["bg/coin_gold"],
+	"coin_rain": ["mg/powerup_bomb", "plat/coin", "plat/star"],
+	"color_chaos": ["mg/powerup_bomb"],
+	"fish_catch": ["plat/crate", "surv/fish", "surv/fish_small"],
+	"ghost_photo": ["bg/coin_gold"],
+	"kart_bowling": ["td/boulder"],
+	"lava_surf": ["mg/diamond", "mg/ring", "pirate/rocks_a", "td/rocks"],
+	"lucky_bells": ["bg/coin_gold"],
+	"meteor_dodge": ["plat/star"],
+	"quick_fishing": ["surv/fish"],
+	"snowball_fight": ["hol/snowball"],
+	"star_hoops": ["plat/star"],
+	"switch_gauntlet": ["plat/barrel"],
+	"tower_balance": ["dun/column", "dun/floor_small"],
+	"treasure_zipline": ["bg/coin_gold"],
+}
+
+
 func _ready() -> void:
+	Assets.warm(WARM_MODELS.get(game_id, []))
 	info = Game.minigame_info(game_id)
 	if Net.in_game():
 		rng.seed = int(Net.game_cfg.get("seed", 1)) ^ hash(game_id) ^ (int(Game.party.get("dseq", 0)) * 7919 if Game.mode == "party" else 0)
@@ -256,6 +287,7 @@ func _flow() -> void:
 func _process(delta: float) -> void:
 	if state != "play":
 		return
+	clock += delta
 	if show_timer:
 		time_left = maxf(0.0, time_left - delta)
 		var secs := int(ceil(time_left))
@@ -911,6 +943,52 @@ func _return(placements: Array[int]) -> void:
 			Router.goto("res://scenes/menu/MainMenu.tscn", {"page": "online"})
 		_:
 			Router.goto("res://scenes/menu/MainMenu.tscn")
+
+
+# --- Zugspiele: niemand hält die Runde auf ----------------------------------------------------------
+
+const TURN_PATIENCE := 20.0
+var _turn_slot := -1
+var _turn_idle := 0.0
+var _turn_label: Label
+
+
+## Für Spiele, in denen einer nach dem anderen dran ist: je Bild für den Spieler am Zug aufrufen. Zählt bei
+## Menschen die Zeit ohne jede Eingabe; die letzten 5 Sekunden zeigt ein Countdown. true = Geduld vorbei – das
+## Spiel führt den Zug dann selbst aus (mit dem, was gerade eingestellt ist). CPU-Züge und fremde Online-Plätze
+## zählen nie. So kann ein abwesender Spieler die anderen nicht endlos warten lassen.
+func turn_timed_out(slot: int, delta: float, limit := TURN_PATIENCE) -> bool:
+	if slot != _turn_slot:
+		_turn_slot = slot
+		_turn_idle = 0.0
+	if slot < 0 or slot >= Game.players.size() or Game.players[slot].cpu or not Net.owns_slot(slot):
+		if _turn_label:
+			_turn_label.visible = false
+		return false
+	var busy := InputHub.move(slot).length() > 0.3
+	for act: String in InputHub.ACTIONS:
+		busy = busy or InputHub.held(slot, act)
+	_turn_idle = 0.0 if busy else _turn_idle + delta
+	var left := limit - _turn_idle
+	if left <= 5.0 and left > 0.0:
+		if _turn_label == null:
+			_turn_label = UI.label("", 44, Color("#ffd23f"), true, 10)
+			_turn_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+			_turn_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			_turn_label.position = Vector2(-260, 96)
+			_turn_label.size = Vector2(520, 60)
+			_hud_root.add_child(_turn_label)
+		_turn_label.visible = true
+		_turn_label.text = "%s: noch %d …" % [Game.SLOT_NAMES[slot], int(ceil(left))]
+	elif _turn_label:
+		_turn_label.visible = false
+	if _turn_idle >= limit:
+		_turn_idle = 0.0
+		_turn_slot = -1
+		if _turn_label:
+			_turn_label.visible = false
+		return true
+	return false
 
 
 # --- HUD & Overlays -------------------------------------------------------------------------------
