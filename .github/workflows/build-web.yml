@@ -104,6 +104,12 @@ jobs:
           done
           ! grep -q "RACE-WARN\|SCRIPT ERROR" race.log
 
+      - name: Nitro Dash – Linsentropfen im Split-Screen (je Ansicht eigene Tropfen, nur eigenes Bild, Vollbild-Linse leer)
+        run: |
+          LUMOS_LENS=1 timeout 600 $GODOT_BIN --headless --fixed-fps 60 --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/lens_split_test.gd --split-test 2>&1 | tee lens.log
+          grep -q "LENS-SPLIT OK" lens.log
+          ! grep -q "SCRIPT ERROR" lens.log
+
       - name: Character Behavior Laboratory (Mimik, IK, Gewicht, Gefühle, Mikroleben, Sozialverhalten, Cartoon, Leistung)
         run: |
           timeout 1500 $GODOT_BIN --headless --fixed-fps 60 --path . res://tools/charlab/CharLab.tscn -- --lab-auto 2>&1 | tee charlab.log

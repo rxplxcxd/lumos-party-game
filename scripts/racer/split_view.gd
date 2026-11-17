@@ -51,6 +51,7 @@ func setup(r: Racer, laps: int) -> SplitView:
 	if Gfx.active != "low" or OS.has_environment("LUMOS_LENS"):   # eigene Tropfen je Ansicht, unter der Anzeige
 		lens = LensDrops.new()
 		add_child(lens)
+		lens.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_hud()
 	return self
 

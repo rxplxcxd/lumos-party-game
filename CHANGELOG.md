@@ -41,8 +41,33 @@ Die Framework-Stufe trägt im Auftrag den Arbeitstitel „1.6“ – die Version
 * Einstellungen: „Lebendige Mimik“ (Grundschalter) plus je ein Schalter für Spielbrett, Minispiele, Nitro Dash.
 
 ### Nitro Dash
+* **Alle 12 Strecken länger (+13 % bis +49 %, im Mittel +27 %)**, jede mit eigenem Abschnitt vor dem Rundenschluss,
+  der zu ihr passt: Esse-Kombination (Lumos-Ring), zweite Felsinsel mit zwei Routen und Fontänen (Korallen-Kanal),
+  Sprung über den Glutgraben und Lavafontäne (Neon-Vulkan), Pass-Serpentinen mit Steilkurve im Regen (Sturmpass),
+  Eis-Kehre mit Sprung und rollendem Schneeball (Frost-Gipfel), Schwerelos-Schleife mit Sprungkissen und
+  Plasmakugel (Orbit-Ring), Häuserblock mit zwei Straßen und Lieferwagen (City-Rally), Dünensprung und
+  Steppenläufer (Wüsten-Canyon), zweiter Baumtunnel mit Pilz-Sprungkissen (Glühwald), Zuckerguss-Looping mit
+  Kaugummikugeln (Zuckerstraße), Spiral-Brücke über den eigenen Anfang (Dschungel), zweiter Wasserfall zum
+  Durchfahren (Wasserfall-Schlucht). Gewählt per Variantensuche: keine Selbstüberschneidung, Rückgeraden und ihre
+  Schlenker bleiben erhalten.
+* Rundenzeiten (8 CPU-Karts, je 2 Runden): Bestrunde 37,6–45,4 s → 43,4–57,9 s; alle im Ziel auf allen Strecken.
 * Split-Screen: jede Ansicht hat eigene Tropfen auf der Linse (nach ihrem Fahrer und ihrer Kamera), richtig
-  skaliert; die Linse liest nur das Bild der eigenen Ansicht (kein Nachbarbild am Rand).
+  skaliert; die Linse liest nur das Bild der eigenen Ansicht (kein Nachbarbild am Rand). Neuer Test
+  `tools/dev/lens_split_test.gd` (auch in der CI) – er fand dabei, dass die Linsen der Ansichten zunächst die Größe 0
+  hatten (behoben).
+
+### Spielbretter: eigenes Leben je Brett (`BoardLife`)
+* Jedes der 10 Bretter bekommt zwei bis drei Elemente, die nur zu ihm passen: Pusteblumen-Schirmchen, Drachen und
+  Schwalben (Wiesen) · Möwen und Glitzern auf dem Wasser (Bucht) · Staub, Tropfen und Glut (Dungeon) · Wolkenfetzen
+  und Heißluftballons (Wolkenland) · Irrlichter, Krähen, Laub (Friedhof) · Schneefall und Polarlicht (Frostdorf) ·
+  Sternschnuppen, Funkeln, kreisende Planeten (Sternwarte) · Sporen und Feenlichter (Zauberwald) · Streusel und
+  Luftballons (Torte) · Blätter im Aufwind und Vögel um die Spitze (Wolkenturm).
+* Rein dekorativ, eigener Zufall, kein Netz-Abgleich; alles in der Luft oder am Rand, nie auf Feldern, Wegen oder vor
+  der Brett-Kamera. Kosten je Brett 0 bis +0,6 ms CPU je Bild (gemessen), keine Ruckler.
+
+### Geräte-Leistung
+* Testplan `docs/GERAETE_TESTPLAN.md`: Messgrößen, Geräte-Matrix, reproduzierbarer Ablauf, Ergebnisvorlage. Echte
+  Geräte standen nicht zur Verfügung – es gibt keine Geräte-FPS, nur gekennzeichnete Server- und Simulationswerte.
 
 ### CharLab
 * Gesichts-Labor `--lab-face` (auch in der CI): Modell-Kompatibilität (20 Modelle), Mund an der Haut je Ausdruck,

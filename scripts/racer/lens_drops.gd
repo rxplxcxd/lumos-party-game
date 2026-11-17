@@ -46,7 +46,7 @@ var _rect := Rect2()   # zuletzt gemeldete Lage im Bildschirm (für view_rect)
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)   # Anker und Ränder: füllt genau die eigene Ansicht
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sh := Shader.new()
 	sh.code = SHADER
