@@ -263,7 +263,10 @@ func _stream(path: String) -> AudioStream:
 		if _is_web_music(path):
 			_fetch_music(path, true)
 			return null   # kommt per Download nach (siehe _play_path)
+		var t0 := Time.get_ticks_usec() if Assets.late_watch else 0
 		_cache[path] = load(path)
+		if Assets.late_watch:   # Test: Klang erst beim ersten Abspielen mitten im Spiel von der Platte geholt
+			Assets.late_loads.append("audio:%s (%.0f ms)" % [path.get_file(), (Time.get_ticks_usec() - t0) / 1000.0])
 	return _cache[path]
 
 

@@ -57,6 +57,7 @@ Spieler-Agent nicht als Fehler zählte (keine Skriptfehler):
 | Lava-Surfen, Farb-Chaos, Wolkenboss, Ballon-Schlacht | „material is null“ bei jedem eingesammelten Edelstein, geplatzten Ballon u. Ä. – Godot 4.7 gibt eingefärbte Override-Materialien vor der Render-Instanz frei (isoliert nachgestellt: 5 von 5 Löschungen) | `Assets.keep_material`: Material als Metadaten bis zum Schluss gehalten (0 von 5) |
 | Achterbahn-Schießbude | Minispiel-Intro: Kanone zielt mit Nullvektor (steht genau über der Arenamitte) | feste Richtung als Rückfall |
 | Ballon-Schlacht | Slapstick-Modifier invertierte die Skelett-Basis einer auf Größe 0 geschrumpften Figur (Fehler je Bild) | übersprungen, solange die Figur unsichtbar klein ist |
+| Minigolf-Duell | 37–40 ms Ruck bei jedem Lochwechsel: das Gelände wurde über ≈ 24 000 SurfaceTool-Einzelaufrufe neu gebaut | direkt in Arrays mit einmal berechnetem Index, Hügel-Anteil zwischengespeichert: 1,8 statt 16–29 ms; geprüft: Höhen und Normalen gleich `height_at`/`grad_at` (Abweichung < 0,0000001 m); Agent 6/6 Läufe sauber |
 
 Nachprüfung mit dem Spieler-Agenten: diese sechs Spiele in 33 Läufen (alle Kategorien × Strategien) vollständig
 gespielt, alle enden sauber, 0 Skriptfehler, 0 Engine-Fehler während des Spiels (übrig sind nur die üblichen

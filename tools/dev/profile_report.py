@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Szenen-Profil als Markdown-Tabellen (Technik-Audit).
 
-    python3 tools/dev/profile_report.py <headless.jsonl> [<xvfb.jsonl>] > docs/PERF_SCENES.md
+    python3 tools/dev/profile_report.py <headless.jsonl> [<xvfb.jsonl> [<xvfb_vorher.jsonl>]] > docs/PERF_SCENES.md
 
 headless.jsonl: tools/dev/scene_profile.sh (CPU-Seite, Dummy-Renderer)
 xvfb.jsonl:     tools/dev/scene_profile.sh … --xvfb (Draw-Calls, Primitive, Videospeicher; Software-Renderer)
@@ -31,6 +31,7 @@ def fmt(v, nd=2):
 def main():
     head = load(sys.argv[1])
     xv = {r["target"]: r for r in load(sys.argv[2])} if len(sys.argv) > 2 else {}
+    xb = {r["target"]: r for r in load(sys.argv[3])} if len(sys.argv) > 3 else {}
     ok = [r for r in head if "ms_avg" in r]
     out = []
     w = out.append
@@ -80,7 +81,7 @@ def main():
         cols = "| Szene | CPU-ms Mittel | p95 | p99 | 1 %-Tief | Maximum (bei s) | > 16,7 ms | > 33 ms | Speicher MB (Spitze) | Knoten |"
         sep = "|---|---|---|---|---|---|---|---|---|---|"
         if xv:
-            cols += " Draw-Calls | Primitive (Tsd.) | Videospeicher MB |"
+            cols += (" Draw-Calls (vorher → jetzt) |" if xb else " Draw-Calls |") + " Primitive (Tsd.) | Videospeicher MB |"
             sep += "---|---|---|"
         w(cols)
         w(sep)
@@ -91,17 +92,36 @@ def main():
                     f"{r['mem_mb']:.0f} ({r['mem_peak_mb']:.0f}) | {r['nodes']} |")
             if xv:
                 x = xv.get(r["target"], {})
-                line += f" {fmt(x.get('draw_calls'), 0)} | {fmt(x.get('prims_k'), 1)} | {fmt(x.get('vmem_mb'), 0)} |"
+                dc = fmt(x.get('draw_calls'), 0)
+                b = xb.get(r["target"], {})
+                if xb and b.get('draw_calls') is not None and x.get('draw_calls') is not None:
+                    dc = f"{b['draw_calls']:.0f} → {x['draw_calls']:.0f}"
+                line += f" {dc} | {fmt(x.get('prims_k'), 1)} | {fmt(x.get('vmem_mb'), 0)} |"
             w(line)
+    if xv and xb:
+        both = [t for t in xv if t in xb and xv[t].get('draw_calls') is not None and xb[t].get('draw_calls') is not None]
+        sb = sum(xb[t]['draw_calls'] for t in both)
+        sa = sum(xv[t]['draw_calls'] for t in both)
+        best = sorted(both, key=lambda t: xv[t]['draw_calls'] - xb[t]['draw_calls'])[:5]
+        w("")
+        w("## Draw-Calls vor und nach dem Zusammenführen der OBJ-Flächen")
+        w("")
+        w(f"Summe über {len(both)} gemessene Szenen: {sb:.0f} → {sa:.0f} ({100.0 * (sa - sb) / max(sb, 1):+.0f} %). "
+          "Größte Einsparungen: " + ", ".join(f"{t.split(':')[-1]} {xb[t]['draw_calls']:.0f} → {xv[t]['draw_calls']:.0f}" for t in best) + ". "
+          "Ursache: Godots OBJ-Import legt je Materialwechsel in der Datei eine eigene Fläche an (eine 0,5-m-Blume hatte 87 "
+          "Flächen bei 3 Materialien); `Assets._merge_surfaces` führt gleiche Materialien beim Laden zusammen. Gleiche "
+          "Geometrie (Primitive unverändert), Bildvergleich im Rauschen zweier gleicher Läufe.")
     if xv:
         w("")
         w("## Einordnung der Draw-Calls")
         w("")
-        w("Beispiel Hauptmenü (eigene Messung, gleiche Ansicht): Grafikstufe Hoch 663 Draw-Calls je Bild, davon ≈ 600 "
+        w("Beispiel Hauptmenü (eigene Messung vor dem Zusammenführen, gleiche Ansicht): Grafikstufe Hoch 663 Draw-Calls je Bild, davon ≈ 600 "
           "für die 3D-Insel (195 sichtbare Objekte, 88 Schattenwerfer, mehrteilige Figuren) und ≈ 60 für die Oberfläche; "
           "Mittel 522, Niedrig 447 (ohne Schatten). Die Grafikstufen passen das bereits an: „Niedrig“ ohne Schatten, im "
           "Web auf Niedrig/Mittel nur eine Schattenebene und 30 % kürzere Schattendistanz, kleine Deko wirft keinen "
-          "Schatten. Ob das auf schwachen Geräten reicht, zeigt erst eine Messung dort.")
+          "Schatten. Wuschel-Wiesen lag auch ohne Schatten noch bei ≈ 1100 – dort waren nicht die Schatten, sondern die "
+          "OBJ-Flächen die Ursache (siehe oben). Ob die heutigen Werte auf schwachen Geräten reichen, zeigt erst eine "
+          "Messung dort.")
     notes = [r for r in ok if r.get("errors") or r.get("late_loads") or r.get("over33")]
     if notes:
         w("")
