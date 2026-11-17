@@ -66,6 +66,14 @@ Arbeitsstand und offene Punkte: `docs/WORKLOG.md` · Spielertest: `docs/PLAYTEST
   Wolkenboss, Ballon-Schlacht): Godot gab eingefärbte Materialien vor der Render-Instanz frei – Materialien werden
   jetzt bis zum Schluss gehalten. Achterbahn-Schießbude: Kanonen-Zielen mit Nullvektor im Minispiel-Intro.
   Ballon-Schlacht: nicht invertierbare Skelett-Basis bei auf Größe 0 geschrumpften Figuren (Fehler je Bild).
+* **Minigolf-Duell:** Ruck von 37–40 ms bei jedem Lochwechsel behoben – das Gelände wird direkt in Arrays gebaut
+  (Index einmal berechnet, Hügel-Anteil zwischengespeichert): 1,8 statt 16–29 ms, Geometrie identisch.
+* **Draw-Calls halbiert, wo OBJ-Modelle stehen:** Godots OBJ-Import legt je Materialwechsel in der Datei eine eigene
+  Fläche an – eine 0,5-m-Blume (Modular-Terrain-Pack) hatte 87 Flächen bei 3 Materialien, jede ein eigener Draw-Call,
+  mit Schatten fast doppelt. `Assets._merge_surfaces` führt gleiche Materialien beim Laden einmal je Modell zusammen.
+  Wuschel-Wiesen bei gleicher Ansicht 2172 → 1122 Draw-Calls (Dreiecke unverändert), Hauptmenü 652 → 348; Bildvergleich
+  vorher/nachher liegt im Rauschen zweier identischer Läufe (223 bzw. 288 abweichende Pixel von 921 600). Über 48
+  gemessene Szenen 19 528 → 15 909 (−19 %), Bretter −28 %, Abenteuer-Modi −36 %.
 * **Grenzen dieses Durchlaufs (ehrlich):** Die Runden sind kaum länger geworden (≈ 40–47 s) – neue Abschnitte, keine
   neuen Streckenteile; Bretter und Bosse wurden nur über die bestehenden Dauertests geprüft, nicht einzeln
   überarbeitet; Maus- und Touch-Bedienung des Menüs prüft der Menü-Agent nicht; Leistung nur als CPU-Zeit auf dem

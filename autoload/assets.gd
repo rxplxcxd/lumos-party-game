@@ -918,10 +918,46 @@ func _instantiate(res: Resource) -> Node3D:
 					m.roughness = 0.9
 		var root := Node3D.new()
 		var mi := MeshInstance3D.new()
-		mi.mesh = mesh
+		mi.mesh = _merge_surfaces(mesh)
 		root.add_child(mi)
 		return root
 	return null
+
+
+## Godots OBJ-Import legt für jeden Materialwechsel in der Datei eine eigene Fläche an – die Blume
+## „Hilly_Prop_Flower_Lily_Blue“ hatte 87 Flächen bei nur 3 Materialien: 87 Draw-Calls, mit Schatten fast doppelt so
+## viele (Wuschel-Wiesen: 1642 Draw-Calls je Bild). Flächen mit gleichem Material werden einmal je Mesh zusammengeführt –
+## gleiche Geometrie, gleiche Materialien, sichtbar identisch. Ergebnis hängt als Metadaten am Original-Mesh.
+static func _merge_surfaces(mesh: Mesh) -> Mesh:
+	if mesh.has_meta("lumos_merged"):
+		return mesh.get_meta("lumos_merged")
+	var out: Mesh = mesh
+	var am := mesh as ArrayMesh
+	if am and am.get_surface_count() > 1 and am.get_blend_shape_count() == 0:
+		var order: Array = []   # [Schlüssel, Material] in der ursprünglichen Reihenfolge
+		var groups := {}
+		var ok := true
+		for si in am.get_surface_count():
+			if am.surface_get_primitive_type(si) != Mesh.PRIMITIVE_TRIANGLES:
+				ok = false
+				break
+			var mat := am.surface_get_material(si)
+			var k := mat.get_instance_id() if mat else 0
+			if not groups.has(k):
+				groups[k] = []
+				order.append([k, mat])
+			(groups[k] as Array).append(si)
+		if ok and order.size() < am.get_surface_count():
+			var merged := ArrayMesh.new()
+			for e in order:
+				var st := SurfaceTool.new()
+				for si in groups[e[0]]:
+					st.append_from(am, si, Transform3D.IDENTITY)
+				merged.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, st.commit_to_arrays())
+				merged.surface_set_material(merged.get_surface_count() - 1, e[1])
+			out = merged
+	mesh.set_meta("lumos_merged", out)
+	return out
 
 
 ## Instanziert ein Modell. Gibt immer einen Node3D zurück (Fallback: Platzhalter-Würfel).

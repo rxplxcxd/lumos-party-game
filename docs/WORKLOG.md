@@ -16,7 +16,7 @@ Freigabe unverändert.
 | B4 – Bretter | nur Dauertest je Brett (5 Runden) + Deko-Prüfung, keine Überarbeitung | Scratch-Protokoll, CI-Soak |
 | B5 – Framework im Spiel | Stufen 1–2 eingebaut (Menü-Insel, Siegerehrung); Brett, Minispiele, Nitro Dash offen | `scripts/actor/lumos_game.gd`, `docs/CHARACTER_FRAMEWORK.md` „Einsatz im Spiel“ |
 | B6 – UI/UX | fertig für Tastatur/Controller (Menü-Agent, Funde behoben); Maus/Touch nicht automatisiert | `tools/dev/menu_agent.gd`, `docs/PLAYTEST.md` |
-| B7 – Technik-Profile je Szene | fertig: 105 Szenen CPU-seitig + Render-Zählwerte; Funde behoben (Küchen-Ruckler, Material-Fehler, 2 Engine-Fehler); echte Geräte-FPS offen | `tools/dev/scene_profile.sh`, `docs/PERF_SCENES.md` |
+| B7 – Technik-Profile je Szene | fertig: 105 Szenen CPU-seitig + 48 mit Render-Zählwerten; Funde behoben (Küchen-Ruckler, Material-Fehler, 2 Engine-Fehler, OBJ-Flächen: Draw-Calls −19 % gesamt, Bretter −28 %); echte Geräte-FPS offen | `tools/dev/scene_profile.sh`, `docs/PERF_SCENES.md` |
 | C10 – Trailer 2.0 | Weltenwechsel-Stamm überarbeitet, Neu-Render; kein neuer Storyboard-Umfang | `trailer/README.md` |
 | D11 – Abschluss | in Arbeit | |
 

@@ -156,9 +156,15 @@ func build_arena() -> void:
 
 
 ## Rasen als Höhenfeld-Mesh (Mähstreifen, Hügel heller, Senken dunkler – Gefälle ist so ablesbar).
+## Gelände-Mesh als Höhenraster. Direkt in Arrays gebaut (Punkte je Gitterknoten, Dreiecke über einen einmal
+## berechneten Index): Der frühere Aufbau über SurfaceTool mit ≈ 24 000 Einzelaufrufen kostete beim Lochwechsel
+## 35–40 ms in einem Bild. Gleiche Positionen, Normalen und Farben je Knoten – sichtbar identisch.
+var _terrain_index := PackedInt32Array()
+var _terrain_mat: StandardMaterial3D
+var _terrain_base := PackedVector3Array()   # je Knoten: Höhe und Gefälle nur der Hügel (ändern sich nie)
+
+
 func _build_terrain() -> void:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var step := 0.25
 	var ex := HALF_X + 0.3
 	var ez := HALF_Z + 0.3
@@ -167,32 +173,75 @@ func _build_terrain() -> void:
 	var base := Color("#46b350")
 	var light := Color("#7fd46a")
 	var dark := Color("#2f8a3e")
-	var verts: Array[Vector3] = []
-	var cols: Array[Color] = []
-	var norms: Array[Vector3] = []
+	var n := (nx + 1) * (nz + 1)
+	var verts := PackedVector3Array()
+	var cols := PackedColorArray()
+	var norms := PackedVector3Array()
+	verts.resize(n)
+	cols.resize(n)
+	norms.resize(n)
+	if _terrain_base.size() != n:
+		# Hügel-Anteil einmal je Spiel (wie height_at/grad_at, ohne die Mulde ums Loch)
+		_terrain_base.resize(n)
+		var kb := 0
+		for iz in nz + 1:
+			for ix in nx + 1:
+				var p := Vector2(-ex + ix * step, -ez + iz * step)
+				var hb := BASE_H
+				var gb := Vector2.ZERO
+				for m: Vector4 in MOUNDS:
+					var dx := p.x - m.x
+					var dz := p.y - m.y
+					var s2 := m.w * m.w
+					var e: float = m.z * exp(-(dx * dx + dz * dz) / (2.0 * s2))
+					hb += e
+					gb += Vector2(-dx / s2 * e, -dz / s2 * e)
+				_terrain_base[kb] = Vector3(hb, gb.x, gb.y)
+				kb += 1
+	var k := 0
 	for iz in nz + 1:
 		for ix in nx + 1:
 			var p := Vector2(-ex + ix * step, -ez + iz * step)
-			var h := height_at(p)
+			# Mulde ums Loch (wie in height_at/grad_at): nur dieser Anteil ändert sich von Loch zu Loch
+			var hd := p - _hole2
+			var eh := -0.05 * exp(-hd.length_squared() / (2.0 * 0.25))
+			var bb := _terrain_base[k]
+			var h := bb.x + eh
+			var g := Vector2(bb.y - hd.x / 0.25 * eh, bb.z - hd.y / 0.25 * eh)
 			var stripe := 0.05 if (int(floor((p.x + 20.0) / 1.5)) % 2 == 0) else -0.03
 			var t := clampf((h - BASE_H) * 2.2, -1.0, 1.0)
 			var c := base.lerp(light, t) if t > 0.0 else base.lerp(dark, -t)
-			cols.append(c.lightened(stripe) if stripe > 0.0 else c.darkened(-stripe))
-			verts.append(Vector3(p.x, h, p.y))
-			var g := grad_at(p)
-			norms.append(Vector3(-g.x, 1.0, -g.y).normalized())
-	for iz in nz:
-		for ix in nx:
-			var i0 := iz * (nx + 1) + ix
-			for k in [i0, i0 + 1, i0 + nx + 1, i0 + 1, i0 + nx + 2, i0 + nx + 1]:
-				st.set_color(cols[k])
-				st.set_normal(norms[k])
-				st.add_vertex(verts[k])
-	var mat := StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 0.95
-	st.set_material(mat)
-	_terrain.mesh = st.commit()
+			cols[k] = c.lightened(stripe) if stripe > 0.0 else c.darkened(-stripe)
+			verts[k] = Vector3(p.x, h, p.y)
+			norms[k] = Vector3(-g.x, 1.0, -g.y).normalized()
+			k += 1
+	if _terrain_index.size() != nx * nz * 6:
+		_terrain_index.resize(nx * nz * 6)
+		var j := 0
+		for iz in nz:
+			for ix in nx:
+				var i0 := iz * (nx + 1) + ix
+				_terrain_index[j] = i0
+				_terrain_index[j + 1] = i0 + 1
+				_terrain_index[j + 2] = i0 + nx + 1
+				_terrain_index[j + 3] = i0 + 1
+				_terrain_index[j + 4] = i0 + nx + 2
+				_terrain_index[j + 5] = i0 + nx + 1
+				j += 6
+	if _terrain_mat == null:
+		_terrain_mat = StandardMaterial3D.new()
+		_terrain_mat.vertex_color_use_as_albedo = true
+		_terrain_mat.roughness = 0.95
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = norms
+	arrays[Mesh.ARRAY_COLOR] = cols
+	arrays[Mesh.ARRAY_INDEX] = _terrain_index
+	var am := ArrayMesh.new()
+	am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	am.surface_set_material(0, _terrain_mat)
+	_terrain.mesh = am
 	for bm in bumpers:
 		var bp: Vector3 = bm.pos
 		var y := height_at(Vector2(bp.x, bp.z))
