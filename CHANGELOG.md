@@ -33,6 +33,11 @@ Arbeitsstand und offene Punkte: `docs/WORKLOG.md` · Spielertest: `docs/PLAYTEST
   Grafikstufe), kräftigere Reifengischt aus beiden Hinterrädern.
 * **Trailer:** Der Vordergrund-Stamm des Weltenwechsels Wald → Wiese hat Rinde (Furchen, Moos, Rundung) statt einer
   schwarzen Fläche und zieht in 1,2 s statt rund 3 s durchs Bild; im Gegenschuss steht er nicht mehr in der Wiese.
+  Neu gerendert: H.264 High 1920×1080, konstant 60 fps, 5836 Bilder, 97,27 s, 159,4 MB, AAC-LC 48 kHz Stereo,
+  −14,1 LUFS, True Peak −1,2 dBFS;  OK, Durchdringungs-Prüfung OK (kleinster Abstand +23 mm).
+* **Stein-Kegeln:** Die Tempelbahn schwebte über dem 7 m tieferen Hintergrund, verstreute Felsen lagen teils auf der
+  Bahn – jetzt Grasplateau unter der Bahn, Deko nur seitlich (Deko-Prüfung aller Minispiele: 0 Funde).
+* **Bretter:** Dauertest je Brett (5 Runden Party mit 4 CPUs) für alle 10 Bretter bestanden, 0 Skriptfehler.
 * **Grenzen dieses Durchlaufs (ehrlich):** Die Runden sind kaum länger geworden (≈ 40–47 s) – neue Abschnitte, keine
   neuen Streckenteile; Bretter, Menüs und Bosse wurden nur über die bestehenden Dauertests geprüft, nicht einzeln
   überarbeitet; das Character Framework ist weiterhin nicht in Spielabläufe eingebaut; Linsentropfen nur in der
