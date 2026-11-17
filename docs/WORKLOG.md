@@ -19,8 +19,8 @@ Versionsnummer: **1.5.3** (die Framework-Stufe heißt im Auftrag „1.6“ – d
 | 7 Bretter einzeln beleben | fertig | `scripts/party/board_life.gd`; je Brett 0 bis +0,6 ms; Kontrollbilder `tools/dev/board_life_shot.gd` |
 | 8 Strecken verlängern | fertig | +13 % bis +49 %; Fahrtest 12/12 alle im Ziel; Rundenzeiten vorher/nachher in `docs/ABSCHLUSS_1.5.3.md` |
 | 9 Linsentropfen im Split-Screen | fertig | je Ansicht eigene Linse; Test `tools/dev/lens_split_test.gd` (CI) |
-| 10 Geräte-FPS-Testplan | Plan fertig, keine Geräte verfügbar | `docs/GERAETE_TESTPLAN.md`; simulierte Web-Messung folgt |
-| 11 Regression, CI, Doku A–G | offen | `docs/ABSCHLUSS_1.5.3.md` |
+| 10 Geräte-FPS-Testplan | Plan fertig, keine Geräte verfügbar | `docs/GERAETE_TESTPLAN.md`; simulierte Web-Messung (SwiftShader, 1×/4×) in `docs/ABSCHLUSS_1.5.3.md` F |
+| 11 Regression, CI, Doku A–G | lokal fertig, CI auf dem Endstand läuft | `docs/ABSCHLUSS_1.5.3.md` (A–G); lokal: Check, Systemtests, Item-Regeln, Fahrtest 12/12, Verhaltenslabor 98/98, Gesichts-Labor 6/6, Linsen-Test, Langzeit-Test, Menü-Agent (Tastatur, Controller, Smartphone, Tablet), Spieler-Agent (5 Minispiele, 32 Läufe, 0 Skriptfehler), Trailer-Trennung |
 
 Funde unterwegs (1.5.3):
 * **Wackel-Physik (seit 1.5.2):** Zubehör wurde am ganzen Teilnamen erkannt – „RogueHooded_…“ enthält „hood“, also

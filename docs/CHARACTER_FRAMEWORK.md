@@ -4,6 +4,8 @@ Universelles Mehrschicht-System für lebendige Figuren: Gefühlszustand, Mikrole
 Wahrnehmung, Interaktionsprotokoll, Persönlichkeit und Cartoon-Reaktionen – aufbauend auf Mimik, IK mit Handdrehung,
 Fußverankerung und Fortbewegung (1.5.0/1.5.1). Code in `scripts/actor/`, Testlabor in `tools/charlab/`.
 
+**Stand 1.5.3:** Mund an der Haut, Verdeckung durch Ausrüstung (`LumosAppearance`), im Spiel auch auf dem Brett,
+in Minispielen und bei Nitro Dash (siehe „Gesichtsgeometrie und Verdeckung“, „Einsatz im Spiel“).
 **Stand 1.5.2 (Finalisierung):** implementiert, im Character Behavior Laboratory geprüft (98 Prüfungen, Werte
 unten), im Performance-Labor je Teilsystem gemessen und optimiert, im Trailer im Einsatz – dort ohne Durchdringung
 (Prüfprogramm, kleinster Abstand fester Körperteile im ganzen Trailer +23 mm).
@@ -401,12 +403,17 @@ unverändert; das Framework färbt nur Gesicht, Haltung, Blick und Mikroleben de
 |---|---|---|
 | 1 | Figuren-Insel im Hauptmenü: Gesichter, Mikroleben, Reaktionen aufs Antippen, Gruppenjubel | eingebaut |
 | 2 | Siegerehrung (`scenes/cutscenes/podium.gd`; Party-Ende und weitere Modi): Anspannung, Erleichterung, Freude, Stolz des Siegers, Verlegenheit nach dem Missgeschick des Letzten | eingebaut |
-| 3 | Brett-Figuren (Warten, Sternkauf), Minispiel-Ergebnis | offen – dort entstehen die Figuren nicht neu, Gesichter würden mitten in einer Einstellung erscheinen; braucht Einbau ab Szenenstart und Leistungsmessung mit 4 Figuren im Web |
-| 4 | Nitro Dash: Fahrer mit `hold_wheel`, Reaktionen auf Treffer | offen |
+| 3 | Spielbrett (ab 1.5.3): die vier Spielfiguren ab Szenenstart mit Gesicht, Mikroleben und Körper (Cartoon halb so stark); Spiel-Reaktionen (`CharacterRig.react`) färben das Gesicht automatisch | eingebaut, Schalter „… auf dem Spielbrett“ |
+| 4 | Minispiele (Avatare über `PartyAvatar`) und Nitro Dash (Fahrer): **nur Gesicht**, Gefühle und Augen – keine Körper-Ebene (`cfg.body_layer = false`), keine Cartoon-Effekte; Treffer und Zielplatz im Gesicht des Fahrers | eingebaut, Schalter „… in Minispielen“ / „… bei Nitro Dash“ |
+
+Kosten (headless, CPU je Bild): Brett 0,38 → 1,33 ms, Minispiel 0,79 → 1,74 ms, Rennen 0,91 → 1,37 ms (Details:
+`docs/ABSCHLUSS_1.5.3.md`, Abschnitt E). Minispiele, die eigene Figuren ohne `PartyAvatar` bauen, bleiben ohne
+Framework.
 
 Regeln: nur Figuren, die eigens für die Szene entstehen (kein „Aufploppen“ von Gesichtern); eigene Lumos-Avatare
-(`custom/…`) bleiben ohne Framework (noch nicht geprüft). Abschaltbar über die Einstellung **„Lebendige Mimik
-(Menü & Siegerehrung)“** – wirkt sofort auf der Menü-Insel – und automatisch auf der Grafikstufe „Niedrig“.
+(`custom/…`) bleiben ohne Framework (noch nicht geprüft). Abschaltbar über die Einstellung **„Lebendige Mimik“**
+(Grundschalter, wirkt sofort auf der Menü-Insel) und je Bereich (Spielbrett, Minispiele, Nitro Dash) – und
+automatisch auf der Grafikstufe „Niedrig“.
 `set_enabled(false)` stellt jetzt auch den Original-Kopf mit den ursprünglichen Augen wieder her
 (`LumosFace.set_shown`); vorher stand die Figur nach dem Abschalten ohne Augen da.
 
@@ -468,8 +475,8 @@ Mikroleben und Gesten laufen dort wie bisher. Eigene Lumos-Avatare (`custom/…`
 
 ## Bekannte Grenzen (ehrlich)
 
-* **Im Spiel nur an zwei Stellen** (Menü-Insel, Siegerehrung; siehe „Einsatz im Spiel“). Brett, Minispiele und
-  Nitro Dash nutzen es noch nicht. Spielabläufe, Steuerung, Physik und Kollisionen sind unverändert.
+* **Im Spiel:** Menü-Insel, Siegerehrung, Spielbrett (mit Körper), Minispiele mit `PartyAvatar` und Nitro Dash
+  (nur Gesicht). Spielabläufe, Steuerung, Physik, Kollisionen und Netz sind unverändert.
 * Gesten und Interaktionen sind prozedural über IK; es gibt keine Finger. Schnelle Gesten bleiben IK-Bögen,
   keine handanimierte Qualität.
 * Chibi-Geometrie: Der Kopf ist breiter, als der Arm lang ist. Umarmungen gibt es darum nur seitlich, Trösten an
