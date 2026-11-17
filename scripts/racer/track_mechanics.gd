@@ -250,7 +250,7 @@ func _build_hazards() -> void:
 					sm.top_radius = w * 0.5
 					sm.bottom_radius = w * 0.5
 					sm.height = 0.04
-					var smat := _mat(Color("#2a2c3a"), 0.9, 0.6)
+					var smat := _mat(Color("#2a2c3a"), 0.9, 0.12)
 					smat.emission = Color(0.6, 0.8, 1.0)
 					sm.material = smat
 					scorch.mesh = sm
@@ -424,12 +424,12 @@ func tick(race_t: float, racers: Array) -> void:
 					elif ph < 0.0:   # Vorwarnung: der Fleck knistert und flackert immer schneller
 						var k := -ph
 						l.light_energy = k * 2.0 * (1.0 if int(race_t * (10.0 + 30.0 * k)) % 2 == 0 else 0.2)
-						pm_b.emission_energy_multiplier = 0.6 + k * 2.0
+						pm_b.emission_energy_multiplier = 0.12 + k * 2.5
 						if int(race_t * 8.0) != int((race_t - 0.016) * 8.0):
 							FX.sparks(root_g.global_position + Vector3.UP * 0.2, Color(0.8, 0.92, 1.0), 3, 0.5)
 					else:
 						l.light_energy = 0.0
-						pm_b.emission_energy_multiplier = 0.6
+						pm_b.emission_energy_multiplier = 0.12
 				elif skin == "rock":
 					var rock: Node3D = e.rock
 					var shm: StandardMaterial3D = e.shadow_mat

@@ -1552,7 +1552,7 @@ func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 10
 	add_child(layer)
-	if Gfx.active != "low":   # Tropfen auf der Linse: unter der Anzeige, nicht auf der niedrigsten Grafikstufe
+	if Gfx.active != "low" or OS.has_environment("LUMOS_LENS"):   # Tropfen auf der Linse (Umgebungsvariable: Test auf schwacher Grafik): unter der Anzeige, nicht auf der niedrigsten Grafikstufe
 		_lens = LensDrops.new()
 		layer.add_child(_lens)
 		mech.drenched.connect(func(r: Racer, amount: float) -> void:

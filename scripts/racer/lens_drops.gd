@@ -19,12 +19,14 @@ void fragment() {
 	float h = sqrt(max(0.0, 1.0 - r * r));                      // Wölbung des Tropfens
 	vec2 px = 1.0 / vec2(textureSize(screen_tex, 0));
 	float size = COLOR.g * 64.0;                                // Radius in Pixeln (über die Farbe mitgegeben)
-	vec2 uv = SCREEN_UV - p * (0.55 + 0.9 * (1.0 - h)) * size * px;   // Linse: Bild im Tropfen steht kopf
+	vec2 uv = SCREEN_UV - p * (0.9 + 1.6 * (1.0 - h)) * size * px;    // Linse: Bild im Tropfen steht kopf und ist gestaucht
 	vec3 col = texture(screen_tex, uv).rgb;
-	float rim = smoothstep(0.55, 1.0, r);
-	col = mix(col * 1.06 + 0.02, col * 0.62, rim * 0.75);       // dunkler Rand
-	col += vec3(0.9, 0.95, 1.0) * smoothstep(0.82, 0.98, 1.0 - length(p - vec2(-0.38, -0.42))) * 0.55;   // Glanzpunkt
-	col += vec3(0.5, 0.6, 0.7) * smoothstep(0.7, 0.95, r) * smoothstep(0.2, 0.9, p.y) * 0.25;            // heller Unterrand
+	col = mix(col, vec3(dot(col, vec3(0.33))), 0.12) * 1.1 + vec3(0.015, 0.03, 0.05);   // Wasser: etwas heller, kühler
+	float rim = smoothstep(0.62, 1.0, r);
+	col *= mix(1.0, 0.42, rim);                                  // dunkler Rand (Totalreflexion)
+	col += vec3(0.55, 0.66, 0.78) * smoothstep(0.86, 1.0, r) * smoothstep(-0.2, 0.9, p.y) * 0.5;   // heller Unterrand
+	float spec = smoothstep(0.80, 0.97, 1.0 - length(p - vec2(-0.36, -0.42)));
+	col = mix(col, vec3(1.0), spec * 0.85);                      // Glanzpunkt
 	float a = smoothstep(1.0, 0.86, r) * COLOR.a;
 	COLOR = vec4(col, a);
 }"
@@ -67,7 +69,7 @@ func _add(scale_f := 1.0) -> void:
 	var p := Vector2(0.5, 0.5) + Vector2(cos(a) * 0.5, sin(a) * 0.5) * d
 	p = p.clamp(Vector2(0.02, 0.03), Vector2(0.98, 0.97))
 	var life := _rng.randf_range(1.1, 2.8)
-	_drops.append({"p": p, "r": _rng.randf_range(9.0, 30.0) * scale_f * (size.y / 720.0), "life": life, "max": life,
+	_drops.append({"p": p, "r": _rng.randf_range(12.0, 38.0) * scale_f * (get_viewport_rect().size.y / 720.0), "life": life, "max": life,
 		"v": Vector2(_rng.randf_range(-0.01, 0.01), _rng.randf_range(0.015, 0.05)), "s": _rng.randf_range(1.0, 1.35)})
 
 
@@ -101,6 +103,6 @@ func _draw() -> void:
 		var u := float(d.life) / float(d.max)
 		var alpha := smoothstep(0.0, 0.25, u) * smoothstep(1.0, 0.92, u)   # weich erscheinen und verschwinden
 		var r := float(d.r) * (0.75 + 0.25 * u)
-		var c := (d.p as Vector2) * size
+		var c := (d.p as Vector2) * get_viewport_rect().size
 		var h := r * float(d.s) * (1.0 + wind * 0.25)   # läuft der Tropfen, zieht er sich in die Länge
 		draw_texture_rect(_tex, Rect2(c - Vector2(r, h), Vector2(r, h) * 2.0), false, Color(1.0, clampf(r / 64.0, 0.0, 1.0), 1.0, alpha))

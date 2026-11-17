@@ -691,7 +691,8 @@ func _ai_input(delta: float) -> Dictionary:
 		use = get_parent().call("ai_wants_item", self)
 	# Rollender Baumstamm kreuzt genau bei Ankunft: kurz vom Gas (seitlich ausweichen hilft nicht, er rollt quer)
 	var gas := true
-	if mech != null and cpu_level > 0 and (mech as TrackMechanics).log_ahead(s, x, v, float(get_parent().get("race_time"))):
+	# Nur aus der Fahrt heraus: Wer schon langsam ist, rollt weiter – sonst bleibt die CPU vor dichtem Querverkehr stehen.
+	if mech != null and cpu_level > 0 and v > 9.0 and (mech as TrackMechanics).log_ahead(s, x, v, float(get_parent().get("race_time"))):
 		gas = false
 		drift = false
 	return {"steer": steer, "accel": gas, "brake": false, "drift": drift, "item": use, "pitch": -0.3 if gliding else 0.0}
