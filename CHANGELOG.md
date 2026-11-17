@@ -6,6 +6,38 @@ Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--nex
 
 ## 1.5.2 – Universelles Mehrschicht-System: Gefühl, Mikroleben, Gewicht, Sozialverhalten, Cartoon
 
+### 1.5.2 Qualitätsdurchlauf – Spielertest aller Minispiele, Nitro-Dash-Strecken, Trailer-Übergang
+Arbeitsstand und offene Punkte: `docs/WORKLOG.md` · Spielertest: `docs/PLAYTEST.md`.
+* **Projektinventar aus dem Code** (`tools/dev/inventory.gd` → `data/project_inventory.json`): 69 Minispiele (alle
+  mit Szene und Skript), 12 Strecken, 10 Bretter, 10 Bosse, 6 Figuren; prüft Strecken auf Selbstüberschneidung und
+  längste Geraden. README-Altlast „38 Minispiele“ korrigiert.
+* **Lumos Player Agent** (`tools/dev/player_agent.gd`): spielt jedes Minispiel als Mensch über echte
+  Tastatur-Ereignisse – klug, abwesend, zufällig, als Button-Masher; 379 Läufe, alle 69 Spiele enden sauber,
+  0 Skriptfehler.
+* **Stampf-Wellen repariert:** Stampfer erzeugten nie eine Welle (Landung wurde nie erkannt) – die Kernmechanik war
+  wirkungslos, fast jede Partie endete im Vierfach-Gleichstand. Dazu schrumpft die Bühne jetzt zweimal mit Vorwarnung.
+* **Spielzeit statt Echtzeit-Uhr** (`MinigameBase.clock`) in Kürbis-Weitwurf (CPU warf im Zeitraffer nie),
+  Geisterschloss und Wolkenboss (Sprünge nach einer Pause).
+* **Zug-Zeitbegrenzung** für abwesende Spieler in Pinguin-Curling, Schatz-Schnüffeln, Stein-Kegeln
+  (`turn_timed_out`, Countdown in den letzten 5 s).
+* **Kein Nachladen mitten im Spiel:** 18 Minispiele laden später erscheinende Modelle beim Aufbau (vorher Ruckler
+  bis 448 ms beim ersten Auftauchen).
+* **Nitro Dash – Streckenereignisse je Strecke:** Wasser- und Sandfontänen, Blitzeinschläge, Steinschlag,
+  Schneebälle, Kaugummikugeln, Sternschnuppen, Querverkehr, Steppenläufer, Krabben – alle mit Vorwarnung im festen
+  Takt, 3 s Schonfrist nach einem Treffer; 10 von 12 Strecken haben jetzt eigene Ereignisse (vorher 2).
+* **Nitro Dash – gestaltete Rückgeraden:** Der Streckenbaukasten füllt die Gerade des Rundenschlusses mit Schlenkern,
+  Kuppen, Item-Reihen und Marken; neun Strecken verlieren ihre 110–290 m lange leere Rückgerade (längste Gerade z. B.
+  Glühwald 233 → 77 m, Stadt 264 → 131 m).
+* **Nitro Dash – Wasser:** lichtbrechende Tropfen auf der Kameralinse (Wasserfall, Fontäne, Gischt des Vordermanns,
+  Gewitterregen, Auftauchen; verlaufen und verschwinden nach 1–3 s, Bildmitte bleibt frei, nicht auf niedrigster
+  Grafikstufe), kräftigere Reifengischt aus beiden Hinterrädern.
+* **Trailer:** Der Vordergrund-Stamm des Weltenwechsels Wald → Wiese hat Rinde (Furchen, Moos, Rundung) statt einer
+  schwarzen Fläche und zieht in 1,2 s statt rund 3 s durchs Bild; im Gegenschuss steht er nicht mehr in der Wiese.
+* **Grenzen dieses Durchlaufs (ehrlich):** Die Runden sind kaum länger geworden (≈ 40–47 s) – neue Abschnitte, keine
+  neuen Streckenteile; Bretter, Menüs und Bosse wurden nur über die bestehenden Dauertests geprüft, nicht einzeln
+  überarbeitet; das Character Framework ist weiterhin nicht in Spielabläufe eingebaut; Linsentropfen nur in der
+  Einzelansicht (nicht im Split-Screen).
+
 ### 1.5.2 Finalisierung – Profiling, Optimierung, Durchdringungsschutz, Stresstests, Release-Validierung
 Auf dem Entwicklungsbranch; `main` bleibt unverändert bis zur Freigabe.
 * **Performance-Labor (`tools/charlab/PerfLab.tscn`, `LumosProf`):** misst jedes Teilsystem getrennt (Fassade,

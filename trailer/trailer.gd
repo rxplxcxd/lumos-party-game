@@ -134,7 +134,7 @@ func _ready() -> void:
 	_prepare_camera()
 	# Vordergrund-Stamm für den verdeckten Weltenwechsel genau dorthin, wo die Kamera im Wechselmoment steht
 	var cw: Vector3 = _cam_eval(WIPE_T)[0]
-	_trunk_local = Vector3(cw.x, 8.0, cw.z - 2.2)
+	_trunk_local = Vector3(cw.x, 8.0, cw.z - 1.22)   # ganz nah: zieht in halber Zeit durchs Bild und deckt es trotzdem ganz ab
 	var cw2: Vector3 = _cam_eval(WIPE2_T)[0]
 	_curtain_local = Vector3(cw2.x, 0.0, cw2.z - 1.7)
 	_use_set("forest")
@@ -782,15 +782,36 @@ func _build_sets() -> void:
 	_fill.position = Vector3(0.6, 0.5, 0.2)
 	_trunk = MeshInstance3D.new()
 	var tm := CylinderMesh.new()
-	tm.top_radius = 1.35
-	tm.bottom_radius = 1.6
+	tm.top_radius = 0.92
+	tm.bottom_radius = 1.0
 	tm.height = 16.0
-	tm.radial_segments = 28
+	tm.radial_segments = 40
 	tm.set_meta("gfx_tuned", true)   # Spiel-Grafik soll die Rundung nicht reduzieren (Silhouette ganz nah)
-	var bark := StandardMaterial3D.new()
-	bark.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED   # in beiden Welten gleich dunkel – kein Lichtsprung
-	bark.albedo_color = Color("#20140d")
-	bark.disable_fog = true
+	# Rinde als eigener, unbeleuchteter Shader: in beiden Welten gleich (kein Lichtsprung im Wechselbild), aber mit
+	# Furchen, Moosflecken und Rundung – ein Stamm, keine schwarze Fläche.
+	var bark := ShaderMaterial.new()
+	var bsh := Shader.new()
+	bsh.code = "shader_type spatial;
+render_mode unshaded, fog_disabled, cull_back;
+float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float n(vec2 p) { vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h(i), h(i + vec2(1.0, 0.0)), f.x), mix(h(i + vec2(0.0, 1.0)), h(i + vec2(1.0, 1.0)), f.x), f.y); }
+void fragment() {
+	vec2 uv = vec2(UV.x * 150.0, UV.y * 22.0);
+	float furrow = n(vec2(uv.x, uv.y * 0.35 + n(uv * 0.5) * 1.6));            // lange, leicht gewundene Furchen
+	float fine = n(uv * vec2(3.0, 0.8));
+	vec3 dark = vec3(0.095, 0.066, 0.046);
+	vec3 mid = vec3(0.27, 0.195, 0.135);
+	vec3 ridge = vec3(0.46, 0.37, 0.27);
+	vec3 col = mix(dark, mid, smoothstep(0.25, 0.6, furrow));
+	col = mix(col, ridge, smoothstep(0.62, 0.9, furrow) * (0.5 + 0.5 * fine));
+	float moss = smoothstep(0.6, 0.8, n(vec2(UV.x * 40.0, UV.y * 14.0) + 3.7)) * smoothstep(0.45, 0.75, fine);
+	col = mix(col, vec3(0.20, 0.32, 0.13), moss * 0.55);
+	float facing = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);     // Rundung: zum Rand hin dunkler
+	col *= mix(0.72, 1.05, facing);
+	ALBEDO = col;
+}"
+	bark.shader = bsh
 	tm.material = bark
 	_trunk.mesh = tm
 	_trunk.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -1712,7 +1733,7 @@ func _act3() -> void:
 	# Der Stamm zieht ganz nah durchs Bild und deckt es im Wechselmoment vollständig ab
 	at(49.8, func() -> void: _trunk.visible = true)
 	at(WIPE_T, func() -> void: _use_set("meadow", "day"))
-	at(55.2, func() -> void: _trunk.visible = false)
+	at(54.5, func() -> void: _trunk.visible = false)   # vor dem Gegenschuss: dort stünde er sonst als Säule in der Wiese
 	# Wiese: Die Magierin bleibt staunend vor der Riesenblume stehen – der Held kommt zurück, nimmt ihre Hand
 	# und zieht sie mit (sie wird wirklich gezogen: Arm gestreckt, ein Ruck, dann läuft sie hinterher)
 	go(A, 53.2, 54.8, Vector3(38.0, 0, 0.2), Vector3(42.0, 0, 0.2))

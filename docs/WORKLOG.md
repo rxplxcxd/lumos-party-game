@@ -11,11 +11,14 @@ Freigabe unverändert.
 | A – 1.5.2 finalisieren (Profiling, Optimierung, Stresstests, Trailer ohne Durchdringung) | fertig | Commits `a9cea90b`, `bc2a005d`; CI-Lauf 49 auf dem Branch grün; `docs/CHARACTER_FRAMEWORK.md` |
 | B0 – Projektinventar | fertig | `tools/dev/inventory.gd` → `data/project_inventory.json` |
 | B1 – Player-Agent | fertig | `tools/dev/player_agent.gd`, `player_agent.sh`, `agent_report.py` |
-| B2 – alle Minispiele einzeln | in Arbeit | `docs/PLAYTEST.md` |
-| B3 – Nitro Dash | offen | |
-| B4–B8 – Bretter, UI, Framework im Spiel, Technik | offen | |
-| C10 – Trailer 2.0 | offen | |
-| D11 – Abschluss | offen | |
+| B2 – alle Minispiele einzeln | fertig (automatisch gespielt; Funde behoben) | `docs/PLAYTEST.md` |
+| B3 – Nitro Dash | Ereignisse, Rückgeraden, Wasser fertig; Fahrtest 12/12 sauber | CHANGELOG „Qualitätsdurchlauf“ |
+| B4 – Bretter | nur Dauertest je Brett (5 Runden) + Deko-Prüfung, keine Überarbeitung | Scratch-Protokoll, CI-Soak |
+| B5 – Framework im Spiel | **offen** (nicht eingebaut) | `docs/CHARACTER_FRAMEWORK.md` „Vorbereitung“ |
+| B6 – UI/UX | **offen** (kein Menü-Durchlauf des Agenten) | |
+| B7 – Technik-Profile je Szene | **offen** (nur Minispiel-Ruckler und Framework gemessen) | |
+| C10 – Trailer 2.0 | Weltenwechsel-Stamm überarbeitet, Neu-Render; kein neuer Storyboard-Umfang | `trailer/README.md` |
+| D11 – Abschluss | in Arbeit | |
 
 ## Inventar (aus dem Code, nicht aus der Doku)
 
@@ -33,3 +36,9 @@ Abweichung Doku ↔ Code: README nannte in der Ordnerübersicht noch „38 Minis
 ## Entscheidungen und offene Punkte
 
 (fortlaufend ergänzt)
+
+* Nächste sinnvolle Schritte: (1) Agent um Menü-Durchlauf erweitern (Start → Modus → Figur → Spiel → Ergebnis →
+  zurück), (2) Strecken wirklich verlängern (zweite Schleife je Strecke; Baukasten und Überschneidungs-Prüfung sind
+  da), (3) Linsentropfen in `SplitView`, (4) Bretter einzeln beleben, (5) Framework in Sieges-/Ergebnisszenen.
+* Agent-Befunde, die bewusst blieben: Rempelkugeln/Kart-Kegeln/Eisschollen – Tastatur-Agent schwächer als Analog-CPU
+  (kein Fehler); Pinguin-Curling – der automatische Wurf eines Abwesenden kann Punkte bringen (gewollt mittelmäßig).
