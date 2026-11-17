@@ -77,6 +77,8 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if String(a).begins_with("--lab-faces="):
 			_face_sheet.call_deferred(String(a).get_slice("=", 1))
+		elif String(a).begins_with("--lab-face"):   # Gesichts-Labor 1.5.3: Kompatibilität, Mund an der Haut, Referenzbilder
+			_face_lab.call_deferred(String(a).get_slice("=", 1) if String(a).contains("=") else "")
 		elif String(a).begins_with("--lab-auto"):
 			_out = String(a).get_slice("=", 1) if String(a).contains("=") else ""
 			_auto.call_deferred()
@@ -629,6 +631,14 @@ func _frame_ms(crowd: Array[LumosActor], n: int, on: bool) -> float:
 
 
 ## Nahaufnahmen der Gesichter: je Ausdruck von vorn, schräg (45°) und fast im Profil (75°), Kopf dabei gedreht.
+func _face_lab(dir: String) -> void:
+	var fl: RefCounted = preload("res://tools/charlab/face_lab.gd").new()
+	await fl.call("run", self, dir)
+	var n_fail := int(fl.get("fails"))
+	print("FACE-ERGEBNIS %s (%d Modell(e) mit Fehlern)" % ["PASS" if n_fail == 0 else "FAIL", n_fail])
+	get_tree().quit(0 if n_fail == 0 else 1)
+
+
 func _face_sheet(dir: String) -> void:
 	label.visible = false
 	DirAccess.make_dir_recursive_absolute(dir)

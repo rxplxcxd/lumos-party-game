@@ -52,6 +52,8 @@ func run() -> void:
 	tree.root.size = Vector2i(int(res[0]), int(res[1]))
 	if args.has("lively"):    # Character Framework (Menü-Insel, Siegerehrung) an/aus – für den Kostenvergleich
 		Game.settings["lively_faces"] = String(args["lively"]) != "0"
+	if args.has("board-life"):   # eigenes Leben je Brett an/aus (BoardLife, 1.5.3) – für den Kostenvergleich
+		Game.settings["board_life"] = String(args["board-life"]) != "0"
 	if args.has("quality"):   # Grafikstufe erzwingen (xvfb/Software-Renderer erkennt sonst „Niedrig“)
 		Game.settings["quality"] = String(args["quality"])
 		Gfx.apply()

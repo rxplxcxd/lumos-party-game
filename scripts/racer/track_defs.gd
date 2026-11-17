@@ -221,13 +221,16 @@ static func _ring() -> Dictionary:
 		["R", 26, 90], ["L", 26, 45], ["T", "chic"], ["S", 30], ["T", "loop"], ["LOOP", 13, 19], ["S", 36],
 		["T", "i2"], ["R", 25, 180], ["T", "hp"], ["S", 40, 6], ["T", "ramp"], ["S", 16, 3], ["T", "g0"],
 		["S", 64, -1], ["S", 34, -8], ["T", "g1"], ["S", 10], ["T", "i3"], ["L", 30, 90], ["S", 40], ["T", "b2"],
-		["L", 36, 45], ["R", 36, 45], ["S", 30], ["T", "i4"], ["CLOSE", 34],
+		["L", 36, 45], ["R", 36, 45], ["S", 30], ["T", "i4"], ["T", "xb"], ["S", 24], ["L", 34, 60], ["R", 34, 60], ["T", "xi"], ["S", 24], ["R", 26, 160, 4], ["CLOSE", 34],
 	])
 	d.glide = [[t["g0"], t["g1"]]]
 	d.ramps = [t["ramp"]]
 	d.boosts = [[t["b1"], 0.0], [t["b2"], 3.0], [t["chic"], -2.0], [t["end2"], -2.0]]
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d.bank = {t["i1"]: -8, t["hp"]: 10, t["i4"]: 6}
+	# 1.5.3: längere Runde – Esse-Kombination, überhöhte Haarnadel und Sprungkuppe (eigener Abschnitt vor dem Rundenschluss)
+	d.boosts.append([t["xb"], 0.0])
+	d.items.append(t["xi"])
 	d["desc"] = "Grand-Prix-Klassiker: schnelle Rechts, Schikane, Looping, Haarnadel und Gleiter über die Schlucht."
 	return d
 
@@ -240,7 +243,7 @@ static func _coral() -> Dictionary:
 		["T", "w0"], ["S", 30, -6], ["L", 32, 70, -3], ["T", "i2"], ["R", 28, 110], ["S", 30], ["L", 30, 60, 3],
 		["T", "b2"], ["S", 30, 6], ["T", "w1"], ["S", 30], ["R", 22, 120], ["T", "i3"], ["S", 30], ["T", "div0"],
 		["S", 70], ["T", "div1"], ["S", 20], ["T", "ramp"], ["S", 14, 2], ["S", 30, -2], ["T", "i4"], ["L", 26, 90],
-		["CLOSE", 30, [["S", 12], ["BUMP", 26, 36, -1], ["T", "f4"], ["S", 36], ["BUMP", 26, 36, 1], ["S", 12]]],
+		["S", 13], ["T", "xi"], ["R", 30, 46], ["T", "xdiv"], ["S", 43], ["L", 32, 72], ["T", "xg"], ["S", 26], ["R", 26, 39], ["CLOSE", 30, [["S", 12], ["BUMP", 26, 36, -1], ["T", "f4"], ["S", 36], ["BUMP", 26, 36, 1], ["S", 12]]],
 	])
 	d.water = [[t["w0"], t["w1"]]]
 	d.ramps = [t["ramp"]]
@@ -249,6 +252,11 @@ static func _coral() -> Dictionary:
 	d.bank = {t["i1"]: -8, t["i3"]: 9}
 	d["dividers"] = [[t["div0"], 4.0, 66.0, -2.6, 2.6]]
 	d["hazards"] = [{"p": t["i1"], "type": "geyser", "skin": "water", "off": 12.0, "x": -4.0, "w": 4.2, "period": 4.4, "on": 1.1, "phase": 0.0}, {"p": t["i1"], "type": "geyser", "skin": "water", "off": 28.0, "x": 4.0, "w": 4.2, "period": 4.4, "on": 1.1, "phase": 2.2}, {"p": t["w1"], "type": "geyser", "skin": "water", "off": 14.0, "x": 0.0, "w": 4.2, "period": 4.0, "on": 1.0, "phase": 1.0}, {"p": t["i3"], "type": "log", "skin": "crab", "off": 14.0, "x": 0.0, "w": 18.0, "period": 5.4, "on": 2.6, "phase": 0.0}]
+	# 1.5.3: längere Runde – zweite Felsinsel mit zwei Routen und Fontänen im Hafenbecken (eigener Abschnitt vor dem Rundenschluss)
+	d.items.append(t["xi"])
+	d["dividers"] = d.get("dividers", []) + [[t["xdiv"], 4.0, 58.0, -2.6, 2.6]]
+	d.bank[t["xg"]] = -7
+	d["hazards"] = d.get("hazards", []) + [{"p": t["xg"], "type": "geyser", "skin": "water", "off": 10.0, "x": -3.5, "w": 4.2, "period": 4.2, "on": 1.0, "phase": 0.4}, {"p": t["xg"], "type": "geyser", "skin": "water", "off": 26.0, "x": 3.5, "w": 4.2, "period": 4.2, "on": 1.0, "phase": 2.5}]
 	d["desc"] = "Hafen, Tauchgang durch den Korallentunnel, Felsinsel mit zwei Routen, Sprung über den Steg."
 	d["hazards"].append({"p": t["f4"], "type": "geyser", "skin": "water", "off": 18.0, "x": 0.0, "w": 4.2, "period": 4.2, "on": 1.1, "phase": 3.0})
 	return d
@@ -262,7 +270,7 @@ static func _neon() -> Dictionary:
 		["S", 90], ["T", "gey1"], ["L", 22, 60], ["S", 26], ["T", "loop"], ["LOOP", 14, 20], ["S", 30],
 		["T", "i2"], ["R", 20, 160, 4], ["S", 40, 4], ["T", "ramp"], ["S", 16, 3], ["T", "g0"], ["S", 60, -2],
 		["S", 34, -9], ["T", "g1"], ["S", 20], ["T", "i3"], ["R", 28, 75], ["S", 40], ["T", "gey2"], ["L", 30, 60],
-		["R", 30, 60], ["T", "i4"], ["CLOSE", 30, [["HILL", 40, 5], ["T", "gey3"], ["S", 14], ["BUMP", 20, 36, 1]]],
+		["R", 30, 60], ["T", "i4"], ["S", 24], ["T", "xi"], ["L", 28, 90, 3], ["T", "xr"], ["S", 16, 3], ["S", 40, -3], ["CLOSE", 30, [["HILL", 40, 5], ["T", "gey3"], ["S", 14], ["BUMP", 20, 36, 1]]],
 	])
 	d.glide = [[t["g0"], t["g1"]]]
 	d.ramps = [t["ramp"]]
@@ -270,6 +278,10 @@ static func _neon() -> Dictionary:
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d.bank = {t["i1"]: -8, t["i3"]: -8}
 	d["hazards"] = [{"p": t["gey0"], "type": "geyser", "off": 8.0, "x": -4.0, "w": 4.5, "period": 4.2, "on": 1.1, "phase": 0.0}, {"p": t["gey0"], "type": "geyser", "off": 40.0, "x": 4.0, "w": 4.5, "period": 4.2, "on": 1.1, "phase": 1.4}, {"p": t["gey0"], "type": "geyser", "off": 72.0, "x": -3.0, "w": 4.5, "period": 4.2, "on": 1.1, "phase": 2.8}, {"p": t["gey2"], "type": "geyser", "off": 0.0, "x": 3.5, "w": 4.5, "period": 3.6, "on": 1.0, "phase": 0.6}]
+	# 1.5.3: längere Runde – Sprung über den Glutgraben und Lavafontäne in der Kehre (eigener Abschnitt vor dem Rundenschluss)
+	d.ramps.append(t["xr"])
+	d.items.append(t["xi"])
+	d.bank[t["xi"]] = 8
 	d["desc"] = "Lavafontänen am Straßenrand, Looping, Gleitflug über den Lavasee."
 	d["hazards"].append({"p": t["gey3"], "type": "geyser", "skin": "lava", "off": 6.0, "x": -3.0, "w": 4.5, "period": 3.9, "on": 1.0, "phase": 2.0})
 	return d
@@ -284,7 +296,7 @@ static func _storm() -> Dictionary:
 		["T", "i2"], ["L", 30, 60], ["S", 30], ["T", "ramp"], ["S", 14, 3], ["T", "g0"], ["S", 66, -3],
 		["S", 36, -10], ["T", "g1"], ["S", 30], ["T", "i3"], ["L", 30, 160, -1], ["S", 40, -3], ["T", "wet2"],
 		["L", 22, 50, -2], ["S", 60, -3], ["R", 24, 70, -1], ["L", 24, 70], ["T", "wet3"], ["S", 40], ["T", "b2"],
-		["S", 30], ["T", "i4"], ["CLOSE", 30, [["S", 12], ["BUMP", 22, 42, 1], ["S", 14], ["T", "wet4"], ["HILL", 36, 4], ["T", "wet5"], ["BUMP", 22, 42, -1], ["S", 12]]],
+		["S", 30], ["T", "i4"], ["S", 20], ["T", "xw0"], ["L", 24, 140, 5], ["T", "xbank"], ["S", 30], ["CLOSE", 30, [["S", 12], ["BUMP", 22, 42, 1], ["S", 14], ["T", "wet4"], ["HILL", 36, 4], ["T", "wet5"], ["BUMP", 22, 42, -1], ["S", 12]]],
 	])
 	d.glide = [[t["g0"], t["g1"]]]
 	d.wet = [[t["wet0"], t["wet1"]], [t["wet2"], t["wet3"]]]
@@ -293,6 +305,8 @@ static func _storm() -> Dictionary:
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d.bank = {t["i1"]: -8}
 	d["hazards"] = [{"p": t["i1"], "type": "geyser", "skin": "bolt", "off": 20.0, "x": -3.2, "w": 4.4, "period": 5.0, "on": 0.8, "phase": 0.0}, {"p": t["wet0"], "type": "geyser", "skin": "bolt", "off": 20.0, "x": 3.2, "w": 4.4, "period": 5.0, "on": 0.8, "phase": 2.5}, {"p": t["wet2"], "type": "geyser", "skin": "rock", "off": 34.0, "x": -3.0, "w": 4.6, "period": 5.6, "on": 1.6, "phase": 0.6}, {"p": t["wet3"], "type": "geyser", "skin": "rock", "off": 14.0, "x": 3.2, "w": 4.6, "period": 5.6, "on": 1.6, "phase": 3.4}]
+	# 1.5.3: längere Runde – Serpentinen über den Pass: zwei Kehren mit Steilkurve, nass vom Regen (eigener Abschnitt vor dem Rundenschluss)
+	d.bank[t["xbank"]] = 14
 	d["desc"] = "Serpentinen im Unwetter, nasse Kurven, Sprung über die Schlucht, Abfahrt unter der Brücke."
 	d.wet.append([t["wet4"], t["wet5"]])
 	return d
@@ -306,7 +320,7 @@ static func _frost() -> Dictionary:
 		["L", 30, 60], ["T", "ice1"], ["T", "i1"], ["S", 30, 4], ["L", 20, 170, 4], ["S", 40, 5], ["T", "i2"],
 		["R", 22, 120, 3], ["S", 20], ["T", "ramp"], ["S", 14, 3], ["T", "g0"], ["S", 70, -4], ["S", 40, -15],
 		["T", "g1"], ["S", 30], ["T", "ice2"], ["L", 40, 90], ["S", 40], ["T", "ice3"], ["T", "i3"], ["L", 26, 70],
-		["R", 26, 70], ["T", "i4"], ["CLOSE", 30, [["S", 10], ["BUMP", 24, 36, 1], ["T", "ice4"], ["S", 24], ["T", "ice5"], ["HILL", 36, 4], ["S", 10]]],
+		["R", 26, 70], ["T", "i4"], ["S", 24], ["T", "xice0"], ["R", 36, 100, -3], ["S", 40], ["T", "xice1"], ["T", "xi"], ["L", 26, 120], ["T", "xbank"], ["S", 24], ["T", "xr"], ["S", 14, 2], ["S", 28, -2], ["CLOSE", 30, [["S", 10], ["BUMP", 24, 36, 1], ["T", "ice4"], ["S", 24], ["T", "ice5"], ["HILL", 36, 4], ["S", 10]]],
 	])
 	d.glide = [[t["g0"], t["g1"]]]
 	d.ice = [[t["ice0"], t["ice1"]], [t["ice2"], t["ice3"]]]
@@ -315,6 +329,12 @@ static func _frost() -> Dictionary:
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"]]
 	d.bank = {t["i3"]: 8}
 	d["hazards"] = [{"p": t["i1"], "type": "log", "skin": "snowball", "off": 14.0, "x": 0.0, "w": 18.0, "period": 5.2, "on": 2.3, "phase": 0.0}, {"p": t["ice2"], "type": "log", "skin": "snowball", "off": 60.0, "x": 0.0, "w": 18.0, "period": 5.2, "on": 2.3, "phase": 2.6}, {"p": t["i3"], "type": "log", "skin": "snowball", "off": 6.0, "x": 0.0, "w": 18.0, "period": 4.8, "on": 2.1, "phase": 1.3}]
+	# 1.5.3: längere Runde – Eis-Kehre, Steilkurve und Sprung; ein Schneeball rollt über die Fahrbahn (eigener Abschnitt vor dem Rundenschluss)
+	d.ice.append([t["xice0"], t["xice1"]])
+	d.bank[t["xbank"]] = 10
+	d.ramps.append(t["xr"])
+	d.items.append(t["xi"])
+	d["hazards"] = d.get("hazards", []) + [{"p": t["xi"], "type": "log", "skin": "snowball", "off": 16.0, "x": 0.0, "w": 16.0, "period": 5.6, "on": 2.4, "phase": 0.0}]
 	d["desc"] = "Eisplatten, enge Kehre am Gipfel, Skisprungschanze und eisige Abfahrt."
 	d.ice.append([t["ice4"], t["ice5"]])
 	return d
@@ -328,7 +348,7 @@ static func _orbit() -> Dictionary:
 		["R", 40, 90, 4], ["T", "i1"], ["S", 30, 2], ["T", "bo1"], ["S", 30], ["L", 24, 120], ["T", "i2"],
 		["S", 20], ["T", "loop"], ["LOOP", 13, 19], ["S", 30], ["R", 22, 150], ["T", "i3"], ["S", 20, 4],
 		["T", "ramp"], ["S", 14, 4], ["T", "g0"], ["S", 90, -2], ["S", 40, -10], ["T", "g1"], ["S", 20],
-		["T", "bo2"], ["S", 20], ["T", "i4"], ["R", 34, 80], ["L", 30, 60], ["R", 30, 60], ["CLOSE", 30, [["S", 20], ["BUMP", 26, 38, 1], ["T", "bo3"], ["S", 30], ["HILL", 40, 5], ["BUMP", 26, 38, -1], ["T", "i5"], ["S", 20]]],
+		["T", "bo2"], ["S", 20], ["T", "i4"], ["R", 34, 80], ["L", 30, 60], ["R", 30, 60], ["S", 30], ["T", "xi"], ["L", 30, 90], ["T", "xbo"], ["S", 40], ["CLOSE", 30, [["S", 20], ["BUMP", 26, 38, 1], ["T", "bo3"], ["S", 30], ["HILL", 40, 5], ["BUMP", 26, 38, -1], ["T", "i5"], ["S", 20]]],
 	])
 	d.glide = [[t["g0"], t["g1"]]]
 	d.ramps = [t["ramp"]]
@@ -337,6 +357,9 @@ static func _orbit() -> Dictionary:
 	d.bank = {t["i1"]: -9}
 	d["bounce"] = [[t["bo1"], 0.0, -3.5, 4.5, 12.0], [t["bo2"], 0.0, 3.5, 4.5, 12.0]]
 	d["hazards"] = [{"p": t["i1"], "type": "log", "skin": "orb", "off": 12.0, "x": 0.0, "w": 18.0, "period": 4.6, "on": 1.9, "phase": 0.0}, {"p": t["i3"], "type": "log", "skin": "orb", "off": 8.0, "x": 0.0, "w": 18.0, "period": 4.6, "on": 1.9, "phase": 2.3}]
+	# 1.5.3: längere Runde – Schwerelos-Schleife: Sprungkissen, Kehre um die Raumstation, Plasmakugel (eigener Abschnitt vor dem Rundenschluss)
+	d["bounce"] = d.get("bounce", []) + [[t["xbo"], 0.0, 0.0, 5.0, 12.0]]
+	d.items.append(t["xi"])
 	d["desc"] = "Boost-Tunnel, Sternenfedern, Looping und langer Schwebeflug."
 	d["bounce"].append([t["bo3"], 12.0, 0.0, 4.5, 12.0])
 	d["hazards"].append({"p": t["i5"], "type": "log", "skin": "orb", "off": 10.0, "x": 0.0, "w": 18.0, "period": 4.6, "on": 1.9, "phase": 1.1})
@@ -351,7 +374,7 @@ static func _city() -> Dictionary:
 		["S", 40], ["R", 15, 90], ["T", "div0"], ["S", 80], ["T", "div1"], ["S", 20], ["R", 16, 90], ["T", "i2"],
 		["S", 40], ["L", 22, 45], ["R", 22, 90], ["L", 22, 45], ["S", 20], ["T", "ramp"], ["S", 14, 2],
 		["T", "g0"], ["S", 30, 1], ["S", 20, -3], ["T", "g1"], ["S", 20], ["T", "i3"], ["S", 40], ["L", 15, 90],
-		["S", 40], ["T", "i4"], ["R", 15, 90], ["S", 30], ["R", 15, 90], ["CLOSE", 30, [["S", 20], ["BUMP", 20, 45, 1], ["S", 30], ["T", "x1"], ["BUMP", 20, 45, -1], ["S", 30], ["T", "i5"], ["HILL", 30, 3], ["S", 10]]],
+		["S", 40], ["T", "i4"], ["R", 15, 90], ["S", 30], ["R", 15, 90], ["S", 30], ["T", "xi"], ["L", 20, 90], ["S", 40], ["R", 20, 90], ["T", "xdiv"], ["S", 70], ["L", 20, 90], ["T", "xb"], ["S", 30], ["R", 24, 90], ["CLOSE", 30, [["S", 20], ["BUMP", 20, 45, 1], ["S", 30], ["T", "x1"], ["BUMP", 20, 45, -1], ["S", 30], ["T", "i5"], ["HILL", 30, 3], ["S", 10]]],
 	])
 	d.glide = [[t["g0"], t["g1"]]]
 	d.ramps = [t["ramp"]]
@@ -359,6 +382,11 @@ static func _city() -> Dictionary:
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"], t["i5"]]
 	d["dividers"] = [[t["div0"], 6.0, 70.0, -2.2, 2.2]]
 	d["hazards"] = [{"p": t["b1"], "type": "log", "skin": "car", "off": 52.0, "x": 0.0, "w": 18.0, "period": 5.6, "on": 2.0, "phase": 0.0}, {"p": t["i2"], "type": "log", "skin": "car", "off": 20.0, "x": 0.0, "w": 18.0, "period": 5.6, "on": 2.0, "phase": 2.8}, {"p": t["i3"], "type": "log", "skin": "car", "off": 20.0, "x": 0.0, "w": 18.0, "period": 5.0, "on": 1.9, "phase": 1.4}]
+	# 1.5.3: längere Runde – Häuserblock: drei rechtwinklige Ecken, zwei Straßen um den Block, Lieferwagen (eigener Abschnitt vor dem Rundenschluss)
+	d["dividers"] = d.get("dividers", []) + [[t["xdiv"], 6.0, 56.0, -2.6, 2.6]]
+	d.items.append(t["xi"])
+	d.boosts.append([t["xb"], 0.0])
+	d["hazards"] = d.get("hazards", []) + [{"p": t["xb"], "type": "log", "skin": "car", "off": 12.0, "x": 0.0, "w": 16.0, "period": 6.0, "on": 2.4, "phase": 1.0}]
 	d["desc"] = "Enge 90°-Ecken, Häuserblock mit zwei Routen, Schikane und Kanalsprung."
 	d["hazards"].append({"p": t["x1"], "type": "log", "skin": "car", "off": -14.0, "x": 0.0, "w": 18.0, "period": 5.2, "on": 2.0, "phase": 0.7})
 	return d
@@ -372,7 +400,7 @@ static func _desert() -> Dictionary:
 		["L", 30, 70], ["T", "bo1"], ["S", 40], ["T", "loop"], ["LOOP", 12, 18], ["S", 30], ["T", "i2"],
 		["L", 24, 160, 4], ["S", 30, 4], ["T", "ramp"], ["S", 16, 3], ["T", "g0"], ["S", 70, -2], ["S", 36, -9],
 		["T", "g1"], ["S", 10], ["T", "i3"], ["R", 34, 70], ["S", 50], ["T", "b2"], ["R", 26, 60], ["L", 26, 60],
-		["S", 40], ["T", "i4"], ["CLOSE", 30],
+		["S", 40], ["T", "i4"], ["S", 24], ["T", "xi"], ["R", 34, 80, 2], ["T", "xr"], ["S", 16, 3], ["S", 30, -3], ["T", "xh"], ["L", 30, 120], ["S", 30], ["R", 30, 40], ["CLOSE", 30],
 	])
 	d.glide = [[t["g0"], t["g1"]]]
 	d.ramps = [t["ramp"]]
@@ -381,6 +409,10 @@ static func _desert() -> Dictionary:
 	d.bank = {t["i1"]: 8, t["i3"]: 8}
 	d["bounce"] = [[t["bo1"], 0.0, 0.0, 6.0, 11.0]]
 	d["hazards"] = [{"p": t["i1"], "type": "log", "skin": "tumbleweed", "off": 14.0, "x": 0.0, "w": 18.0, "period": 4.8, "on": 2.4, "phase": 0.0}, {"p": t["i3"], "type": "geyser", "skin": "sand", "off": 30.0, "x": -3.6, "w": 4.4, "period": 4.4, "on": 1.1, "phase": 0.0}, {"p": t["i3"], "type": "geyser", "skin": "sand", "off": 62.0, "x": 3.6, "w": 4.4, "period": 4.4, "on": 1.1, "phase": 2.2}, {"p": t["b2"], "type": "log", "skin": "tumbleweed", "off": 30.0, "x": 0.0, "w": 18.0, "period": 4.8, "on": 2.4, "phase": 2.4}]
+	# 1.5.3: längere Runde – Sprung über die Düne, Steppenläufer in der langen Kehre (eigener Abschnitt vor dem Rundenschluss)
+	d.ramps.append(t["xr"])
+	d.items.append(t["xi"])
+	d["hazards"] = d.get("hazards", []) + [{"p": t["xh"], "type": "log", "skin": "tumbleweed", "off": 10.0, "x": 0.0, "w": 16.0, "period": 5.0, "on": 2.0, "phase": 0.0}]
 	d["desc"] = "Canyon-S-Kurven, Dünen-Sprungfeld, Looping und Gleitflug über die Schlucht."
 	return d
 
@@ -393,13 +425,17 @@ static func _glow() -> Dictionary:
 		["S", 30], ["L", 24, 70], ["R", 24, 70], ["T", "tun0"], ["S", 60], ["T", "tun1"], ["R", 18, 160],
 		["T", "i2"], ["S", 30, 3], ["L", 28, 60, 3], ["T", "wet0"], ["S", 50, 2], ["T", "wet1"], ["R", 28, 60, -2],
 		["T", "bo2"], ["S", 30, -3], ["L", 26, 90, -3], ["T", "i3"], ["S", 30], ["R", 22, 70], ["L", 22, 70],
-		["T", "i4"], ["S", 40], ["T", "bo3"], ["L", 22, 100], ["R", 22, 100], ["S", 30], ["CLOSE", 30, [["S", 16], ["BUMP", 30, 32, 1], ["S", 24], ["T", "bo4"], ["BUMP", 30, 32, -1], ["S", 24], ["T", "i5"], ["S", 16]]],
+		["T", "i4"], ["S", 40], ["T", "bo3"], ["L", 22, 100], ["R", 22, 100], ["S", 30], ["S", 13], ["T", "xtun0"], ["R", 30, 58], ["S", 26], ["T", "xtun1"], ["T", "xi"], ["L", 26, 91], ["T", "xbo"], ["S", 20], ["R", 30, 32], ["CLOSE", 30, [["S", 16], ["BUMP", 30, 32, 1], ["S", 24], ["T", "bo4"], ["BUMP", 30, 32, -1], ["S", 24], ["T", "i5"], ["S", 16]]],
 	])
 	d.wet = [[t["wet0"], t["wet1"]]]
 	d["tunnel"] = [[t["tun0"], t["tun1"]]]
 	d.boosts = [[t["b1"], 0.0], [t["end2"], 2.0]]
 	d.items = [t["i1"], t["i2"], t["i3"], t["i4"], t["i5"]]
 	d["bounce"] = [[t["bo1"], 0.0, 3.5, 4.0, 12.0], [t["bo2"], 0.0, -3.5, 4.0, 12.0], [t["bo3"], 0.0, 0.0, 4.0, 12.0]]
+	# 1.5.3: längere Runde – zweiter Baumtunnel und Pilz-Sprungkissen in der Kehre (eigener Abschnitt vor dem Rundenschluss)
+	d["tunnel"] = d.get("tunnel", []) + [[t["xtun0"], t["xtun1"]]]
+	d.items.append(t["xi"])
+	d["bounce"] = d.get("bounce", []) + [[t["xbo"], 0.0, 0.0, 4.0, 12.0]]
 	d["desc"] = "Abendfahrt durch den Zauberwald: Leuchtpilze als Sprungfedern, hohler Baumtunnel, nasser Bachlauf."
 	d["bounce"].append([t["bo4"], -10.0, 2.5, 4.0, 12.0])
 	return d
@@ -414,7 +450,7 @@ static func _candy() -> Dictionary:
 		["T", "i2"], ["L", 22, 170, 4], ["S", 30, 3], ["T", "ramp"], ["S", 14, 3], ["T", "g0"], ["S", 64, -2],
 		["S", 34, -2], ["T", "g1"], ["S", 24, 2], ["T", "i3"], ["L", 36, 70, 0], ["T", "bridge"], ["S", 20],
 		["R", 30, 150, -4], ["T", "bo2"], ["S", 60, -4], ["L", 26, 50], ["R", 26, 50], ["T", "i4"], ["S", 30],
-		["CLOSE", 30],
+		["S", 30], ["T", "xi"], ["L", 28, 90], ["S", 20], ["LOOP", 13, 19], ["S", 30], ["T", "xbo"], ["R", 26, 140], ["S", 30], ["T", "xb"], ["L", 30, 50], ["CLOSE", 30],
 	])
 	d.glide = [[t["g0"], t["g1"]]]
 	d.ramps = [t["ramp"]]
@@ -423,6 +459,11 @@ static func _candy() -> Dictionary:
 	d.bank = {t["i1"]: 8}
 	d["bounce"] = [[t["bo1"], 0.0, -3.5, 4.5, 12.0], [t["bo2"], 0.0, 3.5, 4.5, 12.0]]
 	d["hazards"] = [{"p": t["i1"], "type": "log", "skin": "gumball", "off": 62.0, "x": 0.0, "w": 18.0, "period": 5.0, "on": 2.2, "phase": 0.0}, {"p": t["bo2"], "type": "log", "skin": "gumball", "off": 24.0, "x": 0.0, "w": 18.0, "period": 5.0, "on": 2.2, "phase": 2.5}, {"p": t["i4"], "type": "log", "skin": "gumball", "off": 12.0, "x": 0.0, "w": 18.0, "period": 4.6, "on": 2.0, "phase": 1.2}]
+	# 1.5.3: längere Runde – Zuckerguss-Looping, Sprungkissen und Kaugummikugeln (eigener Abschnitt vor dem Rundenschluss)
+	d.items.append(t["xi"])
+	d["bounce"] = d.get("bounce", []) + [[t["xbo"], 0.0, 3.0, 4.5, 12.0]]
+	d.boosts.append([t["xb"], 0.0])
+	d["hazards"] = d.get("hazards", []) + [{"p": t["xb"], "type": "log", "skin": "gumball", "off": 14.0, "x": 0.0, "w": 16.0, "period": 5.2, "on": 2.4, "phase": 0.6}]
 	d["desc"] = "Riesen-Süßigkeiten, Kaugummi-Sprungfelder, Lolli-Looping, Brücke über die erste Kurve."
 	return d
 
@@ -435,7 +476,7 @@ static func _jungle() -> Dictionary:
 		["S", 50], ["T", "log1"], ["L", 22, 100], ["R", 22, 100], ["T", "i2"], ["S", 30], ["R", 20, 60],
 		["L", 20, 120], ["R", 20, 60], ["S", 30], ["T", "div0"], ["S", 90], ["T", "div1"], ["S", 20], ["R", 20, 150],
 		["T", "i3"], ["S", 30, 4], ["T", "ramp"], ["S", 14, 3], ["T", "g0"], ["S", 50, -1], ["S", 30, -6],
-		["T", "g1"], ["S", 20], ["T", "log2"], ["L", 30, 70], ["R", 30, 70], ["T", "i4"], ["CLOSE", 30, [["S", 16], ["BUMP", 24, 40, -1], ["T", "log3"], ["S", 30], ["BUMP", 24, 40, 1], ["T", "i5"], ["S", 16]]],
+		["T", "g1"], ["S", 20], ["T", "log2"], ["L", 30, 70], ["R", 30, 70], ["T", "i4"], ["T", "xs0"], ["L", 24, 360, 7], ["T", "xs1"], ["CLOSE", 30, [["S", 16], ["BUMP", 24, 40, -1], ["T", "log3"], ["S", 30], ["BUMP", 24, 40, 1], ["T", "i5"], ["S", 16]]],
 	])
 	d.glide = [[t["g0"], t["g1"]]]
 	d.ramps = [t["ramp"]]
@@ -444,6 +485,9 @@ static func _jungle() -> Dictionary:
 	d.bank = {t["i1"]: -8}
 	d["dividers"] = [[t["div0"], 4.0, 86.0, -3.0, 3.0]]
 	d["hazards"] = [{"p": t["log0"], "type": "log", "off": 10.0, "x": 0.0, "w": 18.0, "period": 5.0, "on": 2.2, "phase": 0.0}, {"p": t["log1"], "type": "log", "off": 0.0, "x": 0.0, "w": 18.0, "period": 5.0, "on": 2.2, "phase": 2.5}, {"p": t["log2"], "type": "log", "off": 0.0, "x": 0.0, "w": 18.0, "period": 4.6, "on": 2.0, "phase": 1.2}]
+	# 1.5.3: längere Runde – Spiral-Brücke: 360° mit 7 m Anstieg, die Fahrbahn kreuzt über ihren eigenen Anfang (eigener Abschnitt vor dem Rundenschluss)
+	d.bank[t["xs0"]] = 9
+	d.items.append(t["xs1"])
 	d["desc"] = "Rollende Baumstämme, Tempelruine mit zwei Routen, Sprung über den Fluss."
 	d["hazards"].append({"p": t["log3"], "type": "log", "skin": "log", "off": 14.0, "x": 0.0, "w": 18.0, "period": 5.0, "on": 2.2, "phase": 3.4})
 	return d
@@ -457,7 +501,7 @@ static func _falls() -> Dictionary:
 		["S", 50, 4], ["T", "fall"], ["S", 30, 4], ["T", "wet1"], ["R", 22, 120, 2], ["S", 30], ["T", "i2"],
 		["R", 26, 100], ["S", 40, -3], ["T", "bridge"], ["S", 60], ["L", 30, 80], ["S", 30], ["T", "i3"],
 		["S", 10], ["T", "ramp"], ["S", 14, 3], ["T", "g0"], ["S", 60, -2], ["S", 30, -3], ["T", "g1"],
-		["S", 20], ["L", 26, 70, -3], ["R", 26, 70, -3], ["T", "i4"], ["S", 20], ["CLOSE", 34, [["BUMP", 22, 38, -1], ["S", 12], ["HILL", 36, 4]]],
+		["S", 20], ["L", 26, 70, -3], ["R", 26, 70, -3], ["T", "i4"], ["S", 20], ["S", 24], ["T", "xf0"], ["R", 30, 70], ["S", 30], ["T", "xfall"], ["T", "xf1"], ["T", "xi"], ["L", 26, 130, 3], ["T", "xr"], ["S", 16, 3], ["S", 34, -3], ["R", 30, 40], ["CLOSE", 34, [["BUMP", 22, 38, -1], ["S", 12], ["HILL", 36, 4]]],
 	])
 	d.glide = [[t["g0"], t["g1"]]]
 	d.wet = [[t["wet0"], t["wet1"]]]
@@ -467,5 +511,10 @@ static func _falls() -> Dictionary:
 	d.bank = {t["i1"]: -8}
 	d["falls"] = [t["fall"]]
 	d["hazards"] = [{"p": t["wet0"], "type": "geyser", "skin": "water", "off": 16.0, "x": -3.8, "w": 4.2, "period": 4.2, "on": 1.1, "phase": 0.0}, {"p": t["wet0"], "type": "geyser", "skin": "water", "off": 36.0, "x": 3.8, "w": 4.2, "period": 4.2, "on": 1.1, "phase": 2.1}, {"p": t["bridge"], "type": "geyser", "skin": "water", "off": 30.0, "x": 0.0, "w": 4.2, "period": 4.6, "on": 1.0, "phase": 1.0}]
+	# 1.5.3: längere Runde – zweiter Wasserfall zum Durchfahren, nasse Kehre und Sprungkuppe (eigener Abschnitt vor dem Rundenschluss)
+	d.wet.append([t["xf0"], t["xi"]])
+	d["falls"] = d.get("falls", []) + [t["xfall"]]
+	d.ramps.append(t["xr"])
+	d.items.append(t["xi"])
 	d["desc"] = "Mitten durch den Wasserfall, Brücke über die eigene Strecke, Gleitflug über den Schluchtfluss."
 	return d

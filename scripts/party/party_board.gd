@@ -56,6 +56,8 @@ func _ready() -> void:
 		pts.append(sp.pos as Vector3)
 		top = maxf(top, (sp.pos as Vector3).y)
 	var life := CritterLife.populate(self, String(bd[0]), Vector3.ZERO, 0.0, 0.0, 12, pts)
+	if bool(Game.settings.get("board_life", true)):   # eigenes Leben je Brett (1.5.3); Schalter nur für Messungen
+		BoardLife.populate(self, Game.party.board, pts)
 	if life:
 		life.y_min = -2.0
 		life.y_max = top + 3.0
@@ -96,6 +98,7 @@ func _spawn_players() -> void:
 		add_child(r)
 		r.setup(Game.hero(Game.players[i].hero).model, i, 0.8)
 		r.surface = surface
+		LumosGame.attach(r, LumosGame.AUTONOMY, 0.0, "board")   # Gesicht und Mikroleben ab Szenenstart (abschaltbar)
 		if Game.players[i].space < 0 or Game.players[i].space >= spaces.size():
 			Game.players[i].space = 0
 		rigs.append(r)

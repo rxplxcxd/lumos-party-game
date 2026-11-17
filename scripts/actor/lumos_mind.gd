@@ -142,7 +142,7 @@ func _cool_ok(tag: String, secs: float) -> bool:
 
 func _react(ev: Dictionary, dist: float) -> void:
 	var kind := String(ev.kind)
-	var src: LumosActor = ev.src if ev.src is LumosActor else null
+	var src: LumosActor = ev.src if LumosActor.alive(ev.src) and ev.src is LumosActor else null
 	var p := actor.personality
 	var rng := actor.rng
 	var em := actor.emotion

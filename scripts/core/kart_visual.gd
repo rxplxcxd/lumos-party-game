@@ -119,6 +119,8 @@ func setup(kart_key: String, hero_key: String, player_idx := -1, scl := 2.2) -> 
 		hero.set_steer_pose(true)
 	else:
 		hero.play("drive")
+	if player_idx >= 0:   # Fahrer im Rennen: Gesicht und Gefühle (Treffer, Ziel); Haltung und Lenken bleiben unberührt
+		LumosGame.attach(hero, 0.2, 0.0, "race")
 	if player_idx >= 0:
 		_add_ring(Game.player_color(player_idx))
 	spark_l = FX.make_trail(body, "sparks")

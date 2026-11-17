@@ -4,6 +4,8 @@ Universelles Mehrschicht-System für lebendige Figuren: Gefühlszustand, Mikrole
 Wahrnehmung, Interaktionsprotokoll, Persönlichkeit und Cartoon-Reaktionen – aufbauend auf Mimik, IK mit Handdrehung,
 Fußverankerung und Fortbewegung (1.5.0/1.5.1). Code in `scripts/actor/`, Testlabor in `tools/charlab/`.
 
+**Stand 1.5.3:** Mund an der Haut, Verdeckung durch Ausrüstung (`LumosAppearance`), im Spiel auch auf dem Brett,
+in Minispielen und bei Nitro Dash (siehe „Gesichtsgeometrie und Verdeckung“, „Einsatz im Spiel“).
 **Stand 1.5.2 (Finalisierung):** implementiert, im Character Behavior Laboratory geprüft (98 Prüfungen, Werte
 unten), im Performance-Labor je Teilsystem gemessen und optimiert, im Trailer im Einsatz – dort ohne Durchdringung
 (Prüfprogramm, kleinster Abstand fester Körperteile im ganzen Trailer +23 mm).
@@ -401,19 +403,80 @@ unverändert; das Framework färbt nur Gesicht, Haltung, Blick und Mikroleben de
 |---|---|---|
 | 1 | Figuren-Insel im Hauptmenü: Gesichter, Mikroleben, Reaktionen aufs Antippen, Gruppenjubel | eingebaut |
 | 2 | Siegerehrung (`scenes/cutscenes/podium.gd`; Party-Ende und weitere Modi): Anspannung, Erleichterung, Freude, Stolz des Siegers, Verlegenheit nach dem Missgeschick des Letzten | eingebaut |
-| 3 | Brett-Figuren (Warten, Sternkauf), Minispiel-Ergebnis | offen – dort entstehen die Figuren nicht neu, Gesichter würden mitten in einer Einstellung erscheinen; braucht Einbau ab Szenenstart und Leistungsmessung mit 4 Figuren im Web |
-| 4 | Nitro Dash: Fahrer mit `hold_wheel`, Reaktionen auf Treffer | offen |
+| 3 | Spielbrett (ab 1.5.3): die vier Spielfiguren ab Szenenstart mit Gesicht, Mikroleben und Körper (Cartoon halb so stark); Spiel-Reaktionen (`CharacterRig.react`) färben das Gesicht automatisch | eingebaut, Schalter „… auf dem Spielbrett“ |
+| 4 | Minispiele (Avatare über `PartyAvatar`) und Nitro Dash (Fahrer): **nur Gesicht**, Gefühle und Augen – keine Körper-Ebene (`cfg.body_layer = false`), keine Cartoon-Effekte; Treffer und Zielplatz im Gesicht des Fahrers | eingebaut, Schalter „… in Minispielen“ / „… bei Nitro Dash“ |
+
+Kosten (headless, CPU je Bild): Brett 0,38 → 1,33 ms, Minispiel 0,79 → 1,74 ms, Rennen 0,91 → 1,37 ms (Details:
+`docs/ABSCHLUSS_1.5.3.md`, Abschnitt E). Minispiele, die eigene Figuren ohne `PartyAvatar` bauen, bleiben ohne
+Framework.
 
 Regeln: nur Figuren, die eigens für die Szene entstehen (kein „Aufploppen“ von Gesichtern); eigene Lumos-Avatare
-(`custom/…`) bleiben ohne Framework (noch nicht geprüft). Abschaltbar über die Einstellung **„Lebendige Mimik
-(Menü & Siegerehrung)“** – wirkt sofort auf der Menü-Insel – und automatisch auf der Grafikstufe „Niedrig“.
+(`custom/…`) bleiben ohne Framework (noch nicht geprüft). Abschaltbar über die Einstellung **„Lebendige Mimik“**
+(Grundschalter, wirkt sofort auf der Menü-Insel) und je Bereich (Spielbrett, Minispiele, Nitro Dash) – und
+automatisch auf der Grafikstufe „Niedrig“.
 `set_enabled(false)` stellt jetzt auch den Original-Kopf mit den ursprünglichen Augen wieder her
 (`LumosFace.set_shown`); vorher stand die Figur nach dem Abschalten ohne Augen da.
 
+## Gesichtsgeometrie und Verdeckung (Version 1.5.3, Framework-Stufe „1.6“)
+
+**Mund an der Haut (`LumosFace`).** Bis 1.5.2 lag der ganze Mund auf *einer* Näherungsfläche (quadratisch quer,
+linear senkrecht, eine Normale). Bei breitem Lachen hing die Zunge unter dem Kinn als Lappen in der Luft, bei
+anderen Figuren tauchten Mundwinkel in die Wangen. Jetzt:
+* Jede Mundspalte wird einzeln auf die Haut gelegt (Ober-, Mittel-, Unterkante: Höhe bilinear aus dem Tiefenraster
+  des Kopf-Meshs, Normale bilinear); Zahn- und Zungenkante quadratisch durch diese drei Punkte. Der Versatz über der
+  Haut (0,5–0,8 % der Kopfbreite) geht entlang der Normale, nicht nur nach vorn. Gezeichnet als Dreiecksstreifen
+  mit Normale je Punkt – Licht und Schatten folgen der Wölbung (Umlaufsinn im Uhrzeigersinn wie alle Flächen).
+* Grenzen des Gesichts: Der Mund bleibt auf nach vorn gewandter Haut (Normale höchstens 60° von vorn) – über der
+  Kinn-Unterseite, unter Nase und gemaltem Schnurrbart, innerhalb von Wangenrand und Ausrüstung. Größere Ausdrücke
+  werden weich gestaucht (bis 70 % der Grenze unverändert, darüber stetig angenähert): gleiche Form, flacher.
+* Messung (CharLab `--lab-face`, feines Raster aus den echten Dreiecken als Wahrheit, 6 Ausdrücke):
+
+| Figur | vorher: vor der Haut / in der Haut (Kopfbreiten) | jetzt: senkrecht davor / in der Haut |
+|---|---|---|
+| Ritter | +0,33 (Sprechen) / −0,085 | ≤ +0,017 / ≥ −0,003 |
+| Barbar | +0,044 / −0,095 | ≤ +0,026 / ≥ −0,007 |
+| Magier | +0,12 (Sprechen) / −0,055 | ≤ +0,025 / ≥ −0,009 |
+| Waldläufer | +0,146 / −0,134 | ≤ +0,032 / ≥ −0,009 |
+| Schurke | +0,45 (Lachen) / −0,055 | ≤ +0,027 / ≥ −0,007 |
+| Kapuzen-Schurke | +0,054 / −0,042 (Zähne unter der Maske) | Mund unter der Maske ausgeblendet |
+
+  Der verbleibende Abstand (bis 3 % der Kopfbreite) sitzt in Mulden – unter der Nase, am Rand plastischer Bärte –,
+  wo das Tiefenraster (2,5 % der Kopfbreite) die Mulde überbrückt; Blend Shapes hat keines der Modelle (0 bei allen 20).
+* Kopfdrehungen: Das Gesicht hängt an dem Knochen, an dem die Gesichtshaut tatsächlich hängt (`attach_bone`,
+  ermittelt aus den Skin-Gewichten der vorderen Kopfhälfte). Alle sechs Helden: 100 % am Kopfknochen – Mund und Haut
+  bewegen sich bei jeder Drehung gemeinsam.
+
+**Verdeckung (`LumosAppearance`, neu).** Je Figur und Bereich (augen, brauen, mund, wangen, traenen) ein Zustand:
+sichtbar · eingeschränkt · teilweise verdeckt · ausgeblendet.
+* Quellen: alle Teile des Modells außer dem Kopf, in Ruhepose in den Kopfraum gelegt und auf das Gesichtsraster
+  projiziert (verdeckt = liegt vor oder auf der Haut); gemalte Bärte/Schnurrbärte aus der Kopf-Textur; Vorgaben je
+  Modell (`OVERRIDES`) und zur Laufzeit (`set_override`). Teile, die nicht am Kopf hängen (Körper, Arme), zählen nur
+  auf nach vorn gewandter Haut (ein hoher Kragen ja, Arme in der Ruhepose nein). Durchsichtige Teile (Material mit
+  Transparenz) blenden nie aus („teilweise verdeckt“).
+* Ausgeblendete Bereiche werden gar nicht gezeichnet – nichts sticht durch Maske oder Visier. Teile, die zur Laufzeit
+  aus- oder eingeblendet werden, wirken binnen 0,5 s; `add_item()`/`remove_item()` für Teile, die das Spiel anhängt.
+* Hände: Gesten am Kopf (Kratzen, Kinn, Stirn wischen, Wange, Gesicht verbergen, Tränen wischen) greifen nicht in
+  Ausrüstung. Vor dem Gesicht kommt die Hand vor die vorderste Fläche von Maske, Visier, Kinnschutz; an Scheitel und
+  Seiten wandert sie entlang des Strahls aus der Kopfmitte hinter die Außenseite eng anliegender Teile (Belegungsgitter,
+  5 % der Kopfbreite). Unter einer weit abstehenden Krempe bleibt sie, wo sie war. Ohne Ausrüstung unverändert.
+
+| Figur | Teile am Kopf (gemessen) | Zustände | Mund-Grenzen (halbe Breite / oben / unten) |
+|---|---|---|---|
+| Ritter | Helm, Visier (hochgeklappt) | alles sichtbar, Mund eingeschränkt (Helm) | 0,195 / 0,02 (Nase) / 0,085 (Helm) |
+| Barbar | Bärenfell-Hut; gemalt: Schnurrbart, Bart | Brauen teilweise verdeckt (Fell), Mund eingeschränkt | 0,305 / 0,02 (Schnurrbart) / 0,203 (Kinn) |
+| Magier | Hut (Krempe steht weit ab – verdeckt nichts) | alles sichtbar, Mund eingeschränkt (Kinn) | 0,345 / 0,402 / 0,16 |
+| Waldläufer | gemalt: Schnurrbart, Kinnbart | Mund eingeschränkt | 0,08 / 0,02 / 0,103 |
+| Schurke | – | Mund eingeschränkt (Kinn) | 0,255 / 0,39 / 0,135 |
+| Kapuzen-Schurke | Maske | Mund, Wangen, Tränen ausgeblendet; Augen sichtbar | – |
+
+Kompatibilität (gemessen, nicht angenommen): Gesicht nur bei den sechs KayKit-Helden. Skelett-Helden (4), Kenney-
+Figuren (4), NPCs (4) und Haustiere (2): kein Gesicht (keine erkennbaren Augen bzw. kein Kopf-Mesh) – Körper,
+Mikroleben und Gesten laufen dort wie bisher. Eigene Lumos-Avatare (`custom/…`) bleiben ohne Framework (nicht geprüft).
+
 ## Bekannte Grenzen (ehrlich)
 
-* **Im Spiel nur an zwei Stellen** (Menü-Insel, Siegerehrung; siehe „Einsatz im Spiel“). Brett, Minispiele und
-  Nitro Dash nutzen es noch nicht. Spielabläufe, Steuerung, Physik und Kollisionen sind unverändert.
+* **Im Spiel:** Menü-Insel, Siegerehrung, Spielbrett (mit Körper), Minispiele mit `PartyAvatar` und Nitro Dash
+  (nur Gesicht). Spielabläufe, Steuerung, Physik, Kollisionen und Netz sind unverändert.
 * Gesten und Interaktionen sind prozedural über IK; es gibt keine Finger. Schnelle Gesten bleiben IK-Bögen,
   keine handanimierte Qualität.
 * Chibi-Geometrie: Der Kopf ist breiter, als der Arm lang ist. Umarmungen gibt es darum nur seitlich, Trösten an

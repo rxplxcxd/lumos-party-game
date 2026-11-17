@@ -442,6 +442,8 @@ func react(id: String) -> void:
 	if r == null:
 		push_warning("Reaktion fehlt: " + id)
 		return
+	if has_meta(&"lumos_mirror"):   # Character Framework auf Brett, Minispiel, Rennen: Gesicht reagiert mit
+		LumosGame.mirror(self, id)
 	var then := r.then_clip if r.then_clip != "" else "idle"
 	play(r.clip, 0.18, r.clip_speed, true)
 	lock(r.hold)

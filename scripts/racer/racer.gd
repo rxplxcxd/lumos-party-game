@@ -567,6 +567,8 @@ func hit(kind: String) -> bool:
 	drift_dir = 0
 	drift_level = 0
 	_trick = false
+	# Gesicht des Fahrers (Character Framework, nur sichtbar; nichts davon wirkt auf Fahrt oder Netz)
+	LumosGame.react(visual.hero, {"splat": "surprise", "spin": "dizzy", "blast": "surprise", "shrink": "scared", "anchor": "frustrated"}.get(kind, "surprise"))
 	match kind:
 		"splat":   # Kuchen im Gesicht: kurz blind, schlingert, bremst ab – fährt aber weiter
 			stun_t = 0.55

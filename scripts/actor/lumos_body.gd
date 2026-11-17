@@ -538,7 +538,10 @@ func _setup_jiggle(sk: Skeleton3D) -> void:
 		var mi := c as MeshInstance3D
 		if mi == null or mi.skin == null or mi.mesh == null:
 			continue
-		var nm := String(mi.name).to_lower()
+		# Teilname ohne Modell-Präfix („RogueHooded_Cape“ → „cape“): sonst passte „hood“ aus dem Modellnamen auf jedes
+		# Teil des Kapuzen-Schurken, und Kopf, Beine und Arme wippten wie ein Hut (bis 1.5.2)
+		var full := String(mi.name).to_lower()
+		var nm := full.get_slice("_", full.get_slice_count("_") - 1)
 		var kind := ""
 		var gain := 0.0
 		for e: Array in JIGGLE_KINDS:
