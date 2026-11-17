@@ -306,7 +306,7 @@
     "12 Strecken",
     "12 Items",
     "10 Bosse",
-    "38 Minispiele"
+    "69 Minispiele"
   ],
   "godot": "4.7.2-stable (official)",
   "minigames": {
@@ -1289,7 +1289,7 @@
   "problems": [],
   "systems": {
     "autoload": {
-      "lines": 7131,
+      "lines": 7146,
       "scripts": 14
     },
     "scripts/actor": {
@@ -1305,7 +1305,7 @@
       "scripts": 14
     },
     "scripts/minigames": {
-      "lines": 24519,
+      "lines": 24639,
       "scripts": 71
     },
     "scripts/modes": {
@@ -1321,8 +1321,8 @@
       "scripts": 6
     },
     "scripts/racer": {
-      "lines": 5049,
-      "scripts": 8
+      "lines": 5455,
+      "scripts": 9
     },
     "scripts/ui": {
       "lines": 3619,
@@ -1383,6 +1383,8 @@
     ],
     "list": [
       {
+        "close_straight_m": 44.0,
+        "closest_self_distance_m": 16.9,
         "env": "day",
         "features": {
           "boosts": 4,
@@ -1393,18 +1395,24 @@
           "ramps": 1,
           "water": 0
         },
+        "hazards": [],
         "height_range_m": 26.0,
         "id": "lumos_ring",
         "length_m": 1054.0,
+        "longest_straight_m": 160.0,
         "mechanics": [
+          "close_straight:1",
           "close_err:1"
         ],
         "name": "Lumos-Ring",
+        "self_overlaps": 0,
         "theme": "ring",
         "total_turn_deg": 1081.0,
         "width": 16.0
       },
       {
+        "close_straight_m": 195.0,
+        "closest_self_distance_m": 53.1,
         "env": "pirates",
         "features": {
           "boosts": 2,
@@ -1415,19 +1423,32 @@
           "ramps": 1,
           "water": 1
         },
-        "height_range_m": 12.0,
+        "hazards": [
+          "water",
+          "water",
+          "water",
+          "crab",
+          "water"
+        ],
+        "height_range_m": 11.9,
         "id": "coral_canal",
-        "length_m": 1025.0,
+        "length_m": 1033.0,
+        "longest_straight_m": 149.0,
         "mechanics": [
+          "close_straight:1",
           "close_err:1",
-          "dividers:1"
+          "dividers:1",
+          "hazards:5"
         ],
         "name": "Korallen-Kanal",
+        "self_overlaps": 0,
         "theme": "pirates",
-        "total_turn_deg": 753.0,
+        "total_turn_deg": 969.0,
         "width": 17.0
       },
       {
+        "close_straight_m": 112.0,
+        "closest_self_distance_m": 18.2,
         "env": "sunset",
         "features": {
           "boosts": 2,
@@ -1438,19 +1459,31 @@
           "ramps": 1,
           "water": 0
         },
+        "hazards": [
+          "lava",
+          "lava",
+          "lava",
+          "lava",
+          "lava"
+        ],
         "height_range_m": 28.0,
         "id": "neon_volcano",
-        "length_m": 987.0,
+        "length_m": 990.0,
+        "longest_straight_m": 160.0,
         "mechanics": [
+          "close_straight:1",
           "close_err:1",
-          "hazards:4"
+          "hazards:5"
         ],
         "name": "Vulkan-Inselchen",
+        "self_overlaps": 0,
         "theme": "volcano",
-        "total_turn_deg": 912.0,
+        "total_turn_deg": 966.0,
         "width": 15.0
       },
       {
+        "close_straight_m": 201.0,
+        "closest_self_distance_m": 23.0,
         "env": "storm",
         "features": {
           "boosts": 2,
@@ -1461,87 +1494,133 @@
           "ramps": 1,
           "water": 0
         },
+        "hazards": [
+          "bolt",
+          "bolt",
+          "rock",
+          "rock"
+        ],
         "height_range_m": 23.0,
         "id": "storm_pass",
-        "length_m": 1180.0,
+        "length_m": 1191.0,
+        "longest_straight_m": 161.0,
         "mechanics": [
+          "close_straight:1",
           "close_err:1",
-          "wet:2"
+          "wet:3",
+          "hazards:4"
         ],
         "name": "Gewitter-Pass",
+        "self_overlaps": 0,
         "theme": "storm",
-        "total_turn_deg": 957.0,
+        "total_turn_deg": 1209.0,
         "width": 14.0
       },
       {
+        "close_straight_m": 156.0,
+        "closest_self_distance_m": 43.1,
         "env": "snow",
         "features": {
           "boosts": 2,
           "glide": 1,
-          "ice": 2,
+          "ice": 3,
           "items": 4,
           "loops": 0,
           "ramps": 1,
           "water": 0
         },
+        "hazards": [
+          "snowball",
+          "snowball",
+          "snowball"
+        ],
         "height_range_m": 19.0,
         "id": "frost_peak",
-        "length_m": 990.0,
+        "length_m": 994.0,
+        "longest_straight_m": 159.0,
         "mechanics": [
-          "close_err:1"
+          "close_straight:1",
+          "close_err:1",
+          "hazards:3"
         ],
         "name": "Frostgipfel",
+        "self_overlaps": 0,
         "theme": "snow",
-        "total_turn_deg": 793.0,
+        "total_turn_deg": 901.0,
         "width": 15.0
       },
       {
+        "close_straight_m": 293.0,
+        "closest_self_distance_m": 17.6,
         "env": "observatory",
         "features": {
           "boosts": 3,
           "glide": 1,
           "ice": 0,
-          "items": 4,
+          "items": 5,
           "loops": 1,
           "ramps": 1,
           "water": 0
         },
+        "hazards": [
+          "orb",
+          "orb",
+          "orb"
+        ],
         "height_range_m": 31.6,
         "id": "orbit_ring",
-        "length_m": 1179.0,
+        "length_m": 1189.0,
+        "longest_straight_m": 194.0,
         "mechanics": [
+          "close_straight:1",
           "close_err:1",
-          "bounce:2"
+          "bounce:3",
+          "hazards:3"
         ],
         "name": "Sternenstaub-Bahn",
+        "self_overlaps": 0,
         "theme": "space",
-        "total_turn_deg": 1011.0,
+        "total_turn_deg": 1239.0,
         "width": 15.0
       },
       {
+        "close_straight_m": 279.0,
+        "closest_self_distance_m": 38.0,
         "env": "day",
         "features": {
           "boosts": 2,
           "glide": 1,
           "ice": 0,
-          "items": 4,
+          "items": 5,
           "loops": 0,
           "ramps": 1,
           "water": 0
         },
+        "hazards": [
+          "car",
+          "car",
+          "car",
+          "car"
+        ],
         "height_range_m": 3.0,
         "id": "city_rally",
-        "length_m": 1101.0,
+        "length_m": 1113.0,
+        "longest_straight_m": 131.0,
         "mechanics": [
+          "close_straight:1",
           "close_err:1",
-          "dividers:1"
+          "dividers:1",
+          "hazards:4"
         ],
         "name": "Stadt-Rallye",
+        "self_overlaps": 0,
         "theme": "city",
-        "total_turn_deg": 855.0,
+        "total_turn_deg": 1125.0,
         "width": 17.0
       },
       {
+        "close_straight_m": 72.0,
+        "closest_self_distance_m": 17.0,
         "env": "desert",
         "features": {
           "boosts": 2,
@@ -1552,44 +1631,62 @@
           "ramps": 1,
           "water": 0
         },
+        "hazards": [
+          "tumbleweed",
+          "sand",
+          "sand",
+          "tumbleweed"
+        ],
         "height_range_m": 24.0,
         "id": "desert_canyon",
         "length_m": 1008.0,
+        "longest_straight_m": 152.0,
         "mechanics": [
+          "close_straight:1",
           "close_err:1",
-          "bounce:1"
+          "bounce:1",
+          "hazards:4"
         ],
         "name": "Wüsten-Canyon",
+        "self_overlaps": 0,
         "theme": "desert",
         "total_turn_deg": 1037.0,
         "width": 15.0
       },
       {
+        "close_straight_m": 249.0,
+        "closest_self_distance_m": 28.2,
         "env": "forest_dusk",
         "features": {
           "boosts": 2,
           "glide": 0,
           "ice": 0,
-          "items": 4,
+          "items": 5,
           "loops": 0,
           "ramps": 0,
           "water": 0
         },
+        "hazards": [],
         "height_range_m": 8.0,
         "id": "glow_forest",
-        "length_m": 1145.0,
+        "length_m": 1151.0,
+        "longest_straight_m": 77.0,
         "mechanics": [
+          "close_straight:1",
           "close_err:1",
           "wet:1",
           "tunnel:1",
-          "bounce:3"
+          "bounce:4"
         ],
         "name": "Glühwald-Pfad",
+        "self_overlaps": 0,
         "theme": "forest",
-        "total_turn_deg": 1048.0,
+        "total_turn_deg": 1240.0,
         "width": 15.0
       },
       {
+        "close_straight_m": 20.0,
+        "closest_self_distance_m": 17.6,
         "env": "sky",
         "features": {
           "boosts": 2,
@@ -1600,43 +1697,65 @@
           "ramps": 1,
           "water": 0
         },
+        "hazards": [
+          "gumball",
+          "gumball",
+          "gumball"
+        ],
         "height_range_m": 26.0,
         "id": "candy_lane",
         "length_m": 1043.0,
+        "longest_straight_m": 154.0,
         "mechanics": [
+          "close_straight:1",
           "close_err:1",
-          "bounce:2"
+          "bounce:2",
+          "hazards:3"
         ],
         "name": "Zuckerguss-Allee",
+        "self_overlaps": 0,
         "theme": "candy",
         "total_turn_deg": 1199.0,
         "width": 16.0
       },
       {
+        "close_straight_m": 228.0,
+        "closest_self_distance_m": 45.4,
         "env": "day",
         "features": {
           "boosts": 2,
           "glide": 1,
           "ice": 0,
-          "items": 4,
+          "items": 5,
           "loops": 0,
           "ramps": 1,
           "water": 0
         },
+        "hazards": [
+          "log",
+          "log",
+          "log",
+          "log"
+        ],
         "height_range_m": 7.0,
         "id": "jungle_ruins",
-        "length_m": 1121.0,
+        "length_m": 1130.0,
+        "longest_straight_m": 134.0,
         "mechanics": [
+          "close_straight:1",
           "close_err:1",
           "dividers:1",
-          "hazards:3"
+          "hazards:4"
         ],
         "name": "Dschungel-Tempel",
+        "self_overlaps": 0,
         "theme": "jungle",
-        "total_turn_deg": 823.0,
+        "total_turn_deg": 1063.0,
         "width": 18.0
       },
       {
+        "close_straight_m": 119.0,
+        "closest_self_distance_m": 37.8,
         "env": "day",
         "features": {
           "boosts": 2,
@@ -1647,17 +1766,26 @@
           "ramps": 1,
           "water": 0
         },
+        "hazards": [
+          "water",
+          "water",
+          "water"
+        ],
         "height_range_m": 11.0,
         "id": "falls_gorge",
-        "length_m": 1039.0,
+        "length_m": 1043.0,
+        "longest_straight_m": 154.0,
         "mechanics": [
+          "close_straight:1",
           "close_err:1",
           "wet:1",
-          "falls:1"
+          "falls:1",
+          "hazards:3"
         ],
         "name": "Wasserfall-Schlucht",
+        "self_overlaps": 0,
         "theme": "falls",
-        "total_turn_deg": 737.0,
+        "total_turn_deg": 851.0,
         "width": 15.0
       }
     ]

@@ -62,6 +62,41 @@ func run() -> void:
 			var d2 := Vector2(c.x - b.x, c.z - b.z)
 			if d1.length() > 0.01 and d2.length() > 0.01:
 				turn += absf(d1.angle_to(d2))
+		# Selbstüberschneidung: zwei Stellen der Runde (mehr als 70 m Fahrweg auseinander), die sich im Grundriss näher
+		# kommen als eine Fahrbahnbreite, ohne mindestens 6 m Höhenunterschied (Brücke) – dort lägen Fahrbahnen ineinander.
+		var cum: Array = [0.0]
+		for i in pts.size():
+			cum.append(float(cum[i]) + (pts[i] as Vector3).distance_to(pts[(i + 1) % pts.size()]))
+		var overlaps := 0
+		var closest := INF
+		var w := float(d.get("width", 15.0))
+		for i in pts.size():
+			for j in range(i + 1, pts.size()):
+				var along := float(cum[j]) - float(cum[i])
+				if minf(along, length - along) < 70.0:
+					continue
+				var pa: Vector3 = pts[i]
+				var pb: Vector3 = pts[j]
+				var hd := Vector2(pa.x - pb.x, pa.z - pb.z).length()
+				if absf(pa.y - pb.y) < 6.0:
+					closest = minf(closest, hd)
+					if hd < w:
+						overlaps += 1
+		if overlaps > 0:
+			problems.append("Strecke %s: %d Überschneidungen ohne Höhenabstand (engste Stelle %.1f m bei Breite %.0f m)" % [t.id, overlaps, closest, w])
+		if d.has("weave_skipped"):
+			problems.append("Strecke %s: gestaltete Rückgerade passt nicht (%s)" % [t.id, d.weave_skipped])
+		# längste Gerade der Runde (Kontrollpunkte ohne Richtungsänderung)
+		var run := 0.0
+		var longest := 0.0
+		for i in pts.size() * 2:
+			var a2: Vector3 = pts[i % pts.size()]
+			var b2: Vector3 = pts[(i + 1) % pts.size()]
+			var c2: Vector3 = pts[(i + 2) % pts.size()]
+			var e1 := Vector2(b2.x - a2.x, b2.z - a2.z)
+			var e2 := Vector2(c2.x - b2.x, c2.z - b2.z)
+			run = run + e1.length() if absf(e1.angle_to(e2)) < 0.03 else 0.0
+			longest = maxf(longest, run)
 		var feats := {}
 		for k in ["loops", "glide", "water", "ice", "ramps", "boosts", "items"]:
 			feats[k] = (d.get(k, []) as Array).size()
@@ -72,7 +107,22 @@ func run() -> void:
 				extra.append("%s:%d" % [k, (v as Array).size() if v is Array else ((v as Dictionary).size() if v is Dictionary else 1)])
 		tracks.append({"id": t.id, "name": t.name, "env": d.get("env", ""), "theme": d.get("theme", ""), "width": d.get("width", 0.0),
 			"length_m": snappedf(length, 1.0), "height_range_m": snappedf(ymax - ymin, 0.1), "total_turn_deg": snappedf(rad_to_deg(turn), 1.0),
-			"features": feats, "mechanics": extra})
+			"features": feats, "mechanics": extra, "hazards": (d.get("hazards", []) as Array).map(func(h: Dictionary) -> String: return TrackMechanics.skin_of(h)),
+			"closest_self_distance_m": snappedf(closest, 0.1), "self_overlaps": overlaps,
+			"longest_straight_m": snappedf(longest, 1.0), "close_straight_m": snappedf(float(d.get("close_straight", 0.0)), 1.0)})
+	for a in OS.get_cmdline_user_args():   # --points=datei.json: Grundrisse aller Strecken (für Zeichnungen beim Streckenbau)
+		if String(a).begins_with("--points="):
+			var pl := {}
+			for t: Dictionary in Game.TRACKS:
+				var d2: Dictionary = TrackDefs.get_def(String(t.id))
+				var marks := {}
+				for k in ["ramps", "items"]:
+					marks[k] = d2.get(k, [])
+				pl[String(t.id)] = {"pts": (d2.points as Array).map(func(v: Vector3) -> Array: return [snappedf(v.x, 0.1), snappedf(v.y, 0.1), snappedf(v.z, 0.1)]), "width": d2.width,
+					"glide": d2.get("glide", []), "loops": (d2.get("loops", []) as Array).map(func(l: Dictionary) -> Array: return [l.from, l.to]), "marks": marks}
+			var pf := FileAccess.open(String(a).substr(9), FileAccess.WRITE)
+			pf.store_string(JSON.stringify(pl))
+			pf.close()
 	inv["tracks"] = {"count": tracks.size(), "cups": Game.CUPS.map(func(c: Dictionary) -> Dictionary: return {"id": c.id, "name": c.name, "tracks": c.tracks}), "list": tracks}
 	# --- Bretter ------------------------------------------------------------------------------------------------
 	var boards: Array = []
@@ -134,6 +184,6 @@ func run() -> void:
 	print("INVENTAR Kategorien %s · Arten %s · Skripte ohne Katalog %s" % [str(cats), str(kinds), str(orphan)])
 	print("INVENTAR README nennt: %s" % str(claims))
 	for t: Dictionary in tracks:
-		print("INVENTAR Strecke %-14s %5.0f m · Höhe %5.1f m · Kurven %5.0f° · %s %s" % [t.id, t.length_m, t.height_range_m, t.total_turn_deg, str(t.features), str(t.mechanics)])
+		print("INVENTAR Strecke %-14s %5.0f m · Höhe %5.1f m · Kurven %5.0f° · engste Eigen-Annäherung %5.1f m · längste Gerade %3.0f m (Rückgerade %3.0f m) · Gefahren %s" % [t.id, t.length_m, t.height_range_m, t.total_turn_deg, t.closest_self_distance_m, t.longest_straight_m, t.close_straight_m, str(t.hazards)])
 	for b: Dictionary in boards:
 		print("INVENTAR Brett %-11s %3d Felder · %d Abzweige · Boss %s · %s" % [b.id, b.spaces, b.branch_points, b.boss, str(b.space_types)])

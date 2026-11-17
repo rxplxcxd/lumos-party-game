@@ -1496,7 +1496,40 @@ func _maybe_closeup(victim: Racer, attacker: Racer) -> void:
 	CutsceneManager.play("ItemHitCloseup", {"victim": victim, "letterbox": true, "blend_back": 0.22, "skippable": false})
 
 
+var _lens: LensDrops
+var _was_under := false
+
+
+## Wasser auf der Linse: Regen im Gewitter, Gischt auf nasser Fahrbahn (mehr direkt hinter einem Vordermann),
+## ein Schwall beim Auftauchen. Wasserfall und Fontänen melden sich über mech.drenched.
+func _update_lens() -> void:
+	if _lens == null or focus == null:
+		return
+	_lens.wind = clampf(absf(focus.v) / 30.0, 0.0, 1.0)
+	var rate := 0.0
+	if _underwater < 0.5:
+		if String(def.get("env", "")) == "storm":
+			rate += 1.6
+		if track.is_wet(focus.s) and focus.h < 0.5 and absf(focus.v) > 10.0:
+			rate += 1.2
+			for r in racers:
+				var o := r as Racer
+				var ds := track.wrap_s(o.s - focus.s)
+				if o != focus and ds > 0.5 and ds < 9.0 and absf(o.x - focus.x) < 3.0 and o.h < 0.5:
+					rate += 4.0   # fährt in der Gischt des Vordermanns
+		for hz: Dictionary in track.hazards:   # nahe an einer aktiven Wasserfontäne vorbei
+			if TrackMechanics.skin_of(hz) == "water" and RaceTrack.hazard_phase(hz, race_time) >= 1.0 \
+					and absf(track.wrap_s(float(hz.s) - focus.s + track.length * 0.5) - track.length * 0.5) < 7.0:
+				rate += 5.0
+	_lens.rain = rate
+	var under := _underwater > 0.5
+	if _was_under and not under:
+		_lens.splash(0.8)   # aufgetaucht: Wasser läuft von der Linse
+	_was_under = under
+
+
 func _update_underwater(delta: float) -> void:
+	_update_lens()
 	var target := 1.0 if (track.is_water(focus.s) and cam.global_position.y < -0.6) else 0.0
 	_underwater = lerpf(_underwater, target, clampf(delta * 3.0, 0, 1))
 	_bubbles.emitting = _underwater > 0.5
@@ -1519,6 +1552,12 @@ func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 10
 	add_child(layer)
+	if Gfx.active != "low":   # Tropfen auf der Linse: unter der Anzeige, nicht auf der niedrigsten Grafikstufe
+		_lens = LensDrops.new()
+		layer.add_child(_lens)
+		mech.drenched.connect(func(r: Racer, amount: float) -> void:
+			if r == focus and _lens:
+				_lens.splash(amount))
 	_hud = UI.hud_root(layer)
 	var left := UI.vbox(-6)
 	_hud.add_child(left)

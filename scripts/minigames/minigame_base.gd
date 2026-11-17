@@ -81,7 +81,34 @@ var _music_hurried := false
 var _debug_ai := "--debug-ai" in OS.get_cmdline_user_args()
 
 
+## Modelle, die erst im Lauf des Spiels erscheinen (Münzen, Geschosse, Sammelobjekte): vorab laden, sonst ruckelt
+## das Bild beim ersten Auftauchen. Die Liste stammt aus dem Player-Agenten (meldet „lädt mitten im Spiel nach“).
+const WARM_MODELS := {
+	"balloon_battle": ["hol/cookie", "toy/item_box"],
+	"barrel_chaos": ["bg/coin_gold", "dun/coin_stack"],
+	"bomb_defuse": ["qp/bomb"],
+	"boss_battle": ["bg/coin_gold"],
+	"boss_cloud": ["plat/coin"],
+	"chest_sniff": ["bg/coin_gold"],
+	"coin_rain": ["mg/powerup_bomb", "plat/coin", "plat/star"],
+	"color_chaos": ["mg/powerup_bomb"],
+	"fish_catch": ["plat/crate", "surv/fish", "surv/fish_small"],
+	"ghost_photo": ["bg/coin_gold"],
+	"kart_bowling": ["td/boulder"],
+	"lava_surf": ["mg/diamond", "mg/ring", "pirate/rocks_a", "td/rocks"],
+	"lucky_bells": ["bg/coin_gold"],
+	"meteor_dodge": ["plat/star"],
+	"quick_fishing": ["surv/fish"],
+	"snowball_fight": ["hol/snowball"],
+	"star_hoops": ["plat/star"],
+	"switch_gauntlet": ["plat/barrel"],
+	"tower_balance": ["dun/column", "dun/floor_small"],
+	"treasure_zipline": ["bg/coin_gold"],
+}
+
+
 func _ready() -> void:
+	Assets.warm(WARM_MODELS.get(game_id, []))
 	info = Game.minigame_info(game_id)
 	if Net.in_game():
 		rng.seed = int(Net.game_cfg.get("seed", 1)) ^ hash(game_id) ^ (int(Game.party.get("dseq", 0)) * 7919 if Game.mode == "party" else 0)
