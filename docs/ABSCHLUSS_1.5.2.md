@@ -191,8 +191,9 @@ Framework-Figuren.
 ## G. Git und Release-Status
 
 * **Branch:** `claude/elegant-johnson-2kfiut`. Bis `ad149cb5` per Pull Request #3 in `main` übernommen
-  (Merge-Commit `e46dd144`); der Branch steht danach wieder auf `main` und trägt nur noch diesen Bericht-Nachtrag
-  (Render-Zählwerte, Merge-Status).
+  (Merge-Commit `e46dd144`). Danach auf dem Branch, **noch nicht in `main`**: `7a07d1b5` (Draw-Calls −19 % durch
+  zusammengeführte OBJ-Flächen, Minigolf ohne Ruck beim Lochwechsel, Render-Profil vorher/nachher) und dieser
+  Bericht-Nachtrag. Für `main` braucht es dafür einen neuen Pull Request.
 * **Relevante Commits dieses Durchlaufs:** `494fb7ec` Inventar, Player-Agent, Streckenereignisse · `7f517a1e`
   Rückgeraden, Linsentropfen, Vorabladen · `6279cff3` Linsentropfen sichtbar, KI vor Querverkehr · `0b34856c`
   Trailer-Stamm · `b21548a7` Stein-Kegeln, Neu-Render · `73a3b8e0` Changelog · `1cdef2d3` Menü-Agent und
@@ -203,7 +204,8 @@ Framework-Figuren.
 * **Nicht abgeschlossen:** Bretter einzeln beleben; Framework Stufe 3–4 (Brett-Figuren, Minispiel-Ergebnis, Nitro
   Dash); Strecken deutlich verlängern; Linsentropfen im Split-Screen; Bildraten auf Zielgeräten und im Web-Build;
   Maus/Touch-Bedienung automatisiert prüfen; Spielspaß durch Menschen testen.
-* **Empfehlung für den nächsten Release-Schritt:** `main` enthält jetzt 1.5.2. Als Nächstes: den CI-Lauf auf
+* **Empfehlung für den nächsten Release-Schritt:** `main` enthält 1.5.2 bis `ad149cb5`; die Nachträge ab `7a07d1b5`
+  per neuem Pull Request übernehmen (CI-Lauf siehe Abschlussnachricht). Danach: den CI-Lauf auf
   `main` (Web-Export, GitHub Pages) abwarten und die veröffentlichte Web-Fassung einmal auf einem echten Smartphone und
   am Desktop mit „FPS anzeigen“ spielen (Menü, ein Brett, ein Rennen, eine Siegerehrung); danach eine kurze Runde mit
   Menschen für den Spielspaß. Erst dann ein Release-Tag (`v1.5.2`) – der Tag löst das Release-Paket aus. Inhaltlich
