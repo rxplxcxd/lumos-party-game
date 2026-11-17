@@ -400,7 +400,49 @@ func _update_cam(_d: float) -> void:
 
 # --- Seitensystem -------------------------------------------------------------------------------
 
+## Zuletzt fokussierter Eintrag je Seite (über Szenenwechsel hinweg): Wer aus einem Spiel oder einer Unterseite
+## zurückkommt, steht wieder auf dem Eintrag, mit dem er hineingegangen ist – nicht wieder ganz oben.
+static var _focus_memory := {}
+
+
+func _remember_focus() -> void:
+	if not _page or not is_inside_tree():
+		return
+	var o := get_viewport().gui_get_focus_owner()
+	if o and _page.is_ancestor_of(o):
+		_focus_memory[String(_page.name)] = _index_path(o, _page)
+
+
+func _index_path(n: Node, root: Node) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	var cur := n
+	while cur and cur != root:
+		out.insert(0, cur.get_index())
+		cur = cur.get_parent()
+	return out
+
+
+func _recall_focus(page: Control, from: String) -> Control:
+	# Nur beim Zurückkehren: zur Hauptseite (von überall) und von der Touch-Anpassung in die Einstellungen
+	if not (String(page.name) == "main" or (String(page.name) == "settings" and from == "touch_edit")):
+		return null
+	var path: PackedInt32Array = _focus_memory.get(String(page.name), PackedInt32Array())
+	if path.is_empty():
+		return null
+	var cur: Node = page
+	for i in path:
+		if i >= cur.get_child_count():
+			return null
+		cur = cur.get_child(i)
+	var c := cur as Control
+	if c and c.is_visible_in_tree() and c.focus_mode != Control.FOCUS_NONE and not (c is BaseButton and (c as BaseButton).disabled):
+		return c
+	return null
+
+
 func show_page(name: String) -> void:
+	_remember_focus()
+	var from := String(_page.name) if _page else ""
 	if _page:
 		var old := _page
 		# Alte Seite umbenennen: Sonst bekäme die neue (gleichnamige) Seite beim add_child einen Ersatznamen,
@@ -433,6 +475,7 @@ func show_page(name: String) -> void:
 		_:
 			p = _page_main()
 	p.name = name
+	_lock_column_sides(p)
 	_ui.add_child(p)
 	_page = p
 	p.modulate.a = 0.0
@@ -448,9 +491,27 @@ func show_page(name: String) -> void:
 		bt.tween_property(b, "modulate:a", 1.0, 0.2)
 		k += 1
 	await get_tree().process_frame
-	var first := _first_focus(p)
+	if not is_instance_valid(p) or _page != p:
+		return
+	var first := _recall_focus(p, from)
+	if first == null:
+		first = _first_focus(p)
 	if first:
 		first.grab_focus()
+
+
+## Knöpfe, die allein untereinander stehen (Spalte), reagieren nicht auf links/rechts. Godots freie Nachbarsuche
+## hängt davon ab, was gerade im sichtbaren Ausschnitt liegt – „rechts“ sprang sonst mal zu einem Spieler-Pfeil,
+## mal zum Zurück-Knopf. Reihen (HBox, Raster, Stepper) behalten ihre Seitwärts-Navigation.
+func _lock_column_sides(n: Node) -> void:
+	for c in n.get_children():
+		if c is BaseButton and c.get_parent() is VBoxContainer:
+			var b := c as BaseButton
+			if b.focus_neighbor_left == NodePath(""):
+				b.focus_neighbor_left = NodePath(".")
+			if b.focus_neighbor_right == NodePath(""):
+				b.focus_neighbor_right = NodePath(".")
+		_lock_column_sides(c)
 
 
 func _all_buttons(n: Node) -> Array[Button]:
@@ -463,7 +524,8 @@ func _all_buttons(n: Node) -> Array[Button]:
 
 
 func _first_focus(n: Node) -> Control:
-	if n is Button and (n as Button).visible and not (n as Button).disabled:
+	# Erstes bedienbares Element in Lesereihenfolge – auch Regler (Einstellungen beginnen sonst mitten in der Liste)
+	if (n is Button and (n as Button).visible and not (n as Button).disabled) or (n is Slider and (n as Slider).visible):
 		return n
 	for c in n.get_children():
 		var r := _first_focus(c)
@@ -669,8 +731,11 @@ func _page_main() -> Control:
 		["Online", "Mit Freunden über Raumcode", "globe", Color("#00b894"), "online"],
 	]
 	var desc := UI.label("", 22, Color(1, 1, 1, 0.92), true, 8)
+	var tiles: Array[Button] = []
+	var smalls: Array[Button] = []
 	for it in items:
 		var b := _mode_tile(String(it[0]), String(it[1]), String(it[2]), it[3])
+		tiles.append(b)
 		var target: String = it[4]
 		var sub: String = it[1]
 		b.pressed.connect(func() -> void: show_page(target))
@@ -685,6 +750,8 @@ func _page_main() -> Control:
 		rb.icon = UI.icon_tex(String(sb[0]), 30)
 		rb.custom_minimum_size = Vector2(64, 64)
 		rb.tooltip_text = String(sb[1])
+		rb.accessibility_name = String(sb[1])
+		smalls.append(rb)
 		var tgt: String = sb[2]
 		var label: String = sb[1]
 		rb.pressed.connect(func() -> void: show_page(tgt))
@@ -697,6 +764,7 @@ func _page_main() -> Control:
 	acc.pressed.connect(func() -> void: show_page("profile"))
 	root.add_child(acc)
 	UI.place(acc, Control.PRESET_TOP_RIGHT, Vector2(-300, 24), Vector2(276, 56))
+	_wire_main_focus(tiles, smalls, acc)
 	# Untere Leiste: Beschreibung des gewählten Eintrags + Bedienhilfe
 	var bar := PanelContainer.new()
 	bar.add_theme_stylebox_override("panel", UI.tex_box("bar_wood", Color(1, 1, 1, 0.94), Vector4(30, 8, 30, 12)))
@@ -714,10 +782,34 @@ func _page_main() -> Control:
 	return root
 
 
+## Feste Controller-Reihenfolge der Hauptseite: Kacheln untereinander, darunter die runden Knöpfe von links nach
+## rechts, die Konto-Pille oben rechts (hoch von der ersten Kachel, rechts von jeder Kachel). Ohne feste Nachbarn
+## entschied die Geometrie – je nach Kachel-Animation landete „runter“ mal beim Profil, mal bei den Einstellungen.
+func _wire_main_focus(tiles: Array[Button], smalls: Array[Button], acc: Button) -> void:
+	for i in tiles.size():
+		var t := tiles[i]
+		t.focus_neighbor_top = t.get_path_to(tiles[i - 1] if i > 0 else acc)
+		t.focus_neighbor_bottom = t.get_path_to(tiles[i + 1] if i < tiles.size() - 1 else smalls[0])
+		t.focus_neighbor_right = t.get_path_to(acc)
+		t.focus_neighbor_left = t.get_path_to(t)
+	for j in smalls.size():
+		var sb := smalls[j]
+		sb.focus_neighbor_top = sb.get_path_to(tiles[tiles.size() - 1])
+		sb.focus_neighbor_bottom = sb.get_path_to(sb)
+		sb.focus_neighbor_left = sb.get_path_to(smalls[j - 1] if j > 0 else sb)
+		sb.focus_neighbor_right = sb.get_path_to(smalls[j + 1] if j < smalls.size() - 1 else sb)
+	acc.focus_neighbor_bottom = acc.get_path_to(tiles[0])
+	acc.focus_neighbor_left = acc.get_path_to(tiles[0])
+	acc.focus_neighbor_top = acc.get_path_to(acc)
+	acc.focus_neighbor_right = acc.get_path_to(acc)
+
+
 ## Große Modus-Kachel: Icon links, Titel + Untertitel – fokussiert leicht vergrößert.
 func _mode_tile(title: String, sub: String, icon: String, col: Color) -> Button:
 	var b := UI.button("", col, 30, 430.0)
 	b.custom_minimum_size = Vector2(430, 76)
+	b.accessibility_name = title       # Titel steht in eigenen Labels – für Bildschirmleser am Knopf selbst
+	b.accessibility_description = sub
 	var h := UI.hbox(14)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(h)
@@ -820,6 +912,7 @@ func _login_view(v: VBoxContainer) -> void:
 		email.add_theme_font_size_override("font_size", 24)
 		email.text = _login_email
 		email.text_changed.connect(func(t: String) -> void: _login_email = t)
+		UI.field_nav(email, "E-Mail")
 		v.add_child(email)
 		var pw := LineEdit.new()
 		pw.placeholder_text = "Passwort"
@@ -827,12 +920,14 @@ func _login_view(v: VBoxContainer) -> void:
 		pw.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_PASSWORD
 		pw.custom_minimum_size = Vector2(520, 54)
 		pw.add_theme_font_size_override("font_size", 24)
+		UI.field_nav(pw, "Passwort")
 		v.add_child(pw)
 		var name_edit := LineEdit.new()
 		name_edit.placeholder_text = "Anzeigename (nur bei Registrierung)"
 		name_edit.custom_minimum_size = Vector2(520, 54)
 		name_edit.add_theme_font_size_override("font_size", 24)
 		name_edit.text = Game.hero(Game.players[0].hero).name
+		UI.field_nav(name_edit, "Anzeigename")
 		v.add_child(name_edit)
 		var row := UI.hbox(12)
 		var login := UI.button("Anmelden", Color("#2ecc71"), 28, 250)
@@ -1021,7 +1116,8 @@ func _page_party() -> Control:
 	var board_names := Game.BOARDS.map(func(b: Dictionary) -> String: return b.name)
 	var board_desc := UI.label(Game.BOARDS[_party_board].desc, 22, Color(1, 1, 1, 0.85))
 	board_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	board_desc.custom_minimum_size = Vector2(620, 60)
+	board_desc.custom_minimum_size = Vector2(620, 122)   # feste Höhe: Blättern verschiebt die Zeilen darunter nicht
+	board_desc.max_lines_visible = 4
 	var bs := Stepper.new().setup(board_names, _party_board, 340, Color("#ff4fb8"))
 	bs.changed.connect(func(i: int) -> void:
 		_party_board = i
@@ -1030,7 +1126,8 @@ func _page_party() -> Control:
 	v.add_child(board_desc)
 	var mode_desc := UI.label(Game.PARTY_MODES[_party_mode].desc, 20, Color(1, 1, 1, 0.75))
 	mode_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	mode_desc.custom_minimum_size = Vector2(620, 44)
+	mode_desc.custom_minimum_size = Vector2(620, 82)
+	mode_desc.max_lines_visible = 3
 	var ms := Stepper.new().setup(Game.PARTY_MODES.map(func(m: Dictionary) -> String: return m.name), _party_mode, 340, Color("#ff4fb8"))
 	ms.changed.connect(func(i: int) -> void:
 		_party_mode = i
@@ -1089,8 +1186,9 @@ func _wire_player_rows() -> void:
 		var row: Array = grid[r]
 		for c in row.size():
 			var b: Button = row[c]
-			b.focus_neighbor_left = b.get_path_to(row[c - 1]) if c > 0 else NodePath("")
-			b.focus_neighbor_right = b.get_path_to(row[c + 1]) if c < row.size() - 1 else NodePath("")
+			# Zeilenenden fest: Die freie Nachbarsuche sprang hier je nach Scrollstand in eine andere Zeile
+			b.focus_neighbor_left = b.get_path_to(row[c - 1] if c > 0 else b)
+			b.focus_neighbor_right = b.get_path_to(row[c + 1] if c < row.size() - 1 else b)
 			if r > 0:
 				b.focus_neighbor_top = b.get_path_to(grid[r - 1][c])
 			if r < grid.size() - 1:
@@ -1142,7 +1240,8 @@ func _page_race() -> Control:
 			cur = i
 	var desc := UI.label(Game.TRACKS[cur].desc, 22, Color(1, 1, 1, 0.85))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.custom_minimum_size = Vector2(620, 50)
+	desc.custom_minimum_size = Vector2(620, 122)   # feste Höhe (Cup-Liste, Bestzeit): die Zeilen darunter springen nicht
+	desc.max_lines_visible = 4
 	var modes := ["Einzelrennen", "Grand Prix", "Zeitfahren"]
 	var mode_ids := ["single", "gp", "time"]
 	var cur_mode := maxi(0, mode_ids.find(String(Game.race_cfg.get("mode", "single"))))
@@ -1214,7 +1313,10 @@ func _page_minigames() -> Control:
 	var v: VBoxContainer = arr[1]
 	var desc := UI.label("Wähle eines von %d Minispielen." % Game.MINIGAMES.size(), 22, Color(1, 1, 1, 0.85))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.custom_minimum_size = Vector2(700, 64)
+	# Feste Höhe (4 Zeilen, die längste Beschreibung): Wuchs die Beschreibung beim Durchblättern um eine Zeile,
+	# rutschte das ganze Raster nach unten – erst nachdem die Seite zum fokussierten Spiel gescrollt hatte.
+	desc.custom_minimum_size = Vector2(700, 122)
+	desc.max_lines_visible = 4
 	v.add_child(desc)
 	var grid := GridContainer.new()
 	grid.columns = 3
@@ -1340,6 +1442,7 @@ func _slider(title: String, key: String, mn := 0.0, mx := 1.0) -> Control:
 	s.step = 0.05
 	s.value = float(Game.settings[key])
 	s.custom_minimum_size = Vector2(320, 44)
+	s.accessibility_name = title
 	s.value_changed.connect(func(val: float) -> void:
 		Game.settings[key] = val
 		Game.save_settings()

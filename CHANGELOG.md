@@ -38,9 +38,22 @@ Arbeitsstand und offene Punkte: `docs/WORKLOG.md` · Spielertest: `docs/PLAYTEST
 * **Stein-Kegeln:** Die Tempelbahn schwebte über dem 7 m tieferen Hintergrund, verstreute Felsen lagen teils auf der
   Bahn – jetzt Grasplateau unter der Bahn, Deko nur seitlich (Deko-Prüfung aller Minispiele: 0 Funde).
 * **Bretter:** Dauertest je Brett (5 Runden Party mit 4 CPUs) für alle 10 Bretter bestanden, 0 Skriptfehler.
+* **Menü-Agent** (`tools/dev/menu_agent.gd`): bedient das Menü nur über echte Tastatur- bzw. Controller-Ereignisse
+  und prüft je Seite Fokus, Erreichbarkeit aller Bedienelemente (Fokus-Breitensuche), Fallen, Text-Überlauf und die
+  Ausgänge (Abbrechen, Zurück); dazu 11 Abläufe Start → Spiel → Pause → „Zum Hauptmenü“ bzw. Spielende → Auswahl.
+  Nach den Korrekturen: 10 Seiten in 4 Konfigurationen (Tastatur 16:9, Controller, Smartphone 19,5:9, Tablet 4:3)
+  ohne Befund, 11 von 11 Abläufen sauber, 0 Engine-Fehler.
+* **Menü – behoben:** feste Controller-Reihenfolge der Hauptseite (die Einstellungen waren per Steuerkreuz nicht
+  verlässlich erreichbar); zurück auf der Hauptseite – auch nach einem Spiel – steht der Fokus auf dem Eintrag, über
+  den man hineinging (vorher immer ganz oben); Einstellungen beginnen beim ersten Regler statt mitten in der Liste;
+  Raumcode- und Anmeldefelder halten den Fokus nicht mehr fest; feste Höhe der Beschreibungen in Minispiel-Auswahl,
+  Party- und Rennmenü (wuchs eine Beschreibung beim Blättern um eine Zeile, rutschte das Raster nach dem Scrollen
+  weg und die gewählte Kachel lag bis zu 62 px außerhalb); Zeilenenden und einspaltige Knöpfe (auch im Pausenmenü)
+  springen nicht mehr seitlich in andere Zeilen; zugängliche Namen für Bildschirmleser an Kacheln, runden Knöpfen,
+  Stepper-Pfeilen, Reglern und Textfeldern.
 * **Grenzen dieses Durchlaufs (ehrlich):** Die Runden sind kaum länger geworden (≈ 40–47 s) – neue Abschnitte, keine
-  neuen Streckenteile; Bretter, Menüs und Bosse wurden nur über die bestehenden Dauertests geprüft, nicht einzeln
-  überarbeitet; das Character Framework ist weiterhin nicht in Spielabläufe eingebaut; Linsentropfen nur in der
+  neuen Streckenteile; Bretter und Bosse wurden nur über die bestehenden Dauertests geprüft, nicht einzeln
+  überarbeitet; Maus- und Touch-Bedienung des Menüs prüft der Menü-Agent nicht; das Character Framework ist weiterhin nicht in Spielabläufe eingebaut; Linsentropfen nur in der
   Einzelansicht (nicht im Split-Screen).
 
 ### 1.5.2 Finalisierung – Profiling, Optimierung, Durchdringungsschutz, Stresstests, Release-Validierung

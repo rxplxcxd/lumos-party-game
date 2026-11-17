@@ -15,7 +15,7 @@ Freigabe unverändert.
 | B3 – Nitro Dash | Ereignisse, Rückgeraden, Wasser fertig; Fahrtest 12/12 sauber | CHANGELOG „Qualitätsdurchlauf“ |
 | B4 – Bretter | nur Dauertest je Brett (5 Runden) + Deko-Prüfung, keine Überarbeitung | Scratch-Protokoll, CI-Soak |
 | B5 – Framework im Spiel | **offen** (nicht eingebaut) | `docs/CHARACTER_FRAMEWORK.md` „Vorbereitung“ |
-| B6 – UI/UX | **offen** (kein Menü-Durchlauf des Agenten) | |
+| B6 – UI/UX | fertig für Tastatur/Controller (Menü-Agent, Funde behoben); Maus/Touch nicht automatisiert | `tools/dev/menu_agent.gd`, `docs/PLAYTEST.md` |
 | B7 – Technik-Profile je Szene | **offen** (nur Minispiel-Ruckler und Framework gemessen) | |
 | C10 – Trailer 2.0 | Weltenwechsel-Stamm überarbeitet, Neu-Render; kein neuer Storyboard-Umfang | `trailer/README.md` |
 | D11 – Abschluss | in Arbeit | |
@@ -37,8 +37,7 @@ Abweichung Doku ↔ Code: README nannte in der Ordnerübersicht noch „38 Minis
 
 (fortlaufend ergänzt)
 
-* Nächste sinnvolle Schritte: (1) Agent um Menü-Durchlauf erweitern (Start → Modus → Figur → Spiel → Ergebnis →
-  zurück), (2) Strecken wirklich verlängern (zweite Schleife je Strecke; Baukasten und Überschneidungs-Prüfung sind
+* Nächste sinnvolle Schritte: (1) ~~Menü-Durchlauf~~ erledigt (Menü-Agent), (2) Strecken wirklich verlängern (zweite Schleife je Strecke; Baukasten und Überschneidungs-Prüfung sind
   da), (3) Linsentropfen in `SplitView`, (4) Bretter einzeln beleben, (5) Framework in Sieges-/Ergebnisszenen.
 * Agent-Befunde, die bewusst blieben: Rempelkugeln/Kart-Kegeln/Eisschollen – Tastatur-Agent schwächer als Analog-CPU
   (kein Fehler); Pinguin-Curling – der automatische Wurf eines Abwesenden kann Punkte bringen (gewollt mittelmäßig).

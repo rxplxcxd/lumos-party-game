@@ -123,3 +123,34 @@ der Modelle (das ist seither behoben und an Stichproben nachgeprüft).
 | Achterbahn-Schießbude (`coaster_shooter`) | ffa (ffa) | 1.0 | 4.0 | 2.0 | 4.0 | – | 11 | vollständig gespielt |  |
 | Flitzestein-Wurf (`stone_skip`) | ffa (ffa) | 2.5 | 4.0 | 4.0 | 4.0 | – | 14 | vollständig gespielt |  |
 | Spukvilla-Sprint (`ghost_manor`) | ffa (ffa) | 1.5 | 4.0 | 4.0 | 3.0 | 2 | 6 | vollständig gespielt |  |
+
+## Menü-Agent (Bedienung ohne Maus und Touch)
+
+`tools/dev/menu_agent.gd` bedient das Menü ausschließlich über echte Ereignisse (`Input.parse_input_event`):
+Pfeiltasten/Enter/Esc bzw. Steuerkreuz/A/B. Engine-Fehler schneidet ein eigener `Logger` je Seite und Ablauf mit.
+
+```bash
+godot --headless --fixed-fps 60 --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/menu_agent.gd
+```
+
+Schalter: `--pad` (Controller statt Tastatur), `--size=1560x720` (Bildformat; headless hat sonst 1280×1280),
+`--pages-only` (ohne Spielabläufe), `--trace` (Tastenwege bei Abweichungen), `--paths` (Tastenwege je Seite).
+
+Je Seite: Ankunft und Erst-Fokus · Fokus-Breitensuche mit allen vier Richtungen (Regler, Wert-Stepper und Textfelder
+nur hoch/runter) – jedes Bedienelement muss erreichbar sein · Fallen (keine Richtung führt heraus) · fokussiertes
+Element nicht ganz im Bild/Scroll-Ausschnitt · Text über Bildschirm- oder Scroll-Rand · Abbrechen und „Zurück“
+führen zur erwarteten Seite · Fokus-Rückkehr auf den Eintrag, über den man kam · Elemente ohne zugänglichen Namen.
+Abläufe: Brett, Rennen, Minispiel, Zufall, Marathon, Partyhelfer-Reise, Rhythmus-Küche, Athlon, Wolkenturm,
+Kolosseum jeweils Start → 4 s Spiel → Pause → „Zum Hauptmenü“ (zweimal bestätigen) → Hauptseite mit Fokus,
+nicht pausiert; außerdem ein freies Minispiel bis zum Ende → Ergebnis → Auswahl → Abbrechen → Hauptseite.
+
+| Durchlauf | Seiten | Befunde | Abläufe |
+|---|---|---|---|
+| Tastatur 1280×720, vor den Korrekturen | 8 erreicht (Einstellungen per Tastenweg nicht verlässlich) | Fokus-Falle im Raumcode-Feld, 3–8 Kacheln halb außerhalb (bis 62 px), seitliche Sprünge, keine zugänglichen Namen | – |
+| Tastatur 1280×720 | 10 | 0 | 11/11 |
+| Controller 1280×720 | 10 | 0 | – |
+| Smartphone quer 2340×1080 (sichtbar 1560×720) | 10 | 0 | – |
+| Tablet 4:3 (1280×960) | 10 | 0 | – |
+
+Nicht abgedeckt: Maus und Touch (Klickflächen, Ziehen im Touch-Layout), Bildschirmleser selbst (nur geprüft, dass
+jedes Element einen Namen hat), Online-Räume mit echter Verbindung.
