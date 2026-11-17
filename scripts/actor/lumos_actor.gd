@@ -90,6 +90,12 @@ var _pet := {}
 var _step := 0.0
 
 
+## Lebt das Objekt noch? `x is Klasse` bricht in Godot 4 mit einem Fehler ab, wenn x schon gelöscht ist (z. B. eine
+## Figur, die eine andere gerade anschaut, verlässt die Szene) – vor jedem `is` auf Blick-/Ereignisziele prüfen.
+static func alive(v: Variant) -> bool:
+	return typeof(v) == TYPE_OBJECT and is_instance_valid(v)
+
+
 ## Framework an ein Rig hängen (oder das vorhandene zurückgeben).
 static func attach(p_rig: CharacterRig, config: LumosActorConfig = null) -> LumosActor:
 	if p_rig == null:
@@ -119,7 +125,7 @@ func _ready() -> void:
 	process_priority = 10
 	personality = cfg.personality if cfg.personality else LumosPersonality.preset("balanced")
 	rng.seed = cfg.seed if cfg.seed != 0 else absi(hash(rig.model_key)) + 1
-	if rig.skel and cfg.profile != "rigid":
+	if rig.skel and cfg.profile != "rigid" and cfg.body_layer:
 		body = LumosBody.new()
 		rig.skel.add_child(body)
 		if not body.bind(rig.skel, cfg):
@@ -148,7 +154,7 @@ func _ready() -> void:
 	social = LumosSocial.of(self)
 	if social:
 		social.register(self)
-	if body == null:
+	if body == null and cfg.body_layer:   # nur echte Figuren ohne Skelett (Haustiere), nicht der reine Gesichtsmodus
 		_find_pet_parts()
 
 
@@ -182,6 +188,19 @@ func capabilities() -> Dictionary:
 func head_radius() -> float:
 	var s := rig.global_basis.get_scale().x if rig.is_inside_tree() else 1.0
 	return (float(face.metrics().u) * 0.5 * s) if face else 0.45 * s
+
+
+## Hände weichen eng anliegender Kopf-Ausrüstung aus (aus = Verhalten bis 1.5.2; nur für den Vergleich im CharLab)
+static var gear_clearance := true
+
+
+## Ziel einer Hand am Kopf (Welt) aus Helm, Hut oder Maske heraus: hinter die Außenseite eng anliegender, sichtbarer
+## Kopf-Ausrüstung geschoben (LumosAppearance.push_out). Ohne Ausrüstung unverändert.
+func clear_of_gear(p: Vector3) -> Vector3:
+	if not gear_clearance or face == null or face.appearance == null or not face.appearance.has_gear or not face.is_inside_tree():
+		return p
+	var xf := face.global_transform
+	return xf * face.appearance.push_out(xf.affine_inverse() * p)
 
 
 ## Oberkante des Kopfes (Welt) – Ankerpunkt für Effekte über dem Kopf.
@@ -657,7 +676,7 @@ func emit_social(kind: String, data := {}) -> void:
 ## Blickziel: Vector3 (Welt), Node3D, LumosActor (schaut ins Gesicht) oder null. Augen springen, Kopf und
 ## Oberkörper folgen; ein neues Gegenüber wird mit einem kurzen Hochziehen der Brauen begrüßt.
 func look_at_target(target: Variant) -> void:
-	if target != null and not is_same(target, _look) and face and (target is LumosActor or target is Node3D):
+	if target != null and not is_same(target, _look) and face and LumosActor.alive(target) and (target is LumosActor or target is Node3D):
 		face.flash_brows(0.45)
 	_look = target
 	face_saccade(target)
@@ -688,9 +707,9 @@ func look_social(target: Variant, secs := 1.5) -> void:
 
 ## Auf wen schaut die Figur gerade? (für Blickkontakt anderer)
 func look_focus() -> LumosActor:
-	if _look is LumosActor:
+	if LumosActor.alive(_look) and _look is LumosActor:
 		return _look
-	if _s_look_w < 0.05 and _shown is LumosActor and is_instance_valid(_shown):
+	if _s_look_w < 0.05 and LumosActor.alive(_shown) and _shown is LumosActor:
 		return _shown
 	return null
 
@@ -850,12 +869,12 @@ func _resolve(t: Variant) -> Vector3:
 		return t
 	if t is Callable:
 		return (t as Callable).call()
-	if t is LumosActor:
+	if LumosActor.alive(t) and t is LumosActor:
 		var a := t as LumosActor
 		if not is_instance_valid(a):
 			return Vector3.INF
 		return a.body.joint_pos("head") + Vector3.UP * 0.25 if a.body else a.head_top() - Vector3.UP * a.head_radius()
-	if t is Node3D and is_instance_valid(t):
+	if LumosActor.alive(t) and t is Node3D:
 		return (t as Node3D).global_position
 	return Vector3.INF
 
@@ -930,7 +949,7 @@ func _process(delta: float) -> void:
 	if interact:
 		interact.tick(d)
 	if prof: q = LumosProf.lap(&"actor.interact", q)
-	if body == null:
+	if body == null and cfg.body_layer:
 		_rigid_body(d, lv)
 		if prof: q = LumosProf.lap(&"actor.rigid", q)
 	if prof: LumosProf.add(&"actor", p0)

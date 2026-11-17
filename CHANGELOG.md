@@ -4,6 +4,51 @@ Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Re
 Ab 1.5.1 wieder in kleinen Schritten: 1.5.1, 1.5.2 … bis 1.9.9 (keine Sprünge auf ganze Versionen).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.5.3 – Release-Nachträge, Character-Framework-Stufe „1.6“ (Gesichtsgeometrie, Verdeckung), Universe Polish
+
+Die Framework-Stufe trägt im Auftrag den Arbeitstitel „1.6“ – die Versionsnummer ist **1.5.3**. Arbeitsstand:
+`docs/WORKLOG.md`, Abschluss: `docs/ABSCHLUSS_1.5.3.md`.
+
+### Gesicht: Mund an der Haut
+* Jeder Mund-Punkt liegt einzeln auf der Haut (Tiefenraster des Kopf-Meshs, Normale je Punkt, Versatz entlang der
+  Normale). Vorher lag der ganze Mund auf einer Näherungsfläche: beim Lachen hing die Zunge unter dem Kinn in der
+  Luft (bis 0,45 Kopfbreiten vor der Haut), andernorts tauchte der Mund bis 0,134 in die Haut. Jetzt höchstens
+  0,032 davor (Mulden unter der Nase) und 0,009 darin – gemessen an den echten Dreiecken, 6 Helden × 6 Ausdrücke.
+* Weiche Grenzen: Der Mund bleibt über der Kinn-Unterseite, unter Nase und gemaltem Schnurrbart, innerhalb von
+  Wangenrand und Ausrüstung; große Ausdrücke werden dort gestaucht statt abzustehen.
+* Licht und Schatten folgen der Wölbung (Dreiecksstreifen mit Normale je Punkt). Kosten im Leistungslabor
+  unverändert (16 Figuren, alles zugleich: Gesicht zeichnen 3,21 → 3,19 ms je Bild).
+
+### Verdeckung durch Ausrüstung und Bart (neu: `LumosAppearance`)
+* Je Figur und Bereich (Augen, Brauen, Mund, Wangen, Tränen): sichtbar · eingeschränkt · teilweise verdeckt ·
+  ausgeblendet. Quellen: alle Teile des Modells (Helm, Visier, Hut, Kapuze, Maske, Brille, Kragen …), gemalte Bärte
+  aus der Kopf-Textur, Vorgaben je Modell und zur Laufzeit. Ausgeblendetes wird gar nicht gezeichnet.
+* Kapuzen-Schurke: Mund unter der Maske ausgeblendet (vorher ragten beim Lachen Zähne unter der Maske hervor).
+* Durchsichtige Teile (Glas) blenden nie aus; Teile, die zur Laufzeit ein-/ausgeblendet werden, wirken binnen 0,5 s.
+* Hände: Gesten am Kopf (Kratzen, Kinn, Stirn wischen, Wange, Gesicht verbergen, Tränen wischen) greifen nicht in
+  Helm, Hut oder Maske; unter einer weit abstehenden Krempe bleiben sie, wo sie waren.
+
+### Fehler behoben
+* **Wackel-Physik:** Zubehör wurde am ganzen Teilnamen erkannt – beim Kapuzen-Schurken („Hooded“ enthält „hood“)
+  wippten deshalb alle acht Teile wie ein Hut, auch Kopf, Arme und Beine. Jetzt zählt der Teilname ohne Präfix.
+* Das Gesicht folgt dem Knochen, an dem die Gesichtshaut tatsächlich hängt (nicht fest „head“).
+
+### Character Framework im Spiel – je Bereich abschaltbar
+* Neu neben Menü-Insel und Siegerehrung: **Spielbrett** (Figuren mit Gesicht, Mikroleben und Körper ab
+  Szenenstart), **Minispiele** und **Nitro Dash** (nur Gesicht, Gefühle und Augen – keine Körper-Ebene, die
+  Spiel-Animation bleibt unberührt). Vorhandene Spiel-Reaktionen färben das Gesicht automatisch; Treffer und
+  Zielplatz im Rennen zeigen sich im Gesicht des Fahrers. Keine Änderung an Spielablauf, Physik oder Netz.
+* Einstellungen: „Lebendige Mimik“ (Grundschalter) plus je ein Schalter für Spielbrett, Minispiele, Nitro Dash.
+
+### Nitro Dash
+* Split-Screen: jede Ansicht hat eigene Tropfen auf der Linse (nach ihrem Fahrer und ihrer Kamera), richtig
+  skaliert; die Linse liest nur das Bild der eigenen Ansicht (kein Nachbarbild am Rand).
+
+### CharLab
+* Gesichts-Labor `--lab-face` (auch in der CI): Modell-Kompatibilität (20 Modelle), Mund an der Haut je Ausdruck,
+  Ausrüstungstests (eigene Teile aus/ein, geschlossenes Visier, Glasbrille, Maske), Hände in Ausrüstung (echte
+  Hand-Punkte, aktuelle Pose), Referenzbilder (6 Ausdrücke × 6 Blickwinkel/Kopfdrehungen), PASS/FAIL je Modell.
+
 ## 1.5.2 – Universelles Mehrschicht-System: Gefühl, Mikroleben, Gewicht, Sozialverhalten, Cartoon
 
 ### 1.5.2 Qualitätsdurchlauf – Spielertest aller Minispiele, Nitro-Dash-Strecken, Trailer-Übergang

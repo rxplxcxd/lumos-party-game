@@ -61,6 +61,7 @@ func setup(p: int, pos: Vector3, scl := 0.85) -> PartyAvatar:
 	rig = CharacterRig.new()
 	add_child(rig)
 	rig.setup(Game.hero(Game.players[p].hero).model, p, scl)
+	LumosGame.attach(rig, 0.2, 0.0, "minigame")   # nur Gesicht und Gefühle; Bewegung bleibt Spiel-Animation
 	position = pos
 	floor_snap_length = 0.3
 	floor_max_angle = deg_to_rad(50)

@@ -274,7 +274,7 @@ var settings := {
 	"music": 0.7, "sfx": 0.9, "voice": 1.0,
 	"haptics": true, "touch_opacity": 0.8, "touch_scale": 1.0, "touch_layout": {},
 	"auto_accel": true, "steer_sens": 1.0, "screen_shake": 1.0, "quality": "auto", "show_fps": false, "dynamic_res": true, "frame_rate": "auto", "season_deco": "auto",
-	"color_saturation": 1.0, "color_strength": 1.0, "lively_faces": true,
+	"color_saturation": 1.0, "color_strength": 1.0, "lively_faces": true, "lively_board": true, "lively_minigames": true, "lively_race": true,
 		"split_screen": true, "multi_display": true,
 }
 var party: Dictionary = {}
@@ -640,3 +640,10 @@ func save_settings() -> void:
 		cfg.set_value("settings", k, settings[k])
 	cfg.save(SETTINGS_PATH)
 	EventBus.settings_changed.emit()
+
+
+## Beim Beenden: Zwischenspeicher des Character Frameworks freigeben (die Gesichts-Vermessung hält je Modell eine
+## Kopie des Kopf-Meshs – ohne das meldet die Engine sie als „beim Beenden noch belegt“).
+func _exit_tree() -> void:
+	LumosFace.clear_cache()
+	LumosAppearance.clear_cache()

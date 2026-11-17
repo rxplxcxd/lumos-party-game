@@ -20,6 +20,8 @@ var _msg_t := 0.0
 var _up := Vector3.UP
 var _laps := 3
 var _last_item := ""
+var lens: LensDrops          ## Tropfen auf der Linse dieser Ansicht (null auf der Grafikstufe „Niedrig“)
+var lens_under := false      ## Kamera dieser Ansicht war zuletzt unter Wasser (Schwall beim Auftauchen)
 
 
 func setup(r: Racer, laps: int) -> SplitView:
@@ -46,6 +48,9 @@ func setup(r: Racer, laps: int) -> SplitView:
 	cam.far = 700.0
 	vp.add_child(cam)
 	cam.current = true
+	if Gfx.active != "low" or OS.has_environment("LUMOS_LENS"):   # eigene Tropfen je Ansicht, unter der Anzeige
+		lens = LensDrops.new()
+		add_child(lens)
 	_build_hud()
 	return self
 

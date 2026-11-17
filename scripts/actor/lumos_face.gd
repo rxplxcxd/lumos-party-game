@@ -91,8 +91,18 @@ const MOUTH_ACTIONS := {"yawn": 2.2, "sigh": 1.1, "swallow": 0.45, "gasp": 0.7, 
 	"chatter": 1.2, "pant": 2.0, "press": 0.8}
 const SEG := 14
 const GRID := 0.025          ## Rasterweite des Tiefenrasters (Anteil der Kopfbreite)
+const CELL_SKIN := 1         ## Rasterpunkt: echte Haut des Kopf-Meshs
+const CELL_FRONT := 2        ## … nach vorn gewandt (Normale höchstens 60° von vorn)
+const CELL_HAIR := 4         ## … gemalte Behaarung (Bart, Schnurrbart)
+const CELL_COVER := 8        ## … von sichtbarer Ausrüstung verdeckt (LumosAppearance)
+const CELL_GLASS := 16       ## … hinter durchsichtiger Ausrüstung (Brillenglas)
 
 static var _cache := {}      ## Modell → Vermessung (Mesh-Kopie, Augen, Mund, Raster) – gleiche Figuren teilen sie
+
+
+## Vermessungen freigeben (beim Beenden; danach misst jede neue Figur ihr Modell neu).
+static func clear_cache() -> void:
+	_cache.clear()
 
 var expressions: Dictionary = EXPR.duplicate(true)   # je Instanz erweiterbar
 var current := "neutral"
@@ -145,6 +155,26 @@ var _act_d := 1.0
 var _syl_t := 0.0                # Sprech-Silben
 var _syl := Vector3.ZERO         # aktuelle Silbe: (Öffnung, Rundung, Breite)
 var _syl_to := Vector3.ZERO
+var appearance: LumosAppearance  # Verdeckung durch Ausrüstung und Bart, Grenzen des Munds (null = ohne Vermessung)
+var attach_bone := ""             # Knochen, dem das Gesicht folgt ("" = direkt am Kopf-Mesh)
+var _ap_t := 0.0                 # Zeit bis zur nächsten Prüfung, ob Ausrüstung ein- oder ausgeblendet wurde
+var _ap_rev := -1                # zuletzt gezeichneter Stand der Verdeckung
+# Gesichtsraster für _skin() (aus _m, ohne Wörterbuch-Zugriffe im heißen Pfad)
+var _gs := 1.0
+var _gx0 := 0.0
+var _gy0 := 0.0
+var _gnx := 2
+var _gny := 2
+var _dep := PackedFloat32Array()
+var _nr := PackedVector3Array()
+var _sn := Vector3.BACK          # Normale des zuletzt mit _skin() gelegten Punkts
+# Mund-Spalten auf der Haut (je Neuzeichnen): Ober-, Mittel- und Unterkante, Punkt und Normale
+var _mt_p := PackedVector3Array()
+var _mt_n := PackedVector3Array()
+var _mm_p := PackedVector3Array()
+var _mm_n := PackedVector3Array()
+var _mb_p := PackedVector3Array()
+var _mb_n := PackedVector3Array()
 
 
 ## Baut die Ebene. false = Modell ungeeignet (kein Kopf-Mesh, keine erkennbaren Augen) – die Figur bleibt unverändert.
@@ -170,9 +200,27 @@ func setup(rig: CharacterRig) -> bool:
 	_orig_mesh = head.mesh
 	head.mesh = _m.mesh
 	has_own_brows = bool(_m.brows)
-	# Befestigung: am Kopfknochen (lokale Koordinaten = Skelett-Raum in Ruhepose) oder direkt am Kopf-Mesh
+	_gs = float(_m.g)
+	_gx0 = float(_m.gx0)
+	_gy0 = float(_m.gy0)
+	_gnx = int(_m.nx)
+	_gny = int(_m.ny)
+	_dep = _m.depth_s
+	_nr = _m.nrm
+	_mt_p.resize(SEG + 1)
+	_mt_n.resize(SEG + 1)
+	_mm_p.resize(SEG + 1)
+	_mm_n.resize(SEG + 1)
+	_mb_p.resize(SEG + 1)
+	_mb_n.resize(SEG + 1)
+	# Befestigung: an dem Knochen, an dem die Gesichtshaut des Kopf-Meshs tatsächlich hängt (meist „head“; nicht jedes
+	# Rig ist gleich – hängt der Kopf an einem anderen oder zusätzlichen Knochen, folgt das Gesicht genau diesem),
+	# lokale Koordinaten = Mesh-Raum in Ruhepose; ohne Skelett direkt am Kopf-Mesh
 	var sk := rig.skel
 	var hb := sk.find_bone("head") if sk else -1
+	if hb >= 0 and head.skin != null:
+		hb = _face_bone(sk, head, hb)
+	attach_bone = sk.get_bone_name(hb) if hb >= 0 and head.skin != null else ""
 	if hb >= 0 and head.skin != null:
 		var att := BoneAttachment3D.new()
 		att.bone_name = sk.get_bone_name(hb)
@@ -201,9 +249,46 @@ func setup(rig: CharacterRig) -> bool:
 			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 			m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		_mat[e[0]] = m
+	# Ausrüstung und Bart: welche Bereiche frei, eingeschränkt, teilweise verdeckt oder ausgeblendet sind
+	appearance = LumosAppearance.new()
+	appearance.setup(self, rig, head)
+	_ap_t = rng.randf_range(0.2, 0.5)
 	set_expression("neutral", 0.0)
 	_blink_t = rng.randf_range(1.0, 4.0)   # eigener, geseedeter Zufall: bildgenau wiederholbar
 	return true
+
+
+## Knochen mit dem meisten Gewicht an der vorderen Hälfte des Kopf-Meshs (Gesichtshaut); fallback = Kopfknochen.
+static func _face_bone(sk: Skeleton3D, head: MeshInstance3D, fallback: int) -> int:
+	var arr := head.mesh.surface_get_arrays(0)
+	if arr[Mesh.ARRAY_BONES] == null or arr[Mesh.ARRAY_WEIGHTS] == null:
+		return fallback
+	var bones: PackedInt32Array = arr[Mesh.ARRAY_BONES]
+	var wts: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS]
+	var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	if vs.is_empty() or bones.size() < vs.size():
+		return fallback
+	var per := bones.size() / vs.size()
+	var bb := head.mesh.get_aabb()
+	var acc := {}
+	for i in vs.size():
+		if vs[i].z < bb.end.z - 0.35 * bb.size.z:
+			continue
+		for k in per:
+			var w := wts[i * per + k]
+			if w > 0.01:
+				acc[bones[i * per + k]] = float(acc.get(bones[i * per + k], 0.0)) + w
+	var best := -1
+	var best_w := 0.0
+	for bi: int in acc:
+		if float(acc[bi]) > best_w:
+			best_w = float(acc[bi])
+			best = bi
+	if best < 0 or best >= head.skin.get_bind_count():
+		return fallback
+	var bn := head.skin.get_bind_name(best)
+	var bone := sk.find_bone(bn) if bn != &"" else head.skin.get_bind_bone(best)
+	return bone if bone >= 0 else fallback
 
 
 ## Gesicht zeigen oder ganz zurücknehmen: aus = Original-Kopf mit den ursprünglichen Augen (sonst stünde die Figur
@@ -369,12 +454,17 @@ static func _measure(head: MeshInstance3D) -> Dictionary:
 	var depth := PackedFloat32Array()
 	depth.resize(nx * ny)
 	depth.fill(-INF)
+	var cuv := PackedVector2Array()   # Texturkoordinate der vordersten Haut je Rasterpunkt (Haar oder Haut?)
+	cuv.resize(nx * ny)
 	var ia: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
 	var tri_n := ia.size() / 3 if ia.size() > 0 else vs.size() / 3
 	for t in tri_n:
-		var p0 := vs[ia[t * 3] if ia.size() > 0 else t * 3]
-		var p1 := vs[ia[t * 3 + 1] if ia.size() > 0 else t * 3 + 1]
-		var p2 := vs[ia[t * 3 + 2] if ia.size() > 0 else t * 3 + 2]
+		var q0: int = ia[t * 3] if ia.size() > 0 else t * 3
+		var q1: int = ia[t * 3 + 1] if ia.size() > 0 else t * 3 + 1
+		var q2: int = ia[t * 3 + 2] if ia.size() > 0 else t * 3 + 2
+		var p0 := vs[q0]
+		var p1 := vs[q1]
+		var p2 := vs[q2]
 		var den := (p1.y - p2.y) * (p0.x - p2.x) + (p2.x - p1.x) * (p0.y - p2.y)
 		if absf(den) < 1e-9:
 			continue
@@ -393,6 +483,11 @@ static func _measure(head: MeshInstance3D) -> Dictionary:
 					var z := w0 * p0.z + w1 * p1.z + w2 * p2.z
 					if z > depth[j * nx + i]:
 						depth[j * nx + i] = z
+						cuv[j * nx + i] = uv[q0] * w0 + uv[q1] * w1 + uv[q2] * w2
+	var valid := PackedByteArray()   # Rasterpunkt liegt wirklich auf einem Dreieck (vor dem Füllen der Lücken)
+	valid.resize(nx * ny)
+	for c in nx * ny:
+		valid[c] = 1 if depth[c] > -INF else 0
 	# Lücken mit dem Nachbarwert füllen (Ränder des Gesichts)
 	for pass_i in 3:
 		for j in ny:
@@ -415,9 +510,32 @@ static func _measure(head: MeshInstance3D) -> Dictionary:
 			var zu := depth[mini(j + 1, ny - 1) * nx + i]
 			var ok := zl > -1e6 and zr > -1e6 and zd > -1e6 and zu > -1e6
 			nrm[j * nx + i] = Vector3(-(zr - zl) / (2.0 * g), -(zu - zd) / (2.0 * g), 1.0).normalized() if ok else Vector3(0, 0.15, 1).normalized()
+	# Eigenschaften je Rasterpunkt (LumosAppearance): CELL_SKIN echte Haut · CELL_FRONT nach vorn gewandt (Normale
+	# höchstens 60° von vorn – Kinn-Unterseite, Nasenflanken und Wangenrand nicht) · CELL_HAIR gemalte Behaarung
+	# (Farbe weicht deutlich von der Wangenfarbe ab: Bart, Schnurrbart)
+	var bits := PackedByteArray()
+	bits.resize(nx * ny)
+	var tw := img.get_width()
+	var th := img.get_height()
+	for c in nx * ny:
+		if valid[c] == 0:
+			continue
+		var b := CELL_SKIN
+		if nrm[c].z >= 0.5:
+			b |= CELL_FRONT
+		var tc := cuv[c]
+		var ch := img.get_pixel(clampi(int(fposmod(tc.x, 1.0) * tw), 0, tw - 1), clampi(int(fposmod(tc.y, 1.0) * th), 0, th - 1))
+		if absf(ch.r - cheek_col.r) + absf(ch.g - cheek_col.g) + absf(ch.b - cheek_col.b) > 0.35:
+			b |= CELL_HAIR
+		bits[c] = b
+	# Tiefenraster ohne Lücken für das punktgenaue Anlegen (_skin): Restlücken liegen weit hinter dem Gesicht
+	var depth_s := depth.duplicate()
+	for c in nx * ny:
+		if depth_s[c] < -1e6:
+			depth_s[c] = front - 0.5 * bb.size.z
 	var res := {"nrm": nrm, "mesh": am, "eye_c": eye_c, "eye_r": er, "u": u, "cx": cx, "brows": brows, "brow_col": brow_col, "brow_y": brow_y,
 		"mouth": Vector3(cx, eye_y - 0.16 * u - (0.032 * u if stache else 0.0), 0.0), "gx0": gx0, "gy0": gy0, "g": g, "nx": nx, "ny": ny,
-		"depth": depth, "front": front, "skin": cheek_col, "stache": stache, "beard": beard}
+		"depth": depth, "depth_s": depth_s, "bits": bits, "front": front, "skin": cheek_col, "stache": stache, "beard": beard}
 	return res
 
 
@@ -529,6 +647,16 @@ func flash_brows(amount := 0.5) -> void:
 
 
 ## Vermessene Werte (für Tests und eigene Anbauten): eye_c, eye_r, mouth, u (Kopfbreite) …
+## Das gezeichnete Gesicht (ImmediateMesh, Gesichtsraum = Raum des Kopf-Meshs) – für Prüfungen im CharLab.
+func drawn_mesh() -> ImmediateMesh:
+	return _im
+
+
+## Material eines Gesichtsteils (eye, white, cavity, teeth, tongue, brow, blush, tear, lip, cheek).
+func material_of(part: String) -> Material:
+	return _mat.get(part)
+
+
 func metrics() -> Dictionary:
 	return _m
 
@@ -540,6 +668,14 @@ func _process(delta: float) -> void:
 	var p0 := Time.get_ticks_usec() if prof else 0
 	delta *= dt_scale
 	_t += delta
+	if appearance:   # Ausrüstung ein- oder ausgeblendet? Dann Bereiche und Mund-Grenzen neu und sofort neu zeichnen
+		_ap_t -= delta
+		if _ap_t <= 0.0:
+			_ap_t = 0.5
+			appearance.refresh()
+		if appearance.rev != _ap_rev:
+			_ap_rev = appearance.rev
+			_drawn_mask = -1
 	var f := 1.0 - exp(-delta / _tau)
 	for k in KEYS:
 		_cur[k] = lerpf(_cur[k], _tgt[k], f)
@@ -674,10 +810,13 @@ func _draw(bl: float) -> void:
 	var pup := clampf(float(_cur.pupil), 0.3, 1.6)
 	var shake := sin(_t * 38.0) * float(_cur.tremble) * 0.004 * u
 	var gz := Vector2(gaze.x * 0.012, gaze.y * 0.008) * u * (1.0 - scl)   # mit Lederhaut wandert nur die Pupille
+	# Von Ausrüstung ausgeblendete Bereiche (LumosAppearance) werden gar nicht gezeichnet – nichts sticht hindurch
+	var hid := appearance.hidden if appearance else 0
+	var ne := 0 if hid & LumosAppearance.H_EYES else 2
 	# --- Augen ---
 	var eyes: Array = []
 	_sb(_mat.white if scl > 0.02 else _mat.eye)
-	for sd in 2:
+	for sd in ne:
 		var c: Vector3 = eye_c[sd]
 		var cx := c.x + gz.x + shake
 		var cy := c.y + gz.y
@@ -698,7 +837,7 @@ func _draw(bl: float) -> void:
 	if scl > 0.02:
 		# Pupille im weißen Auge: klein vor Schreck, groß beim Bettelblick, wandert mit dem Blick und beim Schielen zur Nase
 		_sb(_mat.eye)
-		for sd in 2:
+		for sd in ne:
 			var e: Array = eyes[sd]
 			var ecx: float = e[0]
 			var ecy: float = e[1]
@@ -726,13 +865,13 @@ func _draw(bl: float) -> void:
 					_quad_s(e[3], ax0, tp0, ax1, tp1, ax1, bt1, ax0, bt0, 0.0055)
 		_se()
 	else:
-		for sd in 2:
+		for sd in ne:
 			var e2: Array = eyes[sd]
 			hl_c.append(Vector3(float(e2[0]) - a * 0.28 + gaze.x * a * 0.2, float(e2[1]) + b * 0.38 - lid * b * 0.5, a))
 	# --- Glanzpunkte (nur bei offenen Augen; beim Bettelblick groß und doppelt) ---
-	if lid < 0.5 and squint < 0.55:
-		_sb(_mat.white if scl <= 0.02 else _mat.white)
-		for sd in 2:
+	if lid < 0.5 and squint < 0.55 and ne > 0:
+		_sb(_mat.white)
+		for sd in ne:
 			var h: Vector3 = hl_c[sd]
 			var r := (0.011 + 0.004 * wide) * u * fs * (lerpf(1.0, pup * 1.15, scl) if scl > 0.02 else 1.0)
 			var spots: Array = [[h.x, h.y, r]]
@@ -750,9 +889,9 @@ func _draw(bl: float) -> void:
 		_se()
 	# --- Tränen: feuchter Lidrand, Bäche über die Wangen, fallende Tropfen ---
 	var tear := float(_cur.tear)
-	if tear > 0.05:
+	if tear > 0.05 and ne > 0 and not hid & LumosAppearance.H_TEARS:
 		_sb(_mat.tear)
-		for sd in 2:
+		for sd in ne:
 			var e3: Array = eyes[sd]
 			var tx: float = float(e3[0]) - float(e3[4]) * a * 0.55
 			var ty: float = float(e3[1]) - b * 0.55
@@ -774,7 +913,7 @@ func _draw(bl: float) -> void:
 		_se()
 	# --- Wangenröte (Freude, Verlegenheit) ---
 	var blush := float(_cur.blush) + laugh * 0.3
-	if blush > 0.03:
+	if blush > 0.03 and not hid & LumosAppearance.H_CHEEKS:
 		(_mat.blush as StandardMaterial3D).albedo_color.a = clampf(blush, 0.0, 1.0) * 0.55
 		_sb(_mat.blush)
 		for sd in 2:
@@ -791,7 +930,7 @@ func _draw(bl: float) -> void:
 		_se()
 	# --- aufgeblasene Backen (Wut, Trotz) ---
 	var cheek := float(_cur.cheek)
-	if cheek > 0.05:
+	if cheek > 0.05 and not hid & LumosAppearance.H_CHEEKS:
 		_sb(_mat.cheek)
 		var mcp: Vector3 = _m.mouth
 		for sd in 2:
@@ -806,7 +945,7 @@ func _draw(bl: float) -> void:
 				_tri_s(pc, Vector2(cxp, cyp), Vector2(cxp + cos(a6) * rxp, cyp + sin(a6) * ryp), Vector2(cxp + cos(a7) * rxp, cyp + sin(a7) * ryp), 0.0095 + 0.01 * cheek)
 		_se()
 	# --- Brauen (nur wenn die Original-Brauen ersetzt wurden) ---
-	if has_own_brows:
+	if has_own_brows and not hid & LumosAppearance.H_BROWS:
 		_sb(_mat.brow)
 		for sd in 2:
 			var s := -1.0 if sd == 0 else 1.0
@@ -879,6 +1018,8 @@ func _draw(bl: float) -> void:
 		var tot := hu + hl2
 		hu = lerpf(hu, tot * 0.62, k)
 		hl2 = tot - hu
+	if hid & LumosAppearance.H_MOUTH:
+		return   # Mund unter Maske, Visier oder Schal: gar nicht zeichnen
 	var mc: Vector3 = _m.mouth
 	var top: Array[Vector2] = []
 	var bot: Array[Vector2] = []
@@ -888,33 +1029,112 @@ func _draw(bl: float) -> void:
 		var yc := curve * 0.085 * u * fs * (x * x - 0.4) + smirk * 0.05 * u * fs * (x + 0.35 * x * x)
 		top.append(Vector2(mc.x + x * w, mc.y + yc + hu * bell))
 		bot.append(Vector2(mc.x + x * w, mc.y + yc - hl2 * bell))
-	var pm := _plane(mc.x, mc.y - (hl2 - hu) * 0.5, maxf(w, 0.02 * u))
-	_sb(_mat.cavity)
-	for k in SEG:
-		var m0 := (top[k] + bot[k]) * 0.5
-		var m1 := (top[k + 1] + bot[k + 1]) * 0.5
-		_quad_s(pm, top[k].x, top[k].y, top[k + 1].x, top[k + 1].y, m1.x, m1.y, m0.x, m0.y, 0.005)
-		_quad_s(pm, m0.x, m0.y, m1.x, m1.y, bot[k + 1].x, bot[k + 1].y, bot[k].x, bot[k].y, 0.005)
+	# Grenzen des Gesichts (LumosAppearance): Der Mund bleibt auf freier, nach vorn gewandter Haut – über dem Kinn,
+	# unter Nase und Schnurrbart, zwischen Wangenrand und Ausrüstung. Große Ausdrücke werden dort weich gestaucht
+	# (gleiche Form, flacher bzw. schmaler); vorher hing ein weit offener Mund unter dem Kinn oder unter der Maske heraus.
+	var lth := 0.016 * u * fs * pout if pout > 0.1 else 0.0
+	var dn := 0.0
+	var up := 0.0
+	var sx := 0.0
+	for k in SEG + 1:
+		dn = maxf(dn, mc.y - bot[k].y + lth)
+		up = maxf(up, top[k].y - mc.y)
+		sx = maxf(sx, absf(top[k].x - mc.x))
+	if appearance:
+		var lim := appearance.limits
+		var kd := _soft(dn, lim.z) / dn if dn > 1e-6 else 1.0
+		var ku := _soft(up, lim.y) / up if up > 1e-6 else 1.0
+		var kx := _soft(sx, lim.x) / sx if sx > 1e-6 else 1.0
+		if kd < 1.0 or ku < 1.0 or kx < 1.0:
+			lth *= kd
+			for k in SEG + 1:
+				var dx := (top[k].x - mc.x) * kx
+				var ty := top[k].y - mc.y
+				var by := bot[k].y - mc.y
+				top[k] = Vector2(mc.x + dx, mc.y + ty * (ku if ty > 0.0 else kd))
+				bot[k] = Vector2(mc.x + dx, mc.y + by * (ku if by > 0.0 else kd))
+	# Jede Spalte einzeln auf die Haut legen – Ober-, Mittel- und Unterkante mit eigener Höhe und Normale aus dem
+	# Tiefenraster. So folgt der Mund der Rundung von Kinn, Wangen und Bart, auch weit offen und von der Seite gesehen
+	# (vorher: eine Näherungsfläche für den ganzen Mund – bei breitem Lachen schwebte er vor dem Kinn oder tauchte in
+	# die Wangen). Gezeichnet als Streifen mit Normale je Punkt: Licht und Schatten folgen der Wölbung.
+	for k in SEG + 1:
+		_mt_p[k] = _skin(top[k].x, top[k].y)
+		_mt_n[k] = _sn
+		_mm_p[k] = _skin(top[k].x, (top[k].y + bot[k].y) * 0.5)
+		_mm_n[k] = _sn
+		_mb_p[k] = _skin(bot[k].x, bot[k].y)
+		_mb_n[k] = _sn
+	# Reihenfolge je Paar: unterer, dann oberer Punkt – im Uhrzeigersinn wie alle Flächen des Gesichts (Vorderseite;
+	# andersherum hielte Godot den Streifen für die Rückseite und beleuchtete ihn mit umgedrehter Normale)
+	var oc := 0.005 * u
+	_sb(_mat.cavity, Mesh.PRIMITIVE_TRIANGLE_STRIP)
+	for k in SEG + 1:
+		_sv(_mm_p[k], _mm_n[k], oc)
+		_sv(_mt_p[k], _mt_n[k], oc)
+	_sv(_mt_p[SEG], _mt_n[SEG], oc)   # entartete Dreiecke: das untere Band schließt ohne Zusatzfläche an
+	_sv(_mb_p[0], _mb_n[0], oc)       # (gerade Anzahl Punkte davor: gleicher Umlaufsinn im zweiten Band)
+	for k in SEG + 1:
+		_sv(_mb_p[k], _mb_n[k], oc)
+		_sv(_mm_p[k], _mm_n[k], oc)
 	_se()
 	if pout > 0.1:   # Schmollen: vorgeschobene Unterlippe
-		_sb(_mat.lip)
-		var lth := 0.016 * u * fs * pout
-		for k in range(1, SEG - 1):
-			_quad_s(pm, bot[k].x, bot[k].y, bot[k + 1].x, bot[k + 1].y, bot[k + 1].x, bot[k + 1].y - lth, bot[k].x, bot[k].y - lth, 0.0075)
+		var ol := 0.0075 * u
+		_sb(_mat.lip, Mesh.PRIMITIVE_TRIANGLE_STRIP)
+		for k in range(1, SEG):
+			var q := _skin(bot[k].x, bot[k].y - lth)
+			_sv(q, _sn, ol)
+			_sv(_mb_p[k], _mb_n[k], ol)
 		_se()
 	if open > 0.2 or _act == "chatter":
-		_sb(_mat.teeth)
-		for k in range(2, SEG - 2):
-			var d0 := (top[k] - bot[k]) * 0.24
-			var d1 := (top[k + 1] - bot[k + 1]) * 0.24
-			_quad_s(pm, top[k].x, top[k].y, top[k + 1].x, top[k + 1].y, top[k + 1].x - d1.x, top[k + 1].y - d1.y, top[k].x - d0.x, top[k].y - d0.y, 0.008)
+		var ot := 0.008 * u
+		_sb(_mat.teeth, Mesh.PRIMITIVE_TRIANGLE_STRIP)   # obere Zahnreihe: 24 % der Öffnung unter der Oberkante
+		for k in range(2, SEG - 1):
+			_sv_col(k, 0.24, ot)
+			_sv(_mt_p[k], _mt_n[k], ot)
 		_se()
-		_sb(_mat.tongue)
-		for k in range(3, SEG - 3):
-			var e0 := (top[k] - bot[k]) * 0.38
-			var e1 := (top[k + 1] - bot[k + 1]) * 0.38
-			_quad_s(pm, bot[k].x + e0.x, bot[k].y + e0.y, bot[k + 1].x + e1.x, bot[k + 1].y + e1.y, bot[k + 1].x, bot[k + 1].y, bot[k].x, bot[k].y, 0.008)
+		_sb(_mat.tongue, Mesh.PRIMITIVE_TRIANGLE_STRIP)  # Zunge: untere 38 % der Öffnung
+		for k in range(3, SEG - 2):
+			_sv(_mb_p[k], _mb_n[k], ot)
+			_sv_col(k, 0.62, ot)
 		_se()
+
+
+## Hautpunkt unter (x, y) im Gesichtsraum: Höhe bilinear aus dem Tiefenraster, Normale bilinear (landet in _sn).
+func _skin(x: float, y: float) -> Vector3:
+	var fx := clampf((x - _gx0) / _gs, 0.0, float(_gnx) - 1.001)
+	var fy := clampf((y - _gy0) / _gs, 0.0, float(_gny) - 1.001)
+	var i := int(fx)
+	var j := int(fy)
+	fx -= float(i)
+	fy -= float(j)
+	var o := j * _gnx + i
+	var za := lerpf(_dep[o], _dep[o + 1], fx)
+	var zb := lerpf(_dep[o + _gnx], _dep[o + _gnx + 1], fx)
+	_sn = _nr[o].lerp(_nr[o + 1], fx).lerp(_nr[o + _gnx].lerp(_nr[o + _gnx + 1], fx), fy).normalized()
+	return Vector3(x, y, lerpf(za, zb, fy))
+
+
+## Punkt einer Mundspalte bei Anteil t (0 = Ober-, 1 = Unterkante): quadratisch durch die drei Hautpunkte der Spalte
+## (Zahn- und Zungenkante ohne eigene Raster-Abfrage).
+func _sv_col(k: int, t: float, off: float) -> void:
+	var l0 := 2.0 * (t - 0.5) * (t - 1.0)
+	var l1 := -4.0 * t * (t - 1.0)
+	var l2 := 2.0 * t * (t - 0.5)
+	_sv(_mt_p[k] * l0 + _mm_p[k] * l1 + _mb_p[k] * l2, (_mt_n[k] * l0 + _mm_n[k] * l1 + _mb_n[k] * l2).normalized(), off)
+
+
+## Ein Punkt eines Streifens: auf der Haut p, um off entlang der Hautnormale n angehoben.
+func _sv(p: Vector3, n: Vector3, off: float) -> void:
+	_im.surface_set_normal(n)
+	_im.surface_add_vertex(p + n * off)
+	_nv += 1
+
+
+## Weiche Grenze: bis 70 % von lim unverändert, darüber nähert sich v der Grenze nur noch an (stetig, ohne Knick).
+static func _soft(v: float, lim: float) -> float:
+	if v <= 0.7 * lim:
+		return v
+	return lim * (0.7 + 0.3 * tanh((v / lim - 0.7) / 0.3))
 
 
 ## Oberkante des Auges: Bogen, vom Oberlid gekappt; tilt stellt das Lid schräg (besorgt > 0, grimmig < 0).
@@ -988,8 +1208,8 @@ func _tri_s(pl: Array, p0: Vector2, p1: Vector2, p2: Vector2, off: float) -> voi
 ## Fläche beginnen/beenden. Eine Fläche ohne Punkte (z. B. Pupille, während das Lid geschlossen ist) bekommt ein
 ## unsichtbares Null-Dreieck: ImmediateMesh ließe sie sonst offen, und die folgenden Gesichtsteile landeten für
 ## dieses Bild im Material der leeren Fläche.
-func _sb(mat: Material) -> void:
-	_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, mat)
+func _sb(mat: Material, prim: Mesh.PrimitiveType = Mesh.PRIMITIVE_TRIANGLES) -> void:
+	_im.surface_begin(prim, mat)
 	_cur_n = Vector3.INF
 	_nv = 0
 

@@ -112,8 +112,19 @@ func stop() -> void:
 		actor.body.micro_chest = Vector3.ZERO
 
 
+## Gesten, deren Hand den Kopf berührt – ihr Ziel wird aus Helm, Hut oder Maske herausgeschoben
+const HEAD_GESTURES := ["scratch", "face_touch", "chin", "wipe_brow", "facepalm", "face_hide", "wipe_tears"]
+
+
 ## Ziel der Hand sd für die laufende Geste (Welt) – je Bild ausgewertet.
 func _target(sd: String) -> Vector3:
+	var p := _target_raw(sd)
+	if p != Vector3.INF and String(_g.get("id", "")) in HEAD_GESTURES:
+		p = actor.clear_of_gear(p)
+	return p
+
+
+func _target_raw(sd: String) -> Vector3:
 	if _g.is_empty():
 		return Vector3.INF
 	var id := String(_g.id)
@@ -227,9 +238,9 @@ func _opt_pos(key: String, fallback: Vector3) -> Vector3:
 	var v: Variant = (_g.opts as Dictionary).get(key, null)
 	if v is Vector3:
 		return v
-	if v is LumosActor:
+	if LumosActor.alive(v) and v is LumosActor:
 		return (v as LumosActor).body.joint_pos("head") if (v as LumosActor).body else (v as LumosActor).rig.global_position + Vector3.UP
-	if v is Node3D and is_instance_valid(v):
+	if LumosActor.alive(v) and v is Node3D:
 		return (v as Node3D).global_position
 	return fallback
 
@@ -384,7 +395,7 @@ func _pick_look(p: LumosPersonality, gz: String) -> void:
 			_look_left = float(c2[2]) * (0.5 if scan else 1.0)
 			look_head = minf(look_head, float(c2[3]))
 			break
-	_contact = look_target as LumosActor if look_target is LumosActor else null
+	_contact = look_target as LumosActor if LumosActor.alive(look_target) and look_target is LumosActor else null
 	if _contact:
 		var mutual: bool = _contact.look_focus() == actor
 		if mutual:   # Blickkontakt: halten je Persönlichkeit, Brauen heben, freundlich lächeln

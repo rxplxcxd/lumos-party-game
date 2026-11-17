@@ -110,6 +110,13 @@ jobs:
           grep -q "CHARLAB OK" charlab.log
           ! grep -q "SCRIPT ERROR" charlab.log
 
+      - name: Gesichts-Labor (Mund an der Haut, Verdeckung durch Ausrüstung, Hände an Helm und Hut, Modell-Kompatibilität)
+        run: |
+          timeout 600 $GODOT_BIN --headless --fixed-fps 60 --path . res://tools/charlab/CharLab.tscn -- --lab-face 2>&1 | tee facelab.log
+          grep "FACE-PRUEFUNG\|FACE-ERGEBNIS" facelab.log
+          grep -q "FACE-ERGEBNIS PASS" facelab.log
+          ! grep -q "SCRIPT ERROR" facelab.log
+
       - name: Trailer-Produktion vom Spiel getrennt (keine Verweise, nicht im Export, lauffähig)
         run: bash trailer/check_isolation.sh
 

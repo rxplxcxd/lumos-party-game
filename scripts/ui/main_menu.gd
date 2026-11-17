@@ -1416,7 +1416,10 @@ func _page_settings() -> Control:
 	v.add_child(_row("Saison-Deko", ss))
 	v.add_child(_toggle("Dynamische Auflösung (stabile Bildrate)", "dynamic_res"))
 	v.add_child(_toggle("FPS anzeigen", "show_fps"))
-	v.add_child(_toggle("Lebendige Mimik (Menü & Siegerehrung)", "lively_faces"))
+	v.add_child(_toggle("Lebendige Mimik (Grundschalter, Menü & Siegerehrung)", "lively_faces"))
+	v.add_child(_toggle("   … auf dem Spielbrett", "lively_board"))
+	v.add_child(_toggle("   … in Minispielen", "lively_minigames"))
+	v.add_child(_toggle("   … bei Nitro Dash", "lively_race"))
 	v.add_child(_toggle("Split-Screen für mehrere Fahrer", "split_screen"))
 	if not OS.has_feature("web"):
 		v.add_child(_toggle("Weitere Monitore automatisch nutzen (%d erkannt)" % DisplayServer.get_screen_count(), "multi_display"))

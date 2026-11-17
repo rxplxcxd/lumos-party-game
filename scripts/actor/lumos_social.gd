@@ -185,7 +185,7 @@ var _comfort := {}
 ## Wer tröstet gerade diese Figur? (nur einer geht hin)
 func comforter_for(a: LumosActor) -> LumosActor:
 	var c: Variant = _comfort.get(a)
-	return c if c is LumosActor and is_instance_valid(c) else null
+	return c if LumosActor.alive(c) and c is LumosActor else null
 
 
 func claim_comfort(a: LumosActor, by: LumosActor) -> void:
@@ -201,7 +201,7 @@ var _help := {}
 ## Wer hilft gerade dieser Figur auf? (nur einer geht hin)
 func helper_for(a: LumosActor) -> LumosActor:
 	var c: Variant = _help.get(a)
-	return c if c is LumosActor and is_instance_valid(c) else null
+	return c if LumosActor.alive(c) and c is LumosActor else null
 
 
 func claim_help(a: LumosActor, by: LumosActor) -> void:

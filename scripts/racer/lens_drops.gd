@@ -5,6 +5,9 @@ extends Control
 ## verschwinden nach 1–3 Sekunden wieder. Jeder Tropfen bricht das Bild dahinter wie eine kleine Linse (Bild steht
 ## darin kopf, heller Rand, Glanzpunkt). Die Bildmitte bleibt frei, die Dichte ist gedeckelt: Die Sicht auf die
 ## Strecke wird nie verdeckt. Ohne Tropfen ist der Knoten unsichtbar und kostet nichts.
+## Split-Screen (ab 1.5.3): je Ansicht ein eigener Knoten (SplitView.lens) mit eigenen Tropfen. Lage und Größe richten
+## sich nach dem eigenen Rechteck (nicht nach dem ganzen Fenster), die Linse liest das Bild nur innerhalb der eigenen
+## Ansicht (view_rect) – kein Nachbarbild bricht am Rand hinein.
 ##
 ##   splash(stärke)   Schwall (0..1): Wasserfall, Fontäne, Auftauchen
 ##   rain             Dauerregen/Gischt (Tropfen je Sekunde), z. B. 3 im Gewitter, bis 8 in der Gischt eines Vordermanns
@@ -13,6 +16,7 @@ extends Control
 const MAX_DROPS := 28
 const SHADER := "shader_type canvas_item;
 uniform sampler2D screen_tex : hint_screen_texture, filter_linear, repeat_disable;
+uniform vec4 view_rect = vec4(0.0, 0.0, 1.0, 1.0);   // eigene Ansicht im Bildschirm (UV): min.xy, max.xy
 void fragment() {
 	vec2 p = UV * 2.0 - 1.0;
 	float r = length(p);
@@ -20,6 +24,7 @@ void fragment() {
 	vec2 px = 1.0 / vec2(textureSize(screen_tex, 0));
 	float size = COLOR.g * 64.0;                                // Radius in Pixeln (über die Farbe mitgegeben)
 	vec2 uv = SCREEN_UV - p * (0.9 + 1.6 * (1.0 - h)) * size * px;    // Linse: Bild im Tropfen steht kopf und ist gestaucht
+	uv = clamp(uv, view_rect.xy + px, view_rect.zw - px);         // nur das Bild der eigenen Ansicht
 	vec3 col = texture(screen_tex, uv).rgb;
 	col = mix(col, vec3(dot(col, vec3(0.33))), 0.12) * 1.1 + vec3(0.015, 0.03, 0.05);   // Wasser: etwas heller, kühler
 	float rim = smoothstep(0.62, 1.0, r);
@@ -37,6 +42,7 @@ var _drops: Array[Dictionary] = []   # {p: Vector2 (0..1), r: px, life, max, v: 
 var _acc := 0.0
 var _rng := RandomNumberGenerator.new()
 var _tex: Texture2D
+var _rect := Rect2()   # zuletzt gemeldete Lage im Bildschirm (für view_rect)
 
 
 func _ready() -> void:
@@ -54,6 +60,14 @@ func _ready() -> void:
 	_rng.seed = 4711
 
 
+## Alle Tropfen weg (z. B. wenn die Ansicht wechselt).
+func clear() -> void:
+	_drops.clear()
+	_acc = 0.0
+	rain = 0.0
+	visible = false
+
+
 ## Schwall von Tropfen. strength 0..1 (1 = durch den Wasserfall gefahren).
 func splash(strength := 1.0) -> void:
 	for k in int(round(lerpf(4.0, 16.0, clampf(strength, 0.0, 1.0)))):
@@ -69,7 +83,7 @@ func _add(scale_f := 1.0) -> void:
 	var p := Vector2(0.5, 0.5) + Vector2(cos(a) * 0.5, sin(a) * 0.5) * d
 	p = p.clamp(Vector2(0.02, 0.03), Vector2(0.98, 0.97))
 	var life := _rng.randf_range(1.1, 2.8)
-	_drops.append({"p": p, "r": _rng.randf_range(12.0, 38.0) * scale_f * (get_viewport_rect().size.y / 720.0), "life": life, "max": life,
+	_drops.append({"p": p, "r": _rng.randf_range(12.0, 38.0) * scale_f * (_area().y / 720.0), "life": life, "max": life,
 		"v": Vector2(_rng.randf_range(-0.01, 0.01), _rng.randf_range(0.015, 0.05)), "s": _rng.randf_range(1.0, 1.35)})
 
 
@@ -84,6 +98,11 @@ func _process(delta: float) -> void:
 			visible = false
 		return
 	visible = true
+	var gr := get_global_rect()   # eigene Ansicht im Bildschirm → Linse liest nur dort
+	if gr != _rect:
+		_rect = gr
+		var vs := get_viewport_rect().size
+		(material as ShaderMaterial).set_shader_parameter("view_rect", Vector4(gr.position.x / vs.x, gr.position.y / vs.y, gr.end.x / vs.x, gr.end.y / vs.y))
 	var k := _drops.size() - 1
 	while k >= 0:
 		var d := _drops[k]
@@ -103,6 +122,11 @@ func _draw() -> void:
 		var u := float(d.life) / float(d.max)
 		var alpha := smoothstep(0.0, 0.25, u) * smoothstep(1.0, 0.92, u)   # weich erscheinen und verschwinden
 		var r := float(d.r) * (0.75 + 0.25 * u)
-		var c := (d.p as Vector2) * get_viewport_rect().size
+		var c := (d.p as Vector2) * _area()
 		var h := r * float(d.s) * (1.0 + wind * 0.25)   # läuft der Tropfen, zieht er sich in die Länge
 		draw_texture_rect(_tex, Rect2(c - Vector2(r, h), Vector2(r, h) * 2.0), false, Color(1.0, clampf(r / 64.0, 0.0, 1.0), 1.0, alpha))
+
+
+## Fläche, auf der die Tropfen liegen: das eigene Rechteck (Split-Ansicht) oder – vor dem ersten Layout – das Fenster.
+func _area() -> Vector2:
+	return size if size.x > 1.0 and size.y > 1.0 else get_viewport_rect().size

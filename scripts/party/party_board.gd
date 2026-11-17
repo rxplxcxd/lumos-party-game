@@ -96,6 +96,7 @@ func _spawn_players() -> void:
 		add_child(r)
 		r.setup(Game.hero(Game.players[i].hero).model, i, 0.8)
 		r.surface = surface
+		LumosGame.attach(r, LumosGame.AUTONOMY, 0.0, "board")   # Gesicht und Mikroleben ab Szenenstart (abschaltbar)
 		if Game.players[i].space < 0 or Game.players[i].space >= spaces.size():
 			Game.players[i].space = 0
 		rigs.append(r)

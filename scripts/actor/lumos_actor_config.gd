@@ -46,6 +46,9 @@ const MODEL_TRAITS := {
 
 @export_group("Gesicht")
 @export var face_enabled := true
+## Körper-Ebene (Haltung, Gewicht, IK, Gesten). false = nur Gesicht, Gefühle und Blick der Augen – die Spiel-Animation
+## bleibt völlig unberührt (Minispiele, Nitro Dash). Ab 1.5.3; ältere Profile: true.
+@export var body_layer := true
 @export var feature_scale := 1.0        ## Größe der Gesichtszüge (größer = von weitem lesbarer)
 
 @export_group("Körper")

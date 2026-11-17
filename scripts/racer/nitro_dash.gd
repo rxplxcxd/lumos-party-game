@@ -780,6 +780,8 @@ func _on_lap(r: Racer, lap: int) -> void:
 	if lap >= laps and not r.finished:
 		r.finished = true
 		r.finish_time = race_time
+		# Gesicht nach Platz (nur sichtbar): Sieger stolz, Podest froh, Letzter enttäuscht
+		LumosGame.feel(r.visual.hero, "pride" if r.place == 1 else ("joy" if r.place <= 3 else ("sad" if r.place >= racers.size() else "content")), 0.8)
 		if not r.is_cpu:
 			Audio.sfx("bell")
 			Audio.jingle("finish")
@@ -1501,31 +1503,51 @@ var _was_under := false
 
 
 ## Wasser auf der Linse: Regen im Gewitter, Gischt auf nasser Fahrbahn (mehr direkt hinter einem Vordermann),
-## ein Schwall beim Auftauchen. Wasserfall und Fontänen melden sich über mech.drenched.
+## ein Schwall beim Auftauchen. Wasserfall und Fontänen melden sich über mech.drenched. Im Split-Screen hat jede
+## Ansicht eigene Tropfen nach ihrem Fahrer und ihrer Kamera; die Vollbild-Linse bleibt dann leer.
 func _update_lens() -> void:
-	if _lens == null or focus == null:
+	var split := _split_in_main and _views_on
+	if _lens and focus:
+		if split:
+			if _lens.visible or _lens.rain > 0.0:
+				_lens.clear()
+		else:
+			_lens.wind = clampf(absf(focus.v) / 30.0, 0.0, 1.0)
+			_lens.rain = _lens_rate(focus) if _underwater < 0.5 else 0.0
+			var under := _underwater > 0.5
+			if _was_under and not under:
+				_lens.splash(0.8)   # aufgetaucht: Wasser läuft von der Linse
+			_was_under = under
+	if not _views_on:
 		return
-	_lens.wind = clampf(absf(focus.v) / 30.0, 0.0, 1.0)
+	for v in views:
+		if v.lens == null or not is_instance_valid(v.racer):
+			continue
+		var under2 := track.is_water(v.racer.s) and v.cam.global_position.y < -0.6
+		v.lens.wind = clampf(absf(v.racer.v) / 30.0, 0.0, 1.0)
+		v.lens.rain = 0.0 if under2 else _lens_rate(v.racer)
+		if v.lens_under and not under2:
+			v.lens.splash(0.8)
+		v.lens_under = under2
+
+
+## Tropfen je Sekunde auf der Linse, die Fahrer r folgt (ohne Unterwasser-Prüfung).
+func _lens_rate(r: Racer) -> float:
 	var rate := 0.0
-	if _underwater < 0.5:
-		if String(def.get("env", "")) == "storm":
-			rate += 1.6
-		if track.is_wet(focus.s) and focus.h < 0.5 and absf(focus.v) > 10.0:
-			rate += 1.2
-			for r in racers:
-				var o := r as Racer
-				var ds := track.wrap_s(o.s - focus.s)
-				if o != focus and ds > 0.5 and ds < 9.0 and absf(o.x - focus.x) < 3.0 and o.h < 0.5:
-					rate += 4.0   # fährt in der Gischt des Vordermanns
-		for hz: Dictionary in track.hazards:   # nahe an einer aktiven Wasserfontäne vorbei
-			if TrackMechanics.skin_of(hz) == "water" and RaceTrack.hazard_phase(hz, race_time) >= 1.0 \
-					and absf(track.wrap_s(float(hz.s) - focus.s + track.length * 0.5) - track.length * 0.5) < 7.0:
-				rate += 5.0
-	_lens.rain = rate
-	var under := _underwater > 0.5
-	if _was_under and not under:
-		_lens.splash(0.8)   # aufgetaucht: Wasser läuft von der Linse
-	_was_under = under
+	if String(def.get("env", "")) == "storm":
+		rate += 1.6
+	if track.is_wet(r.s) and r.h < 0.5 and absf(r.v) > 10.0:
+		rate += 1.2
+		for o2 in racers:
+			var o := o2 as Racer
+			var ds := track.wrap_s(o.s - r.s)
+			if o != r and ds > 0.5 and ds < 9.0 and absf(o.x - r.x) < 3.0 and o.h < 0.5:
+				rate += 4.0   # fährt in der Gischt des Vordermanns
+	for hz: Dictionary in track.hazards:   # nahe an einer aktiven Wasserfontäne vorbei
+		if TrackMechanics.skin_of(hz) == "water" and RaceTrack.hazard_phase(hz, race_time) >= 1.0 \
+				and absf(track.wrap_s(float(hz.s) - r.s + track.length * 0.5) - track.length * 0.5) < 7.0:
+			rate += 5.0
+	return rate
 
 
 func _update_underwater(delta: float) -> void:
@@ -1556,8 +1578,11 @@ func _build_hud() -> void:
 		_lens = LensDrops.new()
 		layer.add_child(_lens)
 		mech.drenched.connect(func(r: Racer, amount: float) -> void:
-			if r == focus and _lens:
-				_lens.splash(amount))
+			if r == focus and _lens and not (_split_in_main and _views_on):
+				_lens.splash(amount)
+			for v in views:   # Split-Screen: nur die Ansicht des betroffenen Fahrers
+				if v.racer == r and v.lens and _views_on:
+					v.lens.splash(amount))
 	_hud = UI.hud_root(layer)
 	var left := UI.vbox(-6)
 	_hud.add_child(left)
