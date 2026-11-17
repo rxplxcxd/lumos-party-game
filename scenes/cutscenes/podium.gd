@@ -45,6 +45,9 @@ func run(d: Node, ctx: Dictionary) -> void:
 		r.face_now(Vector3(0, 0, 1))
 		r.visible = i >= 3
 		_rigs.append(r)
+		# Character Framework: echte Mimik bei der Siegerehrung (Figuren entstehen hier neu – kein Aufploppen)
+		LumosGame.attach(r)
+		LumosGame.feel(r, "nervous" if i >= 3 else "content", 0.6)
 	Audio.music("podium", 0.6)
 	await d.fade(true, 0.3)
 	d.cut(STAGE + Vector3(0, 6, 22), STAGE + Vector3.UP * 2.0, 50.0)
@@ -77,7 +80,8 @@ func run(d: Node, ctx: Dictionary) -> void:
 	Audio.jingle("fanfare")
 	Audio.sfx("crowd")
 	Audio.voice("congratulations")
-	w.react("victory")
+	_react(w, "victory")
+	LumosGame.feel(w, "pride")
 	d.title(entries[0].name, "ist der große Sieger!", 0.0, Color("#ffcc33"))
 	await d.orbit(STAGE + spots[0] + Vector3.UP * 2.4, 6.0, 1.6, -40.0, 40.0, 3.2, 36.0, 1.4, 4.5, 1.0)
 	d.punch(-10.0, 0.4)
@@ -98,7 +102,7 @@ func run(d: Node, ctx: Dictionary) -> void:
 
 	# Schlussbild
 	for i in mini(3, _rigs.size()):
-		_rigs[i].react("cheer" if i == 0 else "wave")
+		_react(_rigs[i], "cheer" if i == 0 else "wave")
 	FX.confetti(STAGE + Vector3(0, 8, 0), 120)
 	d.cut(STAGE + Vector3(0, 5, 17), STAGE + Vector3.UP * 2.2, 48.0)
 	d.title("Danke fürs Spielen!", "Lumos Party", 0.0, Color.WHITE)
@@ -124,7 +128,8 @@ func _reveal(d: Node, i: int, e: Dictionary, place: String, color: Color, reacti
 	add_child(spot)
 	spot.global_position = pos + Vector3.UP * 9.0
 	spot.look_at(pos, Vector3.FORWARD)
-	r.react(reaction)
+	_react(r, reaction)
+	LumosGame.feel(r, "joy" if i == 1 else "content", 0.8)
 	d.title(e.name, place, 0.0, color)
 	await d.wait(1.6)
 	d.hide_text()
@@ -215,14 +220,14 @@ func _loser_gag(d: Node, e: Dictionary) -> void:
 	d.cut(pos + Vector3(-2.5, 1.8, 7.0), pos + Vector3.UP * 1.2, 42.0)
 	d.subtitle("Und auf dem letzten Platz … %s!" % e.name, 1.4)
 	r.face_now(Vector3(0, 0, 1))
-	r.react("wave")
+	_react(r, "wave")
 	await d.wait(1.2)
 	# Stolpert über die eigenen Füße – nach vorne von der Bühne auf den Boden (weg von den Kanonen)
 	r.play("walk", 0.1, 1.0)
 	var tw := r.create_tween()
 	tw.tween_property(r, "global_position", pos + Vector3(0, 0, 1.4), 0.6)
 	await tw.finished
-	r.react("trip_fall")
+	_react(r, "trip_fall")
 	Audio.sfx("whistle_fall", pos)
 	var land := Vector3(pos.x - 0.4, STAGE.y, STAGE.z + 5.6)
 	var start := r.global_position
@@ -261,12 +266,20 @@ func _loser_gag(d: Node, e: Dictionary) -> void:
 	await d.wait(2.0)
 	var tw4 := r.pivot.create_tween()
 	tw4.tween_property(r.pivot, "scale", Vector3.ONE, 0.6).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
-	r.react("dizzy")
+	_react(r, "dizzy")
 	var tw5 := anvil.create_tween()
 	tw5.tween_property(anvil, "global_position", anvil.global_position + Vector3(-1.2, 0, 0.6), 0.4).set_trans(Tween.TRANS_BACK)
 	await tw5.finished
 	await d.wait(0.8)
 	anvil.queue_free()
+
+
+## Spiel-Reaktion abspielen und – mit Character Framework – im Gesicht spiegeln.
+func _react(r: CharacterRig, id: String) -> void:
+	r.react(id)
+	LumosGame.mirror(r, id)
+	if id in ["sad", "dizzy"]:
+		LumosGame.feel(r, "embarrassed", 0.7)   # nach dem Missgeschick: verlegen statt neutral
 
 
 ## Weltraum-Begrenzungsbox eines Modells (für passgenaues Aufsetzen).
@@ -321,7 +334,7 @@ func _gag_intro(d: Node, e: Dictionary) -> CharacterRig:
 	d.cut(pos + Vector3(-2.5, 1.8, 7.0), pos + Vector3.UP * 1.2, 42.0)
 	d.subtitle("Und auf dem letzten Platz … %s!" % e.name, 1.4)
 	r.face_now(Vector3(0, 0, 1))
-	r.react("wave")
+	_react(r, "wave")
 	await d.wait(1.2)
 	return r
 
@@ -352,7 +365,7 @@ func _gag_pie(d: Node, e: Dictionary) -> void:
 	FX.dust(head, Color(1, 0.98, 0.92), 14, 1.2)
 	d.shake(0.3)
 	r.set_soot(4.0)
-	r.react("sad")
+	_react(r, "sad")
 	var fall := pie.create_tween()
 	fall.tween_property(pie, "global_position:y", r.global_position.y + 0.1, 0.5).set_trans(Tween.TRANS_BOUNCE)
 	await d.wait(0.6)
@@ -386,7 +399,7 @@ func _gag_rain(d: Node, e: Dictionary) -> void:
 	cloud.add_child(rain)
 	rain.position = Vector3(0, -0.4, 0)
 	rain.emitting = true
-	r.react("sad")
+	_react(r, "sad")
 	FX.dizzy_stars(r, 0.6, 1.0)
 	await d.wait(1.2)
 	Audio.sfx("sigh", null, -2.0)
@@ -410,7 +423,7 @@ func _gag_bounce(d: Node, e: Dictionary) -> void:
 	await arc(r, r.global_position, land + Vector3.UP * 1.2, 1.0, 0.4)
 	Audio.sfx("boing", land, 0.0, 1.3)
 	Juice.squash(shroom, 1.4, 0.5, 0.3, shroom.scale)
-	r.react("launch")
+	_react(r, "launch")
 	Audio.sfx("whistle_up", land, -4.0)
 	var target := land + Vector3(-2.2, 0.0, 0.6)
 	d.move(target + Vector3(-1.5, 3.0, 7.0), target + Vector3.UP * 1.5, 1.0, 44.0)
@@ -431,5 +444,5 @@ func _gag_bounce(d: Node, e: Dictionary) -> void:
 	var flip := r.create_tween()
 	flip.tween_property(r, "rotation:x", 0.0, 0.4).set_trans(Tween.TRANS_BACK)
 	flip.parallel().tween_property(r, "global_position", target, 0.4)
-	r.react("dizzy")
+	_react(r, "dizzy")
 	await d.wait(0.8)

@@ -274,7 +274,7 @@ var settings := {
 	"music": 0.7, "sfx": 0.9, "voice": 1.0,
 	"haptics": true, "touch_opacity": 0.8, "touch_scale": 1.0, "touch_layout": {},
 	"auto_accel": true, "steer_sens": 1.0, "screen_shake": 1.0, "quality": "auto", "show_fps": false, "dynamic_res": true, "frame_rate": "auto", "season_deco": "auto",
-	"color_saturation": 1.0, "color_strength": 1.0,
+	"color_saturation": 1.0, "color_strength": 1.0, "lively_faces": true,
 		"split_screen": true, "multi_display": true,
 }
 var party: Dictionary = {}

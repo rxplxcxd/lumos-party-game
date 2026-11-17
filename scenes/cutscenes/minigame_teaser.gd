@@ -144,6 +144,8 @@ func _cannon_entrance(d: Node, g: MinigameBase, targets: Array[Vector3]) -> void
 	base.global_position = cannon_pos
 	var cannon := Assets.spawn("pirate/cannon", base, Vector3.ZERO, 0.0, 2.6)
 	var toward := Vector3(c.x - cannon_pos.x, 0, c.z - cannon_pos.z).normalized()
+	if toward.length_squared() < 0.5:
+		toward = Vector3.FORWARD   # Kanone steht genau über der Arenamitte (z. B. Achterbahn-Schießbude)
 	_aim(base, toward, 0.0)
 	Juice.pop_in(base, 0.3)
 	var side := toward.cross(Vector3.UP)
@@ -190,7 +192,12 @@ func _cannon_entrance(d: Node, g: MinigameBase, targets: Array[Vector3]) -> void
 
 ## Laufrichtung des Rohrs bei Gier "dir" und Elevation "elev".
 func _barrel_dir(dir: Vector3, elev: float) -> Vector3:
-	return (dir * cos(elev) + Vector3.UP * sin(elev)).normalized()
+	if dir.length_squared() < 1e-6:
+		dir = Vector3.FORWARD   # Ziel genau unter der Kanone: feste Richtung statt Nullvektor (looking_at-Fehler)
+	var fwd := (dir * cos(elev) + Vector3.UP * sin(elev)).normalized()
+	if absf(fwd.y) > 0.999:
+		fwd = (fwd + dir.normalized() * 0.05).normalized()   # nie exakt senkrecht (parallel zur Oben-Achse)
+	return fwd
 
 
 func _aim(base: Node3D, dir: Vector3, elev: float) -> void:

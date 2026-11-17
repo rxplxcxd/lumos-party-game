@@ -123,6 +123,7 @@ func _actor(key: String, pos: Vector3, scl := 0.95) -> CharacterRig:
 	r.position = pos
 	r.face_now(Vector3(0, 0, 1))
 	r.play("idle")
+	LumosGame.attach(r)   # Character Framework: Gesichter, Mikroleben, Blicke (abschaltbar: „Lebendige Mimik“)
 	_heroes.append(r)
 	return r
 
@@ -612,6 +613,7 @@ func _poke(r: CharacterRig) -> void:
 	to.y = 0.0
 	r.turn_to(to, 0.18)
 	r.react(id)
+	LumosGame.mirror(r, id)
 	if POKE_SFX.has(id):
 		Audio.sfx(POKE_SFX[id], r.global_position, -3.0, 1.45 if pet else 1.0)
 	await get_tree().create_timer((rc.hold if rc else 1.0) + 0.1, false).timeout
@@ -633,6 +635,7 @@ func _group_cheer() -> void:
 		if is_instance_valid(r):
 			_pokes[r.get_instance_id()] = {"n": 0, "t": 0, "busy": Time.get_ticks_msec() + 2600}
 			r.react("victory" if not r.model_key.begins_with("pet/") else "cheer")
+			LumosGame.mirror(r, "victory")
 	FX.confetti(Vector3(1.5, 1.0, 1.5), 120)
 	if _star:
 		_poke_prop(_star)
@@ -1411,6 +1414,7 @@ func _page_settings() -> Control:
 	v.add_child(_row("Saison-Deko", ss))
 	v.add_child(_toggle("Dynamische Auflösung (stabile Bildrate)", "dynamic_res"))
 	v.add_child(_toggle("FPS anzeigen", "show_fps"))
+	v.add_child(_toggle("Lebendige Mimik (Menü & Siegerehrung)", "lively_faces"))
 	v.add_child(_toggle("Split-Screen für mehrere Fahrer", "split_screen"))
 	if not OS.has_feature("web"):
 		v.add_child(_toggle("Weitere Monitore automatisch nutzen (%d erkannt)" % DisplayServer.get_screen_count(), "multi_display"))
@@ -1461,8 +1465,22 @@ func _toggle(title: String, key: String) -> Control:
 		Audio.sfx("ui_toggle", null, -2.0, 1.15 if on else 0.9, 0.0)
 		Game.settings[key] = on
 		Game.save_settings()
+		if key == "lively_faces":
+			_apply_lively()
 		Audio.sfx("ui_toggle"))
 	return c
+
+
+## Schalter „Lebendige Mimik“ sofort auf der Menü-Insel umsetzen (aus: Original-Gesichter der Modelle).
+func _apply_lively() -> void:
+	for r in _heroes:
+		if not is_instance_valid(r):
+			continue
+		var a := LumosActor.of(r)
+		if a:
+			a.set_enabled(LumosGame.enabled())
+		else:
+			LumosGame.attach(r)
 
 
 func _page_touch_edit() -> Control:

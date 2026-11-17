@@ -389,16 +389,31 @@ Zubehör-Federn, Atmung, dezente Reaktionen. Gezielt eingesetzt: großes Staunen
 Kopfkratzen, Schielen aufs Glühwürmchen, Stolpern mit Gewicht, Rotwerden, Herzen an der Blüte, Zittern vor dem Boss,
 Sternchen nach der Explosion, Bettelblick, Schlucken, Lächeln im Schlaf.
 
-## Vorbereitung der Spiel-Integration (schrittweise, noch nicht umgesetzt)
+## Einsatz im Spiel (ab 1.5.2, schrittweise)
 
-1. Brett-Zwischensequenzen (Sieg, Sternkauf): `attach` + `feel`/`react`, Autonomie 0,35.
-2. Minispiel-Ergebnis: Ereignisse `win`/`lose` aussenden, Gewinner jubelt, andere reagieren.
-3. Nitro Dash: Fahrer mit `hold_wheel` und Reaktionen auf Treffer.
-4. Je Schritt: Leistung im Web-Build messen, Abschaltbarkeit über `set_enabled(false)` behalten.
+Eine Stelle für alle Einsätze: `scripts/actor/lumos_game.gd` (`LumosGame`). `attach(rig)` hängt das Framework mit
+Autonomie 0,35 an (Mikroleben, Blicke, dezente Reaktionen – keine Ortswechsel), `feel`/`react` setzen Gefühle,
+`mirror(rig, reaktion)` übersetzt die vorhandenen Spiel-Reaktionen (`CharacterRig.react`: wave, cheer, victory,
+shocked, sad, dizzy, trip_fall …) in passende Gesichter. Spielabläufe, Steuerung, Physik und Kollisionen bleiben
+unverändert; das Framework färbt nur Gesicht, Haltung, Blick und Mikroleben der normalen Animation ein.
+
+| Stufe | Ort | Stand |
+|---|---|---|
+| 1 | Figuren-Insel im Hauptmenü: Gesichter, Mikroleben, Reaktionen aufs Antippen, Gruppenjubel | eingebaut |
+| 2 | Siegerehrung (`scenes/cutscenes/podium.gd`; Party-Ende und weitere Modi): Anspannung, Erleichterung, Freude, Stolz des Siegers, Verlegenheit nach dem Missgeschick des Letzten | eingebaut |
+| 3 | Brett-Figuren (Warten, Sternkauf), Minispiel-Ergebnis | offen – dort entstehen die Figuren nicht neu, Gesichter würden mitten in einer Einstellung erscheinen; braucht Einbau ab Szenenstart und Leistungsmessung mit 4 Figuren im Web |
+| 4 | Nitro Dash: Fahrer mit `hold_wheel`, Reaktionen auf Treffer | offen |
+
+Regeln: nur Figuren, die eigens für die Szene entstehen (kein „Aufploppen“ von Gesichtern); eigene Lumos-Avatare
+(`custom/…`) bleiben ohne Framework (noch nicht geprüft). Abschaltbar über die Einstellung **„Lebendige Mimik
+(Menü & Siegerehrung)“** – wirkt sofort auf der Menü-Insel – und automatisch auf der Grafikstufe „Niedrig“.
+`set_enabled(false)` stellt jetzt auch den Original-Kopf mit den ursprünglichen Augen wieder her
+(`LumosFace.set_shown`); vorher stand die Figur nach dem Abschalten ohne Augen da.
 
 ## Bekannte Grenzen (ehrlich)
 
-* **Nicht im Spiel eingebaut.** Spielabläufe, Steuerung, Physik und Kollisionen sind unverändert.
+* **Im Spiel nur an zwei Stellen** (Menü-Insel, Siegerehrung; siehe „Einsatz im Spiel“). Brett, Minispiele und
+  Nitro Dash nutzen es noch nicht. Spielabläufe, Steuerung, Physik und Kollisionen sind unverändert.
 * Gesten und Interaktionen sind prozedural über IK; es gibt keine Finger. Schnelle Gesten bleiben IK-Bögen,
   keine handanimierte Qualität.
 * Chibi-Geometrie: Der Kopf ist breiter, als der Arm lang ist. Umarmungen gibt es darum nur seitlich, Trösten an

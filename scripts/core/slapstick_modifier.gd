@@ -71,6 +71,8 @@ func _process_modification() -> void:
 	var skel := get_skeleton()
 	if skel == null or _bones.is_empty():
 		return
+	if absf(skel.global_basis.determinant()) < 1e-9:
+		return   # Figur auf Größe 0 geschrumpft (z. B. ausgeschieden): nichts zu sehen, Basis nicht invertierbar
 	var now := Time.get_ticks_msec()
 	var dt := clampf((now - _last_ms) / 1000.0, 0.0, 0.1) * Engine.time_scale
 	_last_ms = now

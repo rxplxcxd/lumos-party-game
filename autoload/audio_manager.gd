@@ -254,6 +254,12 @@ func _set_bus(bus_name: String, lin: float) -> void:
 
 func _stream(path: String) -> AudioStream:
 	if not _cache.has(path):
+		if _warming.has(path):
+			_warming.erase(path)
+			var w := ResourceLoader.load_threaded_get(path) as AudioStream   # im Hintergrund vorgeladen (warm_music)
+			if w:
+				_cache[path] = w
+				return w
 		if _is_web_music(path):
 			_fetch_music(path, true)
 			return null   # kommt per Download nach (siehe _play_path)
@@ -351,6 +357,46 @@ func _play_path(path: String, fade: float, loop: bool, from_pos := 0.0) -> void:
 		return
 	_deferred = {"path": path, "key": _music_current, "fade": fade, "loop": loop, "from": from_pos}
 	_fade_out_all(minf(fade, 0.4))
+
+
+var _warming := {}   # Pfad → im Lade-Thread angefordert (warm_music)
+
+
+## Song im Hintergrund vorladen, bevor er mitten im Spiel gebraucht wird (Hurry-Up, Outro, nächster Gang der
+## Rhythmus-Küche). Der erste load() kostete sonst bei kaltem Datei-Cache bis zu 290 ms in einem einzigen Bild.
+## Nativ: Lade-Thread; Web: Download in der Vorlade-Reihe (die Songs liegen dort nicht im Start-Paket).
+func warm_music(path: String) -> void:
+	if path == "" or _cache.has(path) or _warming.has(path):
+		return
+	if _is_web_music(path):
+		_fetch_music(path)
+		return
+	if OS.has_feature("web"):
+		return   # Web-Export ohne Threads: kein Hintergrund-Laden, Musik kommt dort ohnehin per Download
+	if ResourceLoader.load_threaded_request(path) == OK:
+		_warming[path] = true
+
+
+## Fertig vorgeladene Songs in den Cache übernehmen (kein offener Lade-Auftrag bleibt liegen, auch wenn der Song
+## nie gespielt wird, z. B. Hurry-Up bei vorzeitigem Spielende).
+func _collect_warmed() -> void:
+	for path: String in _warming.keys():
+		var st := ResourceLoader.load_threaded_get_status(path)
+		if st == ResourceLoader.THREAD_LOAD_LOADED:
+			_warming.erase(path)
+			var w := ResourceLoader.load_threaded_get(path) as AudioStream
+			if w:
+				_cache[path] = w
+		elif st != ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			_warming.erase(path)
+
+
+## Weitere Abschnitte eines Minispiel-Songs vorladen (Standard: Hurry-Up und Outro).
+func warm_minigame_music(track: int, sections: Array = ["hurry", "outro"]) -> void:
+	var t: Dictionary = MusicMeta.MINIGAME[clampi(track, 0, MusicMeta.MINIGAME.size() - 1)]
+	for sect in sections:
+		if t.has(sect):
+			warm_music(String(t[sect].file))
 
 
 func cache_size() -> int:
@@ -509,6 +555,8 @@ func minigame_music(track := -1, fade := 0.35, sect := "normal", from_pos := 0.0
 	_sched.clear()
 	var sec: Dictionary = MusicMeta.MINIGAME[mg_track][sect]
 	_play_path(String(sec.file), fade, sect != "outro", maxf(0.0, from_pos))
+	if sect == "normal":
+		warm_minigame_music(mg_track)   # Hurry-Up und Outro kommen später mitten im Spiel
 	_set_section(sect, float(sec.bpm))
 	_beat = maxf(0.0, from_pos) * float(sec.bpm) / 60.0 - _latency_beats(float(sec.bpm))
 	_beat_us = Time.get_ticks_usec()
@@ -652,6 +700,8 @@ func _fade_out_all(fade: float) -> void:
 
 
 func _process(delta: float) -> void:
+	if not _warming.is_empty():
+		_collect_warmed()
 	if _mp.is_empty():
 		return
 	for i in 2:

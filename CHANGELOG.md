@@ -51,10 +51,27 @@ Arbeitsstand und offene Punkte: `docs/WORKLOG.md` · Spielertest: `docs/PLAYTEST
   weg und die gewählte Kachel lag bis zu 62 px außerhalb); Zeilenenden und einspaltige Knöpfe (auch im Pausenmenü)
   springen nicht mehr seitlich in andere Zeilen; zugängliche Namen für Bildschirmleser an Kacheln, runden Knöpfen,
   Stepper-Pfeilen, Reglern und Textfeldern.
+* **Character Framework im Spiel (erste Stufen):** Figuren-Insel im Hauptmenü (Gesichter, Mikroleben, Blicke,
+  Reaktionen aufs Antippen) und die Siegerehrung (Podest von Party-Ende und weiteren Modi: Anspannung, Freude, Stolz
+  des Siegers, Verlegenheit nach dem Missgeschick des Letzten). Eine zentrale Anbindung (`LumosGame`), nur an
+  Figuren, die eigens für die Szene entstehen; Spielabläufe unverändert. Neuer Schalter „Lebendige Mimik (Menü &
+  Siegerehrung)“, auf Grafikstufe „Niedrig“ automatisch aus. Behoben: Abschalten des Frameworks ließ die Figur ohne
+  Augen zurück (Original-Kopf wird jetzt wiederhergestellt).
+* **Leistungsprofil je Szene** (`tools/dev/scene_profile.gd`/`.sh`, Bericht `docs/PERF_SCENES.md`): Menü, 10 Bretter,
+  12 Strecken, 10 Bosskämpfe, 5 Modi, 67 Minispiele – Bildzeiten (Mittel, p95, p99, 1 %-Tief, Maximum mit Zeitpunkt),
+  Speicher, Knoten, Engine-Fehler, spät geladene Modelle; Render-Zählwerte mit echtem OpenGL.
+* **Behoben aus dem Profil:** Rhythmus-Küche ruckelte beim Wechsel in den 2. Gang bis 292 ms (Song kam erst dann
+  von der Platte) – alle Gänge sowie Hurry-Up und Outro jedes Minispiels laden jetzt im Hintergrund vor.
+  „material is null“-Fehler beim Einsammeln von Edelsteinen, Platzen von Ballons u. a. (Lava-Surfen, Farb-Chaos,
+  Wolkenboss, Ballon-Schlacht): Godot gab eingefärbte Materialien vor der Render-Instanz frei – Materialien werden
+  jetzt bis zum Schluss gehalten. Achterbahn-Schießbude: Kanonen-Zielen mit Nullvektor im Minispiel-Intro.
+  Ballon-Schlacht: nicht invertierbare Skelett-Basis bei auf Größe 0 geschrumpften Figuren (Fehler je Bild).
 * **Grenzen dieses Durchlaufs (ehrlich):** Die Runden sind kaum länger geworden (≈ 40–47 s) – neue Abschnitte, keine
   neuen Streckenteile; Bretter und Bosse wurden nur über die bestehenden Dauertests geprüft, nicht einzeln
-  überarbeitet; Maus- und Touch-Bedienung des Menüs prüft der Menü-Agent nicht; das Character Framework ist weiterhin nicht in Spielabläufe eingebaut; Linsentropfen nur in der
-  Einzelansicht (nicht im Split-Screen).
+  überarbeitet; Maus- und Touch-Bedienung des Menüs prüft der Menü-Agent nicht; Leistung nur als CPU-Zeit auf dem
+  Testserver und als Render-Zählwerte gemessen – echte Bildraten auf Zielgeräten und im Web-Build stehen aus; das
+  Character Framework steckt erst in Menü und Siegerehrung, nicht in Brett, Minispielen und Nitro Dash;
+  Linsentropfen nur in der Einzelansicht (nicht im Split-Screen).
 
 ### 1.5.2 Finalisierung – Profiling, Optimierung, Durchdringungsschutz, Stresstests, Release-Validierung
 Auf dem Entwicklungsbranch; `main` bleibt unverändert bis zur Freigabe.

@@ -867,8 +867,7 @@ func set_enabled(on: bool) -> void:
 	if body:
 		body.active = on and lod < 2
 	if face:
-		face.visible = on
-		face.set_process(on)
+		face.set_shown(on)   # aus: Original-Kopf mit den ursprünglichen Augen zurück
 
 
 func _update_lod(d: float) -> void:

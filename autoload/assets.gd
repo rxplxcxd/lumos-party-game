@@ -1038,6 +1038,17 @@ static func tint(root: Node, color: Color, unshaded := false, emission := 0.0) -
 				m.emission = color
 				m.emission_energy_multiplier = emission
 			mi.set_surface_override_material(s, m)
+			keep_material(mi, m)
+
+
+## Eigenes Material zusätzlich als Metadaten am Mesh halten. Godot 4.7 gibt Override-Materialien beim Löschen eines
+## Meshs frei, bevor dessen Render-Instanz verschwindet – die Instanz zeigt dann einen Bild lang auf ein gelöschtes
+## Material (Fehler „material is null“ bei jedem eingesammelten Edelstein, geplatzten Ballon …). Metadaten werden
+## erst ganz am Ende des Objekts freigegeben, also nach der Render-Instanz.
+static func keep_material(mi: GeometryInstance3D, m: Material) -> void:
+	var kept: Array = mi.get_meta("kept_mats", [])
+	kept.append(m)
+	mi.set_meta("kept_mats", kept)
 
 
 static func find_meshes(root: Node) -> Array[MeshInstance3D]:

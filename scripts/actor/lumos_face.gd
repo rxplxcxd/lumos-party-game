@@ -128,6 +128,8 @@ var _drawn_mask := -1             # Schaltpunkte beim letzten Neuzeichnen
 static var vis_px := 0.25
 static var expr_rev := 0          ## Zähler für Änderungen an Ausdrücken zur Laufzeit
 var _mat := {}
+var _head: MeshInstance3D       # Kopf-Mesh der Figur …
+var _orig_mesh: Mesh            # … und sein Original (mit den ursprünglichen Augen) – für set_shown(false)
 var _blink_t := 2.0
 var _blink := 0.0
 var _flash := 0.0
@@ -164,6 +166,8 @@ func setup(rig: CharacterRig) -> bool:
 	if _m.is_empty():
 		push_warning("LumosFace: keine Augen im Kopf-Mesh erkannt (%s) – Gesicht übersprungen" % rig.model_key)
 		return false
+	_head = head
+	_orig_mesh = head.mesh
 	head.mesh = _m.mesh
 	has_own_brows = bool(_m.brows)
 	# Befestigung: am Kopfknochen (lokale Koordinaten = Skelett-Raum in Ruhepose) oder direkt am Kopf-Mesh
@@ -200,6 +204,15 @@ func setup(rig: CharacterRig) -> bool:
 	set_expression("neutral", 0.0)
 	_blink_t = rng.randf_range(1.0, 4.0)   # eigener, geseedeter Zufall: bildgenau wiederholbar
 	return true
+
+
+## Gesicht zeigen oder ganz zurücknehmen: aus = Original-Kopf mit den ursprünglichen Augen (sonst stünde die Figur
+## nach dem Abschalten ohne Augen da, weil die Original-Augen beim Einrichten versenkt wurden).
+func set_shown(on: bool) -> void:
+	visible = on
+	set_process(on)
+	if is_instance_valid(_head) and _m.has("mesh"):
+		_head.mesh = _m.mesh if on else _orig_mesh
 
 
 ## Kopf-Mesh: KayKit „*_Head“, Kenney „head-mesh“, sonst ein Mesh mit „head“ im Namen, sonst (Figuren ohne Skelett)
