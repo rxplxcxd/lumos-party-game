@@ -61,6 +61,7 @@ const PRESETS := {
 
 static var _water_shader: Shader
 static var _lava_shader: Shader
+static var _shore_shader: Shader
 
 
 static func env(parent: Node, preset := "day", glow := true) -> WorldEnvironment:
@@ -175,8 +176,18 @@ static func mat(color: Color, rough := 0.85, emission := 0.0) -> StandardMateria
 	return m
 
 
+## Material einer Lumos-Oberflächenfamilie (Gras, Sand, Fels, Planken, Putz, Dach …) in der Palettenfarbe – oder
+## das bisherige einfarbige Material, wenn family leer ist oder die Einstellung „Oberflächen-Details“ aus ist.
+static func surface(family: String, color: Color, rough := 0.85, opts := {}) -> Material:
+	if family == "":
+		return mat(color, rough)
+	var o := opts.duplicate()
+	o["rough"] = rough
+	return LumosMaterials.surface(family, color, o)
+
+
 ## Viele gleich große Quader ohne Kollision als EIN Mesh (ein Draw-Call statt hunderter, z. B. Bodenkacheln).
-static func boxes(parent: Node, size: Vector3, centers: Array, color := Color(0.6, 0.6, 0.65)) -> MeshInstance3D:
+static func boxes(parent: Node, size: Vector3, centers: Array, color := Color(0.6, 0.6, 0.65), family := "") -> MeshInstance3D:
 	var bm := BoxMesh.new()
 	bm.size = size
 	var st := SurfaceTool.new()
@@ -185,13 +196,13 @@ static func boxes(parent: Node, size: Vector3, centers: Array, color := Color(0.
 		st.append_from(bm, 0, Transform3D(Basis.IDENTITY, c as Vector3))
 	var mi := MeshInstance3D.new()
 	mi.mesh = st.commit()
-	mi.material_override = mat(color)
+	mi.material_override = surface(family, color)
 	parent.add_child(mi)
 	return mi
 
 
 ## Statischer Quader mit Kollision (Boden, Wände, Plattformen).
-static func box(parent: Node, size: Vector3, pos: Vector3, color := Color(0.6, 0.6, 0.65), collide := true, layer := 1) -> Node3D:
+static func box(parent: Node, size: Vector3, pos: Vector3, color := Color(0.6, 0.6, 0.65), collide := true, layer := 1, family := "") -> Node3D:
 	var root: Node3D = StaticBody3D.new() if collide else Node3D.new()
 	if collide:
 		(root as StaticBody3D).collision_layer = layer
@@ -203,7 +214,7 @@ static func box(parent: Node, size: Vector3, pos: Vector3, color := Color(0.6, 0
 	var mi := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = size
-	bm.material = mat(color)
+	bm.material = surface(family, color)
 	mi.mesh = bm
 	root.add_child(mi)
 	parent.add_child(root)
@@ -228,21 +239,21 @@ static func cottage(parent: Node, pos: Vector3, rot_y := 0.0, scl := 1.0, wall :
 	var body := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = Vector3(3.0, 2.0, 2.6)
-	bm.material = mat(wall, 0.9)
+	bm.material = surface("plaster", wall, 0.9)
 	body.mesh = bm
 	body.position.y = 1.0
 	root.add_child(body)
 	var rf := MeshInstance3D.new()
 	var pm := PrismMesh.new()
 	pm.size = Vector3(3.5, 1.5, 3.0)
-	pm.material = mat(roof, 0.7)
+	pm.material = surface("roof", roof, 0.7)
 	rf.mesh = pm
 	rf.position.y = 2.75
 	root.add_child(rf)
 	var door := MeshInstance3D.new()
 	var dm := BoxMesh.new()
 	dm.size = Vector3(0.8, 1.3, 0.08)
-	dm.material = mat(Color("#a8704a"), 0.8)
+	dm.material = surface("planks", Color("#a8704a"), 0.8, {"tile": 1.2})
 	door.mesh = dm
 	door.position = Vector3(0, 0.65, 1.31)
 	root.add_child(door)
@@ -257,14 +268,14 @@ static func cottage(parent: Node, pos: Vector3, rot_y := 0.0, scl := 1.0, wall :
 	var ch := MeshInstance3D.new()
 	var cm := BoxMesh.new()
 	cm.size = Vector3(0.4, 0.9, 0.4)
-	cm.material = mat(Color("#c98d5a"), 0.9)
+	cm.material = surface("bricks", Color("#c98d5a"), 0.9, {"tile": 1.0})
 	ch.mesh = cm
 	ch.position = Vector3(0.8, 3.1, -0.4)
 	root.add_child(ch)
 	return root
 
 
-static func cylinder(parent: Node, radius: float, height: float, pos: Vector3, color := Color(0.6, 0.6, 0.65), collide := true) -> Node3D:
+static func cylinder(parent: Node, radius: float, height: float, pos: Vector3, color := Color(0.6, 0.6, 0.65), collide := true, family := "") -> Node3D:
 	var root: Node3D = StaticBody3D.new() if collide else Node3D.new()
 	if collide:
 		var cs := CollisionShape3D.new()
@@ -278,7 +289,8 @@ static func cylinder(parent: Node, radius: float, height: float, pos: Vector3, c
 	cm.top_radius = radius
 	cm.bottom_radius = radius
 	cm.height = height
-	cm.material = mat(color)
+	cm.radial_segments = clampi(int(radius * 10.0), 64, 128)   # große Inseln: keine sichtbaren Kanten im Umriss
+	cm.material = surface(family, color)
 	mi.mesh = cm
 	root.add_child(mi)
 	parent.add_child(root)
@@ -305,6 +317,42 @@ static func water(parent: Node, size := Vector2(200, 200), y := 0.0, deep := Col
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(mi)
 	mi.position.y = y
+	return mi
+
+
+## Uferkante um eine runde Insel: Flachwasser-Verlauf und wandernder Schaum auf einem Ring knapp über dem Wasser
+## (assets/shaders/shore.gdshader). radius = Uferlinie, width = Breite nach außen. Bei Grafikstufe „Niedrig“ nur
+## Flachwasser ohne Schaumbänder.
+static func shore(parent: Node, center: Vector3, radius: float, width := 4.0, y := 0.0, shallow := Color(0.55, 0.92, 0.9)) -> MeshInstance3D:
+	if _shore_shader == null:
+		_shore_shader = load("res://assets/shaders/shore.gdshader")
+	var seg := clampi(int(radius * 12.0), 48, 160)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in seg:
+		var a0 := TAU * i / seg
+		var a1 := TAU * (i + 1) / seg
+		var pts := [[radius, a0, 0.0], [radius + width, a0, 1.0], [radius + width, a1, 1.0], [radius, a1, 0.0]]
+		var vs: Array[Vector3] = []
+		var uvs: Array[Vector2] = []
+		for q in pts:
+			vs.append(Vector3(cos(q[1]) * q[0], 0.0, sin(q[1]) * q[0]))
+			uvs.append(Vector2(q[2], q[1] / TAU))
+		for idx in [0, 2, 1, 0, 3, 2]:
+			st.set_normal(Vector3.UP)
+			st.set_uv(uvs[idx])
+			st.add_vertex(vs[idx])
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	var m := ShaderMaterial.new()
+	m.shader = _shore_shader
+	m.set_shader_parameter("shallow", shallow)
+	if Gfx.active == "low":
+		m.set_shader_parameter("foam_alpha", 0.0)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(mi)
+	mi.position = center + Vector3(0, y, 0)
 	return mi
 
 

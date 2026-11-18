@@ -1,0 +1,674 @@
+{
+ "bark": {
+  "pack": "stylized-stone-wood",
+  "material": "WoodBark_02",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.419,
+   0.282,
+   0.193
+  ],
+  "rough_src": [
+   0.502,
+   0.737
+  ],
+  "ao": true,
+  "k": 0.5021,
+  "ks": 0.7179,
+  "hue": 0.35,
+  "clipped_share": 0.0026,
+  "files": [
+   "bark_albedo.webp",
+   "bark_normal.webp"
+  ]
+ },
+ "bricks": {
+  "pack": "ftp-stylized-bricks-plaster",
+  "material": "Stylized_Rounded_Bricks_01",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.441,
+   0.297,
+   0.205
+  ],
+  "rough_src": [
+   0.522,
+   0.925
+  ],
+  "ao": true,
+  "k": 0.3207,
+  "ks": 0.5769,
+  "hue": 0.35,
+  "clipped_share": 0.0019,
+  "files": [
+   "bricks_albedo.webp",
+   "bricks_normal.webp"
+  ]
+ },
+ "checker": {
+  "pack": "ftp-stylizedceramictiles01",
+  "material": "Stylized_CeramicTilingFloor_02",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.664,
+   0.604,
+   0.522
+  ],
+  "rough_src": [
+   0.161,
+   0.518
+  ],
+  "ao": true,
+  "k": 0.3996,
+  "ks": 0.5667,
+  "hue": 0.35,
+  "clipped_share": 0.0008,
+  "files": [
+   "checker_albedo.webp",
+   "checker_normal.webp"
+  ]
+ },
+ "cliff": {
+  "pack": "stylized-stone-wood",
+  "material": "Stone_04",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.438,
+   0.299,
+   0.217
+  ],
+  "rough_src": [
+   0.471,
+   0.925
+  ],
+  "ao": true,
+  "k": 0.3621,
+  "ks": 0.6159,
+  "hue": 0.35,
+  "clipped_share": 0.0038,
+  "files": [
+   "cliff_albedo.webp",
+   "cliff_normal.webp"
+  ]
+ },
+ "cobble_moss": {
+  "pack": "stylizedpk01",
+  "material": "Stylized_02_Stone_Ground",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.435,
+   0.46,
+   0.349
+  ],
+  "rough_src": [
+   0.475,
+   0.875
+  ],
+  "ao": true,
+  "k": 0.5696,
+  "ks": 0.7702,
+  "hue": 0.35,
+  "clipped_share": 0.0013,
+  "files": [
+   "cobble_moss_albedo.webp",
+   "cobble_moss_normal.webp"
+  ]
+ },
+ "concrete": {
+  "pack": "fmp-stylized-concrete",
+  "material": "Stylized_Concrete_01",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.547,
+   0.52,
+   0.451
+  ],
+  "rough_src": [
+   0.604,
+   0.702
+  ],
+  "ao": true,
+  "k": 0.7,
+  "ks": 0.8485,
+  "hue": 0.35,
+  "clipped_share": 0.0007,
+  "files": [
+   "concrete_albedo.webp",
+   "concrete_normal.webp"
+  ]
+ },
+ "dirt": {
+  "pack": "ftpgrass-dirt",
+  "material": "Stylized_HandpaintedDirt_01",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.756,
+   0.609,
+   0.364
+  ],
+  "rough_src": [
+   1.0,
+   1.0
+  ],
+  "ao": true,
+  "k": 0.5058,
+  "ks": 0.7286,
+  "hue": 0.35,
+  "clipped_share": 0.0011,
+  "files": [
+   "dirt_albedo.webp",
+   "dirt_normal.webp"
+  ]
+ },
+ "dune": {
+  "pack": "stylizedpk01",
+  "material": "Stylized_06_Sand",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.811,
+   0.531,
+   0.327
+  ],
+  "rough_src": [
+   0.576,
+   0.624
+  ],
+  "ao": true,
+  "k": 0.5921,
+  "ks": 0.7877,
+  "hue": 0.35,
+  "clipped_share": 0.0013,
+  "files": [
+   "dune_albedo.webp",
+   "dune_normal.webp"
+  ]
+ },
+ "fabric": {
+  "pack": "ftp-stylized-03",
+  "material": "Stylized_22_Tatami",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.723,
+   0.55,
+   0.348
+  ],
+  "rough_src": [
+   0.475,
+   0.922
+  ],
+  "ao": true,
+  "k": 0.4333,
+  "ks": 0.6351,
+  "hue": 0.35,
+  "clipped_share": 0.0012,
+  "files": [
+   "fabric_albedo.webp",
+   "fabric_normal.webp"
+  ]
+ },
+ "flagstone": {
+  "pack": "ftpgrass-dirt",
+  "material": "Stylized_HandpaintedStones_02",
+  "source_res": 4096,
+  "res": 1024,
+  "mean_srgb": [
+   0.535,
+   0.497,
+   0.467
+  ],
+  "rough_src": [
+   1.0,
+   1.0
+  ],
+  "ao": true,
+  "k": 0.4822,
+  "ks": 0.7081,
+  "hue": 0.35,
+  "clipped_share": 0.0036,
+  "files": [
+   "flagstone_albedo.webp",
+   "flagstone_normal.webp"
+  ]
+ },
+ "grass": {
+  "pack": "ftpgrass-dirt",
+  "material": "Stylized_HandpaintedGrass_01",
+  "source_res": 4096,
+  "res": 1024,
+  "mean_srgb": [
+   0.681,
+   0.779,
+   0.21
+  ],
+  "rough_src": [
+   0.773,
+   0.8
+  ],
+  "ao": true,
+  "k": 0.5731,
+  "ks": 0.7741,
+  "hue": 0.35,
+  "clipped_share": 0.0017,
+  "files": [
+   "grass_albedo.webp",
+   "grass_normal.webp"
+  ]
+ },
+ "ice": {
+  "pack": "stylizedpk02",
+  "material": "Stylized_18_Ice",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.014,
+   0.345,
+   0.524
+  ],
+  "rough_src": [
+   0.082,
+   0.584
+  ],
+  "ao": true,
+  "k": 0.3605,
+  "ks": 0.6031,
+  "hue": 0.35,
+  "clipped_share": 0.0015,
+  "files": [
+   "ice_albedo.webp",
+   "ice_normal.webp"
+  ]
+ },
+ "lava_rock": {
+  "pack": "ftp-stylized-mix-stones-01",
+  "material": "Stylized_LavaRock_01",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.209,
+   0.145,
+   0.149
+  ],
+  "rough_src": [
+   0.396,
+   0.831
+  ],
+  "ao": true,
+  "k": 0.3053,
+  "ks": 0.5796,
+  "hue": 0.35,
+  "clipped_share": 0.0014,
+  "files": [
+   "lava_rock_albedo.webp",
+   "lava_rock_normal.webp"
+  ]
+ },
+ "meadow": {
+  "pack": "ftpgrass-dirt",
+  "material": "Stylized_HandpaintedGrassAndDirt_01",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.781,
+   0.687,
+   0.267
+  ],
+  "rough_src": [
+   1.0,
+   1.0
+  ],
+  "ao": true,
+  "k": 0.5339,
+  "ks": 0.7464,
+  "hue": 0.35,
+  "clipped_share": 0.001,
+  "files": [
+   "meadow_albedo.webp",
+   "meadow_normal.webp"
+  ]
+ },
+ "metal": {
+  "pack": "ftp-metals-01",
+  "material": "Stylized_BaseMetal_01",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.337,
+   0.341,
+   0.339
+  ],
+  "rough_src": [
+   0.298,
+   0.467
+  ],
+  "ao": true,
+  "k": 0.6631,
+  "ks": 0.8293,
+  "hue": 0.35,
+  "clipped_share": 0.0039,
+  "files": [
+   "metal_albedo.webp",
+   "metal_normal.webp"
+  ]
+ },
+ "metal_panel": {
+  "pack": "ftp-stylized-metal-panels",
+  "material": "Stylized_MetalPanels_01",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.413,
+   0.35,
+   0.328
+  ],
+  "rough_src": [
+   0.388,
+   0.851
+  ],
+  "ao": true,
+  "k": 0.3,
+  "ks": 0.5628,
+  "hue": 0.35,
+  "clipped_share": 0.0044,
+  "files": [
+   "metal_panel_albedo.webp",
+   "metal_panel_normal.webp"
+  ]
+ },
+ "mud": {
+  "pack": "ftp-stylized-03",
+  "material": "Stylized_33_Mud",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.489,
+   0.376,
+   0.288
+  ],
+  "rough_src": [
+   0.125,
+   0.69
+  ],
+  "ao": true,
+  "k": 0.5465,
+  "ks": 0.7571,
+  "hue": 0.35,
+  "clipped_share": 0.0017,
+  "files": [
+   "mud_albedo.webp",
+   "mud_normal.webp"
+  ]
+ },
+ "paving": {
+  "pack": "ftp-bricks-pavement",
+  "material": "Stylized_BricksPavement_04",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.621,
+   0.591,
+   0.483
+  ],
+  "rough_src": [
+   0.424,
+   1.0
+  ],
+  "ao": true,
+  "k": 0.6054,
+  "ks": 0.7818,
+  "hue": 0.35,
+  "clipped_share": 0.0011,
+  "files": [
+   "paving_albedo.webp",
+   "paving_normal.webp"
+  ]
+ },
+ "pebbles": {
+  "pack": "ftpgrass-dirt",
+  "material": "Stylized_HandpaintedStones_03",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.738,
+   0.432,
+   0.27
+  ],
+  "rough_src": [
+   1.0,
+   1.0
+  ],
+  "ao": true,
+  "k": 0.3867,
+  "ks": 0.6433,
+  "hue": 0.35,
+  "clipped_share": 0.0024,
+  "files": [
+   "pebbles_albedo.webp",
+   "pebbles_normal.webp"
+  ]
+ },
+ "planks": {
+  "pack": "stylizedpk01",
+  "material": "Stylized_03_Wood_Planks",
+  "source_res": 4096,
+  "res": 1024,
+  "mean_srgb": [
+   0.5,
+   0.347,
+   0.198
+  ],
+  "rough_src": [
+   0.431,
+   0.612
+  ],
+  "ao": true,
+  "k": 0.3,
+  "ks": 0.5623,
+  "hue": 0.35,
+  "clipped_share": 0.0032,
+  "files": [
+   "planks_albedo.webp",
+   "planks_normal.webp"
+  ]
+ },
+ "plaster": {
+  "pack": "ftp-stylized-bricks-plaster",
+  "material": "Stylized_Plaster_01",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.733,
+   0.581,
+   0.358
+  ],
+  "rough_src": [
+   0.616,
+   0.729
+  ],
+  "ao": true,
+  "k": 0.7,
+  "ks": 0.854,
+  "hue": 0.35,
+  "clipped_share": 0.0,
+  "files": [
+   "plaster_albedo.webp",
+   "plaster_normal.webp"
+  ]
+ },
+ "rock": {
+  "pack": "stylized-stone-wood",
+  "material": "Stone_01",
+  "source_res": 4096,
+  "res": 1024,
+  "mean_srgb": [
+   0.356,
+   0.353,
+   0.355
+  ],
+  "rough_src": [
+   0.475,
+   0.925
+  ],
+  "ao": true,
+  "k": 0.3,
+  "ks": 0.5545,
+  "hue": 0.35,
+  "clipped_share": 0.0084,
+  "files": [
+   "rock_albedo.webp",
+   "rock_normal.webp"
+  ]
+ },
+ "roof": {
+  "pack": "stylizedpk02",
+  "material": "Stylized_13_RoofSquare",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.744,
+   0.331,
+   0.264
+  ],
+  "rough_src": [
+   0.275,
+   0.71
+  ],
+  "ao": true,
+  "k": 0.408,
+  "ks": 0.6567,
+  "hue": 0.35,
+  "clipped_share": 0.0023,
+  "files": [
+   "roof_albedo.webp",
+   "roof_normal.webp"
+  ]
+ },
+ "sand": {
+  "pack": "ftpgrass-dirt",
+  "material": "Stylized_HandpaintedSand_01",
+  "source_res": 4096,
+  "res": 1024,
+  "mean_srgb": [
+   0.748,
+   0.477,
+   0.267
+  ],
+  "rough_src": [
+   1.0,
+   1.0
+  ],
+  "ao": true,
+  "k": 0.6243,
+  "ks": 0.807,
+  "hue": 0.35,
+  "clipped_share": 0.0028,
+  "files": [
+   "sand_albedo.webp",
+   "sand_normal.webp"
+  ]
+ },
+ "snow": {
+  "pack": "stylizedpk01",
+  "material": "Stylized_08_Snow",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.87,
+   0.893,
+   0.901
+  ],
+  "rough_src": [
+   0.369,
+   0.694
+  ],
+  "ao": true,
+  "k": 0.7,
+  "ks": 0.8536,
+  "hue": 0.35,
+  "clipped_share": 0.0,
+  "files": [
+   "snow_albedo.webp",
+   "snow_normal.webp"
+  ]
+ },
+ "stone_wall": {
+  "pack": "ftp-stylized-bricks-plaster",
+  "material": "Stylized_StoneTiles_01",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.464,
+   0.406,
+   0.354
+  ],
+  "rough_src": [
+   0.522,
+   0.925
+  ],
+  "ao": true,
+  "k": 0.3632,
+  "ks": 0.6214,
+  "hue": 0.35,
+  "clipped_share": 0.0036,
+  "files": [
+   "stone_wall_albedo.webp",
+   "stone_wall_normal.webp"
+  ]
+ },
+ "tiles": {
+  "pack": "ftp-stylizedceramictiles01",
+  "material": "Stylized_CeramicTiles_02",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.693,
+   0.65,
+   0.595
+  ],
+  "rough_src": [
+   0.082,
+   0.718
+  ],
+  "ao": true,
+  "k": 0.671,
+  "ks": 0.8241,
+  "hue": 0.35,
+  "clipped_share": 0.0021,
+  "files": [
+   "tiles_albedo.webp",
+   "tiles_normal.webp"
+  ]
+ },
+ "wood": {
+  "pack": "stylized-stone-wood",
+  "material": "Wood_01",
+  "source_res": 4096,
+  "res": 512,
+  "mean_srgb": [
+   0.548,
+   0.386,
+   0.277
+  ],
+  "rough_src": [
+   0.286,
+   0.612
+  ],
+  "ao": true,
+  "k": 0.3567,
+  "ks": 0.6198,
+  "hue": 0.35,
+  "clipped_share": 0.0037,
+  "files": [
+   "wood_albedo.webp",
+   "wood_normal.webp"
+  ]
+ }
+}

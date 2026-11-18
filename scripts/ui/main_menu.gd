@@ -47,8 +47,9 @@ func _build_diorama() -> void:
 	WorldKit.water(self, Vector2(260, 260), -0.6)
 	WorldKit.backdrop(self, "beach", Color("#e8d6a0"), -0.56)
 	# Insel
-	WorldKit.cylinder(self, 9.0, 1.2, Vector3(0, -0.6, 0), Color("#f1d9a0"), false)
-	WorldKit.cylinder(self, 7.0, 0.3, Vector3(0, 0.1, 0), Color("#7fd36a"), false)
+	WorldKit.cylinder(self, 9.0, 1.2, Vector3(0, -0.6, 0), Color("#f1d9a0"), false, "sand")
+	WorldKit.cylinder(self, 7.0, 0.3, Vector3(0, 0.1, 0), Color("#7fd36a"), false, "grass")
+	WorldKit.shore(self, Vector3.ZERO, 8.6, 5.0, -0.36)   # Uferlinie knapp innerhalb des Sandrands (Wellen heben das Wasser)
 	for i in 10:
 		var a := TAU * i / 10.0
 		if sin(a) > 0.2:
@@ -1416,6 +1417,7 @@ func _page_settings() -> Control:
 	v.add_child(_row("Saison-Deko", ss))
 	v.add_child(_toggle("Dynamische Auflösung (stabile Bildrate)", "dynamic_res"))
 	v.add_child(_toggle("FPS anzeigen", "show_fps"))
+	v.add_child(_toggle("Oberflächen-Details (Materialien; wirkt ab der nächsten Szene)", "surface_detail"))
 	v.add_child(_toggle("Lebendige Mimik (Grundschalter, Menü & Siegerehrung)", "lively_faces"))
 	v.add_child(_toggle("   … auf dem Spielbrett", "lively_board"))
 	v.add_child(_toggle("   … in Minispielen", "lively_minigames"))

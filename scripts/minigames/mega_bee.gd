@@ -119,7 +119,7 @@ func _apply_fade(f: float) -> void:
 				continue
 			var key := "%d_%d" % [m.get_instance_id(), k]
 			if not _fade_mats.has(key):
-				var src := m.get_active_material(k)
+				var src := LumosMaterials.source_of(m.get_active_material(k))
 				var dup: BaseMaterial3D = (src.duplicate() as BaseMaterial3D) if src is BaseMaterial3D else StandardMaterial3D.new()
 				dup.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
 				_fade_mats[key] = dup

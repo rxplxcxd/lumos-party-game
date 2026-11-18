@@ -832,6 +832,7 @@ func cache_size() -> int:
 ## im Speicher – lange Sessions liefen voll, bis der Browser den Tab neu geladen hat.
 func prune_cache() -> void:
 	season = ""
+	LumosMaterials.prune()
 	_gen += 1
 	for p in _cache.keys():
 		if int(_used.get(p, -99)) < _gen - 2:
@@ -903,7 +904,10 @@ func _norm(key: String, p: String) -> Vector3:
 ## Szene oder (OBJ-)Mesh instanzieren – OBJ-Dateien importiert Godot als Mesh statt als Szene.
 func _instantiate(res: Resource) -> Node3D:
 	if res is PackedScene:
-		return (res as PackedScene).instantiate() as Node3D
+		var inst := (res as PackedScene).instantiate() as Node3D
+		if inst:
+			LumosMaterials.apply_to_model(inst)
+		return inst
 	if res is Mesh:
 		var mesh := res as Mesh
 		if not mesh.has_meta("lumos_fixed"):
@@ -920,6 +924,7 @@ func _instantiate(res: Resource) -> Node3D:
 		var mi := MeshInstance3D.new()
 		mi.mesh = _merge_surfaces(mesh)
 		root.add_child(mi)
+		LumosMaterials.apply_to_model(root)
 		return root
 	return null
 
@@ -1058,7 +1063,7 @@ static func tint(root: Node, color: Color, unshaded := false, emission := 0.0) -
 	for mi in find_meshes(root):
 		var count := mi.get_surface_override_material_count()
 		for s in count:
-			var base: Material = mi.get_active_material(s)
+			var base: Material = LumosMaterials.source_of(mi.get_active_material(s))   # Detail-Material → Original
 			var m: StandardMaterial3D
 			if base is StandardMaterial3D:
 				m = (base as StandardMaterial3D).duplicate()
