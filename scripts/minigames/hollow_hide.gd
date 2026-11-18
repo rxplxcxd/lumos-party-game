@@ -37,7 +37,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.cylinder(world, 12.0, 1.0, Vector3(0, -0.5, 0), Color("#6fb85a"))
+	WorldKit.cylinder(world, 12.0, 1.0, Vector3(0, -0.5, 0), Color("#6fb85a"), true, "grass")
 	for k in N:
 		var s := Node3D.new()
 		world.add_child(s)

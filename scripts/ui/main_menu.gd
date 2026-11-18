@@ -47,8 +47,9 @@ func _build_diorama() -> void:
 	WorldKit.water(self, Vector2(260, 260), -0.6)
 	WorldKit.backdrop(self, "beach", Color("#e8d6a0"), -0.56)
 	# Insel
-	WorldKit.cylinder(self, 9.0, 1.2, Vector3(0, -0.6, 0), Color("#f1d9a0"), false)
-	WorldKit.cylinder(self, 7.0, 0.3, Vector3(0, 0.1, 0), Color("#7fd36a"), false)
+	WorldKit.cylinder(self, 9.0, 1.2, Vector3(0, -0.6, 0), Color("#f1d9a0"), false, "sand")
+	WorldKit.cylinder(self, 7.0, 0.3, Vector3(0, 0.1, 0), Color("#7fd36a"), false, "grass")
+	WorldKit.shore(self, Vector3.ZERO, 8.6, 5.0, -0.36)   # Uferlinie knapp innerhalb des Sandrands (Wellen heben das Wasser)
 	for i in 10:
 		var a := TAU * i / 10.0
 		if sin(a) > 0.2:
@@ -183,7 +184,7 @@ func _act_ball(a: CharacterRig, b: CharacterRig) -> void:
 		await tw.finished
 		if randf() < 0.18:
 			# verfehlt! Ball kullert weg, kurzer Schreck, dann holen
-			to.react("surprised" if to.has_clip("surprised") else "dodge")
+			to.react("shocked")   # Reaktion aus der Bibliothek (vorher Animationsname → „Reaktion fehlt“, kein Schreck)
 			var roll := to.position + Vector3(randf_range(-1.5, 1.5), 0.2, randf_range(0.8, 1.6))
 			var rt := ball.create_tween()
 			rt.tween_property(ball, "position", roll, 0.6).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
@@ -1416,6 +1417,7 @@ func _page_settings() -> Control:
 	v.add_child(_row("Saison-Deko", ss))
 	v.add_child(_toggle("Dynamische Auflösung (stabile Bildrate)", "dynamic_res"))
 	v.add_child(_toggle("FPS anzeigen", "show_fps"))
+	v.add_child(_toggle("Oberflächen-Details (Materialien; wirkt ab der nächsten Szene)", "surface_detail"))
 	v.add_child(_toggle("Lebendige Mimik (Grundschalter, Menü & Siegerehrung)", "lively_faces"))
 	v.add_child(_toggle("   … auf dem Spielbrett", "lively_board"))
 	v.add_child(_toggle("   … in Minispielen", "lively_minigames"))
@@ -1521,6 +1523,8 @@ Engine: Godot 4 (MIT-Lizenz) · GL-Compatibility / WebGL2
 [b]3D-Modelle[/b] (CC0): Kenney – Pirate, Platformer, Castle, Graveyard, Racing, Car, Toy Car, Survival, Space, Nature, Mini Arena, Mini Arcade, Tower Defense, Modular Cave, Watercraft, Fantasy Town, Holiday, Mini Characters, Cube Pets
 KayKit (CC0, Kay Lousberg) – Adventurers, Character Animations, Skeletons, Dungeon Pack, Mini-Game Variety Pack, Board Game Bits, Holiday Bits, Halloween Bits, Furniture Bits, Restaurant Bits, City Builder Bits, Platformer Pack, Space Base Bits, Forest Nature, RPG Tools
 Quaternius (CC0) – Nature, Platformer
+
+[b]Oberflächen-Texturen[/b] (CC BY 4.0): JulioVII (juliovii.itch.io) – Texture Pack: Stylized 01, 02, 03 · Stylized Stone & Wood, Stone & Wood 02 · Stylized Grass & Dirt · Stylized Bricks 01 · Stylized Bricks & Pavement · Stylized Metals 01 · Materials Stylized Concrete, Metal Panels, Bricks & Plaster, Ceramic Tiles 01, Mix Stones 01 (verkleinert und für das Spiel aufbereitet)
 
 [b]Audio[/b] (CC0): Kenney – Impact, Interface, Digital, RPG, Sci-Fi, UI, Music Jingles, Voiceover
 [b]UI-Sounds[/b] (CC BY 4.0): „UI Sound Effects by lolurio“ (lolurio.itch.io) · „Cute, Cozy & Magical UI SFX“ von Nomagician Music (nomagician.itch.io)

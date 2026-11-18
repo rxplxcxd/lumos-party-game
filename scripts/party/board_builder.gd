@@ -133,7 +133,7 @@ func _build_spaces() -> void:
 			island.scale.y = 2.0
 		elif board_id == "tower":
 			# Laufsteg-Planke unter jedem Feld, zum Turm hin ausgerichtet
-			var plank := WorldKit.box(holder, Vector3(3.4, 0.35, 3.0), Vector3(0, -0.2, 0), Color("#e8c79a") if sp.branch < 0 else Color("#8fd16a"), false)
+			var plank := WorldKit.box(holder, Vector3(3.4, 0.35, 3.0), Vector3(0, -0.2, 0), Color("#e8c79a") if sp.branch < 0 else Color("#8fd16a"), false, 1, "planks")
 			plank.look_at(Vector3(0, holder.global_position.y - 0.2, 0), Vector3.UP)
 		space_nodes.append(holder)
 
@@ -514,7 +514,7 @@ func _build_dungeon() -> void:
 				continue
 			floor_x.append(Transform3D(Basis(), Vector3(x, 0, z)))
 	WorldKit.multimesh(root, "dun/floor_large", floor_x)
-	WorldKit.box(root, Vector3(64, 1, 48), Vector3(0, -1.8, 0), Color(0.16, 0.12, 0.16), false)
+	WorldKit.box(root, Vector3(64, 1, 48), Vector3(0, -1.8, 0), Color(0.16, 0.12, 0.16), false, 1, "flagstone")
 	WorldKit.lava(root, Vector2(40, 12), -0.45, Vector2(0.12, 0.0))
 	# Kanalränder
 	for x in range(-18, 21, 2):
@@ -567,10 +567,11 @@ func _build_dungeon() -> void:
 
 func _build_pirates() -> void:
 	WorldKit.water(root, Vector2(240, 240), -0.45)
-	var sand := WorldKit.cylinder(root, 1.0, 1.0, Vector3(0, -0.5, 0), Color("#dcb878"), false)
+	var sand := WorldKit.cylinder(root, 1.0, 1.0, Vector3(0, -0.5, 0), Color("#dcb878"), false, "sand")
 	sand.scale = Vector3(27, 0.9, 20)
-	var grass := WorldKit.cylinder(root, 1.0, 1.0, Vector3(0, -0.02, 0), Color("#8fd16a"), false)
+	var grass := WorldKit.cylinder(root, 1.0, 1.0, Vector3(0, -0.02, 0), Color("#8fd16a"), false, "grass")
 	grass.scale = Vector3(14, 0.06, 8)
+	WorldKit.shore(root, Vector3.ZERO, 0.97, 0.22, -0.3).scale = Vector3(27, 1, 20)   # Flachwasser + Schaum am Inselrand
 	_scatter_free(["pirate/palm", "pirate/palm_bend", "pirate/palm_detailed", "nat/tree_palm", "nat/tree_palm_bend"], 26, Rect2(-24, -18, 48, 36), 0.0, Vector2(0.9, 1.3), 3.4)
 	_scatter_free(["pirate/rocks_a", "pirate/rocks_b", "pirate/patch_sand", "pirate/grass", "pirate/barrel", "pirate/crate", "pirate/crate_bottles", "pirate/bottle", "nat/flower_red", "nat/bush"],
 		30, Rect2(-24, -17, 48, 34), 0.0, Vector2(0.8, 1.3), 2.8)
@@ -648,7 +649,7 @@ func _build_sky() -> void:
 # --- Geisterfriedhof ---------------------------------------------------------------------------------------
 
 func _build_graveyard() -> void:
-	WorldKit.box(root, Vector3(70, 1, 52), Vector3(0, -0.5, 0), Color("#2c3a2c"), false)
+	WorldKit.box(root, Vector3(70, 1, 52), Vector3(0, -0.5, 0), Color("#2c3a2c"), false, 1, "meadow@0.55")   # Nacht: Detail nur halb, sonst zu dunkel
 	# Moosige Grabfelder, Zäune und Krypten
 	_scatter_free(["grave/gravestone", "grave/gravestone_round", "grave/gravestone", "grave/debris", "grave/pumpkin", "grave/candles"],
 		46, Rect2(-28, -20, 56, 40), 0.0, Vector2(1.6, 2.2), 2.6)
@@ -739,7 +740,7 @@ func _build_graveyard() -> void:
 # --- Frostdorf ----------------------------------------------------------------------------------------------
 
 func _build_frost() -> void:
-	WorldKit.box(root, Vector3(76, 1, 56), Vector3(0, -0.5, 0), Color("#e8f0fa"), false)
+	WorldKit.box(root, Vector3(76, 1, 56), Vector3(0, -0.5, 0), Color("#e8f0fa"), false, 1, "snow")
 	# Zugefrorener See in der Mitte (Eis-Route 0 führt drüber)
 	var lake := WorldKit.water(root, Vector2(22, 9), 0.02, Color(0.55, 0.78, 0.95), Color(0.85, 0.95, 1.0))
 	lake.position = Vector3(2, 0.03, -7)
@@ -781,14 +782,14 @@ func _build_frost() -> void:
 
 func _build_station() -> void:
 	# Gemütliche Sternwarte auf einer schwebenden Wiesen-Insel im Abendhimmel
-	var isle := WorldKit.cylinder(root, 30.0, 3.0, Vector3(0, -1.5, 0), Color("#7cc46a"), false)
+	var isle := WorldKit.cylinder(root, 30.0, 3.0, Vector3(0, -1.5, 0), Color("#7cc46a"), false, "grass")
 	isle.name = "Isle"
-	WorldKit.cylinder(root, 27.0, 6.0, Vector3(0, -6.0, 0), Color("#a88a6a"), false)
+	WorldKit.cylinder(root, 27.0, 6.0, Vector3(0, -6.0, 0), Color("#a88a6a"), false, "cliff")
 	for i in 30:
 		var a := TAU * i / 30.0
 		WorldKit.place(root, ["plat/flowers", "nat/bush", "plat/mushrooms", "nat/flower_purple"][i % 4], Vector3(cos(a), 0, sin(a)) * 28.0, randf() * 360.0, 1.8)
 	# Sternwarte: Turm + Kuppel + Fernrohr
-	var tower := WorldKit.cylinder(root, 2.6, 6.0, Vector3(0, 3.0, -1), Color("#f2ead8"), false)
+	var tower := WorldKit.cylinder(root, 2.6, 6.0, Vector3(0, 3.0, -1), Color("#f2ead8"), false, "plaster")
 	tower.name = "Observatory"
 	var dome := MeshInstance3D.new()
 	var dm := SphereMesh.new()
@@ -859,7 +860,7 @@ func _build_tower() -> void:
 	tower_h = float(def.helix.h)
 	var R := float(def.helix.r)
 	# Wolkeninsel am Fuß des Turms
-	var base := WorldKit.cylinder(root, R + 6.0, 2.0, Vector3(0, -1.2, 0), Color("#86d06a"), false)
+	var base := WorldKit.cylinder(root, R + 6.0, 2.0, Vector3(0, -1.2, 0), Color("#86d06a"), false, "grass")
 	base.name = "BaseIsle"
 	WorldKit.cylinder(root, R + 6.4, 1.2, Vector3(0, -2.6, 0), Color("#f4f0ff"), false)
 	for i in 18:
@@ -871,7 +872,7 @@ func _build_tower() -> void:
 		var y := f * tower_h / floors
 		var r := lerpf(R - 2.6, R - 4.4, float(f) / floors)
 		var col: Color = [Color("#fff1d8"), Color("#ffe0ec"), Color("#e6f0ff"), Color("#eaffe6")][f % 4]
-		WorldKit.cylinder(root, r, tower_h / floors, Vector3(0, y + tower_h / floors * 0.5, 0), col, false)
+		WorldKit.cylinder(root, r, tower_h / floors, Vector3(0, y + tower_h / floors * 0.5, 0), col, false, "plaster")
 		WorldKit.cylinder(root, r + 0.35, 0.3, Vector3(0, y + 0.15, 0), Color("#c9a0dc"), false)
 		for w in 6:
 			var a2 := TAU * w / 6.0 + f * 0.5
@@ -991,7 +992,7 @@ var _night_glows: Array[Node3D] = []
 
 
 func _build_glowforest() -> void:
-	WorldKit.box(root, Vector3(96, 1, 76), Vector3(0, -0.5, 0), Color("#4f9a46"), false)
+	WorldKit.box(root, Vector3(96, 1, 76), Vector3(0, -0.5, 0), Color("#4f9a46"), false, 1, "grass")
 	_patches([Color("#3f8a3a"), Color("#5aa84c"), Color("#6bb256"), Color("#3a7d40"), Color("#77b85a")], 34, Rect2(-36, -27, 72, 54))
 	_ring(["nat/tree_fat", "nat/tree_oak", "nat/tree_pine", "nat/tree_default", "castle/tree", "plat/tree"], 52, 31.0, 40.0, Vector2(4.2, 6.4))
 	_ring(["nat/bush", "nat/tree_pine", "plat/tree_pine"], 30, 28.0, 31.0, Vector2(2.4, 3.4))
@@ -1056,7 +1057,8 @@ func _patches(cols: Array, count: int, area: Rect2, rad := Vector2(2.5, 6.5)) ->
 		cm.bottom_radius = r
 		cm.height = 0.04
 		cm.radial_segments = 24
-		cm.material = WorldKit.mat(cols[i % cols.size()], 1.0)
+		var pc: Color = cols[i % cols.size()]
+		cm.material = WorldKit.surface("meadow" if pc.g > pc.r * 1.15 else "dirt", pc, 1.0)   # Wiesenflecken / Sandwege
 		d.mesh = cm
 		d.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(d)
@@ -1085,7 +1087,7 @@ func _pond(size: Vector2, cands: Array, deep: Color, shallow: Color, deco := "")
 			cm.top_radius = size.x * 0.5 + 0.8
 			cm.bottom_radius = size.x * 0.5 + 0.8
 			cm.height = 0.1
-			cm.material = WorldKit.mat(Color("#b9a27a"), 1.0)
+			cm.material = WorldKit.surface("pebbles", Color("#b9a27a"), 1.0, {"tile": 1.4})
 			rim.mesh = cm
 			rim.scale = Vector3(1, 1, (size.y + 1.6) / (size.x + 1.6))
 			rim.position = p + Vector3(0, 0.02, 0)
@@ -1211,7 +1213,7 @@ func apply_time_of_day(night: bool, board: Node, animate := true) -> void:
 # --- Wuschel-Wiesen -----------------------------------------------------------------------------------------------
 
 func _build_meadow() -> void:
-	WorldKit.box(root, Vector3(96, 1, 76), Vector3(0, -0.5, 0), Color("#86d06a"), false)
+	WorldKit.box(root, Vector3(96, 1, 76), Vector3(0, -0.5, 0), Color("#86d06a"), false, 1, "grass")
 	_patches([Color("#9bdc76"), Color("#7cc860"), Color("#a6e283"), Color("#f2e6a0"), Color("#93d470")], 34, Rect2(-36, -27, 72, 54))
 	for i in 14:
 		var hill := MeshInstance3D.new()

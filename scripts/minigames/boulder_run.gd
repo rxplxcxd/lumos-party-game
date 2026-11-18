@@ -35,10 +35,10 @@ func _init() -> void:
 
 func build_arena() -> void:
 	# Fester Boden mit Felswänden; die Optik (Streifen, Deko) läuft als Band mit
-	WorldKit.box(world, Vector3(HALF_W * 2.0, 0.5, 40), Vector3(0, -0.25, 2), Color("#b98a5a"))
+	WorldKit.box(world, Vector3(HALF_W * 2.0, 0.5, 40), Vector3(0, -0.25, 2), Color("#b98a5a"), true, 1, "dirt")
 	for side in [-1.0, 1.0]:
 		WorldKit.box(world, Vector3(1.0, 5.0, 40), Vector3(side * (HALF_W + 0.5), 2.5, 2), Color("#8a6a4a"))
-		WorldKit.box(world, Vector3(9.0, 7.0, 40), Vector3(side * (HALF_W + 5.4), 2.0, 2), Color("#9c7a52"), false)
+		WorldKit.box(world, Vector3(9.0, 7.0, 40), Vector3(side * (HALF_W + 5.4), 2.0, 2), Color("#9c7a52"), false, 1, "cliff")
 	for i in 14:
 		var strip := WorldKit.box(world, Vector3(HALF_W * 2.0 - 0.1, 0.04, 1.2), Vector3(0, 0.01, -10.0 + i * 2.0), Color("#a7784b"), false)
 		_decor.append(strip)

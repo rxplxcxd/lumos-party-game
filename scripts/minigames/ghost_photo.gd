@@ -45,17 +45,17 @@ func build_arena() -> void:
 	var hx := ROOM.x * 0.5
 	var hz := ROOM.y * 0.5
 	# Dielenboden mit Läufer
-	WorldKit.box(world, Vector3(ROOM.x, 1, ROOM.y), Vector3(0, -0.5, 0), Color("#5a3d2e"))
+	WorldKit.box(world, Vector3(ROOM.x, 1, ROOM.y), Vector3(0, -0.5, 0), Color("#5a3d2e"), true, 1, "wood")
 	for k in 14:
 		WorldKit.box(world, Vector3(ROOM.x, 0.02, 0.06), Vector3(0, 0.005, -hz + 0.5 + k * 1.05), Color("#3e2a20"), false)
-	var rug := WorldKit.box(world, Vector3(9.0, 0.03, 5.5), Vector3(0, 0.02, 0.2), Color("#6a2a3a"), false)
+	var rug := WorldKit.box(world, Vector3(9.0, 0.03, 5.5), Vector3(0, 0.02, 0.2), Color("#6a2a3a"), false, 1, "fabric")
 	rug.name = "Rug"
-	WorldKit.box(world, Vector3(8.4, 0.035, 4.9), Vector3(0, 0.025, 0.2), Color("#8a3a4a"), false)
+	WorldKit.box(world, Vector3(8.4, 0.035, 4.9), Vector3(0, 0.025, 0.2), Color("#8a3a4a"), false, 1, "fabric")
 	# Tapeten-Wände (hinten + Seiten; vorne nur eine niedrige Holzvertäfelung für freie Sicht)
 	var wall := Color("#3e2a55")
-	WorldKit.box(world, Vector3(ROOM.x, 7, 0.5), Vector3(0, 3.5, -hz), wall)
-	WorldKit.box(world, Vector3(0.5, 7, ROOM.y), Vector3(-hx, 3.5, 0), wall)
-	WorldKit.box(world, Vector3(0.5, 7, ROOM.y), Vector3(hx, 3.5, 0), wall)
+	WorldKit.box(world, Vector3(ROOM.x, 7, 0.5), Vector3(0, 3.5, -hz), wall, true, 1, "plaster")
+	WorldKit.box(world, Vector3(0.5, 7, ROOM.y), Vector3(-hx, 3.5, 0), wall, true, 1, "plaster")
+	WorldKit.box(world, Vector3(0.5, 7, ROOM.y), Vector3(hx, 3.5, 0), wall, true, 1, "plaster")
 	WorldKit.box(world, Vector3(ROOM.x, 1.0, 0.4), Vector3(0, 0.5, hz), Color("#4a3226"))
 	for k in 11:
 		WorldKit.box(world, Vector3(0.18, 6.2, 0.05), Vector3(-hx + 1.0 + k * 2.0, 3.3, -hz + 0.28), Color("#4a3366"), false)
@@ -327,7 +327,7 @@ func custom_entrance(d: Node, targets: Array[Vector3], cs: Node) -> void:
 	var cam_pos: Vector3 = (d.cam as Camera3D).global_position
 	dav.rig.face_now(cam_pos - dp)
 	_lamps[dud].look_at(cam_pos, Vector3.UP)
-	dav.rig.react("surprised" if dav.rig.has_clip("surprised") else "scared")
+	dav.rig.react("scared")   # Reaktion aus der Bibliothek („surprised“ gibt es nur als Animation → vorher keine Reaktion)
 	Audio.sfx("zap", dp, -2.0, 1.2)
 	d.flash(Color(1, 1, 1, 1), 0.55)
 	Juice.shake(0.2)

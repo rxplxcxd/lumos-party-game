@@ -58,7 +58,7 @@ func on_setup() -> void:
 
 func build_arena() -> void:
 	WorldKit.water(world, Vector2(80, 80), -0.6, Color(0.06, 0.4, 0.65), Color(0.3, 0.8, 0.9))
-	WorldKit.box(world, Vector3(26, 1.0, 16), Vector3(0, -0.5, 0), Color("#f2d9a0"))
+	WorldKit.box(world, Vector3(26, 1.0, 16), Vector3(0, -0.5, 0), Color("#f2d9a0"), true, 1, "sand")
 	# Spielfeldlinien, Netz mit Pfosten, unsichtbare Netzwand für Figuren
 	for z in [-HALF_Z, HALF_Z]:
 		WorldKit.box(world, Vector3(HALF_X * 2, 0.02, 0.12), Vector3(0, 0.01, z), Color("#ffffff"), false)

@@ -35,7 +35,7 @@ func _init() -> void:
 
 func build_arena() -> void:
 	WorldKit.water(world, Vector2(120, 140), -0.05, Color(0.08, 0.4, 0.6), Color(0.35, 0.8, 0.9))
-	WorldKit.box(world, Vector3(20, 0.6, 8), Vector3(0, -0.3, 5.5), Color("#f2d9a0"))
+	WorldKit.box(world, Vector3(20, 0.6, 8), Vector3(0, -0.3, 5.5), Color("#f2d9a0"), true, 1, "sand")
 	# Weiten-Bojen alle 10 m mit Schildern
 	for m in range(10, 70, 10):
 		for x in [-6.2, 6.2]:

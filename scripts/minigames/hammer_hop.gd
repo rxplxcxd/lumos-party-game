@@ -31,9 +31,9 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.cylinder(world, RADIUS, 1.0, Vector3(0, -0.5, 0), Color("#c8b48a"))
-	WorldKit.cylinder(world, RADIUS + 0.4, 0.3, Vector3(0, -1.1, 0), Color("#7a6a50"), false)
-	WorldKit.cylinder(world, RADIUS * 0.7, 8.0, Vector3(0, -5.5, 0), Color("#8f8270"), false)
+	WorldKit.cylinder(world, RADIUS, 1.0, Vector3(0, -0.5, 0), Color("#c8b48a"), true, "flagstone")
+	WorldKit.cylinder(world, RADIUS + 0.4, 0.3, Vector3(0, -1.1, 0), Color("#7a6a50"), false, "rock")
+	WorldKit.cylinder(world, RADIUS * 0.7, 8.0, Vector3(0, -5.5, 0), Color("#8f8270"), false, "rock")
 	# Zentrale Säule mit Getriebe
 	var hub := WorldKit.cylinder(world, 0.9, 3.0, Vector3(0, 1.5, 0), Color("#6b5b45"))
 	hub.name = "Hub"

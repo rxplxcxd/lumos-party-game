@@ -43,11 +43,11 @@ func on_setup() -> void:
 
 func build_arena() -> void:
 	# Schlucht: Felswände links/rechts, tief unten Nebel; Startplateau und Zielplateau mit Bettchen
-	WorldKit.box(world, Vector3(16, 1, 4), Vector3(0, -0.5, 7.0), Color("#5a6a4a"))
+	WorldKit.box(world, Vector3(16, 1, 4), Vector3(0, -0.5, 7.0), Color("#5a6a4a"), true, 1, "cobble_moss")
 	var goal_z := 6.0 - STEPS * STEP_LEN - 2.0
-	WorldKit.box(world, Vector3(16, 1, 5), Vector3(0, -0.5, goal_z - 1.0), Color("#5a6a4a"))
+	WorldKit.box(world, Vector3(16, 1, 5), Vector3(0, -0.5, goal_z - 1.0), Color("#5a6a4a"), true, 1, "cobble_moss")
 	for sd in [-1.0, 1.0]:
-		WorldKit.box(world, Vector3(6, 30, 60), Vector3(sd * 12.0, -14.0, goal_z * 0.5), Color("#4a4a62"), false)
+		WorldKit.box(world, Vector3(6, 30, 60), Vector3(sd * 12.0, -14.0, goal_z * 0.5), Color("#4a4a62"), false, 1, "stone_wall")
 	for i in 4:
 		# Balken mit Querlatten
 		var len := STEPS * STEP_LEN + 2.0

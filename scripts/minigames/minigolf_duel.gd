@@ -91,7 +91,7 @@ func grad_at(p: Vector2) -> Vector2:
 
 
 func build_arena() -> void:
-	WorldKit.box(world, Vector3(HALF_X * 2 + 1.0, 1.0, HALF_Z * 2 + 1.0), Vector3(0, -0.5, 0), Color("#3fae4a"))
+	WorldKit.box(world, Vector3(HALF_X * 2 + 1.0, 1.0, HALF_Z * 2 + 1.0), Vector3(0, -0.5, 0), Color("#3fae4a"), true, 1, "grass@0.5")
 	# Banden
 	var wood := Color("#c8874a")
 	for side in [-1.0, 1.0]:

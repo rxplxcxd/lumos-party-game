@@ -53,7 +53,7 @@ func on_setup() -> void:
 
 func build_arena() -> void:
 	# Gartenpavillon: Holzdeck, großer Spieltisch mit Tischdecke, Lampions
-	WorldKit.box(world, Vector3(16, 0.4, 10), Vector3(0, -0.2, 0), Color("#c49a6c"))
+	WorldKit.box(world, Vector3(16, 0.4, 10), Vector3(0, -0.2, 0), Color("#c49a6c"), true, 1, "wood")
 	WorldKit.box(world, Vector3(COLS * CW + 1.0, 0.8, ROWS * CH + 1.0), Vector3(0, 0.4, 0), Color("#8a5a34"))
 	WorldKit.box(world, Vector3(COLS * CW + 0.8, 0.04, ROWS * CH + 0.8), Vector3(0, 0.82, 0), Color("#e8425a"), false)
 	for x in range(-2, 3):

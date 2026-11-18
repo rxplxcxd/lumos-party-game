@@ -37,7 +37,7 @@ func _init() -> void:
 
 func build_arena() -> void:
 	# Straßennetz: Asphalt mit Mittellinien, vier Häuserblöcke mit Gebäuden, Bäumchen und Laternen
-	WorldKit.box(world, Vector3(HALF_X * 2 + 1.4, 0.4, HALF_Z * 2 + 1.4), Vector3(0, -0.2, 0), Color("#5d6270"))
+	WorldKit.box(world, Vector3(HALF_X * 2 + 1.4, 0.4, HALF_Z * 2 + 1.4), Vector3(0, -0.2, 0), Color("#5d6270"), true, 1, "concrete")
 	for z in [-5.8, 0.0, 5.8]:
 		for x in range(-9, 10, 2):
 			WorldKit.box(world, Vector3(0.9, 0.02, 0.14), Vector3(x, 0.01, z), Color("#ffe066"), false)

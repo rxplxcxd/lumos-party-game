@@ -2,7 +2,8 @@ extends Node
 ## Kontrollbilder „Leben je Brett“ (BoardLife, ab 1.5.3): je Brett ein Bild aus der Spielkamera und eines aus der
 ## Weite (Rand, Himmel – dort fliegen Vögel, Ballons, Polarlicht, Sternschnuppen). Partie wie im Spiel (alle CPU).
 ##   xvfb-run -a ./godot --fixed-fps 30 --path . --resolution 960x540 res://tools/dev/Run.tscn -- \
-##     --dev-script=res://tools/dev/board_life_shot.gd --out=/pfad [--only=meadow,frost] [--board-life=0]
+##     --dev-script=res://tools/dev/board_life_shot.gd --out=/pfad [--only=meadow,frost] [--board-life=0] [--views=spiel,nah,weit]
+## nah = feste Kamera über dem Startfeld (deterministisch, für Vorher/Nachher-Vergleiche)
 
 const BOARDS := ["meadow", "pirates", "dungeon", "sky", "graveyard", "frost", "station", "glowforest", "cake", "tower"]
 
@@ -15,6 +16,7 @@ func run() -> void:
 	var out := String(args.get("out", "user://board_life"))
 	DirAccess.make_dir_recursive_absolute(out)
 	var only: Array = String(args.get("only", "")).split(",", false)
+	var views: Array = String(args.get("views", "spiel,weit")).split(",", false)   # spiel · nah · weit
 	if args.has("board-life"):
 		Game.settings["board_life"] = String(args["board-life"]) != "0"
 	Game.settings["quality"] = "high"
@@ -39,9 +41,31 @@ func run() -> void:
 				break
 		for k in 150:   # Einführung laufen lassen, Partikel und Vögel verteilen sich
 			await tree.process_frame
-		await RenderingServer.frame_post_draw
-		tree.root.get_texture().get_image().save_png(out.path_join("%s_spiel.png" % b))
 		var board := tree.current_scene as Node3D
+		if "spiel" in views:
+			await RenderingServer.frame_post_draw
+			tree.root.get_texture().get_image().save_png(out.path_join("%s_spiel.png" % b))
+		if "nah" in views and board:
+			# Feste Nah-Kamera über dem Startfeld (wie die Spielkamera, aber deterministisch → Vorher/Nachher vergleichbar)
+			var sp: Array = board.get("spaces")
+			var p0 := Vector3.ZERO
+			if not sp.is_empty():
+				var s0: Variant = sp[0]
+				p0 = s0["pos"] if s0 is Dictionary else (s0 as Object).get("pos")
+			var nc := Camera3D.new()
+			nc.fov = 50.0
+			board.add_child(nc)
+			nc.global_position = p0 + Vector3(-3.0, 6.5, 8.5)
+			nc.look_at(p0 + Vector3(0, 0.6, 0))
+			nc.current = true
+			for k in 12:
+				await tree.process_frame
+			await RenderingServer.frame_post_draw
+			tree.root.get_texture().get_image().save_png(out.path_join("%s_nah.png" % b))
+			nc.queue_free()
+		if not "weit" in views:
+			print("BOARD-SHOT %s" % b)
+			continue
 		var bl := board.get_node_or_null("BoardLife") as BoardLife if board else null
 		var c := bl.center if bl else Vector3.ZERO
 		var e := bl.extent if bl else 30.0
@@ -59,3 +83,4 @@ func run() -> void:
 		print("BOARD-SHOT %s" % b)
 		cam.queue_free()
 	print("BOARD-SHOTS OK")
+	get_tree().quit()   # sonst läuft der Prozess bis zum äußeren Timeout weiter

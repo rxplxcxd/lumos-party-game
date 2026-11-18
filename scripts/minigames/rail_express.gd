@@ -36,7 +36,7 @@ func on_setup() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.box(world, Vector3(LENGTH + 40, 1, 22), Vector3(LENGTH * 0.5, -0.5, 0), Color("#8fd16a"))
+	WorldKit.box(world, Vector3(LENGTH + 40, 1, 22), Vector3(LENGTH * 0.5, -0.5, 0), Color("#8fd16a"), true, 1, "grass")
 	var rng2 := RandomNumberGenerator.new()
 	rng2.seed = 4242
 	var x := 12.0

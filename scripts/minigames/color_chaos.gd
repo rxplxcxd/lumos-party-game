@@ -26,7 +26,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.box(world, Vector3(N * TILE + 1.0, 1.0, N * TILE + 1.0), Vector3(0, -0.52, 0), Color("#8a8070"))
+	WorldKit.box(world, Vector3(N * TILE + 1.0, 1.0, N * TILE + 1.0), Vector3(0, -0.52, 0), Color("#8a8070"), true, 1, "flagstone@0.6")
 	for side in [-1.0, 1.0]:
 		WorldKit.box(world, Vector3(0.6, 0.8, N * TILE + 1.6), Vector3(side * (_half + 0.6), 0.4, 0), Color("#ff6fb5"))
 		WorldKit.box(world, Vector3(N * TILE + 1.6, 0.8, 0.6), Vector3(0, 0.4, side * (_half + 0.6)), Color("#6fd0ff"))

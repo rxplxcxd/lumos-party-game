@@ -38,7 +38,7 @@ func _wall_z(k: int) -> float:
 
 
 func build_arena() -> void:
-	WorldKit.box(world, Vector3(HALF_X * 2 + 1, 0.4, DEPTH * ROOMS + 8), Vector3(0, -0.2, -DEPTH * ROOMS * 0.5 + 2.5), Color("#5a3d5c"))
+	WorldKit.box(world, Vector3(HALF_X * 2 + 1, 0.4, DEPTH * ROOMS + 8), Vector3(0, -0.2, -DEPTH * ROOMS * 0.5 + 2.5), Color("#5a3d5c"), true, 1, "planks")
 	for z in range(-int(DEPTH * ROOMS) - 2, 6, 2):
 		WorldKit.box(world, Vector3(HALF_X * 2, 0.02, 0.9), Vector3(0, 0.01, z), Color("#6e4a6e"), false)
 	for side in [-1.0, 1.0]:

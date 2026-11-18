@@ -37,7 +37,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.box(world, Vector3(16, 0.4, 10), Vector3(0, -0.2, 2), Color("#c49a6c"))
+	WorldKit.box(world, Vector3(16, 0.4, 10), Vector3(0, -0.2, 2), Color("#c49a6c"), true, 1, "wood")
 	_board = Node3D.new()
 	world.add_child(_board)
 	_board.position = Vector3(0, 0.4, 0)

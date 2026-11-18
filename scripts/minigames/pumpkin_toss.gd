@@ -31,7 +31,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.box(world, Vector3(30, 1, 90), Vector3(0, -0.5, -30), Color("#86c95a"))
+	WorldKit.box(world, Vector3(30, 1, 90), Vector3(0, -0.5, -30), Color("#86c95a"), true, 1, "grass")
 	for d in range(10, 75, 10):
 		var line := WorldKit.box(world, Vector3(26, 0.04, 0.3), Vector3(0, 0.02, 4.0 - d), Color(1, 1, 1, 1), false)
 		line.name = "Line%d" % d

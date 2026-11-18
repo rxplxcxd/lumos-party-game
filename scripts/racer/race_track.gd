@@ -7,6 +7,9 @@ extends Node3D
 
 const STEP := 0.5
 ## Fahrbahn-/Leitplanken-Stile der Themen (Strecken ab v2).
+## Oberflächenfamilie des Unterbaus (Böschung unter der Fahrbahn, Stützpfeiler) je Thema – Farbe bleibt aus STYLES.under
+const UNDER_FAMILY := {"snow": "snow", "city": "concrete", "desert": "cliff", "volcano": "lava_rock", "candy": "", "space": "rock"}
+
 const STYLES := {
 	"storm": {"asphalt": Color(0.15, 0.16, 0.19), "kerb_a": Color(0.95, 0.75, 0.1), "kerb_b": Color(0.14, 0.14, 0.16), "wet": 1.0,
 		"edge_glow": 1.0, "glow_col": Color(1.0, 0.8, 0.35), "under": Color(0.16, 0.16, 0.2), "wall_a": Color("#2a2c34"), "wall_b": Color("#f2c230"), "wall_emit": 0.45},
@@ -49,7 +52,8 @@ var _n := 0
 func build(d: Dictionary) -> void:
 	def = d
 	width = d.width
-	var pts: Array = d.points
+	var pts: Array = _lift_below_ground(d)
+	d.points = pts
 	curve = Curve3D.new()
 	curve.bake_interval = 0.2
 	var n := pts.size()
@@ -93,6 +97,134 @@ func build(d: Dictionary) -> void:
 	_bake_frames()
 	_build_mesh()
 	_build_extras()
+
+
+## 1.5.4: Fahrbahn nie unter der Bodenfläche. build_path verteilt beim Rundenschluss auch den Höhenfehler über die
+## Runde (Summe der Steigungen ≠ 0) – seit der Streckenverlängerung (1.5.3) lagen dadurch auf 7 Strecken lange Abschnitte
+## bis 4 m unter dem Rasen (Boden-Oberkante −0,3 m): Fahrbahn und Karts unsichtbar. Hebt solche Punkte auf ground_y an,
+## weich über ±LIFT_SPAN Punkte (Maximum, dann Mittel – keine Knicke). Loopings und Gleitflüge werden starr angehoben
+## (Form bleibt, Looping-Mittelpunkt wandert mit), Unterwasser-Abschnitte bleiben fest (Wasserspiegel ist fest);
+## Brücken über die eigene Strecke heben sich mit, damit die Durchfahrtshöhe bleibt. Der Weltraum hat keinen Boden.
+## Gleiches Ergebnis auf allen Geräten (online deterministisch); ein zweiter Aufruf ändert nichts mehr.
+const LIFT_SPAN := 4
+
+
+static func _lift_below_ground(d: Dictionary) -> Array:
+	var pts: Array = d.points
+	if String(d.get("theme", "")) == "space":
+		return pts
+	var floor_y := float(d.get("ground_y", -0.15))
+	var n := pts.size()
+	# kind: 0 = frei · 1 = fest auf 0 (Wasser) · 2 = starr (ganzer Abschnitt um denselben Betrag)
+	var kind := PackedByteArray()
+	kind.resize(n)
+	var rigid_val := PackedFloat32Array()
+	rigid_val.resize(n)
+	for w in d.water:
+		for i in range(int(w[0]), int(w[1]) + 1):
+			kind[posmod(i, n)] = 1
+	var rigid: Array = []   # [von, bis, Looping-Dictionary oder null]
+	for g in d.glide:
+		rigid.append([int(g[0]), int(g[1]), null])
+	for lp in d.loops:
+		rigid.append([int(lp.from), int(lp.to), lp])
+	var lift := PackedFloat32Array()
+	lift.resize(n)
+	for i in n:
+		lift[i] = maxf(0.0, floor_y - (pts[i] as Vector3).y)
+	for r in rigid:
+		var a := int(r[0])
+		var b := int(r[1])
+		var lr := maxf(lift[posmod(a, n)], lift[posmod(b, n)])   # Ein- und Ausfahrt liegen am Boden
+		for i in range(a, b + 1):
+			var j := posmod(i, n)
+			if kind[j] == 0:
+				kind[j] = 2
+				rigid_val[j] = lr
+	for i in n:
+		if kind[i] == 1:
+			lift[i] = 0.0
+		elif kind[i] == 2:
+			lift[i] = rigid_val[i]
+	var need := false
+	for i in n:
+		need = need or lift[i] > 0.0
+	if not need:
+		return pts
+	var w := float(d.get("width", 15.0))
+	# Brücken über die eigene Strecke: Paare (unten i, oben j) aus der ursprünglichen Lage – Fahrbahnen überdecken sich
+	# waagrecht und liegen 0,5–9 m übereinander. Der obere Abschnitt hebt sich mindestens so weit wie der untere.
+	var pairs: Array = []
+	for i in n:
+		var pi: Vector3 = pts[i]
+		for j in n:
+			var dij := mini(absi(i - j), n - absi(i - j))
+			var pj: Vector3 = pts[j]
+			if dij > 4 and kind[j] == 0 and pj.y > pi.y + 0.5 and pj.y < pi.y + 9.0 and Vector2(pi.x - pj.x, pi.z - pj.z).length() < w + 6.0:
+				pairs.append(Vector2i(i, j))
+	var sm := _smooth_lift(lift, kind)
+	for it in 4:
+		var changed := false
+		for pr: Vector2i in pairs:
+			if sm[pr.y] < sm[pr.x] - 0.01:
+				lift[pr.y] = maxf(lift[pr.y], sm[pr.x] + 0.05)
+				changed = true
+		if not changed:
+			break
+		sm = _smooth_lift(lift, kind)
+	var out: Array = []
+	for i in n:
+		var p: Vector3 = pts[i]
+		p.y += sm[i]
+		out.append(p)
+	for r in rigid:
+		if r[2] != null:
+			var lr := sm[posmod(int(r[0]), n)]
+			if lr > 0.0:
+				(r[2] as Dictionary)["center"] = (r[2] as Dictionary).center + Vector3.UP * lr
+	return out
+
+
+## Anhebung weich machen: Maximum über ±LIFT_SPAN Punkte, dann Mittel. Feste (Wasser, 0) und starre Abschnitte behalten
+## ihren Wert; vor festen Abschnitten läuft die Anhebung linear aus (dort darf die Fahrbahn kurz tiefer liegen).
+static func _smooth_lift(lift: PackedFloat32Array, kind: PackedByteArray) -> PackedFloat32Array:
+	var n := lift.size()
+	var dil := PackedFloat32Array()
+	dil.resize(n)
+	for i in n:
+		var m := 0.0
+		for k in range(-LIFT_SPAN, LIFT_SPAN + 1):
+			var j := posmod(i + k, n)
+			if kind[j] != 1:
+				m = maxf(m, lift[j])
+		dil[i] = m if kind[i] == 0 else lift[i]
+	var gap := PackedInt32Array()
+	gap.resize(n)
+	for i in n:
+		var g := LIFT_SPAN + 1
+		for k in range(1, LIFT_SPAN + 1):
+			if kind[posmod(i + k, n)] == 1 or kind[posmod(i - k, n)] == 1:
+				g = k
+				break
+		gap[i] = g
+	var out := PackedFloat32Array()
+	out.resize(n)
+	for i in n:
+		if kind[i] != 0:
+			out[i] = lift[i]
+			continue
+		var acc := 0.0
+		var acc_raw := 0.0
+		for k in range(-LIFT_SPAN, LIFT_SPAN + 1):
+			var j := posmod(i + k, n)
+			acc += dil[j] if kind[j] != 1 else 0.0
+			acc_raw += lift[j] if kind[j] != 1 else 0.0
+		var avg := acc / float(2 * LIFT_SPAN + 1)
+		if gap[i] > LIFT_SPAN:
+			out[i] = maxf(avg, lift[i])
+		else:   # vor Wasserabschnitten nur mitteln (kein Ausdehnen) und auslaufen lassen – kein Buckel vor der Einfahrt
+			out[i] = acc_raw / float(2 * LIFT_SPAN + 1) * float(gap[i]) / float(LIFT_SPAN + 1)
+	return out
 
 
 # --- Rahmen -------------------------------------------------------------------------------------------
@@ -329,8 +461,9 @@ func _build_mesh() -> void:
 	add_child(road_mi)
 	var under_mi := MeshInstance3D.new()
 	under_mi.mesh = under.commit()
-	var um := WorldKit.mat(style.get("under", Color(0.35, 0.3, 0.38)))
-	um.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var um := WorldKit.surface(UNDER_FAMILY.get(def.theme, "rock"), style.get("under", Color(0.35, 0.3, 0.38)), 0.85, {"double_sided": true})
+	if um is BaseMaterial3D:
+		(um as BaseMaterial3D).cull_mode = BaseMaterial3D.CULL_DISABLED
 	under_mi.material_override = um
 	add_child(under_mi)
 	var wall_mi := MeshInstance3D.new()
@@ -456,7 +589,7 @@ func _build_pillars() -> void:
 	cm.bottom_radius = 0.9
 	cm.height = 1.0
 	cm.radial_segments = 10
-	cm.material = WorldKit.mat((STYLES.get(def.theme, {}) as Dictionary).get("under", Color(0.45, 0.42, 0.48)), 0.85)
+	cm.material = WorldKit.surface(UNDER_FAMILY.get(def.theme, "rock"), (STYLES.get(def.theme, {}) as Dictionary).get("under", Color(0.45, 0.42, 0.48)), 0.85)
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = cm

@@ -30,7 +30,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.cylinder(world, RADIUS + 0.6, 1.0, Vector3(0, -0.5, 0), Color("#c9b48a"))
+	WorldKit.cylinder(world, RADIUS + 0.6, 1.0, Vector3(0, -0.5, 0), Color("#c9b48a"), true, "flagstone")
 	WorldKit.cylinder(world, RADIUS - 1.5, 0.04, Vector3(0, 0.02, 0), Color("#d8c49a"), false)
 	for i in 16:
 		var a := TAU * i / 16.0

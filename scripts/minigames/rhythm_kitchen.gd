@@ -127,7 +127,7 @@ func _playable_count(c: int) -> int:
 
 func build_arena() -> void:
 	# Holzboden mit Fliesen-Läufer, cremige Wände, großes Sonnenfenster
-	WorldKit.box(world, Vector3(22, 1, 14), Vector3(0, -0.5, -1), Color("#d9b48a"))
+	WorldKit.box(world, Vector3(22, 1, 14), Vector3(0, -0.5, -1), Color("#d9b48a"), true, 1, "planks")
 	for x in 11:
 		for z in 2:
 			var tile := MeshInstance3D.new()

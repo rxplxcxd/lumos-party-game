@@ -155,6 +155,7 @@ func apply() -> void:
 	RenderingServer.directional_shadow_atlas_set_size(int(cfg.shadow_size), true)
 	apply_fps()
 	_walk(get_tree().root)
+	LumosMaterials.refresh_quality()
 	_fps_label.visible = bool(Game.settings.get("show_fps", false))
 	if changed:
 		preset_changed.emit(active)

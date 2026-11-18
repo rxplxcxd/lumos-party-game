@@ -35,10 +35,10 @@ func _init() -> void:
 
 func build_arena() -> void:
 	# Werkstatt-Hof: Holzdielen, Bretterstapel, Sägeböcke, Werkzeugwand
-	WorldKit.box(world, Vector3(18, 0.4, 10), Vector3(0, -0.2, 0), Color("#c49a6c"))
+	WorldKit.box(world, Vector3(18, 0.4, 10), Vector3(0, -0.2, 0), Color("#c49a6c"), true, 1, "wood")
 	for i in 9:
 		WorldKit.box(world, Vector3(18, 0.02, 0.06), Vector3(0, 0.01, -4.5 + i * 1.1), Color("#9c744a"), false)
-	WorldKit.box(world, Vector3(18, 4.5, 0.4), Vector3(0, 2.0, -4.6), Color("#8a5a34"), false)
+	WorldKit.box(world, Vector3(18, 4.5, 0.4), Vector3(0, 2.0, -4.6), Color("#8a5a34"), false, 1, "planks")
 	for i in 7:
 		WorldKit.box(world, Vector3(0.12, 0.9, 0.12), Vector3(-7.5 + i * 2.5, 3.2, -4.3), Color("#5b5f66"), false)
 		WorldKit.cylinder(world, 0.22, 0.12, Vector3(-7.5 + i * 2.5, 3.7, -4.3), Color("#d9824a"), false)

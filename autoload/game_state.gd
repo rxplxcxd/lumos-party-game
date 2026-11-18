@@ -275,7 +275,7 @@ var settings := {
 	"haptics": true, "touch_opacity": 0.8, "touch_scale": 1.0, "touch_layout": {},
 	"auto_accel": true, "steer_sens": 1.0, "screen_shake": 1.0, "quality": "auto", "show_fps": false, "dynamic_res": true, "frame_rate": "auto", "season_deco": "auto",
 	"color_saturation": 1.0, "color_strength": 1.0, "lively_faces": true, "lively_board": true, "lively_minigames": true, "lively_race": true,
-		"split_screen": true, "multi_display": true,
+		"split_screen": true, "surface_detail": true, "multi_display": true,
 }
 var party: Dictionary = {}
 var race_cfg := {"track": "lumos_ring", "laps": 3, "cpu_level": 1, "mode": "single", "cup": 0}
@@ -647,3 +647,4 @@ func save_settings() -> void:
 func _exit_tree() -> void:
 	LumosFace.clear_cache()
 	LumosAppearance.clear_cache()
+	LumosMaterials.clear_cache()   # statische Material-/Shader-/Texturcaches vor dem Engine-Ende freigeben

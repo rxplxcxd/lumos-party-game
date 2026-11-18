@@ -90,8 +90,14 @@ func build(t: RaceTrack, d: Dictionary, env: Environment) -> void:
 
 # --- Boden & Kulisse ----------------------------------------------------------------------------------
 
+## Oberflächenfamilie des Streckenbodens je Thema (LumosMaterials); Süßigkeiten bleiben glatt-einfarbig.
+const GROUND_FAMILY := {"storm": "meadow", "snow": "snow", "city": "concrete", "desert": "dune", "forest": "grass",
+	"jungle": "meadow", "falls": "grass"}
+
+
 func _build_ground() -> void:
 	var col: Color = DECO[theme].ground
+	var fam: String = GROUND_FAMILY.get(theme, "")
 	if theme == "desert":
 		# Boden in Kacheln, die Schlucht unter dem Gleitflug bleibt offen
 		var tile := 24.0
@@ -102,10 +108,10 @@ func _build_ground() -> void:
 				var c := Vector3(ix * tile + bc.x, 0, iz * tile + bc.y)
 				if not _in_gorge(c, tile * 0.5):
 					centers.append(c + Vector3(0, -0.8, 0))
-		WorldKit.boxes(self, Vector3(tile, 1, tile), centers, col)   # ein Mesh statt ~600 Kacheln
+		WorldKit.boxes(self, Vector3(tile, 1, tile), centers, col, fam)   # ein Mesh statt ~600 Kacheln
 		return
 	var b := bounds(track)
-	WorldKit.box(self, Vector3(b.size.x + 320.0, 1, b.size.y + 320.0), Vector3(b.get_center().x, -0.8, b.get_center().y), col, false)
+	WorldKit.box(self, Vector3(b.size.x + 320.0, 1, b.size.y + 320.0), Vector3(b.get_center().x, -0.8, b.get_center().y), col, false, 1, fam)
 
 
 ## Ausdehnung der Strecke in x/z (für Boden, Horizont und Kulisse).
@@ -464,7 +470,7 @@ func _build_city() -> void:
 		w.position = Vector3(mid.x, -0.12, mid.z)
 		w.rotation.y = track.frame((g.x + g.y) * 0.5).basis.get_euler().y + PI * 0.5
 		for side in [-1.0, 1.0]:
-			var quay := WorldKit.box(self, Vector3(1.2, 0.5, 260), Vector3(mid.x, -0.05, mid.z), Color("#8a8f99"), false)
+			var quay := WorldKit.box(self, Vector3(1.2, 0.5, 260), Vector3(mid.x, -0.05, mid.z), Color("#8a8f99"), false, 1, "stone_wall")
 			quay.rotation.y = w.rotation.y
 			quay.position += quay.global_basis.x * float(side) * 8.4
 	# Straßenlaternen (Lichter) an Kreuzungen
@@ -486,7 +492,7 @@ func _build_desert() -> void:
 		while s < g.y + 10.0:
 			var fr := track.frame(s)
 			var o := fr.origin
-			var floor_box := WorldKit.box(self, Vector3(34, 1, 12), Vector3(o.x, -32.0, o.z), Color("#a87850"), false)
+			var floor_box := WorldKit.box(self, Vector3(34, 1, 12), Vector3(o.x, -32.0, o.z), Color("#a87850"), false, 1, "cliff")
 			floor_box.rotation.y = fr.basis.get_euler().y
 			for side in [-1.0, 1.0]:
 				var wp: Vector3 = o + fr.basis.x * float(side) * 16.0

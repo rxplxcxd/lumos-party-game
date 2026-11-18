@@ -2,7 +2,7 @@ extends Node
 ## Kontrollbilder eines Minispiels mit 4 CPUs: wartet auf die Spielphase und speichert zu den angegebenen
 ## Sekunden je ein PNG.
 ##   xvfb-run ./godot --path . --resolution 1280x720 res://tools/dev/Run.tscn -- --dev-script=res://tools/dev/minigame_shot.gd
-##     --only=nail_pro --out=/pfad --at=6,20
+##     --only=nail_pro --out=/pfad --at=6,20 [--quality=high]
 
 
 func run() -> void:
@@ -31,6 +31,9 @@ func run() -> void:
 	if args.has("boss"):
 		cs["boss"] = String(args.boss)   # Boss-Kampf: bestimmten Boss zeigen (--boss=ignis)
 	Game.minigame_setup = cs
+	if args.has("quality"):   # Software-Renderer (xvfb) würde sonst „Niedrig“ wählen – Vergleichsbilder bei fester Stufe
+		Game.settings["quality"] = String(args.quality)
+		Gfx.apply()
 	tree.change_scene_to_file(String(m.scene))
 	var mg: MinigameBase = null
 	while mg == null:

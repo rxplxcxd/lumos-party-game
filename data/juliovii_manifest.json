@@ -1,0 +1,593 @@
+{
+ "_doc": "JulioVII-Stylized-Texturpakete (Premium-Visual-Überarbeitung). Originale liegen NICHT im Repository (1,1 GB, Einzeldatei bis 462 MB > GitHub-Grenze 100 MB); reproduzierbar mit tools/assets/fetch_juliovii.py, Prüfsummen unten. Abruf: 2026-11-17/18.",
+ "packs": [
+  {
+   "title": "Materials Stylized Concrete",
+   "url": "https://juliovii.itch.io/fmp-stylized-concrete",
+   "slug": "fmp-stylized-concrete",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Materials_Stylized_Concrete.zip",
+   "bytes": 27797162,
+   "sha256": "b4102e96a472c15476f94d3ba138a87fabc11d99a60177cc7bbc3e1cfea8b570",
+   "zip_ok": true,
+   "entries": 74,
+   "materials": [
+    "Stylized_ConcreteNaked_01",
+    "Stylized_ConcreteNaked_02",
+    "Stylized_ConcreteTiles_01",
+    "Stylized_ConcreteTiles_02",
+    "Stylized_Concrete_01",
+    "Stylized_Concrete_02",
+    "Stylized_PlasterCracked_01",
+    "Stylized_PlasterCracked_02",
+    "Stylized_StoneAndPlasterWall_01"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Height",
+    "Metallic",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 63
+   },
+   "image_formats": {
+    ".jpg": 63
+   },
+   "other_files": {
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  },
+  {
+   "title": "Stylized Bricks & Pavement",
+   "url": "https://juliovii.itch.io/ftp-bricks-pavement",
+   "slug": "ftp-bricks-pavement",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Materials_Stylized_BricksAndPavement.zip",
+   "bytes": 54295651,
+   "sha256": "3c0a4d111aafe45f53e894d6ff20b60b648f300c606ce0eb97fff6fa693a3518",
+   "zip_ok": true,
+   "entries": 74,
+   "materials": [
+    "Stylized_BricksPavement_01",
+    "Stylized_BricksPavement_02",
+    "Stylized_BricksPavement_03",
+    "Stylized_BricksPavement_04",
+    "Stylized_Bricks_Red_01",
+    "Stylized_Bricks_Red_02",
+    "Stylized_TilesDiamond_01",
+    "Stylized_TilesDiamond_02",
+    "Stylized_Tiles_Red_01"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Height",
+    "Metallic",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 63
+   },
+   "image_formats": {
+    ".jpg": 63
+   },
+   "other_files": {
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  },
+  {
+   "title": "Stylized Metals 01",
+   "url": "https://juliovii.itch.io/ftp-metals-01",
+   "slug": "ftp-metals-01",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Materials_Stylized_Metals_01.zip",
+   "bytes": 35759329,
+   "sha256": "37500e14facdf711444a0bcac72e9d40e0cbdf644bd756af33b856d360d5661a",
+   "zip_ok": true,
+   "entries": 74,
+   "materials": [
+    "Stylized_BaseMetal_01",
+    "Stylized_BaseMetal_02",
+    "Stylized_CooperPanels_01",
+    "Stylized_MetalAndGlass_01",
+    "Stylized_MetalChamber_01",
+    "Stylized_MetalCoins_01",
+    "Stylized_MetalFloor_01",
+    "Stylized_MetalPainted_01",
+    "Stylized_MetalPainted_02"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Height",
+    "Metallic",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 56,
+    "2048x2048": 7
+   },
+   "image_formats": {
+    ".jpg": 63
+   },
+   "other_files": {
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  },
+  {
+   "title": "Stylized Stone & Wood  02",
+   "url": "https://juliovii.itch.io/ftp-stone-wood-02",
+   "slug": "ftp-stone-wood-02",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Materials_Stylized_02.zip",
+   "bytes": 37494427,
+   "sha256": "fd2ae2a0cadffc14181a1d605e3eb1162b0d104a97846f784f8ea4d9138f0883",
+   "zip_ok": true,
+   "entries": 61,
+   "materials": [
+    "StoneGround_01",
+    "StoneGround_Circle_01",
+    "StoneTilesSand_01",
+    "StoneTiles_01",
+    "Stone_06",
+    "WoodBark_03",
+    "WoodenFloor_01",
+    "WoodenFloor_02",
+    "WoodenPlanks_01"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Height",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 50
+   },
+   "image_formats": {
+    ".jpg": 50
+   },
+   "other_files": {
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  },
+  {
+   "title": "Texture Pack: Stylized 03",
+   "url": "https://juliovii.itch.io/ftp-stylized-03",
+   "slug": "ftp-stylized-03",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Materials_Stylized_03.zip",
+   "bytes": 462250132,
+   "sha256": "b3b03bdc89a1767d58f95d75dcfae9651c9b7304d427cfcf715f8e014b8f5331",
+   "zip_ok": true,
+   "entries": 138,
+   "materials": [
+    "Stylized_19_StoneTiles",
+    "Stylized_20_SmallTiles",
+    "Stylized_21_WoodTables02",
+    "Stylized_22_Tatami",
+    "Stylized_23_LeatherSofa",
+    "Stylized_24_LeatherSofa02",
+    "Stylized_25_Ground",
+    "Stylized_26_MetallicPlates",
+    "Stylized_27_ConcreteTiles",
+    "Stylized_28_MetallicWall",
+    "Stylized_29_ConcreteTiles02",
+    "Stylized_30_GroundStone",
+    "Stylized_31_Sand01",
+    "Stylized_32_Sand02",
+    "Stylized_33_Mud"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Gloss",
+    "Height",
+    "Metallic",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 120
+   },
+   "image_formats": {
+    ".jpg": 120
+   },
+   "other_files": {
+    ".hdr": 1,
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  },
+  {
+   "title": "Materials Stylized Bricks & Plaster",
+   "url": "https://juliovii.itch.io/ftp-stylized-bricks-plaster",
+   "slug": "ftp-stylized-bricks-plaster",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Materials_Stylized_BricksPlaster.zip",
+   "bytes": 30424473,
+   "sha256": "a224d97b438dc007e3db3d2937617f5c137fa5fea9badd9c500bb2c93942089b",
+   "zip_ok": true,
+   "entries": 74,
+   "materials": [
+    "Stylized_Plaster_01",
+    "Stylized_RandomTiles_01",
+    "Stylized_Rounded_Bricks_01",
+    "Stylized_Rounded_Bricks_02",
+    "Stylized_Rounded_Bricks_03",
+    "Stylized_StarTiles_01",
+    "Stylized_StoneTiles_01",
+    "Stylized_StoneTiles_02",
+    "Stylized_StoneTiles_03"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Height",
+    "Metallic",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 63
+   },
+   "image_formats": {
+    ".jpg": 63
+   },
+   "other_files": {
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  },
+  {
+   "title": "Materials Stylized Metal Panels",
+   "url": "https://juliovii.itch.io/ftp-stylized-metal-panels",
+   "slug": "ftp-stylized-metal-panels",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Materials_Stylized_MetalPanels.zip",
+   "bytes": 52481438,
+   "sha256": "d19b4e22c041b9045f91c0810b79e9574b19288b3e6009e8ef602dd89210443b",
+   "zip_ok": true,
+   "entries": 78,
+   "materials": [
+    "Stylized_CorrugatedMetal_01",
+    "Stylized_MetalBeams_01",
+    "Stylized_MetalBeams_02",
+    "Stylized_MetalPanels_01",
+    "Stylized_MetalPanels_02",
+    "Stylized_MetalPanels_03",
+    "Stylized_MetalPanels_04",
+    "Stylized_MetalPanels_05",
+    "Stylized_MetalPanels_06"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Height",
+    "Metallic",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 67
+   },
+   "image_formats": {
+    ".jpg": 67
+   },
+   "other_files": {
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  },
+  {
+   "title": "Materials Stylized Mix Stones 01",
+   "url": "https://juliovii.itch.io/ftp-stylized-mix-stones-01",
+   "slug": "ftp-stylized-mix-stones-01",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Materials_Stylized_MixStones_01.zip",
+   "bytes": 39845862,
+   "sha256": "56dd1996a48658f1d83fb64cdaf06d863ce4b4720041b329c5618d7b7968b6f2",
+   "zip_ok": true,
+   "entries": 78,
+   "materials": [
+    "Stylized_AlienStone_01",
+    "Stylized_AlienStone_02",
+    "Stylized_DirtGround_01",
+    "Stylized_DirtGround_02",
+    "Stylized_GreenScales_01",
+    "Stylized_LavaRock_01",
+    "Stylized_LavaRock_02",
+    "Stylized_MetalGrid_01",
+    "Stylized_StoneGround_01"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Emission",
+    "Height",
+    "Metallic",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 67
+   },
+   "image_formats": {
+    ".jpg": 67
+   },
+   "other_files": {
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  },
+  {
+   "title": "Materials Stylized Ceramic Tiles 01",
+   "url": "https://juliovii.itch.io/ftp-stylizedceramictiles01",
+   "slug": "ftp-stylizedceramictiles01",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Materials_Stylized_CeramicTiles.zip",
+   "bytes": 31046124,
+   "sha256": "c5c34985698e0c75dc490cd99681b4580eeee3e71692e9999911b45688ba7eb7",
+   "zip_ok": true,
+   "entries": 74,
+   "materials": [
+    "Stylized_BathroomWall_01",
+    "Stylized_CeramicTiles_01",
+    "Stylized_CeramicTiles_02",
+    "Stylized_CeramicTiles_03",
+    "Stylized_CeramicTiles_04",
+    "Stylized_CeramicTiles_05",
+    "Stylized_CeramicTilingFloor_01",
+    "Stylized_CeramicTilingFloor_02",
+    "Stylized_CeramicTilingFloor_03"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Height",
+    "Metallic",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 63
+   },
+   "image_formats": {
+    ".jpg": 63
+   },
+   "other_files": {
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  },
+  {
+   "title": "Stylized Grass & Dirt",
+   "url": "https://juliovii.itch.io/ftpgrass-dirt",
+   "slug": "ftpgrass-dirt",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Stylized_GrassAndDirt.zip",
+   "bytes": 20099375,
+   "sha256": "706bddc944f28c751a99fccbbd90f8b00cf5f89ea57f534b74aacc469733fd0d",
+   "zip_ok": true,
+   "entries": 73,
+   "materials": [
+    "Stylized_HandpaintedDirt_01",
+    "Stylized_HandpaintedGrassAndDirt_01",
+    "Stylized_HandpaintedGrass_01",
+    "Stylized_HandpaintedGrass_02",
+    "Stylized_HandpaintedSandAndRocks_01",
+    "Stylized_HandpaintedSand_01",
+    "Stylized_HandpaintedStones_01",
+    "Stylized_HandpaintedStones_02",
+    "Stylized_HandpaintedStones_03"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Height",
+    "Metallic",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 62
+   },
+   "image_formats": {
+    ".jpg": 62
+   },
+   "other_files": {
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  },
+  {
+   "title": "Stylized Bricks 01",
+   "url": "https://juliovii.itch.io/ftpstylized-bricks-01",
+   "slug": "ftpstylized-bricks-01",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Materials_Stylized_Bricks_01.zip",
+   "bytes": 68204409,
+   "sha256": "bcfd79357d3e2c1eaa9c4590a538f56d5d56d0771308b05fe8ba099d35300e63",
+   "zip_ok": true,
+   "entries": 74,
+   "materials": [
+    "Stylized_Bricks_Red_03",
+    "Stylized_Bricks_Red_04",
+    "Stylized_Bricks_Red_05",
+    "Stylized_Bricks_Red_06",
+    "Stylized_Bricks_Red_07",
+    "Stylized_Bricks_Red_08",
+    "Stylized_Bricks_Red_09",
+    "Stylized_Bricks_Red_10",
+    "Stylized_Bricks_Red_11"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Height",
+    "Metallic",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 63
+   },
+   "image_formats": {
+    ".jpg": 63
+   },
+   "other_files": {
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  },
+  {
+   "title": "Stylized Stone & Wood",
+   "url": "https://juliovii.itch.io/stylized-stone-wood",
+   "slug": "stylized-stone-wood",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Materials_Stylized_01.zip",
+   "bytes": 32647542,
+   "sha256": "2c76254cf89e1f72efb8169f79225698a81ab1d9210d08c5625f057509d2df4f",
+   "zip_ok": true,
+   "entries": 74,
+   "materials": [
+    "PlasterWall_01",
+    "Stone_01",
+    "Stone_02",
+    "Stone_03",
+    "Stone_04",
+    "Stone_05",
+    "WoodBark_01",
+    "WoodBark_02",
+    "Wood_01"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Height",
+    "Metallic",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 63
+   },
+   "image_formats": {
+    ".jpg": 63
+   },
+   "other_files": {
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  },
+  {
+   "title": "Texture Pack: Stylized 01",
+   "url": "https://juliovii.itch.io/stylizedpk01",
+   "slug": "stylizedpk01",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Materials_Stylized.zip",
+   "bytes": 101489718,
+   "sha256": "fd85b1ca804b9d90a7d8186a6251672426b5a7984e70a2faf98c6afe2b70aaf3",
+   "zip_ok": true,
+   "entries": 84,
+   "materials": [
+    "Stylized_01_Bricks",
+    "Stylized_02_Stone_Ground",
+    "Stylized_03_Wood_Planks",
+    "Stylized_04_Rocks",
+    "Stylized_05_Roof",
+    "Stylized_06_Sand",
+    "Stylized_07_Stone_Snowv2",
+    "Stylized_08_Snow",
+    "Stylized_09_Snow02"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Gloss",
+    "Height",
+    "Metallic",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 64,
+    "2048x2048": 8
+   },
+   "image_formats": {
+    ".jpg": 72
+   },
+   "other_files": {
+    ".hdr": 1,
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  },
+  {
+   "title": "Texture Pack: Stylized 02",
+   "url": "https://juliovii.itch.io/stylizedpk02",
+   "slug": "stylizedpk02",
+   "price": "Name your own price (kostenloser Download genutzt)",
+   "license": "CC-BY 4.0 (Produktseite: \"This pack is licensed CC-BY. Any commercial application is allowed except reselling.\")",
+   "file": "Materials_Stylized_02.zip",
+   "bytes": 107331699,
+   "sha256": "e617715e40142e64f1f84c2cf5fba7c9925cc04575baf7bb2d63f34bb074ea29",
+   "zip_ok": true,
+   "entries": 84,
+   "materials": [
+    "Stylized_10_AlienEggs",
+    "Stylized_11_Barrels",
+    "Stylized_12_RoofRound",
+    "Stylized_13_RoofSquare",
+    "Stylized_14_Desert_Tiles",
+    "Stylized_15_Grass",
+    "Stylized_16_Stone_Floor",
+    "Stylized_17_Broken_Ice",
+    "Stylized_18_Ice"
+   ],
+   "channels": [
+    "AO",
+    "BaseColor",
+    "Gloss",
+    "Height",
+    "Metallic",
+    "Normal",
+    "Roughness"
+   ],
+   "image_sizes": {
+    "4096x4096": 72
+   },
+   "image_formats": {
+    ".jpg": 72
+   },
+   "other_files": {
+    ".hdr": 1,
+    ".blend": 1
+   },
+   "not_downloaded": "Substance-Quelldateien (SBS/SBSAR) – laut Produktseite kostenpflichtig, auf der Gratis-Downloadseite nicht angeboten"
+  }
+ ]
+}
