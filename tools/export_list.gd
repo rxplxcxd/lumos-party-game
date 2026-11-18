@@ -7,8 +7,9 @@ extends Node
 ## godot --headless --path . res://tools/dev/Run.tscn -- --dev-script=res://tools/export_list.gd
 
 const DIRS := ["res://autoload", "res://scripts", "res://scenes", "res://assets/animations", "res://assets/shaders",
-	"res://assets/music", "res://assets/sfx", "res://assets/fonts"]
-const EXT := ["gd", "tscn", "tres", "gdshader", "ogg", "ttf", "res"]
+	"res://assets/music", "res://assets/sfx", "res://assets/fonts", "res://assets/materials"]
+# webp: Lumos-Oberflächen (assets/materials/surfaces) – LumosMaterials lädt sie per Pfad, kein Katalog verweist darauf
+const EXT := ["gd", "tscn", "tres", "gdshader", "ogg", "ttf", "res", "webp"]
 
 
 func run() -> void:

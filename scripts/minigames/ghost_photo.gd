@@ -327,7 +327,7 @@ func custom_entrance(d: Node, targets: Array[Vector3], cs: Node) -> void:
 	var cam_pos: Vector3 = (d.cam as Camera3D).global_position
 	dav.rig.face_now(cam_pos - dp)
 	_lamps[dud].look_at(cam_pos, Vector3.UP)
-	dav.rig.react("surprised" if dav.rig.has_clip("surprised") else "scared")
+	dav.rig.react("scared")   # Reaktion aus der Bibliothek („surprised“ gibt es nur als Animation → vorher keine Reaktion)
 	Audio.sfx("zap", dp, -2.0, 1.2)
 	d.flash(Color(1, 1, 1, 1), 0.55)
 	Juice.shake(0.2)

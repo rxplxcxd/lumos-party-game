@@ -2,9 +2,10 @@
 // Die Palettenfarbe des Spiels bleibt die Grundfarbe (tint); die JulioVII-Textur liefert nur Detail: Helligkeits- und
 // leichte Farbtonvariation (Mittelwert 1,0 → Farbe bleibt), Rauheit (Alphakanal) und Normalmap (OpenGL-Konvention).
 // Projektion ohne UVs (triplanar, Welt- oder Objektraum, Kachelgröße in Metern) – passt auf jede Low-Poly-Form.
-// Stufen (uniform quality): 0 = nur Farbe, eine Projektion (Niedrig) · 1 = + Normalmap, eine Projektion (Mittel)
-//                           2 = volle Dreifach-Projektion mit weichen Übergängen + Großflächen-Variation (Hoch/Ultra)
-// Kosten: Stufe 0 = 1 Texturzugriff, Stufe 1 = 2, Stufe 2 = 2 je sichtbarer Projektion (flache Böden: 2, Kanten: 4–6).
+// Stufen (uniform quality): 0 = nur Farbe (Niedrig) · 1 = + Normalmap der Hauptprojektion (Mittel)
+//                           2 = Normalmap aller Projektionen + Großflächen-Variation (Hoch/Ultra)
+// Farbe immer weich überblendet. Kosten flacher Böden: Stufe 0 = 1 Texturzugriff, 1 und 2 = 2; Kanten 2–3 (Stufe 0),
+// 3–4 (Stufe 1), 4–6 (Stufe 2).
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
 
@@ -65,12 +66,18 @@ void fragment() {
 	vec3 p = v_pos / tile;
 	// Projektionen: Y (Boden) uv = xz · X uv = (z, -y) · Z uv = (x, -y) – Bildoberkante zeigt auf Wänden nach oben
 	vec3 an = abs(n);
-	vec3 w;
-	if (quality >= 2) {
-		w = pow(an, vec3(sharpness));
-		w /= (w.x + w.y + w.z);
-	} else {
-		w = (an.y >= an.x && an.y >= an.z) ? vec3(0.0, 1.0, 0.0) : (an.x >= an.z ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 0.0, 1.0));
+	// Farbe in allen Stufen weich überblendet (eine harte Einzelprojektion zeigte auf runden Seitenwänden Nähte);
+	// flache Flächen brauchen trotzdem nur eine Projektion (Gewichte < 0,01 werden übersprungen)
+	vec3 w = pow(an, vec3(sharpness));
+	w /= (w.x + w.y + w.z);
+	// Normalmap: Hoch alle Projektionen, Mittel nur die Hauptprojektion, Niedrig keine
+	vec3 wn_w = w;
+	if (quality == 1) {
+		// Hauptprojektion, an der Umschaltstelle (zwei Gewichte gleich) weich ausgeblendet → keine Lichtnaht
+		float wmax = max(w.x, max(w.y, w.z));
+		float wmid = w.x + w.y + w.z - wmax - min(w.x, min(w.y, w.z));
+		float fade = smoothstep(0.0, 0.35, wmax - wmid);
+		wn_w = (w.y >= w.x && w.y >= w.z) ? vec3(0.0, fade, 0.0) : (w.x >= w.z ? vec3(fade, 0.0, 0.0) : vec3(0.0, 0.0, fade));
 	}
 	vec2 uvx = vec2(p.z, -p.y);
 	vec2 uvy = p.xz;
@@ -80,15 +87,15 @@ void fragment() {
 	bool nm = quality >= 1 && normal_strength > 0.001;
 	if (w.x > 0.01) {
 		a += texture(detail_albedo, uvx) * w.x;
-		if (nm) { vec2 g = texture(detail_normal, uvx).rg * 2.0 - 1.0; t += vec3(0.0, g.g, g.r) * w.x; }
+		if (nm && wn_w.x > 0.01) { vec2 g = texture(detail_normal, uvx).rg * 2.0 - 1.0; t += vec3(0.0, g.g, g.r) * wn_w.x; }
 	}
 	if (w.y > 0.01) {
 		a += texture(detail_albedo, uvy) * w.y;
-		if (nm) { vec2 g = texture(detail_normal, uvy).rg * 2.0 - 1.0; t += vec3(g.r, 0.0, -g.g) * w.y; }
+		if (nm && wn_w.y > 0.01) { vec2 g = texture(detail_normal, uvy).rg * 2.0 - 1.0; t += vec3(g.r, 0.0, -g.g) * wn_w.y; }
 	}
 	if (w.z > 0.01) {
 		a += texture(detail_albedo, uvz) * w.z;
-		if (nm) { vec2 g = texture(detail_normal, uvz).rg * 2.0 - 1.0; t += vec3(g.r, g.g, 0.0) * w.z; }
+		if (nm && wn_w.z > 0.01) { vec2 g = texture(detail_normal, uvz).rg * 2.0 - 1.0; t += vec3(g.r, g.g, 0.0) * wn_w.z; }
 	}
 	float dist = length(VERTEX);   // Abstand zur Kamera (Sichtraum)
 	float near = 1.0 - smoothstep(fade_far * 0.35, fade_far, dist);

@@ -184,7 +184,7 @@ func _act_ball(a: CharacterRig, b: CharacterRig) -> void:
 		await tw.finished
 		if randf() < 0.18:
 			# verfehlt! Ball kullert weg, kurzer Schreck, dann holen
-			to.react("surprised" if to.has_clip("surprised") else "dodge")
+			to.react("shocked")   # Reaktion aus der Bibliothek (vorher Animationsname → „Reaktion fehlt“, kein Schreck)
 			var roll := to.position + Vector3(randf_range(-1.5, 1.5), 0.2, randf_range(0.8, 1.6))
 			var rt := ball.create_tween()
 			rt.tween_property(ball, "position", roll, 0.6).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)

@@ -152,20 +152,25 @@ static func _lift_below_ground(d: Dictionary) -> Array:
 	if not need:
 		return pts
 	var w := float(d.get("width", 15.0))
-	var sm := _smooth_lift(lift, kind)
-	# Brücken über die eigene Strecke: der obere Abschnitt hebt sich mit, damit die Durchfahrtshöhe bleibt
-	var raised := false
+	# Brücken über die eigene Strecke: Paare (unten i, oben j) aus der ursprünglichen Lage – Fahrbahnen überdecken sich
+	# waagrecht und liegen 0,5–9 m übereinander. Der obere Abschnitt hebt sich mindestens so weit wie der untere.
+	var pairs: Array = []
 	for i in n:
-		if sm[i] <= 0.0:
-			continue
 		var pi: Vector3 = pts[i]
 		for j in n:
 			var dij := mini(absi(i - j), n - absi(i - j))
 			var pj: Vector3 = pts[j]
-			if dij > 4 and kind[j] == 0 and pj.y > pi.y + 1.0 and Vector2(pi.x - pj.x, pi.z - pj.z).length() < w + 6.0 and lift[j] < sm[i]:
-				lift[j] = sm[i]
-				raised = true
-	if raised:
+			if dij > 4 and kind[j] == 0 and pj.y > pi.y + 0.5 and pj.y < pi.y + 9.0 and Vector2(pi.x - pj.x, pi.z - pj.z).length() < w + 6.0:
+				pairs.append(Vector2i(i, j))
+	var sm := _smooth_lift(lift, kind)
+	for it in 4:
+		var changed := false
+		for pr: Vector2i in pairs:
+			if sm[pr.y] < sm[pr.x] - 0.01:
+				lift[pr.y] = maxf(lift[pr.y], sm[pr.x] + 0.05)
+				changed = true
+		if not changed:
+			break
 		sm = _smooth_lift(lift, kind)
 	var out: Array = []
 	for i in n:
@@ -209,11 +214,16 @@ static func _smooth_lift(lift: PackedFloat32Array, kind: PackedByteArray) -> Pac
 			out[i] = lift[i]
 			continue
 		var acc := 0.0
+		var acc_raw := 0.0
 		for k in range(-LIFT_SPAN, LIFT_SPAN + 1):
 			var j := posmod(i + k, n)
 			acc += dil[j] if kind[j] != 1 else 0.0
+			acc_raw += lift[j] if kind[j] != 1 else 0.0
 		var avg := acc / float(2 * LIFT_SPAN + 1)
-		out[i] = maxf(avg, lift[i]) if gap[i] > LIFT_SPAN else avg * float(gap[i]) / float(LIFT_SPAN + 1)
+		if gap[i] > LIFT_SPAN:
+			out[i] = maxf(avg, lift[i])
+		else:   # vor Wasserabschnitten nur mitteln (kein Ausdehnen) und auslaufen lassen – kein Buckel vor der Einfahrt
+			out[i] = acc_raw / float(2 * LIFT_SPAN + 1) * float(gap[i]) / float(LIFT_SPAN + 1)
 	return out
 
 

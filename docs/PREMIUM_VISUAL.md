@@ -74,3 +74,56 @@ ohne Einsatzort.
 | `duck.zip` | Low-Poly-Ente (GLB 27 KB, Textur 512²) | **keine Lizenzangabe** | nicht eingesetzt bis zur Klärung der Lizenz |
 
 Alle Zips bleiben unverändert im Repository (nichts gelöscht oder überschrieben).
+
+## B. Lumos-Materialsystem
+
+| Baustein | Datei | Aufgabe |
+|---|---|---|
+| Aufbereitung | `tools/assets/build_surfaces.py` + `tools/assets/surfaces_src.json` | 28 Familien aus den Originalarchiven: Kastenfilter-Verkleinerung (kachelbar, nie hochskaliert), AO eingebacken, Detailfarbe normiert (Helligkeit × gedämpfter Farbton), Rauheit im Alphakanal, Normalen renormiert |
+| Laufzeitwerte | `scripts/core/surface_stats.gd` (erzeugt) | Normierung je Familie (linear `k`, sRGB `ks`), Mittelfarbe |
+| Shader | `assets/shaders/lumos_surface.gdshader` | triplanar im Welt- oder Objektraum, Palettenfarbe × Detail, asymmetrisches Detail, Großflächen-Variation, Ausblenden zur Ferne, drei Stufen über ein Uniform, farbraumunabhängig |
+| Bibliothek | `scripts/core/lumos_materials.gd` | Familien-Parameter, Cache je (Familie, Farbe, Optionen), Freigabe je Szenenwechsel und beim Beenden, Stufe bei Grafikwechsel nachziehen, doppelseitige Variante |
+| Modell-Vereinheitlichung | `LumosMaterials.normalize_model` / `apply_to_model` (in `Assets._instantiate`) | metallic = 1 → 0 (Nature/Space Kit), Plastikglanz < 0,45 → 0,55, sprechende Materialnamen → Detail im Objektraum |
+| Uferkante | `assets/shaders/shore.gdshader`, `WorldKit.shore()` | Flachwasser-Verlauf + wandernder Schaum am Inselrand (ersetzt die Tiefen-/Refraktionsidee des hochgeladenen Wasser-Shaders ohne Bildschirmkopie) |
+| Einbindung | `WorldKit.surface()`, `family`-Parameter von `box/boxes/cylinder`, Kurzform `"familie@stärke"` | ein Wort am Aufruf genügt; ohne Familie bleibt alles wie bisher |
+| Einstellung | „Oberflächen-Details“ (Einstellungen, Standard an) | aus = bisheriges einfarbiges Material (Rückfall) |
+
+**Familien:** grass, meadow, dirt, sand, dune, pebbles, flagstone, cobble_moss, rock, cliff, stone_wall, bricks, plaster,
+planks, wood, bark, roof, metal, metal_panel, snow, ice, tiles, checker, paving, concrete, lava_rock, fabric, mud –
+Parameter (Kachel, Rauheit, Metallic, Stärken) in `LumosMaterials.FAMILIES`, Regeln in `VISUAL_STANDARD.md`.
+
+**Grafikstufen (Qualitätsprofile):** Niedrig = nur Detailfarbe (flache Böden 1 Texturzugriff), Mittel = + Normalmap der
+Hauptprojektion (an Umschaltstellen weich ausgeblendet), Hoch/Ultra = Normalmap aller Projektionen + Großflächen-
+Variation. Farbe in allen Stufen weich überblendet (anfangs harte Einzelprojektion → Naht auf runden Seitenwänden,
+behoben). Wechsel der Grafikstufe wirkt sofort (Uniform), die Einstellung „Oberflächen-Details“ ab der nächsten Szene.
+
+**Wichtigster technischer Befund:** Der Compatibility-Renderer dieses Builds rechnet **ohne Linear-Umrechnung** –
+weder Texturen mit `source_color` noch Farb-Uniforms werden dekodiert (`tools/dev/srgb_probe.gd`: Uniform 0,5 → 0,502,
+Rohwert 0,5 → 0,502). Eine linear berechnete Normierung machte alle Flächen ~30 % heller (Messung
+`tools/dev/surface_probe.gd --neutral --raw=det`: 1,29 statt 1,0). Der Shader erkennt den Modus jetzt selbst und bleibt
+auf beiden Wegen farbtreu: Lumos ohne Detail = altes Material Pixel für Pixel; mit Detail ±1 % Mittelwert.
+
+## C. Visuelle Prüfung (Audit)
+
+Methode: feste Kameras und fester Zufall (`material_shot.gd`, `board_life_shot.gd --views=nah,weit`, `track_shot.gd`,
+`minigame_shot.gd --quality=high`), Vorher = unveränderte Arbeitskopie von `f1e251b5`, gleiche Auflösung, gleiches Licht.
+Materialzählung aller GLB/GLTF (`mat_census`), Texturliste aller Importe, Strecken-Geometrie (`track_check.gd`).
+
+### C.1 Befunde und Ursachen
+
+| Bereich | Befund | Ursache | Maßnahme |
+|---|---|---|---|
+| Große Flächen (Inseln, Böden, Wände, Böschungen) | einfarbig, „Platzhalter“-Wirkung, keine Oberfläche | erzeugte Primitive ohne UVs mit Flat-Material | Lumos-Oberflächen (triplanar, keine UVs nötig) |
+| Kenney Nature Kit (688 Materialien, 329 Modelle) / Space Kit (463) | dunkel, spiegeln Himmelsfarbe | glTF ohne Metallic-Angabe → metallic = 1 | beim Laden auf 0 (Metall-Namen 0,5) |
+| KayKit Platformer (370), Mini-Game (266), City Builder (41) | Plastikglanz (Rauheit 0,2–0,4) | Exportwerte | auf 0,55 (Glas/Leuchten/Eis/Kristall ausgenommen) |
+| Farbatlas-Modelle (Kenney/KayKit `colormap`, 1 Material je Paket) | in Ordnung | Palette ist der Stil | unverändert |
+| Große Inseln (Zylinder r = 9–31 m) | Kanten im Umriss | 64 Segmente fest | 64–128 nach Radius |
+| Uferlinien | harter Schnitt Wasser/Sand | kein Übergang | Uferring (Flachwasser + Schaum) |
+| Strecken (7 von 12) | Fahrbahn bis 765 m je Runde unter dem Rasen | Höhen-Schließfehler über die Runde verteilt (s. E) | Anhebung beim Streckenbau |
+| Texturen | Quellen 4K, Spiel nutzt 512²/1024² | – | kein 4K im Spiel; Detail per Kachel (150–350 Texel/m) |
+| Kompression | Projektstandard verlustfrei (`compress/mode=0`) | richtig für Paletten (Blockkompression lässt Farbfelder bluten) | Detailtexturen VRAM-komprimiert (BC3/RGTC), Paletten bleiben |
+| Mipmaps / Filter | Mipmaps an (Projektstandard) | – | Detailtexturen zusätzlich anisotrop |
+| Normalmaps | alle 14 Pakete OpenGL-Konvention | – | keine Umrechnung nötig, Konvention im Shader dokumentiert |
+| Paket-Vorschaubilder | 1920×1080-Vorschauen (`contents.png`, `Preview.png` …) importiert | liegen in Asset-Ordnern | nicht exportiert (Exportliste nur geladene Dateien) – kein Laufzeitkosten-Befund |
+| Wiederholungsmuster | bei großen Flächen sichtbar möglich | Kachel | Großflächen-Variation + Ausblenden zur Ferne |
+| Nachtszenen (Friedhof, Zauberwald-Nacht) | Detail dunkelt nur ab → Nacht bleibt Nacht; Friedhof zu dunkel | asymmetrisches Detail | Friedhof halbe Stärke |
