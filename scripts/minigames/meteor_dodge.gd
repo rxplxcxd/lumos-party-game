@@ -23,8 +23,8 @@ func _init() -> void:
 
 func build_arena() -> void:
 	# Sternschnuppen-Wiese: Ein runder Hügel bei Abenddämmerung, Sternschnuppen-Brocken fallen herab
-	WorldKit.cylinder(world, RADIUS + 0.5, 2.0, Vector3(0, -1.0, 0), Color("#6fb85e"))
-	WorldKit.cylinder(world, RADIUS + 1.2, 1.8, Vector3(0, -1.3, 0), Color("#a8845a"), false)
+	WorldKit.cylinder(world, RADIUS + 0.5, 2.0, Vector3(0, -1.0, 0), Color("#6fb85e"), true, "grass")
+	WorldKit.cylinder(world, RADIUS + 1.2, 1.8, Vector3(0, -1.3, 0), Color("#a8845a"), false, "cliff")
 	for i in 14:
 		var a := randf() * TAU
 		var r := randf_range(2.0, RADIUS - 1.0)

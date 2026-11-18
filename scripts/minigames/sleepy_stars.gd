@@ -39,7 +39,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.cylinder(world, 11.0, 1.0, Vector3(0, -0.5, 0), Color("#7cc46a"))
+	WorldKit.cylinder(world, 11.0, 1.0, Vector3(0, -0.5, 0), Color("#7cc46a"), true, "grass")
 	var pos := [Vector3(0, 0, -5.2), Vector3(4.2, 0, -2.6), Vector3(0, 0, -0.4), Vector3(-4.2, 0, -2.6)]
 	for k in 4:
 		var stem := WorldKit.cylinder(world, 0.35, 1.2, pos[k] + Vector3(0, 0.6, 0), Color("#f4ead2"), false)

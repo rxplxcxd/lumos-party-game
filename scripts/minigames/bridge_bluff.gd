@@ -37,8 +37,8 @@ func _init() -> void:
 
 func build_arena() -> void:
 	# Startplateau, vier Brückenfelder, dahinter Hängebrücken zur Zielinsel über einer nebligen Schlucht
-	WorldKit.box(world, Vector3(13.5, 1.0, 5.0), Vector3(0, -0.5, 4.0), Color("#c9a26b"))
-	WorldKit.box(world, Vector3(13.5, 6.0, 5.0), Vector3(0, -4.0, 4.0), Color("#8a6a4a"), false)
+	WorldKit.box(world, Vector3(13.5, 1.0, 5.0), Vector3(0, -0.5, 4.0), Color("#c9a26b"), true, 1, "dirt")
+	WorldKit.box(world, Vector3(13.5, 6.0, 5.0), Vector3(0, -4.0, 4.0), Color("#8a6a4a"), false, 1, "cliff")
 	for i in 4:
 		var body := StaticBody3D.new()
 		world.add_child(body)
@@ -68,7 +68,7 @@ func build_arena() -> void:
 		for s in [-1.0, 1.0]:
 			WorldKit.box(world, Vector3(0.06, 0.06, 7.2), Vector3(PAD_X[i] + s * PAD_W * 0.38, 0.5, -5.2), Color("#e8d2a0"), false)
 		_pads.append({"body": body, "cs": cs, "mesh": mi, "label": lb, "x": PAD_X[i]})
-	WorldKit.box(world, Vector3(14, 1.0, 4.0), Vector3(0, -0.5, -11.0), Color("#7cc85a"), false)
+	WorldKit.box(world, Vector3(14, 1.0, 4.0), Vector3(0, -0.5, -11.0), Color("#7cc85a"), false, 1, "grass")
 	WorldKit.place(world, "plat/flag", Vector3(0, 0, -11.0), 0.0, 1.4)
 	WorldKit.place(world, "plat/chest", Vector3(2.5, 0, -11.5), 0.0, 1.4)
 	WorldKit.scatter(world, ["nat/tree_pine", "nat/rock_large", "nat/bush"], 8, Vector3(0, 0, -12.0), 4.0, 8.0, 0.0)

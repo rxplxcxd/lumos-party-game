@@ -61,7 +61,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.box(world, Vector3(80, 1, 110), Vector3(0, -0.52, -12), Color("#eef4fb"))
+	WorldKit.box(world, Vector3(80, 1, 110), Vector3(0, -0.52, -12), Color("#eef4fb"), true, 1, "ice@0.5")
 	WorldKit.place(world, "hk/snow_bunker", Vector3(-14, 0, 24), 150.0, 3.0)
 	for k in 10:
 		var fan := _make_penguin(Color("#2a2f40"))

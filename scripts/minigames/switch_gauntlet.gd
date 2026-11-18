@@ -56,7 +56,7 @@ func build_arena() -> void:
 	WorldKit.box(world, Vector3(HALF_W * 2, 1.0, 4.6), Vector3(0, -0.5, -6.1), Color("#b6d6ec"))
 	WorldKit.box(world, Vector3(HALF_W * 2, 1.0, 5.4), Vector3(0, -0.5, -11.3), Color("#d9b48a"))
 	WorldKit.box(world, Vector3(HALF_W * 2 + 2, 1.0, 3.0), Vector3(0, -0.5, -15.2), Color("#ffd166"))
-	WorldKit.box(world, Vector3(40, 0.5, 40), Vector3(0, -6.0, 0), Color("#5a8a4a"))
+	WorldKit.box(world, Vector3(40, 0.5, 40), Vector3(0, -6.0, 0), Color("#5a8a4a"), true, 1, "grass")
 	WorldKit.place(world, "plat/flag", Vector3(0, 0, -15.5), 0.0, 1.6)
 	WorldKit.place(world, "plat/chest", Vector3(2.6, 0, -15.8), -20.0, 1.3)
 	# Geländer links überall, rechts nur außerhalb des Windabschnitts

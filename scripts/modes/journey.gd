@@ -115,8 +115,8 @@ func _write() -> void:
 
 func _build_island() -> void:
 	WorldKit.water(self, Vector2(260, 260), -0.6, Color(0.08, 0.42, 0.66), Color(0.3, 0.8, 0.9))
-	WorldKit.cylinder(self, 34.0, 2.0, Vector3(0, -1.0, 0), Color("#f2dca0"))
-	WorldKit.cylinder(self, 30.0, 2.04, Vector3(0, -0.98, 0), Color("#7cc860"))
+	WorldKit.cylinder(self, 34.0, 2.0, Vector3(0, -1.0, 0), Color("#f2dca0"), true, "sand")
+	WorldKit.cylinder(self, 30.0, 2.04, Vector3(0, -0.98, 0), Color("#7cc860"), true, "grass")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4711
 	for i in 30:

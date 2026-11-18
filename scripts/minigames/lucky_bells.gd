@@ -25,7 +25,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.box(world, Vector3(20, 1, 12), Vector3(0, -0.5, -1), Color("#f6d8a8"))
+	WorldKit.box(world, Vector3(20, 1, 12), Vector3(0, -0.5, -1), Color("#f6d8a8"), true, 1, "paving")
 	WorldKit.box(world, Vector3(20, 6, 0.6), Vector3(0, 3, -4.6), Color("#ffb3c7"), false)
 	for k in 9:
 		var lamp := WorldKit.cylinder(world, 0.22, 0.22, Vector3(-8 + k * 2.0, 5.9, -4.2), Color("#fff3a0"), false)

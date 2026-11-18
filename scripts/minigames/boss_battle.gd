@@ -99,11 +99,15 @@ func on_setup() -> void:
 
 # --- Arena ------------------------------------------------------------------------------------------------------
 
+## Oberflächenfamilie des Arenabodens je Umgebung (Farbe bleibt aus der Boss-Definition); Wolken/Torte bleiben glatt.
+const ARENA_FAMILY := {"dungeon": "flagstone", "pirates": "sand", "graveyard": "cobble_moss", "snow": "snow",
+	"observatory": "tiles", "forest_night": "grass", "day": "grass"}
+
 func build_arena() -> void:
 	var ground: Color = def.ground
 	var tile: Color = def.tile
-	WorldKit.cylinder(world, R, 1.0, Vector3(0, -0.5, 0), ground)
-	WorldKit.cylinder(world, R + 0.5, 0.6, Vector3(0, -0.9, 0), tile.darkened(0.3), false)
+	WorldKit.cylinder(world, R, 1.0, Vector3(0, -0.5, 0), ground, true, String(ARENA_FAMILY.get(String(def.env), "")))
+	WorldKit.cylinder(world, R + 0.5, 0.6, Vector3(0, -0.9, 0), tile.darkened(0.3), false, "stone_wall")
 	WorldKit.cylinder(world, 4.2, 0.12, Vector3(BOSS_HOME.x, 0.02, BOSS_HOME.z), tile.darkened(0.12), false)
 	for k in 24:
 		var a := TAU * k / 24.0

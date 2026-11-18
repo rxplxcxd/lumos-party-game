@@ -183,6 +183,10 @@ static func surface(family: String, color: Color, rough := 0.85, opts := {}) -> 
 		return mat(color, rough)
 	var o := opts.duplicate()
 	o["rough"] = rough
+	if "@" in family:   # "grass@0.5" = Familie mit halber Detailstärke (z. B. glatter Golfrasen)
+		var parts := family.split("@")
+		family = parts[0]
+		o["strength"] = float(parts[1])
 	return LumosMaterials.surface(family, color, o)
 
 
@@ -502,7 +506,8 @@ static func backdrop(parent: Node3D, style: String, ground: Color, ground_y := -
 			var g := MeshInstance3D.new()
 			var pm := PlaneMesh.new()
 			pm.size = Vector2(1400, 1400)
-			pm.material = mat(ground, 1.0)
+			# Fernboden: gleiche Familie wie die Spielfläche, große Kachel (blendet zur Ferne ohnehin aus)
+			pm.material = surface({"meadow": "grass", "snow": "snow", "night": "meadow"}.get(style, ""), ground, 1.0, {"tile": 6.0})
 			g.mesh = pm
 			g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			g.position.y = ground_y

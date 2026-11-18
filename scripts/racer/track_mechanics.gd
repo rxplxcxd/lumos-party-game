@@ -608,11 +608,11 @@ func _build_falls(s: float) -> void:
 	var left := -fr.basis.x
 	var rock := Color("#6a767c")
 	# Felswand links, Überhang quer über die Fahrbahn, Stützfels rechts – daraus stürzt der Wasserfall auf die Straße
-	var cliff := WorldKit.box(self, Vector3(5, 26, 22), Vector3.ZERO, rock, false)
+	var cliff := WorldKit.box(self, Vector3(5, 26, 22), Vector3.ZERO, rock, false, 1, "cliff")
 	cliff.global_transform = Transform3D(fr.basis, fr.origin + left * (hw + 4.5) + Vector3.UP * 12.0)
-	var ledge := WorldKit.box(self, Vector3(track.width + 9.0, 2.2, 5.0), Vector3.ZERO, rock.darkened(0.1), false)
+	var ledge := WorldKit.box(self, Vector3(track.width + 9.0, 2.2, 5.0), Vector3.ZERO, rock.darkened(0.1), false, 1, "rock")
 	ledge.global_transform = Transform3D(fr.basis, fr.origin + left * 1.5 + Vector3.UP * 8.6)
-	var pillar := WorldKit.box(self, Vector3(3.2, 9.5, 4.2), Vector3.ZERO, rock.lightened(0.08), false)
+	var pillar := WorldKit.box(self, Vector3(3.2, 9.5, 4.2), Vector3.ZERO, rock.lightened(0.08), false, 1, "rock")
 	pillar.global_transform = Transform3D(fr.basis, fr.origin - left * (hw + 2.2) + Vector3.UP * 4.0)
 	for k in 3:   # Moos und Büsche auf dem Überhang
 		var bp := fr.origin + fr.basis.x * lerpf(-hw, hw, k / 2.0) + Vector3.UP * 9.8

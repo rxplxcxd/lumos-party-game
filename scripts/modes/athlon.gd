@@ -97,7 +97,7 @@ func _tile_pos(k: int) -> Vector3:
 
 
 func _build_world() -> void:
-	WorldKit.box(self, Vector3(110, 1, 90), Vector3(0, -0.5, 0), Color("#86d06a"), false)
+	WorldKit.box(self, Vector3(110, 1, 90), Vector3(0, -0.5, 0), Color("#86d06a"), false, 1, "grass")
 	for i in TRACK_N:
 		_tiles.append(_tile_pos(i))
 	# Laufbahn: helle Platten, Sonderfelder farbig

@@ -36,7 +36,7 @@ func build_arena() -> void:
 	_phys_mat.bounce = 0.0
 	var clouds := WorldKit.water(world, Vector2(200, 200), -8.0, Color(0.92, 0.94, 1.0), Color(1, 1, 1))
 	(clouds.mesh.surface_get_material(0) as ShaderMaterial).set_shader_parameter("wave_height", 0.6)
-	WorldKit.box(world, Vector3(22, 2, 6), Vector3(0, 0, 0.5), Color("#7fc95a"))
+	WorldKit.box(world, Vector3(22, 2, 6), Vector3(0, 0, 0.5), Color("#7fc95a"), true, 1, "grass")
 	for x in BASE_X:
 		var base := WorldKit.box(world, Vector3(2.6, 0.4, 2.6), Vector3(x, BASE_Y + 0.2, 0), Color("#b8a090"))
 		(base as StaticBody3D).physics_material_override = _phys_mat

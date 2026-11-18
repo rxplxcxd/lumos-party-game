@@ -340,7 +340,7 @@ var _ref: CharacterRig
 
 func _build_arena() -> void:
 	# Sandboden mit geharkten Ringen und Sternen-Emblem in der Mitte
-	WorldKit.cylinder(self, 20.6, 1.0, Vector3(0, -0.5, 0), Color("#e8d29a"))
+	WorldKit.cylinder(self, 20.6, 1.0, Vector3(0, -0.5, 0), Color("#e8d29a"), true, "sand")
 	for k in 4:
 		var ring := MeshInstance3D.new()
 		var tm := TorusMesh.new()

@@ -31,7 +31,7 @@ func _init() -> void:
 func build_arena() -> void:
 	WorldKit.water(world, Vector2(160, 160), -1.2)
 	# Schiffsdeck
-	var deck := WorldKit.box(world, Vector3(20, 1.0, 14), Vector3(0, -0.5, 0), Color("#a0703f"))
+	var deck := WorldKit.box(world, Vector3(20, 1.0, 14), Vector3(0, -0.5, 0), Color("#a0703f"), true, 1, "planks")
 	var planks: Array = []
 	for x in range(-9, 10, 2):
 		for z in range(-6, 7, 3):

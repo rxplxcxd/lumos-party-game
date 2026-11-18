@@ -59,6 +59,7 @@ const MODEL_TILE := 0.6        # Kachel auf Modellen kleiner (Requisiten sind kl
 const GLOSSY_OK := ["glass", "glow", "ice", "crystal", "water", "metallic", "gold", "chrome", "gem", "lens", "screen"]
 
 static var _shader: Shader
+static var _shader_2s: Shader   # doppelseitig (Böschungen, offene Meshes)
 static var _tex := {}       # Familie → [Albedo, Normal]
 static var _cache := {}     # Schlüssel → ShaderMaterial
 static var _used := {}      # Schlüssel → Szenen-Generation (Aufräumen wie Assets.prune_cache)
@@ -98,6 +99,11 @@ static func surface(family: String, color := Color(0, 0, 0, 0), opts := {}) -> M
 	var tx := _textures(family)
 	var m := ShaderMaterial.new()
 	m.shader = _shader
+	if bool(opts.get("double_sided", false)):
+		if _shader_2s == null:
+			_shader_2s = Shader.new()
+			_shader_2s.code = _shader.code.replace("cull_back", "cull_disabled")
+		m.shader = _shader_2s
 	m.set_shader_parameter("tint", _own_color(family) if color.a == 0.0 else color)
 	m.set_shader_parameter("detail_albedo", tx[0])
 	m.set_shader_parameter("detail_normal", tx[1])
@@ -132,7 +138,7 @@ static func source_of(m: Material) -> Material:
 
 ## Importiertes Modellmaterial vereinheitlichen (immer, unabhängig von der Einstellung – Fehlerkorrektur):
 ## Nature-/Space-Kit kommen mit metallic = 1 aus dem glTF (Standardwert, vom Exporter nicht gesetzt) – Bäume, Felsen,
-## Klippen wirkten dunkel und spiegelten den Himmel. Glänzender Kunststoff (Rauheit 0,2–0,3) wird auf 0,55 angehoben,
+## Klippen wirkten dunkel und spiegelten den Himmel. Glänzender Kunststoff (Rauheit unter 0,45) wird auf 0,55 angehoben,
 ## Glas/Leuchtteile/Metall bleiben.
 static func normalize_model(m: BaseMaterial3D) -> void:
 	if m.has_meta("lumos_norm"):
@@ -149,8 +155,8 @@ static func normalize_model(m: BaseMaterial3D) -> void:
 	elif m.metallic > 0.9:
 		m.metallic = 0.5
 		m.roughness = maxf(m.roughness * 0.5, 0.45)
-	if not glossy_ok and m.metallic < 0.3 and m.roughness < 0.55 and m.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED:
-		m.roughness = 0.55
+	if not glossy_ok and m.metallic < 0.3 and m.roughness < 0.45 and m.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED:
+		m.roughness = 0.55   # KayKit-Platformer 0,3, Mini-Game 0,2/0,4, City Builder 0,4; Figuren (0,5) bleiben unverändert
 
 
 ## Detail-Variante eines Modellmaterials (oder null, wenn der Name keine Familie hat / Einstellung aus).
@@ -226,6 +232,16 @@ static func prune() -> void:
 	for fam in _tex.keys():
 		if not live.has(fam):
 			_tex.erase(fam)
+
+
+## Beim Beenden: alle statischen Verweise lösen (sonst meldet Godot Shader/Materialien als „leaked at exit“).
+static func clear_cache() -> void:
+	_cache.clear()
+	_used.clear()
+	_model_conv.clear()
+	_tex.clear()
+	_shader = null
+	_shader_2s = null
 
 
 static func cached_count() -> int:

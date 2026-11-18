@@ -117,10 +117,10 @@ func _build_world() -> void:
 					var o := track.frame(ss).origin
 					sand.append(Vector3(o.x, -0.75, o.z))
 				ss += 18.0
-			WorldKit.boxes(self, Vector3(40, 1, 40), sand, Color("#f1d9a0"))
+			WorldKit.boxes(self, Vector3(40, 1, 40), sand, Color("#f1d9a0"), "sand")
 		"volcano":
-			WorldKit.box(self, Vector3(bb.size.x + 320, 1, bb.size.y + 320), Vector3(bc.x, -0.8, bc.z), Color("#7a9a4a"), false)
-			WorldKit.box(self, Vector3(bb.size.x + 60, 1, bb.size.y + 60), Vector3(bc.x, -0.75, bc.z), Color("#b88a5a"), false)
+			WorldKit.box(self, Vector3(bb.size.x + 320, 1, bb.size.y + 320), Vector3(bc.x, -0.8, bc.z), Color("#7a9a4a"), false, 1, "meadow")
+			WorldKit.box(self, Vector3(bb.size.x + 60, 1, bb.size.y + 60), Vector3(bc.x, -0.75, bc.z), Color("#b88a5a"), false, 1, "dirt")
 			for g in track.glide_ranges:   # Lavasee unter dem Gleitflug
 				var gm := track.frame((g.x + g.y) * 0.5)
 				var lava := WorldKit.lava(self, Vector2(40, g.y - g.x + 30.0), -0.5, Vector2(0.05, 0.1))
@@ -131,7 +131,7 @@ func _build_world() -> void:
 			cm.top_radius = 14.0
 			cm.bottom_radius = 46.0
 			cm.height = 38.0
-			cm.material = WorldKit.mat(Color("#8a5a42"), 0.95)
+			cm.material = WorldKit.surface("cliff", Color("#8a5a42"), 0.95, {"tile": 8.0})   # Vulkankegel: Schichtfels
 			cone.mesh = cm
 			var cpos := Vector3(bb.position.x - 70.0, 18, bb.position.y - 50.0)
 			cone.position = cpos
@@ -144,7 +144,7 @@ func _build_world() -> void:
 			smoke.position = Vector3(cpos.x, 39, cpos.z)
 			smoke.emitting = true
 		"ring":
-			WorldKit.box(self, Vector3(bb.size.x + 320, 1, bb.size.y + 320), Vector3(bc.x, -0.8, bc.z), Color("#4c9a36"), false)
+			WorldKit.box(self, Vector3(bb.size.x + 320, 1, bb.size.y + 320), Vector3(bc.x, -0.8, bc.z), Color("#4c9a36"), false, 1, "grass")
 		_:
 			pass
 	_decorate(theme)

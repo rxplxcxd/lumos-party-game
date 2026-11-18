@@ -42,7 +42,7 @@ func on_setup() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.box(world, Vector3(HALF_X * 2 + 1, 0.4, HALF_Z * 2 + 1), Vector3(0, -0.2, 0), Color("#7cc85a"))
+	WorldKit.box(world, Vector3(HALF_X * 2 + 1, 0.4, HALF_Z * 2 + 1), Vector3(0, -0.2, 0), Color("#7cc85a"), true, 1, "grass")
 	WorldKit.box(world, Vector3(HALF_X + 0.5, 0.02, HALF_Z * 2 + 1), Vector3(-HALF_X * 0.5, 0.01, 0), Color("#86d164"), false)
 	# Hecke in der Mitte (Figuren bleiben im eigenen Garten, Bomben fliegen drüber)
 	WorldKit.box(world, Vector3(0.6, 0.9, HALF_Z * 2 + 1), Vector3(0, 0.45, 0), Color("#3f8a3a"))

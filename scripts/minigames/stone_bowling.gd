@@ -57,7 +57,7 @@ func build_arena() -> void:
 	MgKit.ring(world, 2.0, 0.08, Color("#6b5a44"), 0.0).position = PIN_C + Vector3(0, 0.13, 0)
 	# Grasplateau unter der Tempelbahn (vorher schwebte die Bahn über dem 7 m tiefer liegenden Hintergrund) und
 	# Felsen/Büsche ringsum – nie auf der Bahn oder zwischen den Säulen (früher lag ein Brocken mitten auf der Bahn)
-	WorldKit.box(world, Vector3(70, 1.2, 70), Vector3(0, -0.9, -8.0), Color("#79a84f"))
+	WorldKit.box(world, Vector3(70, 1.2, 70), Vector3(0, -0.9, -8.0), Color("#79a84f"), true, 1, "grass")
 	var deco_rng := RandomNumberGenerator.new()
 	deco_rng.seed = 41
 	var keys := ["nat/rock_large", "nat/bush", "mt/stalagmite_s", "qn/rock_moss", "nat/bush"]

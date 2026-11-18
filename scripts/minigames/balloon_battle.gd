@@ -30,7 +30,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.box(world, Vector3(HALF * 2 + 6, 1, HALF * 2 + 6), Vector3(0, -0.5, 0), Color("#3f8f4f"))
+	WorldKit.box(world, Vector3(HALF * 2 + 6, 1, HALF * 2 + 6), Vector3(0, -0.5, 0), Color("#3f8f4f"), true, 1, "grass")
 	var tiles: Array = []
 	for x in range(-12, 13, 4):
 		for z in range(-12, 13, 4):

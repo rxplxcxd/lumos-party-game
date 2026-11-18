@@ -1524,6 +1524,8 @@ Engine: Godot 4 (MIT-Lizenz) · GL-Compatibility / WebGL2
 KayKit (CC0, Kay Lousberg) – Adventurers, Character Animations, Skeletons, Dungeon Pack, Mini-Game Variety Pack, Board Game Bits, Holiday Bits, Halloween Bits, Furniture Bits, Restaurant Bits, City Builder Bits, Platformer Pack, Space Base Bits, Forest Nature, RPG Tools
 Quaternius (CC0) – Nature, Platformer
 
+[b]Oberflächen-Texturen[/b] (CC BY 4.0): JulioVII (juliovii.itch.io) – Texture Pack: Stylized 01, 02, 03 · Stylized Stone & Wood, Stone & Wood 02 · Stylized Grass & Dirt · Stylized Bricks 01 · Stylized Bricks & Pavement · Stylized Metals 01 · Materials Stylized Concrete, Metal Panels, Bricks & Plaster, Ceramic Tiles 01, Mix Stones 01 (verkleinert und für das Spiel aufbereitet)
+
 [b]Audio[/b] (CC0): Kenney – Impact, Interface, Digital, RPG, Sci-Fi, UI, Music Jingles, Voiceover
 [b]UI-Sounds[/b] (CC BY 4.0): „UI Sound Effects by lolurio“ (lolurio.itch.io) · „Cute, Cozy & Magical UI SFX“ von Nomagician Music (nomagician.itch.io)
 Musik: ausschließlich die Lumos-Soundtracks (Brett-, Menü- & Minispiel-Tracks; geschnitten, getaktet & geloopt mit tools/audio/build_music.py)

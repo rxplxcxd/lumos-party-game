@@ -33,7 +33,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.box(world, Vector3(60, 0.4, 60), Vector3(0, -0.2, 0), Color("#7cc85a"))
+	WorldKit.box(world, Vector3(60, 0.4, 60), Vector3(0, -0.2, 0), Color("#7cc85a"), true, 1, "grass")
 	# Bahn: Rundkurs mit Hügeln
 	for k in 16:
 		var a := TAU * k / 16.0

@@ -31,7 +31,7 @@ func _init() -> void:
 func build_arena() -> void:
 	WorldKit.water(world, Vector2(60, 90), -1.6, Color(0.1, 0.35, 0.4), Color(0.35, 0.6, 0.6))
 	# Kollision bleibt eben (fair & physik-stabil); nur die sichtbaren Planken kippen mit
-	WorldKit.box(world, Vector3(HALF_W * 2.0, 0.4, Z_NEAR - Z_FAR), Vector3(0, -0.2, 0), Color("#a06a3c"))
+	WorldKit.box(world, Vector3(HALF_W * 2.0, 0.4, Z_NEAR - Z_FAR), Vector3(0, -0.2, 0), Color("#a06a3c"), true, 1, "planks")
 	_pier = Node3D.new()
 	world.add_child(_pier)
 	# Planken-Optik: helle/dunkle Querbretter
@@ -53,7 +53,7 @@ func build_arena() -> void:
 			WorldKit.cylinder(_pier, 0.12, 0.9, Vector3(side * (HALF_W - 0.1), 0.45, Z_FAR + 2.0 + i * 4.4), Color("#7a5532"), false)
 	# Ufer mit Wald, Sägewerk am fernen Ende
 	for side in [-1.0, 1.0]:
-		WorldKit.box(world, Vector3(20, 2, 90), Vector3(side * 14.0, -1.4, 0), Color("#79c25a"), false)
+		WorldKit.box(world, Vector3(20, 2, 90), Vector3(side * 14.0, -1.4, 0), Color("#79c25a"), false, 1, "grass")
 		WorldKit.scatter(world, ["nat/tree_pine", "nat/tree_oak", "nat/bush", "nat/stump", "nat/flower_yellow"], 14, Vector3(side * 13.0, -0.4, 0), 2.0, 8.0, -0.4)
 	WorldKit.cottage(world, Vector3(0, -0.4, Z_FAR - 6.0), PI, 1.6, Color("#e9c79a"))
 	for i in 5:

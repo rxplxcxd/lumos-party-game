@@ -49,7 +49,7 @@ func build_arena() -> void:
 	var ramp_len := Vector2(START_Z - RAMP_END, RAMP_H).length()
 	var ramp := WorldKit.box(world, Vector3(14, 0.4, ramp_len), Vector3(0, RAMP_H * 0.5 - 0.2, (START_Z + RAMP_END) * 0.5), Color("#f4faff"))
 	ramp.rotation.x = -atan2(RAMP_H, START_Z - RAMP_END)
-	WorldKit.box(world, Vector3(14, 3.0, RAMP_END - EDGE_Z), Vector3(0, -1.5, (RAMP_END + EDGE_Z) * 0.5), Color("#cfe9ff"))
+	WorldKit.box(world, Vector3(14, 3.0, RAMP_END - EDGE_Z), Vector3(0, -1.5, (RAMP_END + EDGE_Z) * 0.5), Color("#cfe9ff"), true, 1, "ice@0.6")
 	# Zielzonen kurz vor der Kante (grün, gelb, rot) und Spurlinien
 	for k in 3:
 		var zc := EDGE_Z + 0.5 + k * 1.0
@@ -58,7 +58,7 @@ func build_arena() -> void:
 		WorldKit.box(world, Vector3(0.08, 0.02, RAMP_END - EDGE_Z), Vector3(x, 0.012, (RAMP_END + EDGE_Z) * 0.5), Color("#9cc9ee"), false)
 	for i in 5:
 		WorldKit.place(world, "plat/flag", Vector3(-6.6 + i * 3.3, 0, EDGE_Z + 0.4), 0.0, 0.9)
-	WorldKit.box(world, Vector3(30, 1.0, 16), Vector3(0, -6.0, EDGE_Z - 8.0), Color("#ffffff"))
+	WorldKit.box(world, Vector3(30, 1.0, 16), Vector3(0, -6.0, EDGE_Z - 8.0), Color("#ffffff"), true, 1, "snow")
 	for i in 6:
 		WorldKit.cylinder(world, randf_range(1.5, 2.6), 1.2, Vector3(-7.5 + i * 3.0, -5.3, EDGE_Z - 3.0), Color("#f8fbff"), false).scale.y = 0.6
 	for i in 4:
@@ -67,7 +67,7 @@ func build_arena() -> void:
 	WorldKit.place(world, "hk/snowman", Vector3(7.6, 0, EDGE_Z + 1.5), -20.0, 1.6)
 	WorldKit.place(world, "hk/sled", Vector3(7.8, RAMP_H, START_Z + 1.5), 60.0, 1.4)
 	for side in [-1.0, 1.0]:
-		WorldKit.box(world, Vector3(6, 4, 30), Vector3(side * 10.0, -1.0, -2.0), Color("#e3f1ff"), false)
+		WorldKit.box(world, Vector3(6, 4, 30), Vector3(side * 10.0, -1.0, -2.0), Color("#e3f1ff"), false, 1, "snow")
 		for i in 6:
 			WorldKit.place(world, "nat/pine_snow", Vector3(side * randf_range(8.0, 12.0), 1.0, -12.0 + i * 4.5), randf() * 360.0, randf_range(1.6, 2.4))
 	_patch = MeshInstance3D.new()

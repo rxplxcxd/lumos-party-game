@@ -30,8 +30,8 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.box(world, Vector3(40, 0.4, 40), Vector3(0, -0.45, 0), Color("#f4f9ff"), false)
-	WorldKit.cylinder(world, POND_R, 0.5, Vector3(0, -0.25, 0), Color("#a9dcf5"))
+	WorldKit.box(world, Vector3(40, 0.4, 40), Vector3(0, -0.45, 0), Color("#f4f9ff"), false, 1, "snow")
+	WorldKit.cylinder(world, POND_R, 0.5, Vector3(0, -0.25, 0), Color("#a9dcf5"), true, "ice@0.6")
 	var gloss := WorldKit.cylinder(world, POND_R - 0.3, 0.02, Vector3(0, 0.01, 0), Color("#d4f0ff"), false)
 	(gloss.get_child(0) as MeshInstance3D).material_override = WorldKit.mat(Color(0.85, 0.95, 1.0, 1.0), 0.05, 0.1)
 	# Schneewall als Bande (rundum fest), Lichterketten, Schneemänner, Hütte

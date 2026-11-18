@@ -36,8 +36,8 @@ func _init() -> void:
 
 func build_arena() -> void:
 	# Gartenfest-Bühne: Holzbühne mit Pastell-Tanzfliesen, Lichterketten, Vorhang und Wiesen-Publikum
-	WorldKit.box(world, Vector3(30, 1, 22), Vector3(0, -0.6, 2), Color("#7cc860"), false)
-	WorldKit.box(world, Vector3(14, 1.0, 7), Vector3(0, -0.5, 0), Color("#c98d5a"))
+	WorldKit.box(world, Vector3(30, 1, 22), Vector3(0, -0.6, 2), Color("#7cc860"), false, 1, "grass")
+	WorldKit.box(world, Vector3(14, 1.0, 7), Vector3(0, -0.5, 0), Color("#c98d5a"), true, 1, "planks")
 	var cols := [Color("#ffb3c7"), Color("#a8dcff"), Color("#ffe08a"), Color("#b6f29a")]
 	var bm := BoxMesh.new()
 	bm.size = Vector3(1.9, 0.06, 1.9)

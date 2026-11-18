@@ -35,9 +35,9 @@ func _init() -> void:
 
 func build_arena() -> void:
 	# Schwebende Startinsel mit Landeplätzen, ringsum Wolken und Ballons
-	WorldKit.cylinder(world, ARENA_R, 1.0, Vector3(0, -0.5, 0), Color("#8fd16a"))
-	WorldKit.cylinder(world, ARENA_R * 0.85, 2.5, Vector3(0, -2.2, 0), Color("#a2784f"), false)
-	WorldKit.cylinder(world, ARENA_R * 0.5, 2.0, Vector3(0, -4.2, 0), Color("#8a6440"), false)
+	WorldKit.cylinder(world, ARENA_R, 1.0, Vector3(0, -0.5, 0), Color("#8fd16a"), true, "grass")
+	WorldKit.cylinder(world, ARENA_R * 0.85, 2.5, Vector3(0, -2.2, 0), Color("#a2784f"), false, "cliff")
+	WorldKit.cylinder(world, ARENA_R * 0.5, 2.0, Vector3(0, -4.2, 0), Color("#8a6440"), false, "cliff")
 	for i in 4:
 		var a := TAU * i / 4.0 + PI / 4.0
 		var pad := WorldKit.cylinder(world, 1.3, 0.12, Vector3(cos(a) * 5.0, 0.06, sin(a) * 5.0), Color("#ffd166"), false)

@@ -32,7 +32,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.cylinder(world, 10.0, 1.0, Vector3(0, -0.5, 0), Color("#d9c09a"))
+	WorldKit.cylinder(world, 10.0, 1.0, Vector3(0, -0.5, 0), Color("#d9c09a"), true, "sand")
 	for k in N:
 		var c := Assets.spawn("pirate/chest", world, _slot_pos(k), 0.0, 1.8)
 		chests.append(c)

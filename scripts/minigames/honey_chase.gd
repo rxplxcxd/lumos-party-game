@@ -41,7 +41,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.cylinder(world, 14.0, 1.0, Vector3(0, -0.5, 0), Color("#8fd16a"))
+	WorldKit.cylinder(world, 14.0, 1.0, Vector3(0, -0.5, 0), Color("#8fd16a"), true, "grass")
 	var track := MeshInstance3D.new()
 	var tm := TorusMesh.new()
 	tm.inner_radius = LANES[0] - 0.9

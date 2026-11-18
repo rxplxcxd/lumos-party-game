@@ -43,7 +43,7 @@ func _init() -> void:
 
 
 func build_arena() -> void:
-	WorldKit.cylinder(world, ARENA_R + 1.5, 0.6, Vector3(0, -0.3, 0), Color("#86d164"))
+	WorldKit.cylinder(world, ARENA_R + 1.5, 0.6, Vector3(0, -0.3, 0), Color("#86d164"), true, "grass")
 	WorldKit.scatter(world, ["plat/flowers", "nat/flower_red", "nat/flower_yellow", "nat/flower_purple", "mt/grass_clump"], 46, Vector3.ZERO, 1.5, ARENA_R, 0.0)
 	# Bienenstock, Baumkreis, Honigtöpfe
 	for i in 10:

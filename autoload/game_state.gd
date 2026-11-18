@@ -647,3 +647,4 @@ func save_settings() -> void:
 func _exit_tree() -> void:
 	LumosFace.clear_cache()
 	LumosAppearance.clear_cache()
+	LumosMaterials.clear_cache()   # statische Material-/Shader-/Texturcaches vor dem Engine-Ende freigeben

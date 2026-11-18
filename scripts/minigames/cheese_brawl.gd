@@ -35,7 +35,7 @@ func _init() -> void:
 
 func build_arena() -> void:
 	# Federbett unter dem Käse
-	WorldKit.cylinder(world, RADIUS + 1.5, 1.0, Vector3(0, -5.5, 0), Color("#b07a4a"), false)
+	WorldKit.cylinder(world, RADIUS + 1.5, 1.0, Vector3(0, -5.5, 0), Color("#b07a4a"), false, "cliff")
 	for k in 8:
 		var a := TAU * k / 8.0
 		var sp := Node3D.new()
