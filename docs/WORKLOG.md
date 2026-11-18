@@ -16,10 +16,10 @@ Ausgangsstand `f1e251b5` (1.5.3 + hochgeladene Zips). Bericht: `docs/PREMIUM_VIS
 | 4 Pipeline | fertig | `tools/assets/build_surfaces.py` → 25 Familien (512², Gras/Sand 1024²), WebP im Paket (+6,8 MB) |
 | 5 Pilot Hauptmenü-Insel | fertig | Sand/Gras, Uferkante, rundere Inseln; drei Zustände mit festen Kameras |
 | 6 Materialsystem/Standard | fertig | `LumosMaterials` + `lumos_surface.gdshader`; Modell-Fehlerkorrektur metallic=1 (Nature/Space Kit) |
-| 7 Alle Bereiche | fertig (Feinschliff je Szene laufend) | 10 Bretter, 12 Strecken (Boden, Böschung, Felsen), 46 Minispiele + 3 Modi (Böden), 10 Boss-Arenen |
-| 8 Leistung | offen | – |
-| 9 Spiel/Regression | läuft | **Fund: Fahrbahn unter dem Boden** auf 7 Strecken (seit 1.5.3) – behoben in `RaceTrack._lift_below_ground` |
-| 10 Doku | läuft | – |
+| 7 Alle Bereiche | fertig | 10 Bretter, 12 Strecken (Boden, Böschung, Felsen), 46 Minispiele + 3 Modi (Böden), 10 Boss-Arenen |
+| 8 Leistung | fertig | headless CPU im Rauschen, simuliert (Software-Renderer) Pixelkosten +19/+41/+39 % je Stufe, Fernbereich ohne Normalmap-Zugriff, Web-Paket 42,1 MB (WebP statt S3TC), Bericht D |
+| 9 Spiel/Regression | fertig | **Fund: Fahrbahn unter dem Boden** auf 7 Strecken (seit 1.5.3) – behoben in `RaceTrack._lift_below_ground`; alle 12 Strecken und 69 Minispiele geprüft, Schneeball-Duell-Abweichung als Messrauschen belegt (Bericht E.3) |
+| 10 Doku | fertig | `docs/PREMIUM_VISUAL.md` (A–F), `docs/VISUAL_STANDARD.md`, Vorher/Nachher-Bilder `docs/screenshots/1.5.4/` |
 
 Funde unterwegs (1.5.4):
 * **Compatibility-Renderer rechnet hier ohne Linear-Umrechnung** (Texturen und `source_color`-Uniforms werden nicht
@@ -30,6 +30,10 @@ Funde unterwegs (1.5.4):
 * **Fahrbahn unter dem Rasen:** `build_path` verteilt den Höhen-Schließfehler über die Runde; seit der Verlängerung lagen
   bis zu 765 m je Runde unter der Bodenkante (Lumos-Ring 58 %, Dschungel 59 %). Jetzt ≤ 9 m (Unterwassertunnel
   ausgenommen), Steigungen unverändert, keine Überschneidungen.
+* **Import-Einstellungen der Oberflächen fehlten im Repository** (`.gitignore` schließt `*.import` aus) – CI hätte sie
+  verlustfrei importiert (Gras-Albedo 1,06 MB statt 183 KB). Ausnahme für `assets/materials/surfaces/*.import`.
+* Schneeball-Duell „festgefahren“ im Sweep höher – Ursache: Hitstop in echter Zeit während des Schnellvorlaufs
+  (lastabhängig); unter gleicher Last und in Echtzeit kein nachweisbarer Unterschied, Kollisionswelt identisch.
 * `tools/dev/race_shot.gd` liefert seit 1.5.x keine Bilder mehr (bleibt ohne Fehlermeldung stehen) – ersetzt durch
   `tools/dev/track_shot.gd` (feste Kameras, Startweg wie der CI-Linsentest). `board_life_shot.gd` beendet sich jetzt
   selbst und hat eine feste Nah-Ansicht (`--views=nah`).

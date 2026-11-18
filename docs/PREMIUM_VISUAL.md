@@ -89,7 +89,7 @@ Alle Zips bleiben unverändert im Repository (nichts gelöscht oder überschrieb
 | Einstellung | „Oberflächen-Details“ (Einstellungen, Standard an) | aus = bisheriges einfarbiges Material (Rückfall) |
 
 **Familien:** grass, meadow, dirt, sand, dune, pebbles, flagstone, cobble_moss, rock, cliff, stone_wall, bricks, plaster,
-planks, wood, bark, roof, metal, metal_panel, snow, ice, tiles, checker, paving, concrete, lava_rock, fabric, mud –
+planks, wood, bark, roof, metal, snow, ice, tiles, paving, concrete, lava_rock, fabric (25) –
 Parameter (Kachel, Rauheit, Metallic, Stärken) in `LumosMaterials.FAMILIES`, Regeln in `VISUAL_STANDARD.md`.
 
 **Grafikstufen (Qualitätsprofile):** Niedrig = nur Detailfarbe (flache Böden 1 Texturzugriff), Mittel = + Normalmap der
@@ -132,7 +132,9 @@ Materialzählung aller GLB/GLTF (`mat_census`), Texturliste aller Importe, Strec
 
 Abgelegt in `docs/screenshots/1.5.4/` (Vorher | Nachher, gleiche Kamera, gleiches Licht): Menü-Insel in drei Zuständen
 (Original · neue Materialien · vollständig poliert), alle 10 Bretter (feste Nah-Kamera über dem Startfeld),
-Minispiele (Spielkamera), Grafikstufen Hoch/Mittel/Niedrig.
+Minispiele (Spielkamera), Grafikstufen Hoch/Mittel/Niedrig, alle 12 Strecken mit je 3 festen Kameras
+(`strecken_vorher_nachher_1.jpg`, `_2.jpg`: Vorher-Zeilen zeigen auf Lumos-Ring, Dschungel und Vulkan Rasen statt
+Fahrbahn – die Fahrbahn lag unter der Bodenfläche, s. E.1).
 
 ## D. Leistung
 
@@ -239,6 +241,41 @@ Partikel unverändert.
 | „Reaktion fehlt: dodge“ / „surprised“ | 1.5.x | Menü-Ballspiel und Geister-Fotograf: Schreck-Reaktion wurde nie gespielt (Animationsname statt Reaktion) | `shocked` / `scared` aus der Reaktionsbibliothek |
 | `tools/dev/race_shot.gd` liefert keine Bilder | 1.5.x | Prüfwerkzeug bleibt ohne Fehlermeldung stehen | neues `track_shot.gd` (Startweg wie der CI-Linsentest) |
 | `board_life_shot.gd` beendet sich nicht | 1.5.3 | Prozess läuft bis zum äußeren Zeitlimit | beendet sich selbst |
+| Import-Einstellungen der Oberflächen nicht im Repository | (neu in dieser Arbeit, vor der Auslieferung gefunden) | `.gitignore` schließt alle `*.import` aus → CI und frische Checkouts importieren die 50 Oberflächen-Texturen verlustfrei (Gras-Albedo 1 058 806 statt 183 394 Byte, gemessen) – das ausgelieferte Web-Paket wäre deutlich größer als die gemessenen 42,1 MB | Ausnahme `!assets/materials/surfaces/*.import`; geprüft: Godot 4.7.2 importiert neu, sobald sich die `.import`-Datei ändert (auch aus dem CI-Import-Cache) |
+
+### E.2 Prüfungen des Endstands
+
+| Prüfung | Werkzeug | Ergebnis |
+|---|---|---|
+| Skripte und Szenen | `tools/dev/Check.tscn` | 263 Dateien, 0 Probleme, 0 Skriptfehler |
+| System-Tests (CPU-Stufen, Inventar, Items, Emotes, Steuerung, Touch) | `tools/dev/test_systems.gd` | 73 PASS, „TESTS OK“ |
+| Asset-Inventur, Katalog, Steuerung | `tools/validate_catalog.py`, `tools/validate_controls.py` | OK |
+| Gesichts-Labor (echtes Rendering) | `tools/charlab/face_lab.gd` | 6/6 PASS – Figuren, Mimik und Animationen unbeschädigt |
+| Trailer-Trennung | CI-Schritt | OK (keine Verweise, nicht im Export) |
+| Nitro Dash – **alle 12 Strecken**, je 1 Runde mit 8 CPU-Karts | `tools/dev/race_sweep.sh` | 12/12, je 8/8 im Ziel, keiner hängt fest (Korallen-Kanal 0,7 s festgefahren, Original 1,6 s) |
+| Strecken-Geometrie | `track_check.gd` | Fahrbahn ≤ 9 m je Runde unter der Bodenkante (vorher bis 765 m; Unterwassertunnel ausgenommen), Steigung höchstens +0,01, keine Überschneidung |
+| **Alle 69 Minispiele** mit 4 CPUs (erste Kategorie je Spiel) | `tools/dev/minigame_sweep.sh` | 69/69 regulär beendet, 0 Skriptfehler, 0 durchgefallen; Körpermitte in Geometrie nur bei Kullerfels-Flucht 0,1 s (eine Figur, beim Überrollen durch einen Fels – Spielmechanik) |
+| Web-Build im Browser (Menü, Brett → Roulette → Minispiel) | `tools/dev/web_shot.js` | 0 Konsolenfehler, keine fehlenden Ressourcen, keine Shaderfehler, keine rosa/schwarzen Flächen |
+| Kollisionswelt Original ↔ Endstand (Schneeball-Duell, fester Zufallswert) | Kollisionsformen-Liste | identisch (20 Formen, Lage, Größe) |
+
+### E.3 Schneeball-Duell: „festgefahren“ höher? – geprüft, keine Regression
+
+Der Minispiel-Sweep zeigte im Schneeball-Duell mehr „festgefahren“-Zeit (CPU will laufen, kommt nicht vom Fleck,
+Summe der 4 Figuren): Original 12,7 / 9,8 / 16,1 / 14,5 s, Endstand 30,2 / 28,1 / 41,2 s. Untersuchung:
+
+* **Code:** `snowball_fight.gd`, Spielfigur, Minispiel-Basis unverändert; der neue Material-Code nutzt weder Zufall
+  noch Physik. **Kollisionswelt identisch** (20 Formen, Lage, Größe – bei festem Zufallswert sogar die Drehung der
+  Deckungen, d. h. auch der Zufallsverbrauch beim Aufbau ist gleich).
+* **Ursache der Streuung:** Der Sweep läuft im Schnellvorlauf (`--fixed-fps`), der Treffer-Hitstop
+  (`Juice.hitstop`, 40 ms) und seine 300-ms-Sperre laufen aber in echter Zeit – wie viele Spielbilder davon betroffen
+  sind, hängt von der Rechnerlast ab. Die Endstand-Läufe 30–41 s liefen parallel zu Render-Jobs.
+* **Abwechselnd unter gleicher Last** (8 Paare, Schnellvorlauf): Original 17,9 / 27,9 / 11,3 / 12,5 / 29,6 / 22,6 /
+  11,5 / 14,5 s (⌀ 18,5) · Endstand 15,2 / 27,6 / 29,3 / 26,1 / 11,1 / 26,5 / 33,9 / 26,6 s (⌀ 24,5); Mann-Whitney
+  U = 21 (Grenze für 5 %: 13) – nicht signifikant.
+* **Echtzeit wie im Spiel** (ohne Schnellvorlauf, 3 Paare): Original 20,8 / 26,5 / 21,7 s (⌀ 23,0) · Endstand
+  27,3 / 29,4 / 22,1 s (⌀ 26,3) – Bereiche überlappen.
+
+Ergebnis: kein nachweisbarer Unterschied, keine Ursache im geänderten Code; alle Läufe regulär beendet, 0 Skriptfehler.
 
 ## F. Git
 
@@ -246,6 +283,10 @@ Partikel unverändert.
   Zips). `main` unverändert, kein Merge, keine Veröffentlichung ohne Freigabe.
 * Commits dieser Überarbeitung (Betreff `v1.5.4: …`): Materialsystem + Pilot (`ad65e8db`), alle Bereiche +
   Fahrbahn-Fix + Werkzeuge (`930b135e`, `82a1c044`), Web-Export/Stufen/Brücken-Fix/Reaktionen (`7a2fce44`),
-  Abschluss (Version, Doku, Messwerte) – siehe `git log`.
+  WebP-Umstellung, Version 1.5.4, Bericht (`d35e8260`), Fernbereich ohne Normalmap-Zugriff (`498dd17f`),
+  Import-Einstellungen der Oberflächen im Repository (`1def7854`), Abschluss (Strecken-Bilder, Messwerte, E.2/E.3) –
+  siehe `git log`.
+* CI: Läufe nur über `workflow_dispatch` auf dem Arbeitszweig (kein offener PR). Ein solcher Lauf veröffentlicht
+  nichts: Vercel ist ohne Token übersprungen, GitHub Pages und Release laufen nur auf `main`/Tags (geprüft an Lauf #58).
 * Nicht im Repository: JulioVII-Originalarchive (1,1 GB; Abruf + Prüfsummen über `tools/assets/fetch_juliovii.py`).
 * Unverändert im Repository: alle 14 hochgeladenen Zips (nichts gelöscht oder überschrieben).

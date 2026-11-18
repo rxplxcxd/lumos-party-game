@@ -47,10 +47,10 @@ Glatte Sonderwelten (Torte, Zuckerguss, Wolken) bleiben bewusst einfarbig-glatt.
 | Kiesel, Feldstein, Moos-Pflaster, Fels, Klippe, Steinwand, Ziegel | 0,70–0,95 | 0 | 1,0–1,1 | 0,8–0,9 |
 | Putz | 0,82–0,95 | 0 | 0,7 | 0,55 |
 | Planken, Holz, Rinde, Dach | 0,60–0,95 | 0 | 0,8–1,0 | 0,8–0,85 |
-| Metall, Metallplatten | 0,32–0,70 | 0,45–0,55 | 0,7–0,9 | 0,7 |
+| Metall | 0,32–0,70 | 0,45–0,55 | 0,7–0,9 | 0,7 |
 | Schnee | 0,55–0,80 | 0 | 0,7 | 0,6 |
 | Eis | 0,08–0,30 | 0 | 0,6 | 0,7 |
-| Fliesen, Schachbrett | 0,28–0,60 | 0 | 0,7–0,8 | 0,8–1,0 |
+| Fliesen | 0,28–0,60 | 0 | 0,7–0,8 | 0,8–1,0 |
 | Beton, Pflaster | 0,70–0,95 | 0 | 0,7–1,0 | 0,7–0,9 |
 | Stoff | 0,86–1,0 | 0 | 0,7 | 0,7 |
 
