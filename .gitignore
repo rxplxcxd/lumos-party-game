@@ -1,6 +1,9 @@
 # Godot
 .godot/
 *.import
+# Ausnahme: Oberflächen-Details weichen bewusst vom Projektstandard ab (WebP verlustbehaftet 0,85/0,9 statt verlustfrei,
+# docs/VISUAL_STANDARD.md) – ohne diese Dateien importieren CI und frische Checkouts sie verlustfrei (größeres Web-Paket).
+!assets/materials/surfaces/*.import
 *.tmp
 # Builds
 build/
