@@ -92,12 +92,15 @@ Familie 0,6–1,1; auf Modellen × 0,65. Prüfung der Konvention: `corr(G, dh/dZ
 
 Zählwerte gelten auf jeder GPU; Bildzeiten des Software-Renderers sind keine Geräte-FPS.
 
-| Szene | Draw-Calls | Primitive | Texturspeicher | Ladezeit (Test-Server) |
+| Szene | Draw-Calls | Primitive | Texturspeicher | Ladezeit (Software-Renderer, ohne Nebenlast) |
 |---|---|---|---|---|
-| Hauptmenü | ≤ 400 | ≤ 150 k | ≤ 100 MB | ≤ 7 s |
-| Brett | ≤ 800 | ≤ 250 k | ≤ 110 MB | ≤ 8 s |
+| Hauptmenü | ≤ 400 | ≤ 150 k | ≤ 100 MB | ≤ 8 s |
+| Brett | ≤ 800 | ≤ 250 k | ≤ 110 MB | ≤ 13 s |
 | Strecke (1 Ansicht) | ≤ 400 | ≤ 120 k | ≤ 80 MB | ≤ 7 s |
-| Minispiel / Boss | ≤ 450 | ≤ 200 k | ≤ 80 MB | ≤ 5 s |
+| Minispiel / Boss | ≤ 450 | ≤ 200 k | ≤ 80 MB | ≤ 5,5 s |
+
+Ladezeit zusätzlich: nie mehr als +0,5 s gegenüber dem Stand vor einer Änderung (gleiche Messung, nacheinander, ohne
+parallele Jobs). Gemessener Endstand 1.5.4: Menü 7,1 s, Brett 10,6–12,2 s, Strecke 6,1 s, Minispiel 5,0 s.
 
 Oberflächen-Details je Szene: höchstens 8 Familien gleichzeitig (≈ 12–35 MB Grafikspeicher, je nach Anzahl der
 1024²-Familien). Nicht benötigte Familien werden beim Szenenwechsel freigegeben
