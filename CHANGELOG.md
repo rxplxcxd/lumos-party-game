@@ -4,6 +4,49 @@ Versionierung vor dem Release: **1.1.x** (1.1.1 … 1.1.9), danach **1.2.x** (Re
 Ab 1.5.1 wieder in kleinen Schritten: 1.5.1, 1.5.2 … bis 1.9.9 (keine Sprünge auf ganze Versionen).
 Eine Quelle für alle Stellen: `python3 tools/version.py <version>` (bzw. `--next`). Commit-Betreff: `vX.Y.Z: …`.
 
+## 1.5.4 – Premium-Visual-Überarbeitung: Materialsystem, Oberflächen, Fehlerbehebungen
+
+Bericht: `docs/PREMIUM_VISUAL.md` (A Assets · B Materialsystem · C Audit · D Leistung · E Regression · F Git),
+verbindliche Regeln: `docs/VISUAL_STANDARD.md`, Arbeitsstand: `docs/WORKLOG.md`.
+
+### Assets
+* 14 kostenlose JulioVII-Texturpakete mit „Stylized“ im Titel (CC BY 4.0) über den Gratis-Downloadweg geladen,
+  geprüft (alle Archive intakt, SHA-256 in `data/juliovii_manifest.json`) und reproduzierbar abrufbar
+  (`tools/assets/fetch_juliovii.py`); kostenpflichtige Substance-Quellen nicht geladen. Namensnennung in Credits und
+  `LICENSES.md`.
+* 25 Materialfamilien daraus aufbereitet (`tools/assets/build_surfaces.py`): 4096² → 512² (Gras, Sand 1024²),
+  kachelbar, AO eingebacken, Rauheit im Alphakanal; im Web-Paket als WebP (+6,8 MB statt +30 MB mit S3TC).
+* Hochgeladene Zips analysiert: Nature Kit, Mini Arena, Interface Sounds, Input Prompts sind byte-gleiche Dubletten;
+  Skyboxen, Casino-Audio, Brettspiel-Icons, Mobile Controls ohne sinnvollen Einsatzort; Wasser-/Himmels-/Gras-Shader
+  und Ente ohne Lizenzangabe nicht übernommen (Idee Uferschaum eigenständig umgesetzt).
+
+### Materialsystem und Look
+* `LumosMaterials` + `lumos_surface.gdshader`: ein Shader für alle Familien, triplanar ohne UVs, die Palettenfarbe
+  bleibt, die Textur liefert Detail, Rauheit und Relief. Drei Stufen je Grafikstufe, Rückfall per Einstellung
+  „Oberflächen-Details“.
+* Hauptmenü-Insel: Sand mit Rippeln, Gras, Uferkante mit Flachwasser und Schaum, rundere Inselkanten.
+* Bretter: Wiese, Zauberwald (Nachtstimmung bleibt), Sternwarte, Wolkenturm (Gras, Putz, Planken), Frostdorf
+  (Schnee), Dungeon (Feldstein), Friedhof (Wiese, halbe Stärke), Piratenbucht (Sand + Uferkante), Teichränder (Kiesel),
+  Fernboden der Kulissen.
+* Strecken: Themenboden, Böschungen und Stützen je Thema (Fels, Schnee, Beton, Klippe, Lavastein), Wasserfall-Felsen,
+  Kai-Mauern, Vulkankegel. Fahrbahn und Lesbarkeit unverändert.
+* Minispiele, Modi, Boss-Arenen: 62 Bodenflächen; spielrelevante Farbflächen bleiben einfarbig.
+* Modelle: Kenney Nature/Space Kit kamen mit metallic = 1 (glTF-Standard) – jetzt matt; Plastikglanz (Rauheit < 0,45)
+  auf 0,55; Felsen/Rinde/Erde der Nature-Modelle mit feinem Detail.
+
+### Fehlerbehebungen
+* **Fahrbahn unter dem Rasen:** Der Streckenbaukasten verteilte den Höhen-Schließfehler über die Runde – seit der
+  Verlängerung in 1.5.3 lagen auf 7 Strecken bis 765 m je Runde unter der Bodenfläche (Fahrbahn und Karts
+  unsichtbar). Jetzt weich angehoben (Loopings/Gleiter starr, Überführungen behalten die Durchfahrtshöhe,
+  Unterwassertunnel unverändert). Fahrtest 12/12, Steigungen unverändert, Korallen-Kanal hängt weniger als vorher.
+* Menü-Ballspiel und Geister-Fotograf: die Schreck-Reaktion wurde nie gespielt („Reaktion fehlt“).
+* Web-Export: dynamisch geladene Oberflächen-Texturen in die Exportliste aufgenommen.
+* Statische Material-Caches werden beim Beenden freigegeben.
+
+### Werkzeuge
+* `tools/dev/material_shot.gd`, `track_shot.gd`, `surface_probe.gd`, `srgb_probe.gd`, `web_shot.js`;
+  `board_life_shot.gd` mit fester Nah-Ansicht und eigenem Ende, `minigame_shot.gd --quality`.
+
 ## 1.5.3 – Release-Nachträge, Character-Framework-Stufe „1.6“ (Gesichtsgeometrie, Verdeckung), Universe Polish
 
 Die Framework-Stufe trägt im Auftrag den Arbeitstitel „1.6“ – die Versionsnummer ist **1.5.3**. Arbeitsstand:

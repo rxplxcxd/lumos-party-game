@@ -20,17 +20,20 @@ Glatte Sonderwelten (Torte, Zuckerguss, Wolken) bleiben bewusst einfarbig-glatt.
 
 ## 2. Texturen
 
-* **Auflösung je Familie** (Kachel, wiederholt): **1024²** für Flächen, die nah an der Kamera liegen
-  (`grass`, `sand`, `flagstone`, `rock`, `planks`), **512²** für alle anderen. **Nie 4K** im Spiel; Quellen werden nur
+* **Auflösung je Familie** (Kachel, wiederholt): **1024²** nur für die Flächen mit echten Nahansichten (`grass`,
+  `sand` – Menü-Insel, Bretter), **512²** für alle anderen. **Nie 4K** im Spiel; Quellen werden nur
   verkleinert (`Image.reduce` = Kastenfilter auf ganzen Blöcken → kachelbar ohne Randnaht), **nie hochskaliert**.
 * **Texeldichte** (Ziel 150–350 Texel/m): 1024² auf 3–3,5 m Kachel ≈ 290–340 Texel/m, 512² auf 2–3 m ≈ 170–256 Texel/m.
   Modelle: Kachel × 0,6 (kleinere Requisiten). Fernboden der Kulisse: 6 m (blendet ab 40 m aus).
 * **Kanäle**: `<familie>_albedo.webp` RGB = Detailfarbe (Mittelwert normiert, AO zu 30–60 % eingebacken),
-  A = Rauheit (2.–98.-Perzentil auf 0..1 gestreckt); `<familie>_normal.webp` verlustfrei. Höhe wird nicht
+  A = Rauheit (2.–98.-Perzentil auf 0..1 gestreckt); `<familie>_normal.webp` (Quelle verlustfrei, im Paket WebP 0,9). Höhe wird nicht
   genutzt (keine Parallaxe – zu teuer im Browser).
-* **Import**: Detailtexturen VRAM-komprimiert (`compress/mode=2`: BC3 für Albedo+Rauheit, RGTC für Normalen),
-  Mipmaps an. **Farbatlas-/Palettentexturen bleiben verlustfrei** (Projektstandard `compress/mode=0`): Blockkompression
-  lässt die Farbfelder ineinanderbluten.
+* **Import**: Detailtexturen als **WebP verlustbehaftet** (`compress/mode=1`, Albedo 0,85, Normalen 0,9), Mipmaps an.
+  Begründung (gemessen): S3TC vergrößerte das Web-Paket um 30 MB (35,2 → 65,4 MB), WebP um 6,8 MB; Bildunterschied im
+  Pixelvergleich nicht erkennbar. Im Grafikspeicher liegen sie unkomprimiert (512² ≈ 1,4 MB, 1024² ≈ 5,6 MB mit
+  Mipmaps) – mobile Browser ohne S3TC hätten sie ohnehin entpackt. Nur Familien liefern, die das Spiel verwendet.
+* **Farbatlas-/Palettentexturen bleiben verlustfrei** (Projektstandard `compress/mode=0`): Blockkompression lässt
+  die Farbfelder ineinanderbluten, verlustbehaftete Kompression verschmiert die Feldgrenzen.
 * **Filter**: Welttexturen `filter_linear_mipmap_anisotropic` + `repeat_enable` (im Shader gesetzt). UI-Texturen
   bleiben beim Projektstandard.
 * **Wiederholung**: Großflächen-Variation (Wertrauschen, nur abdunkelnd, 3–14 %) und Ausblenden des Details zur Ferne
@@ -91,13 +94,13 @@ Zählwerte gelten auf jeder GPU; Bildzeiten des Software-Renderers sind keine Ge
 
 | Szene | Draw-Calls | Primitive | Texturspeicher | Ladezeit (Test-Server) |
 |---|---|---|---|---|
-| Hauptmenü | ≤ 400 | ≤ 150 k | ≤ 90 MB | ≤ 7 s |
+| Hauptmenü | ≤ 400 | ≤ 150 k | ≤ 100 MB | ≤ 7 s |
 | Brett | ≤ 800 | ≤ 250 k | ≤ 110 MB | ≤ 8 s |
 | Strecke (1 Ansicht) | ≤ 400 | ≤ 120 k | ≤ 80 MB | ≤ 7 s |
 | Minispiel / Boss | ≤ 450 | ≤ 200 k | ≤ 80 MB | ≤ 5 s |
 
-Oberflächen-Details je Szene: höchstens 8 Familien gleichzeitig (≈ 6–12 MB komprimiert am Desktop, ≈ 25–45 MB
-entpackt im mobilen Browser ohne S3TC). Nicht benötigte Familien werden beim Szenenwechsel freigegeben
+Oberflächen-Details je Szene: höchstens 8 Familien gleichzeitig (≈ 12–35 MB Grafikspeicher, je nach Anzahl der
+1024²-Familien). Nicht benötigte Familien werden beim Szenenwechsel freigegeben
 (`LumosMaterials.prune` über `Assets.prune_cache`).
 
 ## 8. Prüfung

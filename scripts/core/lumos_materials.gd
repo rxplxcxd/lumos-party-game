@@ -4,7 +4,7 @@ extends RefCounted
 ## für alle Materialfamilien, Varianten nur über Parameter. Die Palettenfarbe bleibt die Grundfarbe, die Textur
 ## (JulioVII, aufbereitet von tools/assets/build_surfaces.py) liefert Detail, Rauheit und Normalmap.
 ##   LumosMaterials.surface("grass", Color("#7fd36a"))      → Material für Böden/Wände/Primitive
-##   LumosMaterials.surface("checker")                      → eigene Farben der Textur (ohne Palettenfarbe)
+##   LumosMaterials.surface("lava_rock")                    → eigene Farben der Textur (ohne Palettenfarbe)
 ## Einstellung „Oberflächen-Details“ (Game.settings.surface_detail) aus → bisheriges einfarbiges Material.
 ## Grafikstufe → Shader-Stufe: Niedrig 0 (nur Farbe) · Mittel 1 (+ Normalmap) · Hoch/Ultra 2 (volle Projektion).
 ## Regeln und Budgets: docs/VISUAL_STANDARD.md.
@@ -33,16 +33,13 @@ const FAMILIES := {
 	"bark": {"tile": 1.5, "rough": [0.75, 0.95], "normal": 1.0, "color": 0.85, "macro": 0.04},
 	"roof": {"tile": 2.0, "rough": [0.6, 0.86], "normal": 1.0, "color": 0.85, "macro": 0.06},
 	"metal": {"tile": 2.0, "rough": [0.32, 0.55], "normal": 0.7, "color": 0.7, "metal": 0.55, "spec": 0.5, "macro": 0.04},
-	"metal_panel": {"tile": 3.0, "rough": [0.35, 0.7], "normal": 0.9, "color": 0.75, "metal": 0.45, "spec": 0.5, "macro": 0.04},
 	"snow": {"tile": 4.0, "rough": [0.55, 0.8], "normal": 0.7, "color": 0.6, "spec": 0.45, "macro": 0.06},
 	"ice": {"tile": 3.0, "rough": [0.08, 0.3], "normal": 0.6, "color": 0.7, "spec": 0.6, "macro": 0.05},
 	"tiles": {"tile": 1.6, "rough": [0.28, 0.6], "normal": 0.8, "color": 0.8, "spec": 0.5, "macro": 0.03},
-	"checker": {"tile": 1.6, "rough": [0.3, 0.6], "normal": 0.7, "color": 1.0, "spec": 0.5, "macro": 0.03, "own": true},
 	"paving": {"tile": 2.5, "rough": [0.7, 0.95], "normal": 1.0, "color": 0.9, "macro": 0.06},
 	"concrete": {"tile": 3.0, "rough": [0.78, 0.95], "normal": 0.7, "color": 0.7, "macro": 0.06},
 	"lava_rock": {"tile": 3.0, "rough": [0.6, 0.95], "normal": 1.1, "color": 1.0, "macro": 0.06, "own": true, "glow": 1.6},
 	"fabric": {"tile": 1.0, "rough": [0.86, 1.0], "normal": 0.7, "color": 0.7, "macro": 0.03},
-	"mud": {"tile": 3.0, "rough": [0.35, 0.8], "normal": 0.9, "color": 0.85, "macro": 0.08},
 }
 
 ## Materialnamen importierter Modelle → Familie (nur Pakete mit sprechenden Namen; Farbatlas-Modelle bleiben, wie sie

@@ -13,7 +13,7 @@ Ausgangsstand `f1e251b5` (1.5.3 + hochgeladene Zips). Bericht: `docs/PREMIUM_VIS
 | 1 Status, Sicherung, Vorher-Bilder | fertig | Arbeitskopie des Ausgangsstands (Scratchpad `wt_base`), Vorher-Bilder Menü/Bretter/Strecken/Minispiele mit festen Kameras |
 | 2 JulioVII | fertig | 14 kostenlose „Stylized“-Texturpakete (CC BY 4.0), alle intakt; Prüfsummen `data/juliovii_manifest.json`, erneut ladbar `tools/assets/fetch_juliovii.py` |
 | 3 GitHub-Assets | fertig | 14 Zips analysiert: 4 Dubletten (byte-gleich), Kenney-Skyboxen/Casino/Icons/Mobile ohne Einsatzort, 4 Zips ohne Lizenzangabe nicht übernommen |
-| 4 Pipeline | fertig | `tools/assets/build_surfaces.py` → 28 Familien (512²/1024²), VRAM-komprimiert |
+| 4 Pipeline | fertig | `tools/assets/build_surfaces.py` → 25 Familien (512², Gras/Sand 1024²), WebP im Paket (+6,8 MB) |
 | 5 Pilot Hauptmenü-Insel | fertig | Sand/Gras, Uferkante, rundere Inseln; drei Zustände mit festen Kameras |
 | 6 Materialsystem/Standard | fertig | `LumosMaterials` + `lumos_surface.gdshader`; Modell-Fehlerkorrektur metallic=1 (Nature/Space Kit) |
 | 7 Alle Bereiche | fertig (Feinschliff je Szene laufend) | 10 Bretter, 12 Strecken (Boden, Böschung, Felsen), 46 Minispiele + 3 Modi (Böden), 10 Boss-Arenen |

@@ -47,30 +47,6 @@
    "bricks_normal.webp"
   ]
  },
- "checker": {
-  "pack": "ftp-stylizedceramictiles01",
-  "material": "Stylized_CeramicTilingFloor_02",
-  "source_res": 4096,
-  "res": 512,
-  "mean_srgb": [
-   0.664,
-   0.604,
-   0.522
-  ],
-  "rough_src": [
-   0.161,
-   0.518
-  ],
-  "ao": true,
-  "k": 0.3996,
-  "ks": 0.5667,
-  "hue": 0.35,
-  "clipped_share": 0.0008,
-  "files": [
-   "checker_albedo.webp",
-   "checker_normal.webp"
-  ]
- },
  "cliff": {
   "pack": "stylized-stone-wood",
   "material": "Stone_04",
@@ -219,19 +195,19 @@
   "pack": "ftpgrass-dirt",
   "material": "Stylized_HandpaintedStones_02",
   "source_res": 4096,
-  "res": 1024,
+  "res": 512,
   "mean_srgb": [
    0.535,
-   0.497,
-   0.467
+   0.496,
+   0.466
   ],
   "rough_src": [
    1.0,
    1.0
   ],
   "ao": true,
-  "k": 0.4822,
-  "ks": 0.7081,
+  "k": 0.4836,
+  "ks": 0.7099,
   "hue": 0.35,
   "clipped_share": 0.0036,
   "files": [
@@ -359,54 +335,6 @@
    "metal_normal.webp"
   ]
  },
- "metal_panel": {
-  "pack": "ftp-stylized-metal-panels",
-  "material": "Stylized_MetalPanels_01",
-  "source_res": 4096,
-  "res": 512,
-  "mean_srgb": [
-   0.413,
-   0.35,
-   0.328
-  ],
-  "rough_src": [
-   0.388,
-   0.851
-  ],
-  "ao": true,
-  "k": 0.3,
-  "ks": 0.5628,
-  "hue": 0.35,
-  "clipped_share": 0.0044,
-  "files": [
-   "metal_panel_albedo.webp",
-   "metal_panel_normal.webp"
-  ]
- },
- "mud": {
-  "pack": "ftp-stylized-03",
-  "material": "Stylized_33_Mud",
-  "source_res": 4096,
-  "res": 512,
-  "mean_srgb": [
-   0.489,
-   0.376,
-   0.288
-  ],
-  "rough_src": [
-   0.125,
-   0.69
-  ],
-  "ao": true,
-  "k": 0.5465,
-  "ks": 0.7571,
-  "hue": 0.35,
-  "clipped_share": 0.0017,
-  "files": [
-   "mud_albedo.webp",
-   "mud_normal.webp"
-  ]
- },
  "paving": {
   "pack": "ftp-bricks-pavement",
   "material": "Stylized_BricksPavement_04",
@@ -459,21 +387,21 @@
   "pack": "stylizedpk01",
   "material": "Stylized_03_Wood_Planks",
   "source_res": 4096,
-  "res": 1024,
+  "res": 512,
   "mean_srgb": [
-   0.5,
-   0.347,
-   0.198
+   0.499,
+   0.346,
+   0.197
   ],
   "rough_src": [
    0.431,
-   0.612
+   0.608
   ],
   "ao": true,
   "k": 0.3,
-  "ks": 0.5623,
+  "ks": 0.5637,
   "hue": 0.35,
-  "clipped_share": 0.0032,
+  "clipped_share": 0.0026,
   "files": [
    "planks_albedo.webp",
    "planks_normal.webp"
@@ -507,21 +435,21 @@
   "pack": "stylized-stone-wood",
   "material": "Stone_01",
   "source_res": 4096,
-  "res": 1024,
+  "res": 512,
   "mean_srgb": [
    0.356,
    0.353,
-   0.355
+   0.354
   ],
   "rough_src": [
-   0.475,
+   0.482,
    0.925
   ],
   "ao": true,
   "k": 0.3,
-  "ks": 0.5545,
+  "ks": 0.5548,
   "hue": 0.35,
-  "clipped_share": 0.0084,
+  "clipped_share": 0.008,
   "files": [
    "rock_albedo.webp",
    "rock_normal.webp"

@@ -44,14 +44,14 @@ Summe: 132 Materialien, fast alle 4096² (JPG), Normalen durchgehend OpenGL-Konv
 Grün-Kanal ↔ Höhengradient +0,34 … +0,97 in allen 14 Paketen). **Eignung:** handgemalt-stilisiert, weiche Formen,
 passt zum Cozy-Look; 4K ist für das Spiel überdimensioniert → verkleinert auf 512²/1024².
 
-**Ausgewählt (28 Familien)** – Quelle → Familie: HandpaintedGrass_01 → `grass`, HandpaintedGrassAndDirt_01 →
+**Ausgewählt (25 Familien, alle im Spiel verwendet)** – Quelle → Familie: HandpaintedGrass_01 → `grass`, HandpaintedGrassAndDirt_01 →
 `meadow`, HandpaintedDirt_01 → `dirt`, HandpaintedSand_01 → `sand`, Stylized_06_Sand → `dune`, HandpaintedStones_03 →
 `pebbles`, HandpaintedStones_02 → `flagstone`, Stylized_02_Stone_Ground → `cobble_moss`, Stone_01 → `rock`, Stone_04 →
 `cliff`, StoneTiles_01 → `stone_wall`, Rounded_Bricks_01 → `bricks`, Plaster_01 → `plaster`, Stylized_03_Wood_Planks →
 `planks`, Wood_01 → `wood`, WoodBark_02 → `bark`, Stylized_13_RoofSquare → `roof`, BaseMetal_01 → `metal`,
-MetalPanels_01 → `metal_panel`, Stylized_08_Snow → `snow`, Stylized_18_Ice → `ice`, CeramicTiles_02 → `tiles`,
-CeramicTilingFloor_02 → `checker`, BricksPavement_04 → `paving`, Concrete_01 → `concrete`, LavaRock_01 → `lava_rock`,
-Stylized_22_Tatami → `fabric`, Stylized_33_Mud → `mud`. Nicht ausgewählt (104): Dubletten in Funktion
+Stylized_08_Snow → `snow`, Stylized_18_Ice → `ice`, CeramicTiles_02 → `tiles`, BricksPavement_04 → `paving`,
+Concrete_01 → `concrete`, LavaRock_01 → `lava_rock`, Stylized_22_Tatami → `fabric`. Zunächst aufbereitet, mangels
+Einsatzort wieder entfernt: MetalPanels_01, CeramicTilingFloor_02, Stylized_33_Mud. Nicht ausgewählt (107): Dubletten in Funktion
 (z. B. 9 rote Ziegelvarianten), zu kräftige Sondermuster (Alien-Eier, Fischschuppen, Leder-Sofa), Metallgitter/-paneele
 ohne Einsatzort.
 
@@ -79,7 +79,7 @@ Alle Zips bleiben unverändert im Repository (nichts gelöscht oder überschrieb
 
 | Baustein | Datei | Aufgabe |
 |---|---|---|
-| Aufbereitung | `tools/assets/build_surfaces.py` + `tools/assets/surfaces_src.json` | 28 Familien aus den Originalarchiven: Kastenfilter-Verkleinerung (kachelbar, nie hochskaliert), AO eingebacken, Detailfarbe normiert (Helligkeit × gedämpfter Farbton), Rauheit im Alphakanal, Normalen renormiert |
+| Aufbereitung | `tools/assets/build_surfaces.py` + `tools/assets/surfaces_src.json` | 25 Familien aus den Originalarchiven: Kastenfilter-Verkleinerung (kachelbar, nie hochskaliert), AO eingebacken, Detailfarbe normiert (Helligkeit × gedämpfter Farbton), Rauheit im Alphakanal, Normalen renormiert |
 | Laufzeitwerte | `scripts/core/surface_stats.gd` (erzeugt) | Normierung je Familie (linear `k`, sRGB `ks`), Mittelfarbe |
 | Shader | `assets/shaders/lumos_surface.gdshader` | triplanar im Welt- oder Objektraum, Palettenfarbe × Detail, asymmetrisches Detail, Großflächen-Variation, Ausblenden zur Ferne, drei Stufen über ein Uniform, farbraumunabhängig |
 | Bibliothek | `scripts/core/lumos_materials.gd` | Familien-Parameter, Cache je (Familie, Farbe, Optionen), Freigabe je Szenenwechsel und beim Beenden, Stufe bei Grafikwechsel nachziehen, doppelseitige Variante |
@@ -121,9 +121,131 @@ Materialzählung aller GLB/GLTF (`mat_census`), Texturliste aller Importe, Strec
 | Uferlinien | harter Schnitt Wasser/Sand | kein Übergang | Uferring (Flachwasser + Schaum) |
 | Strecken (7 von 12) | Fahrbahn bis 765 m je Runde unter dem Rasen | Höhen-Schließfehler über die Runde verteilt (s. E) | Anhebung beim Streckenbau |
 | Texturen | Quellen 4K, Spiel nutzt 512²/1024² | – | kein 4K im Spiel; Detail per Kachel (150–350 Texel/m) |
-| Kompression | Projektstandard verlustfrei (`compress/mode=0`) | richtig für Paletten (Blockkompression lässt Farbfelder bluten) | Detailtexturen VRAM-komprimiert (BC3/RGTC), Paletten bleiben |
+| Kompression | Projektstandard verlustfrei (`compress/mode=0`) | richtig für Paletten (Blockkompression lässt Farbfelder bluten) | Detailtexturen als WebP (verlustbehaftet 0,85/0,9) – S3TC hätte das Web-Paket um 30 MB vergrößert (s. D.3), Paletten bleiben |
 | Mipmaps / Filter | Mipmaps an (Projektstandard) | – | Detailtexturen zusätzlich anisotrop |
 | Normalmaps | alle 14 Pakete OpenGL-Konvention | – | keine Umrechnung nötig, Konvention im Shader dokumentiert |
 | Paket-Vorschaubilder | 1920×1080-Vorschauen (`contents.png`, `Preview.png` …) importiert | liegen in Asset-Ordnern | nicht exportiert (Exportliste nur geladene Dateien) – kein Laufzeitkosten-Befund |
 | Wiederholungsmuster | bei großen Flächen sichtbar möglich | Kachel | Großflächen-Variation + Ausblenden zur Ferne |
 | Nachtszenen (Friedhof, Zauberwald-Nacht) | Detail dunkelt nur ab → Nacht bleibt Nacht; Friedhof zu dunkel | asymmetrisches Detail | Friedhof halbe Stärke |
+
+### C.2 Vorher/Nachher-Bilder
+
+Abgelegt in `docs/screenshots/1.5.4/` (Vorher | Nachher, gleiche Kamera, gleiches Licht): Menü-Insel in drei Zuständen
+(Original · neue Materialien · vollständig poliert), alle 10 Bretter (feste Nah-Kamera über dem Startfeld),
+Minispiele (Spielkamera), Grafikstufen Hoch/Mittel/Niedrig.
+
+## D. Leistung
+
+Messarten nach `docs/GERAETE_TESTPLAN.md`: **Test-Server (headless, CPU)** und **simuliert (xvfb/llvmpipe,
+Software-Rasterung)**. Echte Geräte standen nicht zur Verfügung – keine der Zahlen ist eine Geräte-FPS. Vorher =
+Arbeitskopie `f1e251b5`, Nachher = Arbeitsstand, gleiche Ziele, nacheinander gemessen (`tools/dev/scene_profile.sh`).
+
+### D.1 Test-Server, headless (CPU-Seite: Skripte, Physik, Animation, Laden)
+
+| Ziel | Bildzeit Ø ms | p99 ms | 1 %-Tief FPS | Bilder > 33 ms | Laden s | Speicher MB |
+|---|---|---|---|---|---|---|
+| Hauptmenü | 1,80 → 1,76 | 2,9 → 2,5 | 236 → 311 | 0 → 0 | 0,69 → 0,72 | 185 → 194 |
+| Brett Wuschel-Wiesen | 1,24 → 1,60 | 3,6 → 3,7 | 89 → 148 | 1 → 0 | 0,99 → 0,95 | 220 → 244 |
+| Brett Piratenbucht | 1,45 → 1,60 | 4,4 → 4,0 | 109 → 135 | 1 → 1 | 0,95 → 0,88 | 232 → 239 |
+| Brett Zauberwald | 1,61 → 1,41 | 3,5 → 3,7 | 166 → 166 | 0 → 0 | 0,89 → 0,89 | 227 → 233 |
+| Brett Friedhof | 1,46 → 1,54 | 3,4 → 3,8 | 176 → 161 | 0 → 0 | 0,93 → 1,00 | 257 → 260 |
+| Lumos-Ring | 1,88 → 1,96 | 4,0 → 4,2 | 168 → 155 | 0 → 0 | 0,77 → 0,81 | 192 → 199 |
+| Gewitter-Pass | 2,19 → 2,21 | 4,3 → 4,2 | 175 → 185 | 0 → 0 | 0,79 → 0,84 | 194 → 201 |
+| Wüsten-Canyon | 2,08 → 2,08 | 4,2 → 4,0 | 158 → 177 | 0 → 0 | 0,85 → 0,88 | 196 → 203 |
+| Beach-Volley | 1,64 → 1,60 | 3,3 → 3,6 | 214 → 202 | 0 → 0 | 0,49 → 0,49 | 229 → 231 |
+| Honig-Jagd | 0,95 → 1,06 | 2,2 → 2,3 | 261 → 349 | 0 → 0 | 0,54 → 0,49 | 204 → 207 |
+| Pinguin-Curling | 1,30 → 1,24 | 7,4 → 5,6 | 113 → 147 | 0 → 0 | 0,54 → 0,52 | 227 → 229 |
+
+CPU-Kosten im Rauschen (±0,3 ms), Ladezeit gleich, keine neuen Ruckler. Speicher +2 … +24 MB: Der Dummy-Renderer
+hält die Detailtexturen unkomprimiert im Arbeitsspeicher (auf einer GPU liegen sie komprimiert im Grafikspeicher).
+
+### D.2 Simuliert (Software-Renderer, Grafikstufe Hoch, 640×360)
+
+| Ziel | Draw-Calls | Primitive k | Texturen MB | Videospeicher MB | Bildzeit ms (Software) | Laden s |
+|---|---|---|---|---|---|---|
+| Hauptmenü | 342 → 346 | 114,8 → 113,6 | 73,1 → 79,4 | 96 → 102 | 122,6 → 138,2 | 6,2 → 7,0 |
+| Brett Wuschel-Wiesen | 707 → 798 | 152,9 → 176,9 | 64,3 → 76,9 | 88 → 101 | 115,3 → 163,3 | 8,1 → 10,3 |
+| Brett Piratenbucht | 787 → 554 | 179,7 → 138,2 | 65,7 → 72,7 | 89 → 96 | 153,8 → 136,0 | 7,8 → 7,9 |
+| Brett Zauberwald | 660 → 740 | 188,2 → 213,1 | 60,8 → 67,8 | 85 → 92 | 110,3 → 185,1 | 9,1 → 11,0 |
+| Brett Friedhof | 555 → 555 | 122,7 → 122,7 | 93,3 → 97,5 | 117 → 121 | 116,5 → 153,4 | 6,5 → 8,0 |
+| Lumos-Ring | 175 → 206 | 50,4 → 54,0 | 50,6 → 56,8 | 73 → 80 | 56,9 → 89,6 | 4,4 → 7,8 |
+| Gewitter-Pass | 141 → 144 | 77,5 → 81,2 | 52,7 → 59,7 | 76 → 83 | 59,7 → 93,2 | 5,0 → 6,5 |
+| Wüsten-Canyon | 257 → 259 | 94,1 → 94,5 | 51,5 → 58,5 | 75 → 82 | 85,2 → 139,0 | 4,5 → 6,0 |
+| Beach-Volley | 300 → 307 | 70,2 → 70,8 | 54,8 → 62,3 | 78 → 86 | 85,1 → 92,1 | 4,0 → 4,6 |
+| Honig-Jagd | 229 → 229 | 49,0 → 48,7 | 49,9 → 53,4 | 73 → 77 | 80,9 → 101,0 | 3,7 → 4,2 |
+| Pinguin-Curling | 377 → 354 | 62,6 → 74,6 | 48,9 → 49,6 | 73 → 74 | 74,3 → 101,9 | 3,4 → 4,3 |
+
+* Draw-Calls und Primitive schwanken mit Intro-Kamera und Figuren (Piratenbucht −233, Wiese +91) – der Shader
+  ändert die Zahl der Draw-Calls nicht (ein Material je Fläche wie vorher); Strecken mit sichtbarer Fahrbahn
+  (vorher unter dem Rasen verdeckt) zeichnen etwas mehr.
+* **Texturspeicher** im Zwischenstand mit S3TC +4 … +13 MB je Szene; nach der Umstellung auf WebP-Speicherung (D.3)
+  liegen die Detailtexturen unkomprimiert im Grafikspeicher – Werte in D.3.
+* **Ladezeit mit Renderer +0,5 … +3,4 s**: erstmaliges Kompilieren des Oberflächen-Shaders (Hauptvariante, Schatten-,
+  doppelseitige Variante) und Hochladen der Texturen; geschieht beim Szenenaufbau hinter der Überblendung, nicht im
+  Spiel (headless-Ladezeit unverändert). Software-Kompilierung ist deutlich langsamer als ein GPU-Treiber.
+* **Pixelkosten**, kontrolliert gemessen (`tools/dev/surface_cost.gd`, bildschirmfüllender Boden + Zylinder, gleiche
+  Szene, nur Material verschieden; Software-Renderer): flach 34,3 ms · Stufe 0 40,9 ms (+19 %) · Stufe 1 48,5 ms
+  (+41 %) · Stufe 2 47,8 ms (+39 %). Software-Rasterung bildet Texturzugriffe sehr teuer ab; auf GPUs sind 2 Zugriffe
+  je Bodenpixel gering gegenüber Schatten- und Lichtberechnung. Optimierung: hinter 120 m (Detail ausgeblendet) kein
+  Normalmap-Zugriff mehr – halbiert die Zugriffe auf den großen Fernböden der Kulissen.
+
+### D.3 Web-Paket, Texturspeicher, Web-Build
+
+**Paketgröße** (Web-Export, `index.pck`, gemessen):
+
+| Stand | PCK | gzip (Auslieferung) |
+|---|---|---|
+| Original `f1e251b5` | 35,2 MB | 32,4 MB |
+| Zwischenstand, Oberflächen als S3TC (BC3/RGTC) | 65,4 MB | 51,8 MB |
+| **Endstand, Oberflächen als WebP (verlustbehaftet), 25 Familien, 1024² nur Gras/Sand** | **42,1 MB** | **39,2 MB** |
+
+Die S3TC-Variante hätte den Download um 30 MB vergrößert – zu viel für Web/PWA. WebP (Albedo 0,85, Normalen 0,9)
+ist im Pixelvergleich nicht unterscheidbar (`docs/screenshots/1.5.4/`), die Oberflächen belegen im Paket 6,8 MB.
+
+**Texturspeicher** (Software-Renderer, Hoch; Original → S3TC-Zwischenstand → Endstand WebP):
+
+| Ziel | Texturen MB | Videospeicher MB |
+|---|---|---|
+| Hauptmenü | 73,1 → 79,4 → 95,1 | 96 → 102 → 118 |
+| Brett Wuschel-Wiesen | 64,3 → 76,9 → 93,6 | 88 → 101 → 118 |
+| Brett Zauberwald | 60,8 → 67,8 → 77,9 | 85 → 92 → 102 |
+| Lumos-Ring | 50,6 → 56,8 → 65,2 | 73 → 80 → 88 |
+| Beach-Volley | 54,8 → 62,3 → 71,0 | 78 → 86 → 94 |
+
+WebP liegt im Grafikspeicher unkomprimiert: +16 … +29 MB gegenüber dem Original. Mobile Browser ohne S3TC-Unterstützung
+hätten auch die S3TC-Variante entpackt (gleicher Wert); am Desktop sind die zusätzlichen ~16 MB gegenüber S3TC
+unkritisch. Bewusste Entscheidung: kleiner Download vor kleinstem Desktop-Grafikspeicher.
+
+**Web-Build im Browser** (Chromium, Software-WebGL, `tools/dev/web_shot.js`): Hauptmenü sowie Brett → Roulette →
+Minispiel ohne Konsolenfehler – keine fehlenden Ressourcen, keine Shaderfehler, keine rosa/schwarzen Flächen
+(`docs/screenshots/1.5.4/web_build_menue.jpg`).
+
+### D.4 Qualitätsprofile
+
+Bestehende Grafikstufen (Niedrig/Mittel/Hoch/Ultra) steuern den Oberflächen-Shader ohne Neukompilieren (Uniform):
+Niedrig nur Detailfarbe (+19 % simuliert), Mittel/Hoch mit Normalmap. Zusätzlich abschaltbar über
+„Oberflächen-Details“ (bisheriges Aussehen, keine Zusatzkosten). Keine pauschale Absenkung: Schatten, Auflösung,
+Partikel unverändert.
+
+## E. Spiel- und Regressionsprüfung
+
+### E.1 Fehler gefunden und behoben
+
+| Fehler | Seit | Wirkung | Behebung |
+|---|---|---|---|
+| Fahrbahn unter dem Rasen (7 Strecken) | 1.5.3 (Streckenverlängerung) | bis 765 m je Runde unsichtbar (Lumos-Ring 58 %, Dschungel 59 %, Vulkan 37 %, Frost 28 %, Canyon 26 %, Gewitter 15 %, Wasserfall 11 %; Korallen-Kanal außerhalb des Tunnels unter Sand/Wasser) | `RaceTrack._lift_below_ground`: weich anheben, Loopings/Gleiter starr, Überführungen behalten die Durchfahrtshöhe, Unterwassertunnel fest – jetzt ≤ 9 m je Runde (Tunnel ausgenommen), Steigung höchstens +0,01, keine Überschneidung |
+| Nature/Space Kit metallic = 1 | Import | Bäume, Felsen, Klippen dunkel, spiegeln den Himmel (alle Welten) | `LumosMaterials.normalize_model` |
+| Web-Export ohne Oberflächen-Texturen | (neu in dieser Arbeit, vor der Auslieferung gefunden) | Exportliste kennt nur Katalog-Pfade | `tools/export_list.gd` nimmt `assets/materials` auf; im Browser geprüft: 0 Konsolenfehler |
+| „Reaktion fehlt: dodge“ / „surprised“ | 1.5.x | Menü-Ballspiel und Geister-Fotograf: Schreck-Reaktion wurde nie gespielt (Animationsname statt Reaktion) | `shocked` / `scared` aus der Reaktionsbibliothek |
+| `tools/dev/race_shot.gd` liefert keine Bilder | 1.5.x | Prüfwerkzeug bleibt ohne Fehlermeldung stehen | neues `track_shot.gd` (Startweg wie der CI-Linsentest) |
+| `board_life_shot.gd` beendet sich nicht | 1.5.3 | Prozess läuft bis zum äußeren Zeitlimit | beendet sich selbst |
+
+## F. Git
+
+* Arbeitszweig `claude/elegant-johnson-2kfiut` (Ausgangsstand `f1e251b5` = `main` nach PR #4/#5 + hochgeladene
+  Zips). `main` unverändert, kein Merge, keine Veröffentlichung ohne Freigabe.
+* Commits dieser Überarbeitung (Betreff `v1.5.4: …`): Materialsystem + Pilot (`ad65e8db`), alle Bereiche +
+  Fahrbahn-Fix + Werkzeuge (`930b135e`, `82a1c044`), Web-Export/Stufen/Brücken-Fix/Reaktionen (`7a2fce44`),
+  Abschluss (Version, Doku, Messwerte) – siehe `git log`.
+* Nicht im Repository: JulioVII-Originalarchive (1,1 GB; Abruf + Prüfsummen über `tools/assets/fetch_juliovii.py`).
+* Unverändert im Repository: alle 14 hochgeladenen Zips (nichts gelöscht oder überschrieben).

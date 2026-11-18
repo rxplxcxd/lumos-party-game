@@ -1,33 +1,155 @@
 {
-  "_doc": "Quellen der Lumos-Oberflächen (JulioVII, CC-BY 4.0, kostenloser itch.io-Download). Aufbereitung: tools/assets/build_surfaces.py. res = Zielauflösung (Kachel), ao = Anteil der eingebackenen Umgebungsverdeckung.",
+  "_doc": "Quellen der Lumos-Oberflächen (JulioVII, CC-BY 4.0, kostenloser itch.io-Download). Aufbereitung: tools/assets/build_surfaces.py. res = Zielauflösung (Kachel), ao = Anteil der eingebackenen Umgebungsverdeckung. Nur Familien, die das Spiel verwendet (ungenutzte entfernt: metal_panel, mud, checker); 1024² nur für Gras und Sand (Nahansichten), sonst 512².",
   "families": {
-    "grass":       {"pack": "ftpgrass-dirt",              "mat": "Stylized_HandpaintedGrass_01",        "res": 1024, "ao": 0.5},
-    "meadow":      {"pack": "ftpgrass-dirt",              "mat": "Stylized_HandpaintedGrassAndDirt_01", "res": 512,  "ao": 0.5},
-    "dirt":        {"pack": "ftpgrass-dirt",              "mat": "Stylized_HandpaintedDirt_01",         "res": 512,  "ao": 0.6},
-    "sand":        {"pack": "ftpgrass-dirt",              "mat": "Stylized_HandpaintedSand_01",         "res": 1024, "ao": 0.5},
-    "dune":        {"pack": "stylizedpk01",               "mat": "Stylized_06_Sand",                    "res": 512,  "ao": 0.4},
-    "pebbles":     {"pack": "ftpgrass-dirt",              "mat": "Stylized_HandpaintedStones_03",       "res": 512,  "ao": 0.6},
-    "flagstone":   {"pack": "ftpgrass-dirt",              "mat": "Stylized_HandpaintedStones_02",       "res": 1024, "ao": 0.6},
-    "cobble_moss": {"pack": "stylizedpk01",               "mat": "Stylized_02_Stone_Ground",            "res": 512,  "ao": 0.6},
-    "rock":        {"pack": "stylized-stone-wood",        "mat": "Stone_01",                            "res": 1024, "ao": 0.6},
-    "cliff":       {"pack": "stylized-stone-wood",        "mat": "Stone_04",                            "res": 512,  "ao": 0.6},
-    "stone_wall":  {"pack": "ftp-stylized-bricks-plaster","mat": "Stylized_StoneTiles_01",              "res": 512,  "ao": 0.6},
-    "bricks":      {"pack": "ftp-stylized-bricks-plaster","mat": "Stylized_Rounded_Bricks_01",          "res": 512,  "ao": 0.6},
-    "plaster":     {"pack": "ftp-stylized-bricks-plaster","mat": "Stylized_Plaster_01",                 "res": 512,  "ao": 0.5},
-    "planks":      {"pack": "stylizedpk01",               "mat": "Stylized_03_Wood_Planks",             "res": 1024, "ao": 0.6},
-    "wood":        {"pack": "stylized-stone-wood",        "mat": "Wood_01",                             "res": 512,  "ao": 0.5},
-    "bark":        {"pack": "stylized-stone-wood",        "mat": "WoodBark_02",                         "res": 512,  "ao": 0.6},
-    "roof":        {"pack": "stylizedpk02",               "mat": "Stylized_13_RoofSquare",              "res": 512,  "ao": 0.6},
-    "metal":       {"pack": "ftp-metals-01",              "mat": "Stylized_BaseMetal_01",               "res": 512,  "ao": 0.4},
-    "metal_panel": {"pack": "ftp-stylized-metal-panels",  "mat": "Stylized_MetalPanels_01",             "res": 512,  "ao": 0.5},
-    "snow":        {"pack": "stylizedpk01",               "mat": "Stylized_08_Snow",                    "res": 512,  "ao": 0.4},
-    "ice":         {"pack": "stylizedpk02",               "mat": "Stylized_18_Ice",                     "res": 512,  "ao": 0.3},
-    "tiles":       {"pack": "ftp-stylizedceramictiles01", "mat": "Stylized_CeramicTiles_02",            "res": 512,  "ao": 0.5},
-    "checker":     {"pack": "ftp-stylizedceramictiles01", "mat": "Stylized_CeramicTilingFloor_02",      "res": 512,  "ao": 0.5},
-    "paving":      {"pack": "ftp-bricks-pavement",        "mat": "Stylized_BricksPavement_04",          "res": 512,  "ao": 0.6},
-    "concrete":    {"pack": "fmp-stylized-concrete",      "mat": "Stylized_Concrete_01",                "res": 512,  "ao": 0.5},
-    "lava_rock":   {"pack": "ftp-stylized-mix-stones-01", "mat": "Stylized_LavaRock_01",                "res": 512,  "ao": 0.5},
-    "fabric":      {"pack": "ftp-stylized-03",            "mat": "Stylized_22_Tatami",                  "res": 512,  "ao": 0.4},
-    "mud":         {"pack": "ftp-stylized-03",            "mat": "Stylized_33_Mud",                     "res": 512,  "ao": 0.6}
+    "grass": {
+      "pack": "ftpgrass-dirt",
+      "mat": "Stylized_HandpaintedGrass_01",
+      "res": 1024,
+      "ao": 0.5
+    },
+    "meadow": {
+      "pack": "ftpgrass-dirt",
+      "mat": "Stylized_HandpaintedGrassAndDirt_01",
+      "res": 512,
+      "ao": 0.5
+    },
+    "dirt": {
+      "pack": "ftpgrass-dirt",
+      "mat": "Stylized_HandpaintedDirt_01",
+      "res": 512,
+      "ao": 0.6
+    },
+    "sand": {
+      "pack": "ftpgrass-dirt",
+      "mat": "Stylized_HandpaintedSand_01",
+      "res": 1024,
+      "ao": 0.5
+    },
+    "dune": {
+      "pack": "stylizedpk01",
+      "mat": "Stylized_06_Sand",
+      "res": 512,
+      "ao": 0.4
+    },
+    "pebbles": {
+      "pack": "ftpgrass-dirt",
+      "mat": "Stylized_HandpaintedStones_03",
+      "res": 512,
+      "ao": 0.6
+    },
+    "flagstone": {
+      "pack": "ftpgrass-dirt",
+      "mat": "Stylized_HandpaintedStones_02",
+      "res": 512,
+      "ao": 0.6
+    },
+    "cobble_moss": {
+      "pack": "stylizedpk01",
+      "mat": "Stylized_02_Stone_Ground",
+      "res": 512,
+      "ao": 0.6
+    },
+    "rock": {
+      "pack": "stylized-stone-wood",
+      "mat": "Stone_01",
+      "res": 512,
+      "ao": 0.6
+    },
+    "cliff": {
+      "pack": "stylized-stone-wood",
+      "mat": "Stone_04",
+      "res": 512,
+      "ao": 0.6
+    },
+    "stone_wall": {
+      "pack": "ftp-stylized-bricks-plaster",
+      "mat": "Stylized_StoneTiles_01",
+      "res": 512,
+      "ao": 0.6
+    },
+    "bricks": {
+      "pack": "ftp-stylized-bricks-plaster",
+      "mat": "Stylized_Rounded_Bricks_01",
+      "res": 512,
+      "ao": 0.6
+    },
+    "plaster": {
+      "pack": "ftp-stylized-bricks-plaster",
+      "mat": "Stylized_Plaster_01",
+      "res": 512,
+      "ao": 0.5
+    },
+    "planks": {
+      "pack": "stylizedpk01",
+      "mat": "Stylized_03_Wood_Planks",
+      "res": 512,
+      "ao": 0.6
+    },
+    "wood": {
+      "pack": "stylized-stone-wood",
+      "mat": "Wood_01",
+      "res": 512,
+      "ao": 0.5
+    },
+    "bark": {
+      "pack": "stylized-stone-wood",
+      "mat": "WoodBark_02",
+      "res": 512,
+      "ao": 0.6
+    },
+    "roof": {
+      "pack": "stylizedpk02",
+      "mat": "Stylized_13_RoofSquare",
+      "res": 512,
+      "ao": 0.6
+    },
+    "metal": {
+      "pack": "ftp-metals-01",
+      "mat": "Stylized_BaseMetal_01",
+      "res": 512,
+      "ao": 0.4
+    },
+    "snow": {
+      "pack": "stylizedpk01",
+      "mat": "Stylized_08_Snow",
+      "res": 512,
+      "ao": 0.4
+    },
+    "ice": {
+      "pack": "stylizedpk02",
+      "mat": "Stylized_18_Ice",
+      "res": 512,
+      "ao": 0.3
+    },
+    "tiles": {
+      "pack": "ftp-stylizedceramictiles01",
+      "mat": "Stylized_CeramicTiles_02",
+      "res": 512,
+      "ao": 0.5
+    },
+    "paving": {
+      "pack": "ftp-bricks-pavement",
+      "mat": "Stylized_BricksPavement_04",
+      "res": 512,
+      "ao": 0.6
+    },
+    "concrete": {
+      "pack": "fmp-stylized-concrete",
+      "mat": "Stylized_Concrete_01",
+      "res": 512,
+      "ao": 0.5
+    },
+    "lava_rock": {
+      "pack": "ftp-stylized-mix-stones-01",
+      "mat": "Stylized_LavaRock_01",
+      "res": 512,
+      "ao": 0.5
+    },
+    "fabric": {
+      "pack": "ftp-stylized-03",
+      "mat": "Stylized_22_Tatami",
+      "res": 512,
+      "ao": 0.4
+    }
   }
 }
