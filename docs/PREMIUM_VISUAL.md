@@ -269,6 +269,7 @@ Partikel unverändert.
 | Strecken-Geometrie | `track_check.gd` | Fahrbahn ≤ 9 m je Runde unter der Bodenkante (vorher bis 765 m; Unterwassertunnel ausgenommen), Steigung höchstens +0,01, keine Überschneidung |
 | **Alle 69 Minispiele** mit 4 CPUs (erste Kategorie je Spiel) | `tools/dev/minigame_sweep.sh` | 69/69 regulär beendet, 0 Skriptfehler, 0 durchgefallen; Körpermitte in Geometrie nur bei Kullerfels-Flucht 0,1 s (eine Figur, beim Überrollen durch einen Fels – Spielmechanik) |
 | Web-Build im Browser (Menü, Brett → Roulette → Minispiel) | `tools/dev/web_shot.js` | 0 Konsolenfehler, keine fehlenden Ressourcen, keine Shaderfehler, keine rosa/schwarzen Flächen |
+| Online-Brett, 3 Geräte, 1 Mensch-Gast, 240 s (wie CI) | `tools/dev/net_test.sh … party meadow` lokal | Original und Endstand gleich: je 9 Brettzustände, alle Geräte identisch, 0 Skriptfehler. CI-Lauf #64 (`498dd17f`) brach hier ab: nur 2 Zustände in 240 s (Host = Gäste, keine Abweichung) – der Lauf kam auf dem CI-Rechner zu langsam voran |
 | Kollisionswelt Original ↔ Endstand (Schneeball-Duell, fester Zufallswert) | Kollisionsformen-Liste | identisch (20 Formen, Lage, Größe) |
 
 ### E.3 Schneeball-Duell: „festgefahren“ höher? – geprüft, keine Regression
