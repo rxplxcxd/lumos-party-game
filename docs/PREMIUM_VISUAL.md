@@ -182,9 +182,8 @@ hält die Detailtexturen unkomprimiert im Arbeitsspeicher (auf einer GPU liegen 
   (vorher unter dem Rasen verdeckt) zeichnen etwas mehr.
 * **Texturspeicher** im Zwischenstand mit S3TC +4 … +13 MB je Szene; nach der Umstellung auf WebP-Speicherung (D.3)
   liegen die Detailtexturen unkomprimiert im Grafikspeicher – Werte in D.3.
-* **Ladezeit mit Renderer +0,5 … +3,4 s**: erstmaliges Kompilieren des Oberflächen-Shaders (Hauptvariante, Schatten-,
-  doppelseitige Variante) und Hochladen der Texturen; geschieht beim Szenenaufbau hinter der Überblendung, nicht im
-  Spiel (headless-Ladezeit unverändert). Software-Kompilierung ist deutlich langsamer als ein GPU-Treiber.
+* **Ladezeiten dieser Tabelle** stammen aus einem Lauf mit parallelen Jobs und sind nicht vergleichbar – ohne
+  Nebenlast nachgemessen: unverändert (D.3).
 * **Pixelkosten**, kontrolliert gemessen (`tools/dev/surface_cost.gd`, bildschirmfüllender Boden + Zylinder, gleiche
   Szene, nur Material verschieden; Software-Renderer): flach 34,3 ms · Stufe 0 40,9 ms (+19 %) · Stufe 1 48,5 ms
   (+41 %) · Stufe 2 47,8 ms (+39 %). Software-Rasterung bildet Texturzugriffe sehr teuer ab; auf GPUs sind 2 Zugriffe
@@ -217,6 +216,20 @@ ist im Pixelvergleich nicht unterscheidbar (`docs/screenshots/1.5.4/`), die Ober
 WebP liegt im Grafikspeicher unkomprimiert: +16 … +29 MB gegenüber dem Original. Mobile Browser ohne S3TC-Unterstützung
 hätten auch die S3TC-Variante entpackt (gleicher Wert); am Desktop sind die zusätzlichen ~16 MB gegenüber S3TC
 unkritisch. Bewusste Entscheidung: kleiner Download vor kleinstem Desktop-Grafikspeicher.
+
+**Ladezeiten neu gemessen, ohne Nebenlast** (Software-Renderer, Hoch, 640×360; je Ziel Original und Endstand direkt
+nacheinander, `scene_profile.sh --xvfb`; die Ladezeiten in D.2 stammen aus einem Lauf mit parallelen Jobs):
+
+| Ziel | Laden s Original → Endstand | Texturen MB |
+|---|---|---|
+| Hauptmenü (warm; erster Lauf nach Container-Neustart kalt: 16,3 → 12,2) | 7,20 → 7,07 | 73,1 → 94,4 |
+| Brett Wuschel-Wiesen | 12,94 → 12,17 | 64,3 → 93,6 |
+| Brett Zauberwald | 10,58 → 10,57 | 60,8 → 77,9 |
+| Lumos-Ring | 6,05 → 6,11 | 50,6 → 65,2 |
+| Beach-Volley | 4,63 → 4,96 | 54,7 → 72,1 |
+
+Ladezeit gleich (−0,8 … +0,3 s), 0 Engine-Fehler. Die früher gemessenen +0,5 … +3,4 s (D.2) waren Last der parallelen
+Jobs, nicht Shader-Kompilierung.
 
 **Web-Build im Browser** (Chromium, Software-WebGL, `tools/dev/web_shot.js`): Hauptmenü sowie Brett → Roulette →
 Minispiel ohne Konsolenfehler – keine fehlenden Ressourcen, keine Shaderfehler, keine rosa/schwarzen Flächen
