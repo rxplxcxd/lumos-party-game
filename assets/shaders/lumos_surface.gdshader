@@ -84,7 +84,10 @@ void fragment() {
 	vec2 uvz = vec2(p.x, -p.y);
 	vec4 a = vec4(0.0);
 	vec3 t = vec3(0.0);   // Summe der Tangential-Störungen (Weltraum)
-	bool nm = quality >= 1 && normal_strength > 0.001;
+	float dist = length(VERTEX);   // Abstand zur Kamera (Sichtraum)
+	float near = 1.0 - smoothstep(fade_far * 0.35, fade_far, dist);
+	// Hinter fade_far wirkt die Normalmap nicht mehr (Störung × near = 0) – dort keinen Normalmap-Zugriff (Fernböden)
+	bool nm = quality >= 1 && normal_strength > 0.001 && near > 0.001;
 	if (w.x > 0.01) {
 		a += texture(detail_albedo, uvx) * w.x;
 		if (nm && wn_w.x > 0.01) { vec2 g = texture(detail_normal, uvx).rg * 2.0 - 1.0; t += vec3(0.0, g.g, g.r) * wn_w.x; }
@@ -97,8 +100,6 @@ void fragment() {
 		a += texture(detail_albedo, uvz) * w.z;
 		if (nm && wn_w.z > 0.01) { vec2 g = texture(detail_normal, uvz).rg * 2.0 - 1.0; t += vec3(g.r, g.g, 0.0) * wn_w.z; }
 	}
-	float dist = length(VERTEX);   // Abstand zur Kamera (Sichtraum)
-	float near = 1.0 - smoothstep(fade_far * 0.35, fade_far, dist);
 	// Detail asymmetrisch: Vertiefungen dunkeln voll ab, helle Stellen heben nur zu highlight an. Helle Tag-Szenen
 	// liegen schon nahe am Weißpunkt (Gras-Grün, Sand) – symmetrisches Detail würde dort ausbleichen statt zu zeichnen.
 	vec3 d = a.rgb / (space_probe.r < 0.35 ? k : ks);
