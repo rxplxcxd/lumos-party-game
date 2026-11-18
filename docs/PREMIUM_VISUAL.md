@@ -302,5 +302,10 @@ Ergebnis: kein nachweisbarer Unterschied, keine Ursache im geänderten Code; all
   siehe `git log`.
 * CI: Läufe nur über `workflow_dispatch` auf dem Arbeitszweig (kein offener PR). Ein solcher Lauf veröffentlicht
   nichts: Vercel ist ohne Token übersprungen, GitHub Pages und Release laufen nur auf `main`/Tags (geprüft an Lauf #58).
+* **CI-Lauf #67** (`cc8fb94d`, workflow_dispatch): **grün** – alle Prüfschritte inkl. Online-Test, Langzeit-Test,
+  Web-/Linux-Export und Browser-Rauchtest; Vercel/Pages/Release übersprungen (nichts veröffentlicht). Web-Artefakt
+  (GitHub-Pages-Paket) 73,1 MB (Lauf #58, Original 1.5.3) → 79,9 MB (+6,8 MB) – deckt sich mit der lokalen Messung
+  (D.3), d. h. die eingecheckten Import-Einstellungen greifen im CI. Vorheriger Lauf #64 (`498dd17f`, noch ohne
+  `.import`-Dateien) brach im Online-Brett-Test ab (zu langsam, s. E.2).
 * Nicht im Repository: JulioVII-Originalarchive (1,1 GB; Abruf + Prüfsummen über `tools/assets/fetch_juliovii.py`).
 * Unverändert im Repository: alle 14 hochgeladenen Zips (nichts gelöscht oder überschrieben).
