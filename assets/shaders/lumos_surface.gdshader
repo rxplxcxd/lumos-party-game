@@ -61,6 +61,7 @@ float vnoise(vec2 p) {
 
 void fragment() {
 	vec3 n = normalize(v_nrm);
+	if (!FRONT_FACING) n = -n;   // nur in der doppelseitigen Variante (cull_disabled) relevant
 	vec3 p = v_pos / tile;
 	// Projektionen: Y (Boden) uv = xz · X uv = (z, -y) · Z uv = (x, -y) – Bildoberkante zeigt auf Wänden nach oben
 	vec3 an = abs(n);
